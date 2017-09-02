@@ -13,6 +13,7 @@ import javax.json.JsonArray;
 import javax.json.JsonObject;
 import javax.json.JsonReader;
 import javax.json.JsonValue;
+import javax.ws.rs.ProcessingException;
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
 import javax.ws.rs.client.Invocation.Builder;
@@ -67,11 +68,16 @@ public class Fetch implements AutoCloseable {
 		client.close();
 	}
 
-	public List<GitHubIssue> fetchIssues(GitHubProject project) {
+	public List<GitHubIssue> fetchIssues(GitHubProject project) throws IOException {
 		final WebTarget target = client.target(Utils.toURI(project.getApiURL())).path("issues").queryParam("state",
 				"all");
 		final Builder request = target.request(GIT_HUB_MEDIA_TYPE);
-		final Response response = request.get();
+		final Response response;
+		try {
+			response = request.get();
+		} catch (ProcessingException e) {
+			throw new IOException(e);
+		}
 		readRates(response);
 		final String jsonIssuesStr = response.readEntity(String.class);
 		LOGGER.info("List: {}.", jsonIssuesStr);

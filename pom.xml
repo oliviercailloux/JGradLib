@@ -38,11 +38,6 @@
 			<artifactId>javax.json-api</artifactId>
 			<version>1.1</version>
 		</dependency>
-<!-- 		<dependency> -->
-<!-- 			<groupId>com.jcabi</groupId> -->
-<!-- 			<artifactId>jcabi-github</artifactId> -->
-<!-- 			<version>0.32</version> -->
-<!-- 		</dependency> -->
 		<dependency>
 			<groupId>org.apache.odftoolkit</groupId>
 			<artifactId>simple-odf</artifactId>
@@ -65,7 +60,6 @@
 			<version>2.26-b06</version>
 			<scope>runtime</scope>
 		</dependency>
-		<!-- Compatibility problems with jcabi (use old version!) -->
 		<dependency>
 			<groupId>org.glassfish</groupId>
 			<artifactId>javax.json</artifactId>

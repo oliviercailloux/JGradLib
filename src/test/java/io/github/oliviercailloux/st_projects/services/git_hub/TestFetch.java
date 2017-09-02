@@ -32,7 +32,7 @@ public class TestFetch {
 	}
 
 	@Test
-	public void testFetchIssuesOld() {
+	public void testFetchIssuesOld() throws Exception {
 		try (Fetch fetch = new Fetch()) {
 			final Project pjc = new Project("java-course");
 			final GitHubProject ghp = ModelMocker.newGitHubProject(pjc, ModelMocker.newContributor("oli"),

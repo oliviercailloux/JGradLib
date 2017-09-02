@@ -15,14 +15,9 @@ import javax.json.JsonObject;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableList.Builder;
 import com.google.common.collect.ImmutableMap;
-import com.jcabi.github.Coordinates;
-import com.jcabi.github.Issue;
-import com.jcabi.github.Issues;
-import com.jcabi.github.Repo;
-import com.jcabi.github.RtGithub;
 
+import io.github.oliviercailloux.st_projects.services.git_hub.Fetch;
 import io.github.oliviercailloux.st_projects.services.git_hub.Utils;
 
 public class GitHubProject {
@@ -86,16 +81,14 @@ public class GitHubProject {
 	}
 
 	public void initIssues() throws IOException {
-		final Builder<GitHubIssue> builder = ImmutableList.builder();
-		final RtGithub g = new RtGithub();
-		final Repo repo = g.repos().get(new Coordinates.Simple(getOwner().getName(), getName()));
-		final Issues issuesApi = repo.issues();
-		final Iterable<Issue> iterable = issuesApi.iterate(ImmutableMap.of("state", "all"));
-		for (Issue issue : iterable) {
-			final GitHubIssue gitHubIssue = new GitHubIssue(issue.json());
-			builder.add(gitHubIssue);
+		final List<GitHubIssue> fetched;
+		/**
+		 * This should be made cleaner, probably with the help of some GitHub library.
+		 */
+		try (Fetch fetcher = new Fetch()) {
+			fetched = fetcher.fetchIssues(this);
 		}
-		issues = builder.build();
+		issues = ImmutableList.copyOf(fetched);
 		issuesByName = issues.stream().collect(ImmutableMap.toImmutableMap((i) -> i.getName(), (i) -> i));
 	}
 

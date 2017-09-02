@@ -8,7 +8,6 @@ import java.io.ByteArrayOutputStream;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
-import java.util.jar.Attributes.Name;
 
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -65,11 +64,15 @@ public class TestWrite {
 	}
 
 	@Test
-	public void testWriteOneGHProjectWithIssues() throws Exception {
-		final Project p1 = ModelMocker.newProject("p1", 2);
+	public void testWriteOneGHProject() throws Exception {
+		final Project project = new Project("p1");
+		project.getFunctionalities().add(new Functionality("p1-f1", "p1-d1", BigDecimal.valueOf(1)));
+		project.getFunctionalities().add(new Functionality("p1-f2", "p1-d2", BigDecimal.valueOf(2)));
+		final Project p1 = project;
 		final Contributor c1 = ModelMocker.newContributor("c1");
 		final GitHubProject ghp1 = ModelMocker.newGitHubProject(p1, c1, Utils.EXAMPLE_URL);
-		TODO : when the GHP is initialized, it does not accept any getIssue thus will make the writer crash. Second, change this test Name.class */
+		final GitHubIssue is1 = ModelMocker.newGitHubIssue("p1-f1", Utils.EXAMPLE_URL);
+		Mockito.when(ghp1.getIssue("p1-f1")).thenReturn(Optional.of(is1));
 		final List<GitHubProject> projects = ImmutableList.of(ghp1);
 		final byte[] written;
 		try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
@@ -133,34 +136,6 @@ public class TestWrite {
 		try (SpreadsheetDocument doc = SpreadsheetDocument.loadDocument(new ByteArrayInputStream(written))) {
 			doc.save("out.ods");
 		}
-	}
-
-	@Test
-	public void testWriteOneGHProject() throws Exception {
-		final Project project = new Project("p1");
-		project.getFunctionalities().add(new Functionality("p1-f1", "p1-d1", BigDecimal.valueOf(1)));
-		project.getFunctionalities().add(new Functionality("p1-f2", "p1-d2", BigDecimal.valueOf(2)));
-		final Project p1 = project;
-		final Contributor c1 = ModelMocker.newContributor("c1");
-		final GitHubProject ghp1 = ModelMocker.newGitHubProject(p1, c1, Utils.EXAMPLE_URL);
-		final GitHubIssue is1 = ModelMocker.newGitHubIssue("p1-f1", Utils.EXAMPLE_URL);
-		Mockito.when(ghp1.getIssue("p1-f1")).thenReturn(Optional.of(is1));
-		final List<GitHubProject> projects = ImmutableList.of(ghp1);
-		final byte[] written;
-		try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
-			final SpreadsheetWriter writer = new SpreadsheetWriter();
-			writer.setOutputStream(out);
-			writer.writeGitHubProjects(projects);
-			written = out.toByteArray();
-		}
-		final ByteArrayInputStream input = new ByteArrayInputStream(written);
-		try (SpreadsheetDocument doc = SpreadsheetDocument.loadDocument(input)) {
-			assertEquals(1, doc.getTableList().size());
-			final Table sheet = Iterables.getOnlyElement(doc.getTableList());
-			assertTrue(sheet.getRowCount() >= 3);
-			assertTrue(sheet.getColumnCount() == 3);
-		}
-		save(written);
 	}
 
 }
