@@ -3,6 +3,8 @@ package io.github.oliviercailloux.st_projects.model;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
+import java.math.BigDecimal;
+
 import com.google.common.base.MoreObjects;
 
 /**
@@ -18,21 +20,21 @@ public class Functionality {
 	private String description;
 
 	/**
-	 * ≥ 1
+	 * > 0
 	 */
-	private int difficulty;
+	private BigDecimal difficulty;
 
 	/**
 	 * Not <code>null</code>, not empty.
 	 */
 	private String name;
 
-	public Functionality(String name, String description, int difficulty) {
+	public Functionality(String name, String description, BigDecimal difficulty) {
 		this.name = requireNonNull(name);
 		this.description = requireNonNull(description);
 		checkArgument(!name.isEmpty());
 		checkArgument(!description.isEmpty());
-		checkArgument(difficulty >= 1);
+		checkArgument(difficulty.compareTo(BigDecimal.ZERO) > 0);
 		this.difficulty = difficulty;
 	}
 
@@ -40,7 +42,7 @@ public class Functionality {
 		return description;
 	}
 
-	public int getDifficulty() {
+	public BigDecimal getDifficulty() {
 		return difficulty;
 	}
 

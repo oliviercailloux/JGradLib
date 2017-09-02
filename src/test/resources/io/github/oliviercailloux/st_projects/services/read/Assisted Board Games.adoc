@@ -11,9 +11,6 @@ Un Assisted Board Game est composé, idéalement, d’une http://mad-kw.com/uplo
 Dans ce projet on implémentera ce concept, pour commencer, sous la forme d’un Assisted Chess. Le plateau central affiche le plateau de jeu. Les clients individuels des joueurs leur permettront de jouer en recevant l’assistance d’un ordinateur : le joueur peut de façon privée (sans le montrer à son adversaire) proposer un coup, et l’ordinateur lui montrera les meilleurs réponses à son coup. En limitant adéquatement la profondeur de recherche de l’ordinateur, cela pourrait permettre aux joueurs d’éviter les erreurs basiques, ou fournir un avantage compensatoire à un joueur plus faible, ou aider à l’apprentissage. L’objectif plus ambitieux est d’ensuite généraliser cette approche pour permettre d’implémenter des Assisted Board Game en général.
 
 == Fonctions demandées
-
-a
-
 StateTxt:: Un objet qui permet de représenter l’état d’une partie (la position de chaque pièce et le joueur dont c’est le tour). Chercher une bibliothèque Java pour ce faire (et afficher l’état, et permettre de jouer). Attention, licence open source compatible MIT. Chercher un format standard texte pour représenter l’état. Encoder et décoder en ce format. Si pas de standard existant, encoder en JSON. (1)
 MoveTxt:: Un objet qui permet de représenter un coup. Encoder et décoder en texte ou JSON. Calcul d’un nouvel état à partir d’un état et d’un coup, et d’un coup à partir de deux états (ou transition impossible). (1)
 StateServlet:: AddState(id game, State): id state or rejected (check possible get from last state to this one). (Un ajout d’un état à une partie qui n’a pas d’id crée la partie, à condition que ce soit un des deux état initiaux possibles.) (0,5)
@@ -22,7 +19,7 @@ ObjectsXML:: Chercher un schéma XSD (standard de fait ?) pour représenter un �
 ExtServletState:: Étendre Servlets existants GetState, AddState pour accepter et renvoyer à la demande du XML ou JSON. Transformer en REST. Cookie permet de mémoriser id game. (1)
 AddServlets:: Ajouter : AddMove(id game, id player, Move): id move (nb from 0 for the game) or rejected ; GetMove(id game, id move) ; AddGame(List<State>): id game (list may not be empty). En REST, acceptant et renvoyant plusieurs formats. Cookie permet de mémoriser id game. id state = 0: start state. id move = 0: used to get from state 0 to state 1. (1)
 Online:: Faire tourner le serveur en ligne grâce au service d’IBM. (1)
-Player:: Client pour un joueur donné, qui affiche le plateau du point de vue de ce joueur, et permet de jouer une partie (en supposant qu’un autre client tourne pour l’autre joueur, bien sûr). Faites simple !(1)
+Player:: Client pour un joueur donné, qui affiche le plateau du point de vue de ce joueur, et permet de jouer une partie (en supposant qu’un autre client tourne pour l’autre joueur, bien sûr). Faites simple ! (1)
 SetDB:: Concevoir un schéma SQL pour stocker les états des parties. Implémenter une entité JPA et les méthodes permettant d’écrire et de lire depuis la BD. (1)
 UseDB:: Modifier les servlets pour qu’ils écrivent dans et lisent la BD. (1)
 Lib:: Isoler la partie bibliothèque du reste du code. La publier comme un projet Maven indépendant (suffixer le nom du projet de -lib) et faire dépendre le reste du code de cette bibliothèque. (1)
@@ -32,6 +29,8 @@ SOAPClient:: Transformer les clients pour en faire des clients SOAP. (1)
 Help:: Servlet Suggest(State): List<Move> qui suggère de bons coups possibles pour les coups suivants. (0,5)
 HelpAsync:: SuggestAsync(State): id ticket. GetSuggestion(id ticket): State, List<Move> (possibly empty), boolean finished computing, boolean optimal (si l’algo a déterminé qu’il peut gagner à coup sûr en supposant que ce soit toujours lui qui joue les coups suivants du même joueur). (0,5)
 SendMessage:: Envoi message aux clients enregistrés quand calcul suggestion a progressé (liste modifiée) (1)
+
+=== Autres fonctions ===
 Generalize:: Proposer une bibliothèque qui facilite l’implémentation d’autres jeux. Pour un exemple de jeu simple, penser au poker. Il manque au moins un servlet : GetVisibleState(id game, id player): VisibleState.
 GetGames:: Le serveur peut télécharger une liste de parties jouées depuis une base de données publique.
 HistoClient:: Les joueurs peuvent reprendre une partie existante à partir de l’endroit souhaité dans le déroulement de la partie. (Cela constitue une nouvelle partie.)

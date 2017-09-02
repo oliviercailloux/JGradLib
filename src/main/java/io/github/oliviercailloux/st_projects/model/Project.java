@@ -6,9 +6,15 @@ import static java.util.Objects.requireNonNull;
 import java.util.LinkedList;
 import java.util.List;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.common.base.MoreObjects;
 
 public class Project {
+	@SuppressWarnings("unused")
+	private static final Logger LOGGER = LoggerFactory.getLogger(Project.class);
+
 	/**
 	 * Not <code>null</code>.
 	 */
@@ -22,6 +28,7 @@ public class Project {
 	public Project(String name) {
 		this.name = requireNonNull(name);
 		checkArgument(!name.isEmpty());
+		LOGGER.info("Created {}.", name);
 	}
 
 	public List<Functionality> getFunctionalities() {

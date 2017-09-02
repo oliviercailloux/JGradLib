@@ -1,10 +1,12 @@
 package io.github.oliviercailloux.st_projects.model;
 
-import static java.util.Objects.requireNonNull;
-
 import java.net.URL;
 
+import javax.json.JsonObject;
+
 import com.google.common.base.MoreObjects;
+
+import io.github.oliviercailloux.st_projects.services.git_hub.Utils;
 
 public class Contributor {
 	/**
@@ -17,9 +19,9 @@ public class Contributor {
 	 */
 	private URL url;
 
-	public Contributor(String name, URL url) {
-		this.name = requireNonNull(name);
-		this.url = requireNonNull(url);
+	public Contributor(JsonObject contr) {
+		this.name = contr.getString("login");
+		this.url = Utils.newUrl(contr.getString("url"));
 	}
 
 	public String getName() {

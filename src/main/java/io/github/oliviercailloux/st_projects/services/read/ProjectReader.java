@@ -1,62 +1,63 @@
 package io.github.oliviercailloux.st_projects.services.read;
 
-import java.io.IOException;
-import java.io.Reader;
-import java.util.List;
-import java.util.Objects;
+import static com.google.common.base.Preconditions.checkArgument;
+import static java.util.Objects.requireNonNull;
 
-import org.asciidoctor.Asciidoctor;
-import org.asciidoctor.ast.AbstractBlock;
-import org.asciidoctor.ast.Document;
-import org.asciidoctor.ast.ListNode;
-import org.asciidoctor.ast.Section;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.Reader;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.MoreCollectors;
-import com.google.common.io.CharStreams;
+import com.google.common.collect.Lists;
+import com.google.common.io.Files;
+
+import io.github.oliviercailloux.st_projects.model.Project;
 
 public class ProjectReader {
+
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(ProjectReader.class);
 
-	private final Asciidoctor asciidoctor;
-
-	private Document doc;
+	private final FunctionalitiesReader functionalitiesReader;
 
 	public ProjectReader() {
-		asciidoctor = Asciidoctor.Factory.create();
-		doc = null;
+		functionalitiesReader = new FunctionalitiesReader();
 	}
 
-	public void read(Reader source) throws IOException {
-		doc = asciidoctor.load(CharStreams.toString(source), ImmutableMap.of());
-		final List<AbstractBlock> blocks = doc.blocks();
-		for (AbstractBlock block : blocks) {
-			LOGGER.debug("Title: {}.", block.getTitle());
+	public Project asProject(Reader source, String originFileName) throws IllegalFormat, IOException {
+		requireNonNull(source);
+		final String baseName = Files.getNameWithoutExtension(requireNonNull(originFileName));
+		checkArgument(!baseName.isEmpty());
+		final Project project = new Project(baseName);
+		functionalitiesReader.read(source);
+		project.getFunctionalities().addAll(functionalitiesReader.getFunctionalities());
+		final String title = functionalitiesReader.getDoc().getAttribute("doctitle").toString();
+		if (!baseName.equals(title)) {
+			throw new IllegalFormat("Read title: " + title + ".");
 		}
-
-		final Section section;
-		{
-			final AbstractBlock matchingBlock = blocks.stream()
-					.filter(b -> Objects.equals(b.getTitle(), "Fonctions demandées"))
-					.collect(MoreCollectors.onlyElement());
-			section = (Section) matchingBlock;
-		}
-		LOGGER.info("Found section: {}.", section.getTitle());
-
-		final ListNode fcts;
-		{
-			final AbstractBlock matchingBlock = section.getBlocks().stream().filter(b -> b instanceof ListNode)
-					.collect(MoreCollectors.onlyElement());
-			fcts = (ListNode) matchingBlock;
-		}
-		LOGGER.info("Found functionalities list.");
-
-		final List<AbstractBlock> items = fcts.getBlocks();
-		for (AbstractBlock item : items) {
-			LOGGER.info("Item: {}.", item);
-		}
+		return project;
 	}
+
+	public List<Project> asProjects(Path path) throws IOException, IllegalFormat {
+		final List<Project> projects = Lists.newLinkedList();
+		final List<File> files = Arrays.asList(path.toFile().listFiles());
+		Collections.sort(files);
+		LOGGER.info("Found files: {}.", files);
+		for (File file : files) {
+			try (InputStreamReader source = new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8)) {
+				projects.add(asProject(source, file.getName()));
+			}
+		}
+		return projects;
+	}
+
 }

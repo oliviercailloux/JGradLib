@@ -14,9 +14,9 @@ public class TestRead {
 	private static final Logger LOGGER = LoggerFactory.getLogger(TestRead.class);
 
 	@Test
-	public void test() throws IOException {
+	public void test() throws IOException, IllegalFormat {
 		LOGGER.info("Started.");
-		final ProjectReader reader = new ProjectReader();
+		final FunctionalitiesReader reader = new FunctionalitiesReader();
 		try (InputStreamReader sourceReader = new InputStreamReader(
 				getClass().getResourceAsStream("Assisted Board Games.adoc"), StandardCharsets.UTF_8)) {
 			reader.read(sourceReader);
