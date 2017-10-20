@@ -7,6 +7,7 @@ import javax.json.JsonObject;
 import com.google.common.base.MoreObjects;
 
 import io.github.oliviercailloux.st_projects.services.git_hub.Utils;
+import jersey.repackaged.com.google.common.base.Objects;
 
 public class Contributor {
 	/**
@@ -24,12 +25,26 @@ public class Contributor {
 		this.url = Utils.newUrl(contr.getString("url"));
 	}
 
+	@Override
+	public boolean equals(Object o2) {
+		if (!(o2 instanceof Contributor)) {
+			return false;
+		}
+		final Contributor c2 = (Contributor) o2;
+		return Objects.equal(url, c2.url);
+	}
+
 	public String getName() {
 		return name;
 	}
 
 	public URL getUrl() {
 		return url;
+	}
+
+	@Override
+	public int hashCode() {
+		return Objects.hashCode(url);
 	}
 
 	@Override

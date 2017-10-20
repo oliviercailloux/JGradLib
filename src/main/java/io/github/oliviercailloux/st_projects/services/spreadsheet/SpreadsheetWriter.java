@@ -116,7 +116,7 @@ public class SpreadsheetWriter {
 					final Optional<GitHubIssue> issueOpt = project.getGhProject().flatMap((p) -> p.getIssue(fctName));
 					final Cell cellFctName = sheet.getCellByPosition(curCol, curRow);
 					if (issueOpt.isPresent()) {
-						final URL issueUrl = issueOpt.get().getUrl();
+						final URL issueUrl = issueOpt.get().getHtmlURL();
 						cellFctName.addParagraph("").appendHyperlink(fctName, Utils.toURI(issueUrl));
 					} else {
 						cellFctName.setStringValue(fctName);

@@ -2,6 +2,8 @@ package io.github.oliviercailloux.st_projects.services.git_hub;
 
 import static java.util.Objects.requireNonNull;
 
+import java.io.IOException;
+import java.io.StringReader;
 import java.time.LocalDate;
 import java.time.Month;
 import java.time.MonthDay;
@@ -9,9 +11,12 @@ import java.time.ZoneOffset;
 import java.util.LinkedList;
 import java.util.List;
 
+import javax.json.Json;
 import javax.json.JsonArray;
 import javax.json.JsonObject;
+import javax.json.JsonReader;
 import javax.json.JsonValue;
+import javax.ws.rs.ProcessingException;
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
 import javax.ws.rs.client.Invocation.Builder;
@@ -40,14 +45,22 @@ public class RepositoryFinder {
 		floorSearchDate = getFloorSept1();
 	}
 
-	public List<GitHubProject> find(Project project) {
+	public List<GitHubProject> find(Project project) throws IOException {
 		final String projectName = project.getName();
 		final LinkedList<GitHubProject> ghProjects = Lists.newLinkedList();
 		final Builder request = client.target(SEARCH_URI)
 				.queryParam("q", projectName + " in:name created:>" + floorSearchDate.toString())
 				.request(Fetch.GIT_HUB_MEDIA_TYPE);
-		final Response response = request.get();
-		final JsonObject json = response.readEntity(JsonObject.class);
+		final String content;
+		try (Response response = request.get()) {
+			content = response.readEntity(String.class);
+		} catch (ProcessingException e) {
+			throw new IOException(e);
+		}
+		final JsonObject json;
+		try (JsonReader jr = Json.createReader(new StringReader(content))) {
+			json = jr.readObject();
+		}
 		LOGGER.info("Found nb: {}.", json.getInt("total_count"));
 		final JsonArray repos = json.getJsonArray("items");
 //			final Iterable<String> reposCreat = Iterables.transform(repos, (r) -> {

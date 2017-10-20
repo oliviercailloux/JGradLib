@@ -3,6 +3,7 @@ package io.github.oliviercailloux.st_projects.services.git_hub;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import java.io.IOException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.Month;
@@ -21,7 +22,7 @@ public class TestFinder {
 	private static final Logger LOGGER = LoggerFactory.getLogger(TestFinder.class);
 
 	@Test
-	public void testFindMyRepo() {
+	public void testFindMyRepo() throws IOException {
 		final Project myProject = new Project("XMCDA-2.2.1-JAXB");
 		final RepositoryFinder finder = new RepositoryFinder();
 		finder.setFloorSearchDate(LocalDate.of(2015, Month.DECEMBER, 1));
@@ -33,7 +34,7 @@ public class TestFinder {
 	}
 
 	@Test
-	public void testNoFindTooLate() {
+	public void testNoFindTooLate() throws IOException {
 		final Project myProject = new Project("java-course");
 		final RepositoryFinder finder = new RepositoryFinder();
 		finder.setFloorSearchDate(LocalDate.of(2017, Month.DECEMBER, 1));

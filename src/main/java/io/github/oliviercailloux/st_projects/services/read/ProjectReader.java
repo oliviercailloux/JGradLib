@@ -49,7 +49,9 @@ public class ProjectReader {
 
 	public List<Project> asProjects(Path path) throws IOException, IllegalFormat {
 		final List<Project> projects = Lists.newLinkedList();
-		final List<File> files = Arrays.asList(path.toFile().listFiles());
+		final File dir = path.toFile();
+		checkArgument(dir.isDirectory());
+		final List<File> files = Arrays.asList(dir.listFiles());
 		Collections.sort(files);
 		LOGGER.info("Found files: {}.", files);
 		for (File file : files) {

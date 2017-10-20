@@ -24,6 +24,11 @@
 			<version>23.0</version>
 		</dependency>
 		<dependency>
+			<groupId>com.diffplug.durian</groupId>
+			<artifactId>durian</artifactId>
+			<version>3.4.0</version>
+		</dependency>
+		<dependency>
 			<groupId>org.asciidoctor</groupId>
 			<artifactId>asciidoctorj</artifactId>
 			<version>1.6.0-alpha.5</version>
@@ -31,7 +36,7 @@
 		<dependency>
 			<groupId>javax.ws.rs</groupId>
 			<artifactId>javax.ws.rs-api</artifactId>
-			<version>2.0.1</version>
+			<version>2.1</version>
 		</dependency>
 		<dependency>
 			<groupId>javax.json</groupId>
@@ -53,13 +58,30 @@
 				</exclusion>
 			</exclusions>
 		</dependency>
-
 		<dependency>
-			<groupId>org.glassfish.jersey.bundles</groupId>
-			<artifactId>jaxrs-ri</artifactId>
-			<version>2.26-b06</version>
-			<scope>runtime</scope>
+			<groupId>com.jcabi</groupId>
+			<artifactId>jcabi-github</artifactId>
+			<version>0.33</version>
 		</dependency>
+		<dependency>
+			<groupId>org.eclipse.jgit</groupId>
+			<artifactId>org.eclipse.jgit</artifactId>
+			<version>4.8.0.201706111038-r</version>
+		</dependency>
+		<!-- koshuke does not have events associated to issues, it seems. -->
+		<!-- <dependency> -->
+		<!-- <groupId>org.kohsuke</groupId> -->
+		<!-- <artifactId>github-api</artifactId> -->
+		<!-- <version>1.86</version> -->
+		<!-- </dependency> -->
+
+		<!-- Hurts when used together with jcabi -->
+		<!-- <dependency> -->
+		<!-- <groupId>org.glassfish.jersey.bundles</groupId> -->
+		<!-- <artifactId>jaxrs-ri</artifactId> -->
+		<!-- <version>2.26</version> -->
+		<!-- <scope>runtime</scope> -->
+		<!-- </dependency> -->
 		<dependency>
 			<groupId>org.glassfish</groupId>
 			<artifactId>javax.json</artifactId>
@@ -86,12 +108,5 @@
 			<version>2.9.0</version>
 			<scope>test</scope>
 		</dependency>
-		<!-- TODO enquire whether this should be required -->
-		<!-- <dependency> -->
-		<!-- <groupId>net.bytebuddy</groupId> -->
-		<!-- <artifactId>byte-buddy-dep</artifactId> -->
-		<!-- <version>1.7.0</version> -->
-		<!-- <scope>test</scope> -->
-		<!-- </dependency> -->
 	</dependencies>
 </project>

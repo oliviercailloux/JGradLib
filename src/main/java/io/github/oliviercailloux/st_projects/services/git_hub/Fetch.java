@@ -27,6 +27,7 @@ import org.slf4j.LoggerFactory;
 import com.beust.jcommander.internal.Lists;
 import com.google.common.base.Strings;
 
+import io.github.oliviercailloux.st_projects.model.GitHubEvent;
 import io.github.oliviercailloux.st_projects.model.GitHubIssue;
 import io.github.oliviercailloux.st_projects.model.GitHubProject;
 import io.github.oliviercailloux.st_projects.model.Project;
@@ -68,18 +69,64 @@ public class Fetch implements AutoCloseable {
 		client.close();
 	}
 
+	public JsonObject fetchEventDetails(GitHubEvent event) throws IOException {
+		final WebTarget target = client.target(Utils.toURI(event.getApiURL()));
+		final Builder request = target.request(GIT_HUB_MEDIA_TYPE);
+		final String jsonEventDetailsStr;
+		try (Response response = request.get()) {
+			readRates(response);
+			readLinks(response);
+			jsonEventDetailsStr = response.readEntity(String.class);
+		} catch (ProcessingException e) {
+			throw new IOException(e);
+		}
+		LOGGER.info("Received: {}.", jsonEventDetailsStr);
+		final JsonObject jsonEventDetails;
+		try (JsonReader jr = Json.createReader(new StringReader(jsonEventDetailsStr))) {
+			jsonEventDetails = jr.readObject();
+		}
+		return jsonEventDetails;
+	}
+
+	public List<GitHubEvent> fetchEvents(GitHubIssue issue) throws IOException {
+		final WebTarget target = client.target(Utils.toURI(issue.getApiURL())).path("events");
+		final Builder request = target.request(GIT_HUB_MEDIA_TYPE);
+		final String jsonEventsStr;
+		try (Response response = request.get()) {
+			readRates(response);
+			readLinks(response);
+			jsonEventsStr = response.readEntity(String.class);
+		} catch (ProcessingException e) {
+			throw new IOException(e);
+		}
+		LOGGER.info("List: {}.", jsonEventsStr);
+		final JsonArray jsonEvents;
+		try (JsonReader jr = Json.createReader(new StringReader(jsonEventsStr))) {
+			jsonEvents = jr.readArray();
+		}
+		LOGGER.info("List: {}.", jsonEvents);
+
+		final List<GitHubEvent> events = Lists.newLinkedList();
+		for (JsonValue jsonEventValue : jsonEvents) {
+			final JsonObject jsonEvent = jsonEventValue.asJsonObject();
+			final GitHubEvent event = new GitHubEvent(jsonEvent);
+			events.add(event);
+		}
+		return events;
+	}
+
 	public List<GitHubIssue> fetchIssues(GitHubProject project) throws IOException {
 		final WebTarget target = client.target(Utils.toURI(project.getApiURL())).path("issues").queryParam("state",
 				"all");
 		final Builder request = target.request(GIT_HUB_MEDIA_TYPE);
-		final Response response;
-		try {
-			response = request.get();
+		final String jsonIssuesStr;
+		try (Response response = request.get()) {
+			readRates(response);
+			jsonIssuesStr = response.readEntity(String.class);
 		} catch (ProcessingException e) {
 			throw new IOException(e);
 		}
-		readRates(response);
-		final String jsonIssuesStr = response.readEntity(String.class);
+		/** TODO what if too many? */
 		LOGGER.info("List: {}.", jsonIssuesStr);
 		final JsonArray jsonIssues;
 		try (JsonReader jr = Json.createReader(new StringReader(jsonIssuesStr))) {
@@ -95,13 +142,17 @@ public class Fetch implements AutoCloseable {
 		return issues;
 	}
 
-	public List<Project> fetchProjects() throws IllegalFormat {
+	public List<Project> fetchProjects() throws IllegalFormat, IOException {
 		projects = Lists.newLinkedList();
 		final Builder request = client.target(CONTENT_URI).resolveTemplate("owner", "oliviercailloux")
 				.resolveTemplate("repo", "projets").resolveTemplate("path", "EE").request(GIT_HUB_MEDIA_TYPE);
-		final Response response = request.get();
-		readRates(response);
-		final String jsonFileListStr = response.readEntity(String.class);
+		final String jsonFileListStr;
+		try (Response response = request.get()) {
+			readRates(response);
+			jsonFileListStr = response.readEntity(String.class);
+		} catch (ProcessingException e) {
+			throw new IOException(e);
+		}
 		LOGGER.info("List: {}.", jsonFileListStr);
 		try (JsonReader jr = Json.createReader(new StringReader(jsonFileListStr))) {
 			final JsonArray jsonFileList = jr.readArray();
@@ -129,25 +180,36 @@ public class Fetch implements AutoCloseable {
 		return projects;
 	}
 
-	public void fetchReadme() {
+	public void fetchReadme() throws IOException {
 		final WebTarget target = client.target(README_URI).resolveTemplate("owner", "oliviercailloux")
 				.resolveTemplate("repo", "java-course");
 		readRaw(target);
 	}
 
+	private void readLinks(Response response) {
+		LOGGER.info("Link: {}.", Strings.nullToEmpty(response.getHeaderString("Link")));
+	}
+
 	private void readRates(Response response) {
 		rateLimit = Strings.nullToEmpty(response.getHeaderString("X-RateLimit-Remaining"));
 		LOGGER.info("Rate limit: {}.", rateLimit);
-		final String rateResetString = response.getHeaderString("X-RateLimit-Reset");
-		rateReset = Instant.ofEpochSecond(Integer.parseInt(rateResetString)).atZone(ZoneId.systemDefault());
-		LOGGER.info("Rate reset: {}.", rateReset);
+		final String rateResetString = Strings.nullToEmpty(response.getHeaderString("X-RateLimit-Reset"));
+		if (!rateResetString.isEmpty()) {
+			rateReset = Instant.ofEpochSecond(Integer.parseInt(rateResetString)).atZone(ZoneId.systemDefault());
+			LOGGER.info("Rate reset: {}.", rateReset);
+		} else {
+			LOGGER.info("No rate reset info.");
+		}
 	}
 
-	private void readRaw(final WebTarget target) {
+	private void readRaw(final WebTarget target) throws IOException {
 		final Builder request = target.request(GIT_HUB_RAW_MEDIA_TYPE);
-		final Response response = request.get();
-		readRates(response);
-		content = response.readEntity(String.class);
+		try (Response response = request.get()) {
+			readRates(response);
+			content = response.readEntity(String.class);
+		} catch (ProcessingException e) {
+			throw new IOException(e);
+		}
 		LOGGER.info("Content retrieved…\n{}.", content);
 	}
 }
