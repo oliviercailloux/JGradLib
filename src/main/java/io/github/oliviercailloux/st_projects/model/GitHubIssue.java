@@ -23,13 +23,13 @@ import org.slf4j.LoggerFactory;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterators;
+import com.google.common.collect.PeekingIterator;
+import com.google.common.collect.Sets;
 import com.jcabi.github.Event;
 import com.jcabi.github.Issue;
 
 import io.github.oliviercailloux.st_projects.utils.Utils;
-import jersey.repackaged.com.google.common.collect.Iterators;
-import jersey.repackaged.com.google.common.collect.PeekingIterator;
-import jersey.repackaged.com.google.common.collect.Sets;
 
 public class GitHubIssue {
 	@SuppressWarnings("unused")
@@ -97,7 +97,7 @@ public class GitHubIssue {
 				}
 			}
 
-			final Set<GitHubUser> assignees = event.getAssignees().get();
+			final Set<User> assignees = event.getAssignees().get();
 			if (assignees.size() >= 1 && assignees.size() <= 2) {
 				return Optional.of(event);
 			}
@@ -176,22 +176,22 @@ public class GitHubIssue {
 		return helper.toString();
 	}
 
-	private void initEventsAssigneesAndStates() throws IOException {
+	private void initEventsAssigneesAndStates() {
 		checkState(events != null);
-		final Set<GitHubUser> assigneesSet = Sets.newLinkedHashSet();
+		final Set<User> assigneesSet = Sets.newLinkedHashSet();
 		for (GitHubEvent event : events) {
 			final String type = event.getType();
 			switch (type) {
 			case Event.ASSIGNED: {
-				final GitHubUser c = event.getAssignee().get();
-				LOGGER.info("Assigned {}.", c);
+				final User c = event.getAssignee().get();
+				LOGGER.debug("Assigned {}.", c);
 				final boolean modified = assigneesSet.add(c);
 				assert modified;
 				break;
 			}
 			case Event.UNASSIGNED: {
-				final GitHubUser c = event.getAssignee().get();
-				LOGGER.info("Unassigned {}.", c);
+				final User c = event.getAssignee().get();
+				LOGGER.debug("Unassigned {}.", c);
 				final boolean modified = assigneesSet.remove(c);
 				assert modified;
 				break;
@@ -222,13 +222,6 @@ public class GitHubIssue {
 		}
 
 		initializedAllEvents = true;
-
-		final Optional<GitHubEvent> event = getFirstEventDone();
-		final Optional<Set<GitHubUser>> validAssigneesOpt = event.flatMap((e) -> e.getAssignees());
-		final Set<GitHubUser> validAssignees = validAssigneesOpt.orElse(ImmutableSet.of());
-		for (GitHubUser assignee : validAssignees) {
-			assignee.init();
-		}
 	}
 
 	private void initJson() throws IOException {

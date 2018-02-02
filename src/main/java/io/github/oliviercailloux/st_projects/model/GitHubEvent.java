@@ -18,7 +18,6 @@ import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableSet;
 import com.jcabi.github.Event;
 import com.jcabi.github.Github;
-import com.jcabi.github.User;
 
 import io.github.oliviercailloux.st_projects.utils.Utils;
 
@@ -27,9 +26,9 @@ public class GitHubEvent {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(GitHubEvent.class);
 
-	private Optional<GitHubUser> assignee;
+	private Optional<User> assignee;
 
-	private Set<GitHubUser> assignees;
+	private Set<User> assignees;
 
 	private Event event;
 
@@ -45,6 +44,8 @@ public class GitHubEvent {
 	 */
 	private Optional<IssueState> state;
 
+	private final GitHubFactory userFactory;
+
 	public GitHubEvent(Event event) {
 		this.json = null;
 		this.event = event;
@@ -52,6 +53,7 @@ public class GitHubEvent {
 		github = event.repo().github();
 		assignees = null;
 		state = Optional.empty();
+		userFactory = GitHubFactory.using(github);
 	}
 
 	public URL getApiURL() {
@@ -61,11 +63,11 @@ public class GitHubEvent {
 	/**
 	 * @return the returned users are not initialized.
 	 */
-	public Optional<GitHubUser> getAssignee() {
+	public Optional<User> getAssignee() {
 		return assignee;
 	}
 
-	public Optional<Set<GitHubUser>> getAssignees() {
+	public Optional<Set<User>> getAssignees() {
 		return Optional.ofNullable(assignees);
 	}
 
@@ -106,13 +108,12 @@ public class GitHubEvent {
 				assignee = Optional.empty();
 			} else {
 				final String login = ass.getString("login");
-				final User user = github.users().get(login);
-				assignee = Optional.of(new GitHubUser(user));
+				assignee = Optional.of(userFactory.getUser(login));
 			}
 		}
 	}
 
-	public void setAssignees(Set<GitHubUser> assignees) {
+	public void setAssignees(Set<User> assignees) {
 		this.assignees = ImmutableSet.copyOf(assignees);
 	}
 

@@ -8,7 +8,6 @@ import org.slf4j.LoggerFactory;
 
 import com.jcabi.github.Github;
 import com.jcabi.github.RtGithub;
-import com.jcabi.github.User;
 
 import io.github.oliviercailloux.st_projects.utils.Utils;
 
@@ -21,9 +20,7 @@ public class TestGitHubUser {
 	public void test() throws Exception {
 		Utils.logLimits();
 		final Github gitHub = new RtGithub();
-		final User userJcabi = gitHub.users().get("oliviercailloux");
-		final GitHubUser user = new GitHubUser(userJcabi);
-		user.init();
+		final User user = GitHubFactory.using(gitHub).getUser("oliviercailloux");
 		assertEquals(Utils.newURL("https://api.github.com/users/oliviercailloux"), user.getApiURL());
 		assertEquals(Utils.newURL("https://github.com/oliviercailloux"), user.getHtmlURL());
 		assertEquals("oliviercailloux", user.getLogin());

@@ -1,33 +1,37 @@
 package io.github.oliviercailloux.st_projects.model;
 
-import java.io.IOException;
+import static java.util.Objects.requireNonNull;
+
 import java.net.URL;
+import java.util.Objects;
 
 import javax.json.JsonObject;
 
 import com.google.common.base.MoreObjects;
-import com.jcabi.github.User;
 
 import io.github.oliviercailloux.st_projects.utils.Utils;
-import jersey.repackaged.com.google.common.base.Objects;
 
-public class GitHubUser {
-	private JsonObject json;
+public class User {
+	public static User from(JsonObject json) {
+		return new User(json);
+	}
 
-	private User user;
+	/**
+	 * Not <code>null</code>.
+	 */
+	private final JsonObject json;
 
-	public GitHubUser(User user) {
-		this.user = user;
-		json = null;
+	private User(JsonObject json) {
+		this.json = requireNonNull(json);
 	}
 
 	@Override
 	public boolean equals(Object o2) {
-		if (!(o2 instanceof GitHubUser)) {
+		if (!(o2 instanceof User)) {
 			return false;
 		}
-		final GitHubUser c2 = (GitHubUser) o2;
-		return Objects.equal(user, c2.user);
+		final User c2 = (User) o2;
+		return Objects.equals(getLogin(), c2.getLogin());
 	}
 
 	public URL getApiURL() {
@@ -38,21 +42,21 @@ public class GitHubUser {
 		return Utils.newURL(json.getString("html_url"));
 	}
 
+	public JsonObject getJson() {
+		return json;
+	}
+
 	public String getLogin() {
 		return json.getString("login");
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hashCode(user);
-	}
-
-	public void init() throws IOException {
-		json = user.json();
+		return Objects.hashCode(getLogin());
 	}
 
 	@Override
 	public String toString() {
-		return MoreObjects.toStringHelper(this).addValue(user).toString();
+		return MoreObjects.toStringHelper(this).addValue(getLogin()).toString();
 	}
 }

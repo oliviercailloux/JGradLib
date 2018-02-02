@@ -51,11 +51,10 @@ public class TestGitHubIssue {
 		assertEquals(Utils.newURL("https://api.github.com/repos/oliviercailloux/testrel"), issue.getRepoURL());
 		assertEquals(Utils.newURL("https://api.github.com/repos/oliviercailloux/testrel/issues/2"), issue.getApiURL());
 
-		final GitHubUser userC = new GitHubUser(gitHub.users().get("oliviercailloux"));
-		final GitHubUser userN = new GitHubUser(gitHub.users().get("bnegreve"));
+		final User userN = GitHubFactory.using(gitHub).getUser("bnegreve");
 		final GitHubEvent event = issue.getFirstEventDone().get();
-		final Set<GitHubUser> actual = event.getAssignees().get();
-		assertEquals(ImmutableSet.of(userC, userN), actual);
+		final Set<User> actual = event.getAssignees().get();
+		assertEquals(ImmutableSet.of(userN), actual);
 	}
 
 	@Test

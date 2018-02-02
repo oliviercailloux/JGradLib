@@ -11,14 +11,15 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.collect.Iterables;
 import com.jcabi.github.Coordinates;
 import com.jcabi.github.Github;
 import com.jcabi.github.Repo;
 import com.jcabi.github.RtGithub;
 
 import io.github.oliviercailloux.st_projects.services.git_hub.RepositoryFinder;
+import io.github.oliviercailloux.st_projects.utils.JsonUtils;
 import io.github.oliviercailloux.st_projects.utils.Utils;
-import jersey.repackaged.com.google.common.collect.Iterables;
 
 public class TestGitHubProject {
 
@@ -59,7 +60,9 @@ public class TestGitHubProject {
 		assertFalse(project.getIssue("non-existant").isPresent());
 		assertEquals("testrel", project.getName());
 
-		final GitHubUser userC = new GitHubUser(gitHub.users().get("oliviercailloux"));
+		final User userC = GitHubFactory.using(gitHub).getUser("oliviercailloux");
+		LOGGER.debug(JsonUtils.asPrettyString(userC.getJson()));
+		LOGGER.debug(JsonUtils.asPrettyString(project.getOwner().getJson()));
 		assertEquals(userC, project.getOwner());
 	}
 

@@ -26,7 +26,7 @@ import com.jcabi.github.Repo;
 import com.jcabi.github.RtGithub;
 
 import io.github.oliviercailloux.st_projects.model.Functionality;
-import io.github.oliviercailloux.st_projects.model.GitHubUser;
+import io.github.oliviercailloux.st_projects.model.User;
 import io.github.oliviercailloux.st_projects.model.ModelMocker;
 import io.github.oliviercailloux.st_projects.model.Project;
 import io.github.oliviercailloux.st_projects.model.ProjectOnGitHub;
@@ -67,7 +67,7 @@ public class TestWrite {
 	@Test
 	public void testWriteOneGHProject() throws Exception {
 		final Project p1 = ModelMocker.newProject("p1", 3);
-		final GitHubUser c1 = ModelMocker.newContributor("c1");
+		final User c1 = ModelMocker.newContributor("c1");
 		final ProjectOnGitHub ghp1 = ModelMocker.newGitHubProject(p1, c1, Utils.EXAMPLE_URL);
 		ModelMocker.addIssue(ghp1, "p1-f1");
 		ModelMocker.addIssue(ghp1, "p1-f3");
@@ -115,12 +115,12 @@ public class TestWrite {
 	@Test
 	public void testWriteTwoGHProjectsDeep() throws Exception {
 		final Project p1 = ModelMocker.newProject("p1", 3);
-		final GitHubUser c1 = ModelMocker.newContributor("c1");
+		final User c1 = ModelMocker.newContributor("c1");
 		final ProjectOnGitHub ghp1 = ModelMocker.newGitHubProject(p1, c1, Utils.EXAMPLE_URL);
 		ModelMocker.addIssue(ghp1, "p1-f1");
 		ModelMocker.addIssue(ghp1, "p1-f3");
 		final Project p2 = ModelMocker.newProject("p2", 4);
-		final GitHubUser c2 = ModelMocker.newContributor("c2");
+		final User c2 = ModelMocker.newContributor("c2");
 		final ProjectOnGitHub ghp2 = ModelMocker.newGitHubProject(p2, c2, Utils.EXAMPLE_URL);
 		ModelMocker.addIssue(ghp2, "p2-f1");
 		ModelMocker.addIssue(ghp2, "p2-f2");

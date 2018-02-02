@@ -25,7 +25,7 @@ import com.google.common.collect.Range;
 import io.github.oliviercailloux.st_projects.model.Functionality;
 import io.github.oliviercailloux.st_projects.model.GitHubEvent;
 import io.github.oliviercailloux.st_projects.model.GitHubIssue;
-import io.github.oliviercailloux.st_projects.model.GitHubUser;
+import io.github.oliviercailloux.st_projects.model.User;
 import io.github.oliviercailloux.st_projects.model.Project;
 import io.github.oliviercailloux.st_projects.model.ProjectOnGitHub;
 import io.github.oliviercailloux.st_projects.model.ProjectWithPossibleGitHubData;
@@ -215,18 +215,18 @@ public class SpreadsheetWriter {
 		final Optional<GitHubEvent> eventOptRaw = issueOpt.flatMap((i) -> i.getFirstEventDone());
 		final Range<Instant> considered = Range.atMost(ignoreAfter);
 		final Optional<GitHubEvent> eventOpt = eventOptRaw.filter((e) -> considered.contains(e.getCreatedAt()));
-		final Optional<Set<GitHubUser>> assigneesOpt = eventOpt.flatMap((e) -> e.getAssignees());
-		final Set<GitHubUser> assignees = assigneesOpt.orElse(ImmutableSet.of());
+		final Optional<Set<User>> assigneesOpt = eventOpt.flatMap((e) -> e.getAssignees());
+		final Set<User> assignees = assigneesOpt.orElse(ImmutableSet.of());
 
 		if (!assignees.isEmpty()) {
 			final Paragraph p = cellAss.addParagraph("");
-			final Iterator<GitHubUser> assigneesIt = assignees.iterator();
+			final Iterator<User> assigneesIt = assignees.iterator();
 			if (assigneesIt.hasNext()) {
-				final GitHubUser assignee = assigneesIt.next();
+				final User assignee = assigneesIt.next();
 				p.appendHyperlink(assignee.getLogin(), Utils.toURI(assignee.getHtmlURL()));
 			}
 			while (assigneesIt.hasNext()) {
-				final GitHubUser assignee = assigneesIt.next();
+				final User assignee = assigneesIt.next();
 				p.appendTextContentNotCollapsed(", ");
 				p.appendHyperlink(assignee.getLogin(), Utils.toURI(assignee.getHtmlURL()));
 			}

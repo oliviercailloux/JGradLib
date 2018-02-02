@@ -3,6 +3,7 @@ package io.github.oliviercailloux.st_projects.model;
 import static org.junit.Assert.assertEquals;
 
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 
 import org.junit.Test;
 import org.mockito.internal.util.collections.Iterables;
@@ -36,7 +37,7 @@ public class TestGitHubEvent {
 		event.init();
 		assertEquals(Utils.newURL("https://api.github.com/repos/oliviercailloux/testrel/issues/events/1301249271"),
 				event.getApiURL());
-		assertEquals(LocalDateTime.of(2017, 10, 19, 14, 50, 22), event.getCreatedAt());
+		assertEquals(LocalDateTime.of(2017, 10, 19, 14, 50, 22).toInstant(ZoneOffset.UTC), event.getCreatedAt());
 		assertEquals(1301249271, event.getId());
 		assertEquals(Event.ASSIGNED, event.getType());
 	}

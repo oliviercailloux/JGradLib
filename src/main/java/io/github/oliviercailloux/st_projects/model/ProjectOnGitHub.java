@@ -21,13 +21,14 @@ import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
+import com.jcabi.github.Github;
 import com.jcabi.github.Issue;
 import com.jcabi.github.Repo;
 
 import io.github.oliviercailloux.st_projects.utils.JsonUtils;
 import io.github.oliviercailloux.st_projects.utils.Utils;
-import jersey.repackaged.com.google.common.collect.Iterables;
 
 public class ProjectOnGitHub {
 	@SuppressWarnings("unused")
@@ -48,9 +49,13 @@ public class ProjectOnGitHub {
 
 	private Repo repo;
 
+	private GitHubFactory userFactory;
+
 	public ProjectOnGitHub(Project project, Repo repo) {
 		this.project = requireNonNull(project);
 		this.repo = requireNonNull(repo);
+		final Github github = repo.github();
+		userFactory = GitHubFactory.using(github);
 		this.json = null;
 		issues = null;
 		issuesByName = null;
@@ -88,9 +93,10 @@ public class ProjectOnGitHub {
 		return json.getString("name");
 	}
 
-	public GitHubUser getOwner() {
+	public User getOwner() {
 		final JsonObject ownerJson = json.getJsonObject("owner");
-		final GitHubUser owner = new GitHubUser(repo.github().users().get(ownerJson.getString("login")));
+		final String login = userFactory.putUserJson(ownerJson);
+		final User owner = userFactory.getCachedUser(login);
 		return owner;
 	}
 

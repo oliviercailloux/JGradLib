@@ -12,6 +12,7 @@ import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.jcabi.github.RtGithub;
 
@@ -26,7 +27,6 @@ import io.github.oliviercailloux.st_projects.services.read.ProjectReader;
 import io.github.oliviercailloux.st_projects.services.spreadsheet.SpreadsheetException;
 import io.github.oliviercailloux.st_projects.services.spreadsheet.SpreadsheetWriter;
 import io.github.oliviercailloux.st_projects.utils.Utils;
-import jersey.repackaged.com.google.common.collect.Iterables;
 
 public class App {
 	@SuppressWarnings("unused")

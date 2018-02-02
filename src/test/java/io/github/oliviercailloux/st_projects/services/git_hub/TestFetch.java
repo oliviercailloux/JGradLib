@@ -26,8 +26,8 @@ import com.jcabi.github.RtGithub;
 
 import io.github.oliviercailloux.st_projects.model.GitHubEvent;
 import io.github.oliviercailloux.st_projects.model.GitHubIssue;
-import io.github.oliviercailloux.st_projects.model.GitHubUser;
 import io.github.oliviercailloux.st_projects.model.Project;
+import io.github.oliviercailloux.st_projects.model.User;
 import io.github.oliviercailloux.st_projects.services.read.IllegalFormat;
 import io.github.oliviercailloux.st_projects.utils.Utils;
 
@@ -41,18 +41,18 @@ public class TestFetch {
 		final Github github = new RtGithub(Utils.getToken());
 		final Repo repo = github.repos().get(new Coordinates.Simple("badga", "Collaborative-exams"));
 		final GitHubIssue issue = new GitHubIssue(repo.issues().get(3));
+		issue.init();
 		issue.initAllEvents();
+		assertEquals("https://github.com/badga/Collaborative-exams/issues/3", issue.getHtmlURL().toString());
+		assertEquals("https://api.github.com/repos/badga/Collaborative-exams/issues/3", issue.getApiURL().toString());
 		final Optional<GitHubEvent> optDone = issue.getFirstEventDone();
 		assertTrue(optDone.isPresent());
-		final Optional<Set<GitHubUser>> assigneesOpt = optDone.get().getAssignees();
+		final Optional<Set<User>> assigneesOpt = optDone.get().getAssignees();
 		assertTrue(assigneesOpt.isPresent());
-		final Set<GitHubUser> assignees = assigneesOpt.get();
-		for (GitHubUser gitHubUser : assignees) {
-			gitHubUser.init();
-		}
+		final Set<User> assignees = assigneesOpt.get();
 		final Stream<String> loginsStream = assignees.stream().map((u) -> u.getLogin());
 		final Set<String> logins = loginsStream.collect(Collectors.toSet());
-		final ImmutableSet<String> expected = ImmutableSet.of("jeffazzam", "laminetamendjari");
+		final ImmutableSet<String> expected = ImmutableSet.of("jeffazzam");
 		assertEquals(expected, logins);
 	}
 

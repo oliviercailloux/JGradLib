@@ -15,12 +15,12 @@ public class ModelMocker {
 		Mockito.when(project.getIssue(title)).thenReturn(Optional.of(issue));
 	}
 
-	public static GitHubUser newContributor(String name) {
+	public static User newContributor(String name) {
 		return newContributor(name, Utils.EXAMPLE_URL);
 	}
 
-	public static GitHubUser newContributor(String login, URL url) {
-		final GitHubUser c1 = Mockito.mock(GitHubUser.class);
+	public static User newContributor(String login, URL url) {
+		final User c1 = Mockito.mock(User.class);
 		Mockito.when(c1.getLogin()).thenReturn(login);
 		Mockito.when(c1.getHtmlURL()).thenReturn(url);
 		return c1;
@@ -34,7 +34,7 @@ public class ModelMocker {
 		return issue;
 	}
 
-	public static ProjectOnGitHub newGitHubProject(Project project, GitHubUser owner, URL url) {
+	public static ProjectOnGitHub newGitHubProject(Project project, User owner, URL url) {
 		final ProjectOnGitHub ghp1 = Mockito.mock(ProjectOnGitHub.class);
 		Mockito.when(ghp1.getApiURL()).thenReturn(url);
 		Mockito.when(ghp1.getHtmlURL()).thenReturn(url);
@@ -45,7 +45,7 @@ public class ModelMocker {
 
 	public static ProjectOnGitHub newGitHubProject(String projectName, String ownerName) {
 		final Project project = newProject(projectName, 0);
-		final GitHubUser owner = newContributor(ownerName);
+		final User owner = newContributor(ownerName);
 		return newGitHubProject(project, owner, Utils.EXAMPLE_URL);
 	}
 
