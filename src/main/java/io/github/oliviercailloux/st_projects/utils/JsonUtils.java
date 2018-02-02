@@ -13,6 +13,9 @@ import com.google.common.collect.ImmutableMap;
 public class JsonUtils {
 
 	static public String asPrettyString(JsonValue json) {
+		if (json == null) {
+			return "null";
+		}
 		final StringWriter stringWriter = new StringWriter();
 		final JsonWriterFactory writerFactory = Json
 				.createWriterFactory(ImmutableMap.of(JsonGenerator.PRETTY_PRINTING, true));

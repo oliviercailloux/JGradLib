@@ -29,10 +29,11 @@ import com.google.common.base.Strings;
 
 import io.github.oliviercailloux.st_projects.model.GitHubEvent;
 import io.github.oliviercailloux.st_projects.model.GitHubIssue;
-import io.github.oliviercailloux.st_projects.model.GitHubProject;
+import io.github.oliviercailloux.st_projects.model.ProjectOnGitHub;
 import io.github.oliviercailloux.st_projects.model.Project;
 import io.github.oliviercailloux.st_projects.services.read.IllegalFormat;
 import io.github.oliviercailloux.st_projects.services.read.ProjectReader;
+import io.github.oliviercailloux.st_projects.utils.Utils;
 
 public class Fetch implements AutoCloseable {
 	public static final MediaType GIT_HUB_MEDIA_TYPE = new MediaType("application", "vnd.github.v3+json");
@@ -86,60 +87,6 @@ public class Fetch implements AutoCloseable {
 			jsonEventDetails = jr.readObject();
 		}
 		return jsonEventDetails;
-	}
-
-	public List<GitHubEvent> fetchEvents(GitHubIssue issue) throws IOException {
-		final WebTarget target = client.target(Utils.toURI(issue.getApiURL())).path("events");
-		final Builder request = target.request(GIT_HUB_MEDIA_TYPE);
-		final String jsonEventsStr;
-		try (Response response = request.get()) {
-			readRates(response);
-			readLinks(response);
-			jsonEventsStr = response.readEntity(String.class);
-		} catch (ProcessingException e) {
-			throw new IOException(e);
-		}
-		LOGGER.info("List: {}.", jsonEventsStr);
-		final JsonArray jsonEvents;
-		try (JsonReader jr = Json.createReader(new StringReader(jsonEventsStr))) {
-			jsonEvents = jr.readArray();
-		}
-		LOGGER.info("List: {}.", jsonEvents);
-
-		final List<GitHubEvent> events = Lists.newLinkedList();
-		for (JsonValue jsonEventValue : jsonEvents) {
-			final JsonObject jsonEvent = jsonEventValue.asJsonObject();
-			final GitHubEvent event = new GitHubEvent(jsonEvent);
-			events.add(event);
-		}
-		return events;
-	}
-
-	public List<GitHubIssue> fetchIssues(GitHubProject project) throws IOException {
-		final WebTarget target = client.target(Utils.toURI(project.getApiURL())).path("issues").queryParam("state",
-				"all");
-		final Builder request = target.request(GIT_HUB_MEDIA_TYPE);
-		final String jsonIssuesStr;
-		try (Response response = request.get()) {
-			readRates(response);
-			jsonIssuesStr = response.readEntity(String.class);
-		} catch (ProcessingException e) {
-			throw new IOException(e);
-		}
-		/** TODO what if too many? */
-		LOGGER.info("List: {}.", jsonIssuesStr);
-		final JsonArray jsonIssues;
-		try (JsonReader jr = Json.createReader(new StringReader(jsonIssuesStr))) {
-			jsonIssues = jr.readArray();
-		}
-		LOGGER.info("List: {}.", jsonIssues);
-		final List<GitHubIssue> issues = Lists.newLinkedList();
-		for (JsonValue jsonIssueValue : jsonIssues) {
-			final JsonObject jsonIssue = jsonIssueValue.asJsonObject();
-			final GitHubIssue issue = new GitHubIssue(jsonIssue);
-			issues.add(issue);
-		}
-		return issues;
 	}
 
 	public List<Project> fetchProjects() throws IllegalFormat, IOException {

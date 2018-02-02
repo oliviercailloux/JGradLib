@@ -11,9 +11,11 @@ import java.text.ParseException;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.asciidoctor.Asciidoctor;
 import org.asciidoctor.ast.DescriptionList;
@@ -43,6 +45,8 @@ public class FunctionalitiesReader {
 
 	private final Asciidoctor asciidoctor;
 
+	private final Optional<BigDecimal> defaultDifficulty;
+
 	private final Pattern difficultyRegExp;
 
 	private Document doc;
@@ -55,6 +59,10 @@ public class FunctionalitiesReader {
 	private final DecimalFormat numberFormatter;
 
 	public FunctionalitiesReader() {
+		this(Optional.empty());
+	}
+
+	public FunctionalitiesReader(Optional<BigDecimal> defaultDifficulty) {
 		LOGGER.info("Loading.");
 		asciidoctor = Asciidoctor.Factory.create();
 		LOGGER.info("Loaded.");
@@ -63,9 +71,41 @@ public class FunctionalitiesReader {
 		 * Note that the sentence preceding the "difficulty" does not necessarily end
 		 * with a dot. (As in this example.) (Or in this example!)
 		 */
-		difficultyRegExp = Pattern.compile("^(?<Description>.*) \\((?<Difficulty>[0-9,]+).*$");
+		difficultyRegExp = Pattern.compile("^(?<Description>.*) \\((?<Difficulty>[0-9,]+)\\)$");
 		numberFormatter = (DecimalFormat) NumberFormat.getInstance(Locale.FRENCH);
 		numberFormatter.setParseBigDecimal(true);
+		this.defaultDifficulty = defaultDifficulty;
+	}
+
+	public Functionality asFunctionality(DescriptionListEntry item) throws IllegalFormat {
+		final List<ListItem> terms = item.getTerms();
+		checkFormat(terms.size() == 1);
+		final ListItem term = Iterables.getOnlyElement(terms);
+		final String functionalityName = term.getText();
+		checkFormat(!Strings.isNullOrEmpty(functionalityName));
+		final ListItem descriptionItem = item.getDescription();
+		checkFormat(descriptionItem != null);
+		assert descriptionItem != null;
+		final String descriptionFull = descriptionItem.getSource();
+		final String description;
+		final BigDecimal difficulty;
+		final Matcher matcher = difficultyRegExp.matcher(descriptionFull);
+		if (matcher.matches()) {
+			description = matcher.group("Description");
+			final String difficultyString = matcher.group("Difficulty");
+			/** This conversion is safe, as the pattern has matched the group. */
+			try {
+				difficulty = (BigDecimal) numberFormatter.parse(difficultyString);
+			} catch (ParseException e) {
+				throw new IllegalStateException(e);
+			}
+		} else {
+			checkFormat(defaultDifficulty.isPresent(),
+					"Difficulty not found (and default not provided) while matching '" + descriptionFull + "'.");
+			description = descriptionFull;
+			difficulty = defaultDifficulty.get();
+		}
+		return new Functionality(functionalityName, description, difficulty);
 	}
 
 	public Asciidoctor getAsciidoctor() {
@@ -92,7 +132,7 @@ public class FunctionalitiesReader {
 		functionalities = Lists.newLinkedList();
 
 		doc = asciidoctor.load(CharStreams.toString(requireNonNull(source)), ImmutableMap.of());
-		LOGGER.info("Doc title: {}.", doc.getAttribute("doctitle"));
+		LOGGER.debug("Doc title: {}.", doc.getAttribute("doctitle"));
 
 		final List<StructuralNode> blocks = doc.blocks();
 		logTitles(blocks);
@@ -101,47 +141,30 @@ public class FunctionalitiesReader {
 		{
 			final List<StructuralNode> matchingBlocks = blocks.stream()
 					.filter(b -> Objects.equals(b.getTitle(), "Fonctions demandées")).collect(Collectors.toList());
-			checkFormat(matchingBlocks.size() == 1);
+			checkFormat(matchingBlocks.size() == 1,
+					blocks.stream().map(StructuralNode::getTitle).collect(Collectors.toList()).toString() + "; "
+							+ matchingBlocks.toString());
 			final StructuralNode matchingBlock = Iterables.getOnlyElement(matchingBlocks);
 			section = (Section) matchingBlock;
 		}
-		LOGGER.info("Found section: {}.", section.getTitle());
+		LOGGER.debug("Found section: {}.", section.getTitle());
 
-		final DescriptionList fctsSource;
+		final List<DescriptionList> fctsSources;
 		{
-			final List<StructuralNode> matchingBlocks = section.getBlocks().stream()
-					.filter(b -> b instanceof DescriptionList).collect(Collectors.toList());
-			checkFormat(matchingBlocks.size() == 1);
-			final StructuralNode matchingBlock = Iterables.getOnlyElement(matchingBlocks);
-			fctsSource = (DescriptionList) matchingBlock;
+			final List<DescriptionList> matchingBlocks = section.getBlocks().stream()
+					.filter(b -> b instanceof DescriptionList).map(b -> (DescriptionList) b)
+					.collect(Collectors.toList());
+			checkFormat(matchingBlocks.size() >= 1 && matchingBlocks.size() <= 2);
+			fctsSources = matchingBlocks;
 		}
-		LOGGER.info("Found functionalities list.");
+		LOGGER.debug("Found functionalities lists.");
 
-		final List<DescriptionListEntry> items = fctsSource.getItems();
+		final Stream<DescriptionListEntry> itemsStream = fctsSources.stream().flatMap(d -> d.getItems().stream());
+		final List<DescriptionListEntry> items = itemsStream.collect(Collectors.toList());
 		for (DescriptionListEntry item : items) {
-			final List<ListItem> terms = item.getTerms();
-			checkFormat(terms.size() == 1);
-			final ListItem term = Iterables.getOnlyElement(terms);
-			final String functionalityName = term.getText();
-			checkFormat(!Strings.isNullOrEmpty(functionalityName));
-			final ListItem descriptionItem = item.getDescription();
-			checkFormat(descriptionItem != null);
-			assert descriptionItem != null;
-			final String descriptionFull = descriptionItem.getSource();
-			final Matcher matcher = difficultyRegExp.matcher(descriptionFull);
-			checkFormat(matcher.matches(), "Matching '" + descriptionFull + "'.");
-			final String description = matcher.group("Description");
-			final String difficultyString = matcher.group("Difficulty");
-			final BigDecimal difficulty;
-			/** This conversion is safe, as the pattern has matched the group. */
-			try {
-				difficulty = (BigDecimal) numberFormatter.parse(difficultyString);
-			} catch (ParseException e) {
-				throw new IllegalStateException(e);
-			}
-			final Functionality functionality = new Functionality(functionalityName, description, difficulty);
+			final Functionality functionality = asFunctionality(item);
 			functionalities.add(functionality);
-			LOGGER.info("Found: {}.", functionality);
+			LOGGER.debug("Found: {}.", functionality);
 		}
 	}
 

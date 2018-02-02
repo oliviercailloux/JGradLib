@@ -5,6 +5,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
@@ -27,10 +28,18 @@ public class ProjectReader {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(ProjectReader.class);
 
-	private final FunctionalitiesReader functionalitiesReader;
+	private FunctionalitiesReader functionalitiesReader;
 
 	public ProjectReader() {
 		functionalitiesReader = new FunctionalitiesReader();
+	}
+
+	public Project asProject(File file) throws IllegalFormat, IOException, FileNotFoundException {
+		final Project project;
+		try (InputStreamReader source = new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8)) {
+			project = asProject(source, file.getName());
+		}
+		return project;
 	}
 
 	public Project asProject(Reader source, String originFileName) throws IllegalFormat, IOException {
@@ -55,11 +64,18 @@ public class ProjectReader {
 		Collections.sort(files);
 		LOGGER.info("Found files: {}.", files);
 		for (File file : files) {
-			try (InputStreamReader source = new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8)) {
-				projects.add(asProject(source, file.getName()));
-			}
+			final Project project = asProject(file);
+			projects.add(project);
 		}
 		return projects;
+	}
+
+	public FunctionalitiesReader getFunctionalitiesReader() {
+		return functionalitiesReader;
+	}
+
+	public void setFunctionalitiesReader(FunctionalitiesReader functionalitiesReader) {
+		this.functionalitiesReader = requireNonNull(functionalitiesReader);
 	}
 
 }

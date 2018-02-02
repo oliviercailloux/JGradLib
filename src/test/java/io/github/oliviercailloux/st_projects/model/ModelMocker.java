@@ -2,46 +2,40 @@ package io.github.oliviercailloux.st_projects.model;
 
 import java.math.BigDecimal;
 import java.net.URL;
-import java.util.List;
+import java.util.Optional;
 
-import javax.json.Json;
-import javax.json.JsonArray;
-import javax.json.JsonObject;
-import javax.json.JsonReader;
-import javax.json.JsonValue;
-
-import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
-import com.beust.jcommander.internal.Lists;
-
-import io.github.oliviercailloux.st_projects.services.git_hub.Fetch;
-import io.github.oliviercailloux.st_projects.services.git_hub.TestFetch;
-import io.github.oliviercailloux.st_projects.services.git_hub.Utils;
+import io.github.oliviercailloux.st_projects.utils.Utils;
 
 public class ModelMocker {
 
-	public static Contributor newContributor(String name) {
+	public static void addIssue(final ProjectOnGitHub project, final String title) {
+		final GitHubIssue issue = ModelMocker.newGitHubIssue(title, Utils.EXAMPLE_URL);
+		Mockito.when(project.getIssue(title)).thenReturn(Optional.of(issue));
+	}
+
+	public static GitHubUser newContributor(String name) {
 		return newContributor(name, Utils.EXAMPLE_URL);
 	}
 
-	public static Contributor newContributor(String name, URL url) {
-		final Contributor c1 = Mockito.mock(Contributor.class);
-		Mockito.when(c1.getName()).thenReturn(name);
-		Mockito.when(c1.getUrl()).thenReturn(url);
+	public static GitHubUser newContributor(String login, URL url) {
+		final GitHubUser c1 = Mockito.mock(GitHubUser.class);
+		Mockito.when(c1.getLogin()).thenReturn(login);
+		Mockito.when(c1.getHtmlURL()).thenReturn(url);
 		return c1;
 	}
 
-	public static GitHubIssue newGitHubIssue(String name, URL url) {
+	public static GitHubIssue newGitHubIssue(String title, URL url) {
 		final GitHubIssue issue = Mockito.mock(GitHubIssue.class);
-		Mockito.when(issue.getName()).thenReturn(name);
+		Mockito.when(issue.getTitle()).thenReturn(title);
 		Mockito.when(issue.getApiURL()).thenReturn(url);
 		Mockito.when(issue.getHtmlURL()).thenReturn(url);
 		return issue;
 	}
 
-	public static GitHubProject newGitHubProject(Project project, Contributor owner, URL url) {
-		final GitHubProject ghp1 = Mockito.mock(GitHubProject.class);
+	public static ProjectOnGitHub newGitHubProject(Project project, GitHubUser owner, URL url) {
+		final ProjectOnGitHub ghp1 = Mockito.mock(ProjectOnGitHub.class);
 		Mockito.when(ghp1.getApiURL()).thenReturn(url);
 		Mockito.when(ghp1.getHtmlURL()).thenReturn(url);
 		Mockito.when(ghp1.getProject()).thenReturn(project);
@@ -49,9 +43,9 @@ public class ModelMocker {
 		return ghp1;
 	}
 
-	public static GitHubProject newGitHubProject(String projectName, String ownerName) {
+	public static ProjectOnGitHub newGitHubProject(String projectName, String ownerName) {
 		final Project project = newProject(projectName, 0);
-		final Contributor owner = newContributor(ownerName);
+		final GitHubUser owner = newContributor(ownerName);
 		return newGitHubProject(project, owner, Utils.EXAMPLE_URL);
 	}
 
@@ -62,23 +56,6 @@ public class ModelMocker {
 					.add(new Functionality(name + "-f" + i, name + "-d" + i, BigDecimal.valueOf(i)));
 		}
 		return project;
-	}
-
-	public static Fetch newWaffleIssueEvents() throws Exception {
-		final JsonArray jsonEvents;
-		try (JsonReader jr = Json
-				.createReader(TestFetch.class.getResourceAsStream("waffleio-waffle.io-issues-3259-events.json"))) {
-			jsonEvents = jr.readArray();
-		}
-		final List<GitHubEvent> events = Lists.newLinkedList();
-		for (JsonValue jsonEventValue : jsonEvents) {
-			final JsonObject jsonEvent = jsonEventValue.asJsonObject();
-			final GitHubEvent event = new GitHubEvent(jsonEvent);
-			events.add(event);
-		}
-		final Fetch fetcher = Mockito.mock(Fetch.class);
-		Mockito.when(fetcher.fetchEvents(ArgumentMatchers.any())).thenReturn(events);
-		return fetcher;
 	}
 
 }

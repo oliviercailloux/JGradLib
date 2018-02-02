@@ -2,6 +2,8 @@ package io.github.oliviercailloux.st_projects.services.spreadsheet;
 
 public class SpreadsheetException extends Exception {
 
+	private static final long serialVersionUID = 1L;
+
 	public SpreadsheetException() {
 		super();
 	}

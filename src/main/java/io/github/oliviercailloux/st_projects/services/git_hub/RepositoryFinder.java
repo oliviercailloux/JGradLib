@@ -3,7 +3,6 @@ package io.github.oliviercailloux.st_projects.services.git_hub;
 import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
-import java.io.StringReader;
 import java.time.LocalDate;
 import java.time.Month;
 import java.time.MonthDay;
@@ -11,67 +10,59 @@ import java.time.ZoneOffset;
 import java.util.LinkedList;
 import java.util.List;
 
-import javax.json.Json;
-import javax.json.JsonArray;
-import javax.json.JsonObject;
-import javax.json.JsonReader;
-import javax.json.JsonValue;
-import javax.ws.rs.ProcessingException;
-import javax.ws.rs.client.Client;
-import javax.ws.rs.client.ClientBuilder;
-import javax.ws.rs.client.Invocation.Builder;
-import javax.ws.rs.core.Response;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.Lists;
+import com.jcabi.github.Github;
+import com.jcabi.github.Repo;
+import com.jcabi.github.RtGithub;
+import com.jcabi.github.Search;
 
-import io.github.oliviercailloux.st_projects.model.GitHubProject;
 import io.github.oliviercailloux.st_projects.model.Project;
+import io.github.oliviercailloux.st_projects.model.ProjectOnGitHub;
 
 public class RepositoryFinder {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(RepositoryFinder.class);
 
-	private static final String SEARCH_URI = "https://api.github.com/search/repositories";
-
-	private final Client client;
-
 	private LocalDate floorSearchDate;
 
+	private List<ProjectOnGitHub> ghProjects;
+
+	/**
+	 * Not <code>null</code>.
+	 */
+	private Github gitHub;
+
 	public RepositoryFinder() {
-		client = ClientBuilder.newClient();
 		floorSearchDate = getFloorSept1();
+		gitHub = new RtGithub();
+		ghProjects = Lists.newLinkedList();
 	}
 
-	public List<GitHubProject> find(Project project) throws IOException {
-		final String projectName = project.getName();
-		final LinkedList<GitHubProject> ghProjects = Lists.newLinkedList();
-		final Builder request = client.target(SEARCH_URI)
-				.queryParam("q", projectName + " in:name created:>" + floorSearchDate.toString())
-				.request(Fetch.GIT_HUB_MEDIA_TYPE);
-		final String content;
-		try (Response response = request.get()) {
-			content = response.readEntity(String.class);
-		} catch (ProcessingException e) {
-			throw new IOException(e);
-		}
-		final JsonObject json;
-		try (JsonReader jr = Json.createReader(new StringReader(content))) {
-			json = jr.readObject();
-		}
-		LOGGER.info("Found nb: {}.", json.getInt("total_count"));
-		final JsonArray repos = json.getJsonArray("items");
-//			final Iterable<String> reposCreat = Iterables.transform(repos, (r) -> {
-//				final JsonObject repo = r.asJsonObject();
-//				return repo.getString("created_at");
-//			});
-		for (JsonValue repoVal : repos) {
-			final JsonObject repo = repoVal.asJsonObject();
-			final GitHubProject ghp = new GitHubProject(project, repo);
+	public List<ProjectOnGitHub> find(Project project) throws IOException {
+		final String projectName = project.getGitHubName();
+		final String searchKeywords = projectName + " in:name created:>" + floorSearchDate.toString();
+
+		ghProjects = Lists.newLinkedList();
+
+		LOGGER.debug("Searching for {}.", searchKeywords);
+		final Iterable<Repo> repos = gitHub.search().repos(searchKeywords, "", Search.Order.ASC);
+		int i = 0;
+		for (Repo repo : repos) {
+			++i;
+			LOGGER.debug("Found repo: {} (i = {}).", repo, i);
+			if (!repo.coordinates().repo().equals(project.getGitHubName())) {
+				if (repo.coordinates().repo().equalsIgnoreCase(project.getGitHubName())) {
+					LOGGER.error("Equals only when ignoring case: {}.", project);
+				}
+				continue;
+			}
+			final ProjectOnGitHub ghp = new ProjectOnGitHub(project, repo);
 			ghProjects.add(ghp);
 		}
+
 		return ghProjects;
 	}
 
@@ -79,8 +70,30 @@ public class RepositoryFinder {
 		return floorSearchDate;
 	}
 
+	public Github getGitHub() {
+		return gitHub;
+	}
+
+	public boolean hasPom(Repo repo) throws IOException {
+		return repo.contents().exists("pom.xml", "master");
+	}
+
 	public void setFloorSearchDate(LocalDate floorSearchDate) {
 		this.floorSearchDate = requireNonNull(floorSearchDate);
+	}
+
+	public void setGitHub(Github gitHub) {
+		this.gitHub = requireNonNull(gitHub);
+	}
+
+	public List<ProjectOnGitHub> withPom() throws IOException {
+		final LinkedList<ProjectOnGitHub> withPom = Lists.newLinkedList();
+		for (ProjectOnGitHub p : ghProjects) {
+			if (hasPom(p.getRepo())) {
+				withPom.add(p);
+			}
+		}
+		return withPom;
 	}
 
 	/**

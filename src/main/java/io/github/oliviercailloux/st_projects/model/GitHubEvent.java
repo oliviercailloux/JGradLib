@@ -1,12 +1,13 @@
 package io.github.oliviercailloux.st_projects.model;
 
-import static java.util.Objects.requireNonNull;
+import static com.google.common.base.Preconditions.checkState;
 
 import java.io.IOException;
 import java.net.URL;
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
+import java.time.Instant;
 import java.time.ZonedDateTime;
+import java.util.Optional;
+import java.util.Set;
 
 import javax.json.JsonObject;
 
@@ -14,76 +15,81 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.MoreObjects;
-import com.jcabi.github.Coordinates;
+import com.google.common.collect.ImmutableSet;
 import com.jcabi.github.Event;
 import com.jcabi.github.Github;
-import com.jcabi.github.IssueEvents;
-import com.jcabi.github.Repo;
-import com.jcabi.github.RtGithub;
+import com.jcabi.github.User;
 
-import io.github.oliviercailloux.st_projects.services.git_hub.Fetch;
-import io.github.oliviercailloux.st_projects.services.git_hub.Utils;
+import io.github.oliviercailloux.st_projects.utils.Utils;
 
 public class GitHubEvent {
-
-	public static String CLOSED_TYPE = "closed";
 
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(GitHubEvent.class);
 
-	private JsonObject details;
+	private Optional<GitHubUser> assignee;
+
+	private Set<GitHubUser> assignees;
 
 	private Event event;
+
+	private Github github;
 
 	/**
 	 * Not <code>null</code>.
 	 */
 	private JsonObject json;
 
+	/**
+	 * State of the related issue at the time of the event.
+	 */
+	private Optional<IssueState> state;
+
 	public GitHubEvent(Event event) {
 		this.json = null;
-		details = null;
 		this.event = event;
-	}
-
-	public GitHubEvent(JsonObject json) {
-		this.json = requireNonNull(json);
-		details = null;
-		final Github github = new RtGithub();
-		final Repo repo = github.repos()
-				.get(new Coordinates.Simple(getRepoURL().toString().replace("https://api.github.com/repos/", "")));
-		final IssueEvents issues = repo.issueEvents();
-		event = issues.get(getNumber());
+		assignee = null;
+		github = event.repo().github();
+		assignees = null;
+		state = Optional.empty();
 	}
 
 	public URL getApiURL() {
-		return Utils.newUrl(json.getString("url"));
+		return Utils.newURL(json.getString("url"));
 	}
 
-	public LocalDateTime getCreatedAt() {
+	/**
+	 * @return the returned users are not initialized.
+	 */
+	public Optional<GitHubUser> getAssignee() {
+		return assignee;
+	}
+
+	public Optional<Set<GitHubUser>> getAssignees() {
+		return Optional.ofNullable(assignees);
+	}
+
+	public Instant getCreatedAt() {
+		checkState(json != null);
 		final ZonedDateTime parsed = ZonedDateTime.parse(json.getString("created_at"));
-		assert parsed.getZone().equals(ZoneOffset.UTC);
-		return parsed.toLocalDateTime();
+		return parsed.toInstant();
 	}
 
-	public URL getHtmlURL() {
-		return Utils.newUrl(json.getString("html_url"));
+	public int getId() {
+		return json.getInt("id");
 	}
 
-	public GitHubIssue getIssue() {
-		return new GitHubIssue(event.);
-	}
-
-	public String getName() {
-		return json.getString("name");
-	}
-
-	public int getNumber() {
-		return json.getInt("number");
+	public JsonObject getJson() {
+		checkState(json != null);
+		return json;
 	}
 
 	public URL getRepoURL() {
-		return Utils.newUrl(json.getString("repository_url"));
+		return Utils.newURL(json.getString("repository_url"));
+	}
+
+	public Optional<IssueState> getState() {
+		return state;
 	}
 
 	public String getType() {
@@ -94,15 +100,29 @@ public class GitHubEvent {
 		if (json == null) {
 			json = event.json();
 		}
-
-		try (Fetch fetcher = new Fetch()) {
-			details = fetcher.fetchEventDetails(this);
+		if (assignee == null) {
+			final JsonObject ass = json.getJsonObject("assignee");
+			if (ass == null) {
+				assignee = Optional.empty();
+			} else {
+				final String login = ass.getString("login");
+				final User user = github.users().get(login);
+				assignee = Optional.of(new GitHubUser(user));
+			}
 		}
+	}
+
+	public void setAssignees(Set<GitHubUser> assignees) {
+		this.assignees = ImmutableSet.copyOf(assignees);
+	}
+
+	public void setState(IssueState state) {
+		this.state = Optional.of(state);
 	}
 
 	@Override
 	public String toString() {
-		return MoreObjects.toStringHelper(this).addValue(json).add("details", details).toString();
+		return MoreObjects.toStringHelper(this).addValue(event).toString();
 	}
 
 }

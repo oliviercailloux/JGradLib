@@ -35,6 +35,10 @@ public class Project {
 		return functionalities;
 	}
 
+	public String getGitHubName() {
+		return name.replace(' ', '-');
+	}
+
 	public String getName() {
 		return name;
 	}
