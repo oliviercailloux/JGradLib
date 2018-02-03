@@ -7,6 +7,7 @@ import java.time.LocalDate;
 import java.time.Month;
 import java.time.MonthDay;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.slf4j.Logger;
@@ -44,7 +45,7 @@ public class RepositoryFinder {
 		final String projectName = project.getGitHubName();
 		final String searchKeywords = projectName + " in:name created:>" + floorSearchDate.toString();
 
-		ghProjects = Lists.newLinkedList();
+		ghProjects = new ArrayList<>();
 
 		LOGGER.debug("Searching for {}.", searchKeywords);
 		final Iterable<Repo> repos = gitHub.search().repos(searchKeywords, "", Search.Order.ASC);

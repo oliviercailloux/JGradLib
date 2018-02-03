@@ -4,8 +4,7 @@ import java.io.IOException;
 import java.io.StringReader;
 import java.net.URL;
 import java.time.Instant;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
@@ -33,7 +32,7 @@ import io.github.oliviercailloux.st_projects.services.read.IllegalFormat;
 import io.github.oliviercailloux.st_projects.services.read.ProjectReader;
 import io.github.oliviercailloux.st_projects.utils.Utils;
 
-public class Fetch implements AutoCloseable {
+public class RawGitHubFetcher implements AutoCloseable {
 	public static final MediaType GIT_HUB_MEDIA_TYPE = new MediaType("application", "vnd.github.v3+json");
 
 	public static final MediaType GIT_HUB_RAW_MEDIA_TYPE = new MediaType("application", "vnd.github.v3.raw");
@@ -41,7 +40,7 @@ public class Fetch implements AutoCloseable {
 	private static final String CONTENT_URI = "https://api.github.com/repos/{owner}/{repo}/contents/{path}";
 
 	@SuppressWarnings("unused")
-	private static final Logger LOGGER = LoggerFactory.getLogger(Fetch.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(RawGitHubFetcher.class);
 
 	private static final String README_URI = "https://api.github.com/repos/{owner}/{repo}/readme";
 
@@ -53,14 +52,14 @@ public class Fetch implements AutoCloseable {
 
 	private String rateLimit;
 
-	private ZonedDateTime rateReset;
+	private Instant rateReset;
 
-	public Fetch() {
+	public RawGitHubFetcher() {
 		rateLimit = "";
-		rateReset = Instant.EPOCH.atZone(ZoneId.systemDefault());
+		rateReset = Instant.EPOCH;
 		content = "";
 		client = ClientBuilder.newClient();
-		projects = Lists.newLinkedList();
+		projects = new ArrayList<>();
 	}
 
 	@Override
@@ -140,7 +139,7 @@ public class Fetch implements AutoCloseable {
 		LOGGER.info("Rate limit: {}.", rateLimit);
 		final String rateResetString = Strings.nullToEmpty(response.getHeaderString("X-RateLimit-Reset"));
 		if (!rateResetString.isEmpty()) {
-			rateReset = Instant.ofEpochSecond(Integer.parseInt(rateResetString)).atZone(ZoneId.systemDefault());
+			rateReset = Instant.ofEpochSecond(Integer.parseInt(rateResetString));
 			LOGGER.info("Rate reset: {}.", rateReset);
 		} else {
 			LOGGER.info("No rate reset info.");

@@ -30,7 +30,7 @@ import io.github.oliviercailloux.st_projects.model.ModelMocker;
 import io.github.oliviercailloux.st_projects.model.Project;
 import io.github.oliviercailloux.st_projects.model.ProjectOnGitHub;
 import io.github.oliviercailloux.st_projects.model.User;
-import io.github.oliviercailloux.st_projects.services.git_hub.GitHubFactory;
+import io.github.oliviercailloux.st_projects.services.git_hub.GitHubFetcher;
 import io.github.oliviercailloux.st_projects.utils.Utils;
 
 public class TestWrite {
@@ -150,7 +150,7 @@ public class TestWrite {
 		project.getFunctionalities().add(new Functionality("test open", "Descr test open", BigDecimal.ONE));
 		final Github gitHub = new RtGithub(Utils.getToken());
 		final Coordinates.Simple coords = new Coordinates.Simple("oliviercailloux", "testrel");
-		final ProjectOnGitHub ghProject = GitHubFactory.using(gitHub).getProject(coords);
+		final ProjectOnGitHub ghProject = GitHubFetcher.using(gitHub).getProject(coords);
 
 		final byte[] written;
 		try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {

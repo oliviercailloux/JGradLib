@@ -41,8 +41,8 @@ public class TestFetch {
 	}
 
 	@Test
-	public void testFetchProjects() throws IllegalFormat, IOException {
-		try (Fetch fetch = new Fetch()) {
+	public void testRawFetchProjects() throws IllegalFormat, IOException {
+		try (RawGitHubFetcher fetch = new RawGitHubFetcher()) {
 //		fetch.fetchReadme();
 			final List<Project> projects = fetch.fetchProjects();
 			assertTrue(projects.toString(), projects.size() >= 3);

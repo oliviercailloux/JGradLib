@@ -20,7 +20,7 @@ import com.jcabi.github.RtGithub;
 import io.github.oliviercailloux.st_projects.model.Project;
 import io.github.oliviercailloux.st_projects.model.ProjectOnGitHub;
 import io.github.oliviercailloux.st_projects.services.git.Client;
-import io.github.oliviercailloux.st_projects.services.git_hub.GitHubFactory;
+import io.github.oliviercailloux.st_projects.services.git_hub.GitHubFetcher;
 import io.github.oliviercailloux.st_projects.services.git_hub.RepositoryFinder;
 import io.github.oliviercailloux.st_projects.services.read.FunctionalitiesReader;
 import io.github.oliviercailloux.st_projects.services.read.IllegalFormat;
@@ -119,7 +119,7 @@ public class App {
 		final RepositoryFinder finder = new RepositoryFinder();
 		final RtGithub gitHub = new RtGithub(Utils.getToken());
 		finder.setGitHub(gitHub);
-		final GitHubFactory factory = GitHubFactory.using(gitHub);
+		final GitHubFetcher factory = GitHubFetcher.using(gitHub);
 		for (Project project : projects) {
 			LOGGER.info("Searching for {}.", project);
 			final List<Coordinates> found = finder.find(project);

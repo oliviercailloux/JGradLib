@@ -35,19 +35,19 @@ import io.github.oliviercailloux.st_projects.model.User;
 import io.github.oliviercailloux.st_projects.utils.JsonUtils;
 import io.github.oliviercailloux.st_projects.utils.Utils;
 
-public class GitHubFactory {
+public class GitHubFetcher {
 	@SuppressWarnings("unused")
-	private static final Logger LOGGER = LoggerFactory.getLogger(GitHubFactory.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(GitHubFetcher.class);
 
-	public static GitHubFactory using(Github github) {
-		return new GitHubFactory(github);
+	public static GitHubFetcher using(Github github) {
+		return new GitHubFetcher(github);
 	}
 
 	private Github github;
 
 	private final Map<String, User> users = new LinkedHashMap<>();
 
-	private GitHubFactory(Github github) {
+	private GitHubFetcher(Github github) {
 		this.github = requireNonNull(github);
 	}
 
@@ -141,6 +141,11 @@ public class GitHubFactory {
 		return Issue.from(issueJson, snaps);
 	}
 
+	/**
+	 * Note that the returned project has all issues present in github except for
+	 * issues that are pull requests. Those are ignored by this method.
+	 *
+	 */
 	public ProjectOnGitHub getProject(Coordinates coordinates) throws IOException {
 		final Repo repo = github.repos().get(coordinates);
 		final JsonObject json = repo.json();

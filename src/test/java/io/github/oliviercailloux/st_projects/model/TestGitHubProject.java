@@ -17,7 +17,7 @@ import com.jcabi.github.Coordinates;
 import com.jcabi.github.Github;
 import com.jcabi.github.RtGithub;
 
-import io.github.oliviercailloux.st_projects.services.git_hub.GitHubFactory;
+import io.github.oliviercailloux.st_projects.services.git_hub.GitHubFetcher;
 import io.github.oliviercailloux.st_projects.services.git_hub.RepositoryFinder;
 import io.github.oliviercailloux.st_projects.utils.JsonUtils;
 import io.github.oliviercailloux.st_projects.utils.Utils;
@@ -36,7 +36,7 @@ public class TestGitHubProject {
 		assertTrue(found.size() >= 1);
 		final List<Coordinates> foundWithPom = finder.withPom();
 		final Coordinates matching = Iterables.getOnlyElement(foundWithPom);
-		final ProjectOnGitHub project = GitHubFactory.using(gitHub).getProject(matching);
+		final ProjectOnGitHub project = GitHubFetcher.using(gitHub).getProject(matching);
 		assertTrue(project.getIssuesNamed("Course").toString(), project.getIssuesNamed("Course").size() == 1);
 		assertFalse(project.getIssuesNamed("Triple").size() == 1);
 	}
@@ -46,7 +46,7 @@ public class TestGitHubProject {
 		Utils.logLimits();
 
 		final Github gitHub = new RtGithub(Utils.getToken());
-		final GitHubFactory factory = GitHubFactory.using(gitHub);
+		final GitHubFetcher factory = GitHubFetcher.using(gitHub);
 		final Coordinates.Simple coords = new Coordinates.Simple("oliviercailloux", "testrel");
 		final ProjectOnGitHub project = factory.getProject(coords);
 		assertEquals(Utils.newURL("https://api.github.com/repos/oliviercailloux/testrel"), project.getApiURL());
@@ -57,7 +57,7 @@ public class TestGitHubProject {
 		assertFalse(project.getIssuesNamed("non-existant").size() == 1);
 		assertEquals("testrel", project.getName());
 
-		final User userC = GitHubFactory.using(gitHub).getUser("oliviercailloux");
+		final User userC = GitHubFetcher.using(gitHub).getUser("oliviercailloux");
 		LOGGER.debug(JsonUtils.asPrettyString(userC.getJson()));
 		LOGGER.debug(JsonUtils.asPrettyString(project.getOwner().getJson()));
 		assertEquals(userC, project.getOwner());

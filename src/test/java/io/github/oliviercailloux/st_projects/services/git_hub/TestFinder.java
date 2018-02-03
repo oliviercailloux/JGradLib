@@ -37,7 +37,7 @@ public class TestFinder {
 		finder.setFloorSearchDate(LocalDate.of(2015, Month.DECEMBER, 1));
 		final List<Coordinates> found = finder.find(myProject);
 		assertFalse(found.isEmpty());
-		final GitHubFactory factory = GitHubFactory.using(gitHub);
+		final GitHubFetcher factory = GitHubFetcher.using(gitHub);
 		final ImmutableList<ProjectOnGitHub> projects = Utils.map(found, (c) -> factory.getProject(c));
 		final Instant realCreation = LocalDateTime.of(2016, Month.JULY, 29, 17, 34, 19).toInstant(ZoneOffset.UTC);
 		final ProjectOnGitHub project = projects.get(0);

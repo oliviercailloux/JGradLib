@@ -20,7 +20,7 @@ import com.jcabi.github.Coordinates;
 import com.jcabi.github.Github;
 import com.jcabi.github.RtGithub;
 
-import io.github.oliviercailloux.st_projects.services.git_hub.GitHubFactory;
+import io.github.oliviercailloux.st_projects.services.git_hub.GitHubFetcher;
 import io.github.oliviercailloux.st_projects.utils.Utils;
 
 public class TestGitHubIssue {
@@ -32,7 +32,7 @@ public class TestGitHubIssue {
 	public void testAssignees() throws Exception {
 		final IssueCoordinates coord = IssueCoordinates.from("badga", "Collaborative-exams", 3);
 		final Github gitHub = new RtGithub(Utils.getToken());
-		final GitHubFactory factory = GitHubFactory.using(gitHub);
+		final GitHubFetcher factory = GitHubFetcher.using(gitHub);
 
 		final Issue issue = factory.getIssue(coord);
 		assertEquals("https://github.com/badga/Collaborative-exams/issues/3", issue.getHtmlURL().toString());
@@ -49,7 +49,7 @@ public class TestGitHubIssue {
 	@Test
 	public void testDupl() throws Exception {
 		final Github gitHub = new RtGithub(Utils.getToken());
-		final GitHubFactory factory = GitHubFactory.using(gitHub);
+		final GitHubFetcher factory = GitHubFetcher.using(gitHub);
 		final Coordinates.Simple coords = new Coordinates.Simple("benzait27", "Dauphine-Open-Data");
 		final ProjectOnGitHub ghProject = factory.getProject(coords);
 		final Issue issue = ghProject.getIssuesNamed("Course").iterator().next();
@@ -60,7 +60,7 @@ public class TestGitHubIssue {
 	public void testHist() throws Exception {
 		final IssueCoordinates coord = IssueCoordinates.from("oliviercailloux", "testrel", 2);
 		final Github gitHub = new RtGithub(Utils.getToken());
-		final GitHubFactory factory = GitHubFactory.using(gitHub);
+		final GitHubFetcher factory = GitHubFetcher.using(gitHub);
 
 		final Issue issue = factory.getIssue(coord);
 		LOGGER.info("Issue: {}.", issue);
@@ -86,7 +86,7 @@ public class TestGitHubIssue {
 	public void testOpen() throws Exception {
 		final IssueCoordinates coord = IssueCoordinates.from("oliviercailloux", "testrel", 3);
 		final Github gitHub = new RtGithub(Utils.getToken());
-		final GitHubFactory factory = GitHubFactory.using(gitHub);
+		final GitHubFetcher factory = GitHubFetcher.using(gitHub);
 
 		final Issue issue = factory.getIssue(coord);
 		LOGGER.info("Issue: {}.", issue);
