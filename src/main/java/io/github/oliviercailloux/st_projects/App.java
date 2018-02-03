@@ -7,19 +7,20 @@ import java.math.BigDecimal;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
+import com.jcabi.github.Coordinates;
 import com.jcabi.github.RtGithub;
 
 import io.github.oliviercailloux.st_projects.model.Project;
 import io.github.oliviercailloux.st_projects.model.ProjectOnGitHub;
-import io.github.oliviercailloux.st_projects.model.ProjectWithPossibleGitHubData;
 import io.github.oliviercailloux.st_projects.services.git.Client;
+import io.github.oliviercailloux.st_projects.services.git_hub.GitHubFactory;
 import io.github.oliviercailloux.st_projects.services.git_hub.RepositoryFinder;
 import io.github.oliviercailloux.st_projects.services.read.FunctionalitiesReader;
 import io.github.oliviercailloux.st_projects.services.read.IllegalFormat;
@@ -36,9 +37,9 @@ public class App {
 		new App().proceed();
 	}
 
-	private List<Project> origProjects;
+	private final Map<Project, ProjectOnGitHub> ghProjects;
 
-	private final List<ProjectWithPossibleGitHubData> projects;
+	private List<Project> projects;
 
 	private Path projectsDir;
 
@@ -48,7 +49,8 @@ public class App {
 
 	public App() {
 		writer = new SpreadsheetWriter();
-		projects = Lists.newArrayList();
+		projects = null;
+		ghProjects = null;
 	}
 
 	public void proceed() throws Exception {
@@ -56,9 +58,8 @@ public class App {
 //		writeSEProjects();
 		projectsDir = Paths.get("/home/olivier/Professions/Enseignement/Projets/EE");
 		suffix = "EE";
-		origProjects = new ProjectReader().asProjects(projectsDir);
+		projects = new ProjectReader().asProjects(projectsDir);
 		find();
-		initAll();
 		writeGHProjects();
 		retrieveEE();
 //		searchForGHProjectsFromLocal();
@@ -66,27 +67,25 @@ public class App {
 
 	public void retrieveEE() throws Exception {
 		projectsDir = Paths.get("/home/olivier/Professions/Enseignement/Projets/EE");
-		origProjects = new ProjectReader().asProjects(projectsDir);
+		projects = new ProjectReader().asProjects(projectsDir);
 		find();
 
-		for (ProjectWithPossibleGitHubData ghProject : projects) {
-			if (ghProject.getGhProject().isPresent()) {
-				new Client().retrieve(ghProject.getGhProject().get());
-			}
+		for (ProjectOnGitHub ghProject : ghProjects.values()) {
+			new Client().retrieve(ghProject);
 		}
 	}
 
 	public void searchForGHProjectsFromLocal() throws IOException, IllegalFormat {
 		LOGGER.info("Started.");
 		projectsDir = Paths.get("/home/olivier/Professions/Enseignement/Projets/EE");
-		origProjects = new ProjectReader().asProjects(projectsDir);
+		projects = new ProjectReader().asProjects(projectsDir);
 		final RepositoryFinder finder = new RepositoryFinder();
 		finder.setGitHub(new RtGithub(Utils.getToken()));
 //		finder.setFloorSearchDate(LocalDate.of(2017, Month.NOVEMBER, 5));
-		for (Project project : origProjects) {
-			final List<ProjectOnGitHub> found = finder.find(project);
+		for (Project project : projects) {
+			final List<Coordinates> found = finder.find(project);
 			LOGGER.info("Found for {}: {}.", project.getName(), found);
-			final List<ProjectOnGitHub> foundWithPom = finder.withPom();
+			final List<Coordinates> foundWithPom = finder.withPom();
 			LOGGER.info("Found with POM for {}: {}.", project.getName(), foundWithPom);
 		}
 	}
@@ -97,12 +96,12 @@ public class App {
 		try (OutputStream out = new FileOutputStream("Deep-" + suffix + ".ods")) {
 			writer.setWide(false);
 			writer.setOutputStream(out);
-			writer.writeGeneral(projects);
+			writer.write(projects, ghProjects);
 		}
 		try (OutputStream out = new FileOutputStream("Wide-" + suffix + ".ods")) {
 			writer.setWide(true);
 			writer.setOutputStream(out);
-			writer.writeGeneral(projects);
+			writer.write(projects, ghProjects);
 		}
 	}
 
@@ -111,43 +110,31 @@ public class App {
 		suffix = "SE";
 		final ProjectReader projectReader = new ProjectReader();
 		projectReader.setFunctionalitiesReader(new FunctionalitiesReader(Optional.of(BigDecimal.valueOf(1d))));
-		origProjects = projectReader.asProjects(projectsDir);
+		projects = projectReader.asProjects(projectsDir);
 		find();
-		initAll();
 		writeGHProjects();
 	}
 
-	private List<ProjectWithPossibleGitHubData> find() throws IOException {
+	private Map<Project, ProjectOnGitHub> find() throws IOException {
 		final RepositoryFinder finder = new RepositoryFinder();
-		finder.setGitHub(new RtGithub(Utils.getToken()));
-		for (Project project : origProjects) {
+		final RtGithub gitHub = new RtGithub(Utils.getToken());
+		finder.setGitHub(gitHub);
+		final GitHubFactory factory = GitHubFactory.using(gitHub);
+		for (Project project : projects) {
 			LOGGER.info("Searching for {}.", project);
-			final List<ProjectOnGitHub> found = finder.find(project);
+			final List<Coordinates> found = finder.find(project);
 			LOGGER.info("Found: {}.", found);
-			final List<ProjectOnGitHub> foundWithPom = finder.withPom();
+			final List<Coordinates> foundWithPom = finder.withPom();
 			final int nbMatches = foundWithPom.size();
 			switch (nbMatches) {
-			case 0:
-				projects.add(new ProjectWithPossibleGitHubData(project));
-				break;
 			case 1:
-				final ProjectOnGitHub matching = Iterables.getOnlyElement(foundWithPom);
-				matching.init();
-				projects.add(new ProjectWithPossibleGitHubData(matching));
+				final Coordinates matching = Iterables.getOnlyElement(foundWithPom);
+				ghProjects.put(project, factory.getProject(matching));
 				break;
 			default:
 				throw new IllegalStateException("Found multiple matches for " + project + ".");
 			}
 		}
-		return projects;
-	}
-
-	private List<ProjectWithPossibleGitHubData> initAll() throws IOException {
-		for (ProjectWithPossibleGitHubData projectWithPossibleGitHubData : projects) {
-			if (projectWithPossibleGitHubData.getGhProject().isPresent()) {
-				projectWithPossibleGitHubData.getGhProject().get().initAllIssuesAndEvents();
-			}
-		}
-		return projects;
+		return ghProjects;
 	}
 }

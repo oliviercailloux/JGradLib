@@ -12,9 +12,9 @@ public class ProjectWithPossibleGitHubData {
 		ghProject = Optional.empty();
 	}
 
-	public ProjectWithPossibleGitHubData(ProjectOnGitHub project) {
-		this.project = project.getProject();
-		ghProject = Optional.of(project);
+	public ProjectWithPossibleGitHubData(Project project, ProjectOnGitHub projectGH) {
+		this.project = project;
+		ghProject = Optional.of(projectGH);
 	}
 
 	public Optional<ProjectOnGitHub> getGhProject() {

@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory;
 import com.jcabi.github.Github;
 import com.jcabi.github.RtGithub;
 
+import io.github.oliviercailloux.st_projects.services.git_hub.GitHubFactory;
 import io.github.oliviercailloux.st_projects.utils.Utils;
 
 public class TestGitHubUser {

@@ -2,17 +2,18 @@ package io.github.oliviercailloux.st_projects.model;
 
 import java.math.BigDecimal;
 import java.net.URL;
-import java.util.Optional;
 
 import org.mockito.Mockito;
+
+import com.google.common.collect.ImmutableSortedSet;
 
 import io.github.oliviercailloux.st_projects.utils.Utils;
 
 public class ModelMocker {
 
 	public static void addIssue(final ProjectOnGitHub project, final String title) {
-		final GitHubIssue issue = ModelMocker.newGitHubIssue(title, Utils.EXAMPLE_URL);
-		Mockito.when(project.getIssue(title)).thenReturn(Optional.of(issue));
+		final Issue issue = ModelMocker.newGitHubIssue(title, Utils.EXAMPLE_URL);
+		Mockito.when(project.getIssuesNamed(title)).thenReturn(ImmutableSortedSet.of(issue));
 	}
 
 	public static User newContributor(String name) {
@@ -26,27 +27,25 @@ public class ModelMocker {
 		return c1;
 	}
 
-	public static GitHubIssue newGitHubIssue(String title, URL url) {
-		final GitHubIssue issue = Mockito.mock(GitHubIssue.class);
-		Mockito.when(issue.getTitle()).thenReturn(title);
+	public static Issue newGitHubIssue(String name, URL url) {
+		final Issue issue = Mockito.mock(Issue.class);
+		Mockito.when(issue.getOriginalName()).thenReturn(name);
 		Mockito.when(issue.getApiURL()).thenReturn(url);
 		Mockito.when(issue.getHtmlURL()).thenReturn(url);
 		return issue;
 	}
 
-	public static ProjectOnGitHub newGitHubProject(Project project, User owner, URL url) {
+	public static ProjectOnGitHub newGitHubProject(String ownerName) {
+		final User owner = newContributor(ownerName);
+		return newGitHubProject(owner, Utils.EXAMPLE_URL);
+	}
+
+	public static ProjectOnGitHub newGitHubProject(User owner, URL url) {
 		final ProjectOnGitHub ghp1 = Mockito.mock(ProjectOnGitHub.class);
 		Mockito.when(ghp1.getApiURL()).thenReturn(url);
 		Mockito.when(ghp1.getHtmlURL()).thenReturn(url);
-		Mockito.when(ghp1.getProject()).thenReturn(project);
 		Mockito.when(ghp1.getOwner()).thenReturn(owner);
 		return ghp1;
-	}
-
-	public static ProjectOnGitHub newGitHubProject(String projectName, String ownerName) {
-		final Project project = newProject(projectName, 0);
-		final User owner = newContributor(ownerName);
-		return newGitHubProject(project, owner, Utils.EXAMPLE_URL);
 	}
 
 	public static Project newProject(String name, int numberOfFunctionalities) {

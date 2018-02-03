@@ -13,12 +13,17 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Instant;
 import java.time.ZoneId;
+import java.util.Map;
+import java.util.Optional;
 
 import javax.json.JsonObject;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.diffplug.common.base.Throwing;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableList.Builder;
 import com.jcabi.github.Github;
 import com.jcabi.github.Limits;
 import com.jcabi.github.RtGithub;
@@ -31,6 +36,13 @@ public class Utils {
 
 	static {
 		EXAMPLE_URL = newURL("http://example.com");
+	}
+
+	public static <K, V> Optional<V> getOptionally(Map<K, V> map, K el) {
+		if (map.containsKey(el)) {
+			return Optional.of(map.get(el));
+		}
+		return Optional.empty();
 	}
 
 	public static String getToken() throws IOException {
@@ -59,6 +71,18 @@ public class Utils {
 		LOGGER.info("Limit: {}.", limit);
 		LOGGER.info("Remaining: {}.", remaining);
 		LOGGER.info("Reset time: {}.", Instant.ofEpochSecond(reset).atZone(ZoneId.systemDefault()));
+	}
+
+	public static <F, R, T extends Throwable> ImmutableList<R> map(Iterable<F> iterable,
+			Throwing.Specific.Function<F, R, T> fct) throws T {
+		final Builder<R> issues = ImmutableList.builder();
+		for (F elem : iterable) {
+			LOGGER.debug("Getting elem {}.", elem);
+			final R issueT = fct.apply(elem);
+			LOGGER.debug("Got elem {}.", elem);
+			issues.add(issueT);
+		}
+		return issues.build();
 	}
 
 	public static URL newURL(String url) {

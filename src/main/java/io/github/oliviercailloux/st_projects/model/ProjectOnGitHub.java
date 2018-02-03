@@ -3,14 +3,11 @@ package io.github.oliviercailloux.st_projects.model;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
-import java.io.IOException;
 import java.net.URL;
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
-import java.time.ZonedDateTime;
+import java.time.Instant;
 import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.function.Function;
+import java.util.stream.Collector;
 
 import javax.json.JsonObject;
 
@@ -19,56 +16,45 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Maps;
-import com.jcabi.github.Github;
-import com.jcabi.github.Issue;
-import com.jcabi.github.Repo;
+import com.google.common.collect.ImmutableSortedSet;
+import com.google.common.collect.MultimapBuilder;
+import com.google.common.collect.Multimaps;
+import com.google.common.collect.SortedSetMultimap;
 
-import io.github.oliviercailloux.st_projects.utils.JsonUtils;
+import io.github.oliviercailloux.st_projects.services.git_hub.GitHubJsonParser;
 import io.github.oliviercailloux.st_projects.utils.Utils;
 
 public class ProjectOnGitHub {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(ProjectOnGitHub.class);
 
-	private int id;
+	public static ProjectOnGitHub from(JsonObject json, User owner, List<Issue> issues) {
+		return new ProjectOnGitHub(json, owner, issues);
+	}
 
-	private List<GitHubIssue> issues;
+	private SortedSetMultimap<String, Issue> allIssuesByName;
 
-	/**
-	 * not <code>null</code> iff all issues initialized.
-	 */
-	private ImmutableMap<String, GitHubIssue> issuesByName;
+	final private List<Issue> issues;
 
-	private JsonObject json;
+	final private JsonObject json;
 
-	private Project project;
+	final private User owner;
 
-	private Repo repo;
-
-	private GitHubFactory userFactory;
-
-	public ProjectOnGitHub(Project project, Repo repo) {
-		this.project = requireNonNull(project);
-		this.repo = requireNonNull(repo);
-		final Github github = repo.github();
-		userFactory = GitHubFactory.using(github);
-		this.json = null;
-		issues = null;
-		issuesByName = null;
+	private ProjectOnGitHub(JsonObject json, User owner, List<Issue> issues) {
+		this.owner = owner;
+		this.json = requireNonNull(json);
+		this.issues = requireNonNull(issues);
+		final Collector<Issue, ?, SortedSetMultimap<String, Issue>> c = Multimaps.toMultimap(Issue::getOriginalName,
+				Function.identity(), MultimapBuilder.treeKeys().treeSetValues()::build);
+		allIssuesByName = issues.stream().collect(c);
 	}
 
 	public URL getApiURL() {
 		return Utils.newURL(json.getString("url"));
 	}
 
-	public LocalDateTime getCreatedAt() {
-		final ZonedDateTime parsed = ZonedDateTime.parse(json.getString("created_at"));
-		assert parsed.getZone().equals(ZoneOffset.UTC);
-		return parsed.toLocalDateTime();
+	public Instant getCreatedAt() {
+		return GitHubJsonParser.getCreatedAt(json);
 	}
 
 	public URL getHtmlURL() {
@@ -79,14 +65,19 @@ public class ProjectOnGitHub {
 		return json.getInt("id");
 	}
 
-	public Optional<GitHubIssue> getIssue(String name) {
-		checkState(issuesByName != null);
-		return issuesByName.containsKey(name) ? Optional.of(issuesByName.get(name)) : Optional.empty();
-	}
-
-	public List<GitHubIssue> getIssues() {
+	public List<Issue> getIssues() {
 		checkState(issues != null);
 		return issues;
+	}
+
+	/**
+	 * @return all the issues that have that name (may be empty), ordered by their
+	 *         date of “first done” (earliest first), with any issues that do not
+	 *         have “first done” coming last.
+	 */
+	public ImmutableSortedSet<Issue> getIssuesNamed(String name) {
+		requireNonNull(name);
+		return ImmutableSortedSet.copyOf(allIssuesByName.get(name));
 	}
 
 	public String getName() {
@@ -94,18 +85,7 @@ public class ProjectOnGitHub {
 	}
 
 	public User getOwner() {
-		final JsonObject ownerJson = json.getJsonObject("owner");
-		final String login = userFactory.putUserJson(ownerJson);
-		final User owner = userFactory.getCachedUser(login);
 		return owner;
-	}
-
-	public Project getProject() {
-		return project;
-	}
-
-	public Repo getRepo() {
-		return repo;
 	}
 
 	public URL getSshURL() {
@@ -116,56 +96,10 @@ public class ProjectOnGitHub {
 		return json.getString("ssh_url");
 	}
 
-	public void init() throws IOException {
-		if (json == null) {
-			json = repo.json();
-		}
-		if (issues == null) {
-			final Iterable<Issue> issuesIt = repo.issues().iterate(ImmutableMap.of("state", "all"));
-			issues = ImmutableList.copyOf(Iterables.transform(issuesIt, (i) -> new GitHubIssue(i)));
-		}
-		checkState(getName().equals(project.getGitHubName()));
-	}
-
-	public void initAllIssues() throws IOException {
-		for (GitHubIssue issue : issues) {
-			issue.init();
-			LOGGER.info("Inited {}.", issue);
-		}
-	}
-
-	public void initAllIssuesAndEvents() throws IOException {
-		initAllIssues();
-		for (GitHubIssue issue : issues) {
-			issue.initAllEvents();
-		}
-		final Map<String, GitHubIssue> builder = Maps.newLinkedHashMap();
-		for (GitHubIssue issue : issues) {
-			final String title = issue.getTitle();
-			final Optional<GitHubEvent> newValidEventOpt = issue.getFirstEventDone();
-			if (builder.containsKey(title)) {
-				final GitHubIssue currentIssue = builder.get(title);
-				LOGGER.info("Found again {}, already in {}, new {}.", title, currentIssue, issue);
-				final Optional<GitHubEvent> currentValidEventOpt = currentIssue.getFirstEventDone();
-				if (!currentValidEventOpt.isPresent() && newValidEventOpt.isPresent()) {
-					LOGGER.info("Replacing current {} by new valid {}.", currentValidEventOpt, newValidEventOpt);
-					builder.put(title, issue);
-				} else {
-					LOGGER.info("Keeping current {} although found other: {}.", currentValidEventOpt, newValidEventOpt);
-				}
-			} else {
-				builder.put(title, issue);
-			}
-		}
-		issuesByName = ImmutableMap.copyOf(builder);
-	}
-
 	@Override
 	public String toString() {
 		final ToStringHelper helper = MoreObjects.toStringHelper(this);
-		helper.addValue(id).addValue(project.getName());
-		helper.addValue(repo.toString());
-		helper.add("Json", JsonUtils.asPrettyString(json));
+		helper.addValue(getName());
 		return helper.toString();
 	}
 }

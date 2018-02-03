@@ -19,17 +19,18 @@ import org.slf4j.LoggerFactory;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.jcabi.github.Coordinates;
 import com.jcabi.github.Github;
-import com.jcabi.github.Repo;
 import com.jcabi.github.RtGithub;
 
 import io.github.oliviercailloux.st_projects.model.Functionality;
-import io.github.oliviercailloux.st_projects.model.User;
 import io.github.oliviercailloux.st_projects.model.ModelMocker;
 import io.github.oliviercailloux.st_projects.model.Project;
 import io.github.oliviercailloux.st_projects.model.ProjectOnGitHub;
+import io.github.oliviercailloux.st_projects.model.User;
+import io.github.oliviercailloux.st_projects.services.git_hub.GitHubFactory;
 import io.github.oliviercailloux.st_projects.utils.Utils;
 
 public class TestWrite {
@@ -52,7 +53,7 @@ public class TestWrite {
 		try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
 			final SpreadsheetWriter writer = new SpreadsheetWriter();
 			writer.setOutputStream(out);
-			writer.writeProjects(projects);
+			writer.write(projects, ImmutableMap.of());
 			written = out.toByteArray();
 		}
 		final ByteArrayInputStream input = new ByteArrayInputStream(written);
@@ -68,15 +69,14 @@ public class TestWrite {
 	public void testWriteOneGHProject() throws Exception {
 		final Project p1 = ModelMocker.newProject("p1", 3);
 		final User c1 = ModelMocker.newContributor("c1");
-		final ProjectOnGitHub ghp1 = ModelMocker.newGitHubProject(p1, c1, Utils.EXAMPLE_URL);
+		final ProjectOnGitHub ghp1 = ModelMocker.newGitHubProject(c1, Utils.EXAMPLE_URL);
 		ModelMocker.addIssue(ghp1, "p1-f1");
 		ModelMocker.addIssue(ghp1, "p1-f3");
-		final List<ProjectOnGitHub> projects = ImmutableList.of(ghp1);
 		final byte[] written;
 		try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
 			final SpreadsheetWriter writer = new SpreadsheetWriter();
 			writer.setOutputStream(out);
-			writer.writeGitHubProjects(projects);
+			writer.write(ImmutableList.of(p1), ImmutableMap.of(p1, ghp1));
 			written = out.toByteArray();
 		}
 		final ByteArrayInputStream input = new ByteArrayInputStream(written);
@@ -95,12 +95,11 @@ public class TestWrite {
 		final Project p1 = new Project("p1");
 		p1.getFunctionalities().add(new Functionality("f11", "d11", BigDecimal.ONE));
 		p1.getFunctionalities().add(new Functionality("f12", "d12", BigDecimal.TEN));
-		final List<Project> projects = ImmutableList.of(p1);
 		final byte[] written;
 		try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
 			final SpreadsheetWriter writer = new SpreadsheetWriter();
 			writer.setOutputStream(out);
-			writer.writeProjects(projects);
+			writer.write(ImmutableList.of(p1), ImmutableMap.of());
 			written = out.toByteArray();
 		}
 		final ByteArrayInputStream input = new ByteArrayInputStream(written);
@@ -116,22 +115,21 @@ public class TestWrite {
 	public void testWriteTwoGHProjectsDeep() throws Exception {
 		final Project p1 = ModelMocker.newProject("p1", 3);
 		final User c1 = ModelMocker.newContributor("c1");
-		final ProjectOnGitHub ghp1 = ModelMocker.newGitHubProject(p1, c1, Utils.EXAMPLE_URL);
+		final ProjectOnGitHub ghp1 = ModelMocker.newGitHubProject(c1, Utils.EXAMPLE_URL);
 		ModelMocker.addIssue(ghp1, "p1-f1");
 		ModelMocker.addIssue(ghp1, "p1-f3");
 		final Project p2 = ModelMocker.newProject("p2", 4);
 		final User c2 = ModelMocker.newContributor("c2");
-		final ProjectOnGitHub ghp2 = ModelMocker.newGitHubProject(p2, c2, Utils.EXAMPLE_URL);
+		final ProjectOnGitHub ghp2 = ModelMocker.newGitHubProject(c2, Utils.EXAMPLE_URL);
 		ModelMocker.addIssue(ghp2, "p2-f1");
 		ModelMocker.addIssue(ghp2, "p2-f2");
-		final List<ProjectOnGitHub> projects = ImmutableList.of(ghp1, ghp2);
 
 		final byte[] written;
 		try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
 			final SpreadsheetWriter writer = new SpreadsheetWriter();
 			writer.setWide(false);
 			writer.setOutputStream(out);
-			writer.writeGitHubProjects(projects);
+			writer.write(ImmutableList.of(p1, p2), ImmutableMap.of(p1, ghp1, p2, ghp2));
 			written = out.toByteArray();
 		}
 		save(written);
@@ -151,16 +149,14 @@ public class TestWrite {
 		project.getFunctionalities().add(new Functionality("f2", "Descr f2", BigDecimal.ONE));
 		project.getFunctionalities().add(new Functionality("test open", "Descr test open", BigDecimal.ONE));
 		final Github gitHub = new RtGithub(Utils.getToken());
-		final Repo repo = gitHub.repos().get(new Coordinates.Simple("oliviercailloux", "testrel"));
-		final ProjectOnGitHub ghProject = new ProjectOnGitHub(project, repo);
-		ghProject.init();
-		ghProject.initAllIssuesAndEvents();
+		final Coordinates.Simple coords = new Coordinates.Simple("oliviercailloux", "testrel");
+		final ProjectOnGitHub ghProject = GitHubFactory.using(gitHub).getProject(coords);
 
 		final byte[] written;
 		try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
 			final SpreadsheetWriter writer = new SpreadsheetWriter();
 			writer.setOutputStream(out);
-			writer.writeGitHubProjects(ImmutableList.of(ghProject));
+			writer.write(ImmutableList.of(project), ImmutableMap.of(project, ghProject));
 			written = out.toByteArray();
 		}
 		final ByteArrayInputStream input = new ByteArrayInputStream(written);

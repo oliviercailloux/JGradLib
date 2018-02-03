@@ -2,6 +2,7 @@ package io.github.oliviercailloux.st_projects.services.git_hub;
 
 import java.io.IOException;
 import java.io.StringReader;
+import java.net.URL;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
@@ -27,9 +28,6 @@ import org.slf4j.LoggerFactory;
 import com.beust.jcommander.internal.Lists;
 import com.google.common.base.Strings;
 
-import io.github.oliviercailloux.st_projects.model.GitHubEvent;
-import io.github.oliviercailloux.st_projects.model.GitHubIssue;
-import io.github.oliviercailloux.st_projects.model.ProjectOnGitHub;
 import io.github.oliviercailloux.st_projects.model.Project;
 import io.github.oliviercailloux.st_projects.services.read.IllegalFormat;
 import io.github.oliviercailloux.st_projects.services.read.ProjectReader;
@@ -70,8 +68,8 @@ public class Fetch implements AutoCloseable {
 		client.close();
 	}
 
-	public JsonObject fetchEventDetails(GitHubEvent event) throws IOException {
-		final WebTarget target = client.target(Utils.toURI(event.getApiURL()));
+	public JsonObject fetchEventDetails(URL eventApiURL) throws IOException {
+		final WebTarget target = client.target(Utils.toURI(eventApiURL));
 		final Builder request = target.request(GIT_HUB_MEDIA_TYPE);
 		final String jsonEventDetailsStr;
 		try (Response response = request.get()) {

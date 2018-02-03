@@ -21,7 +21,7 @@
 		</encoder>
 	</appender>
 	
-	<logger name="com.jcabi.http.request.BaseRequest" level="ERROR" />
+	<logger name="com.jcabi.http.request.BaseRequest" level="INFO" />
 
 	<root level="DEBUG">
 		<appender-ref ref="STDOUT" />

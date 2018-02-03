@@ -7,20 +7,19 @@ import java.time.LocalDate;
 import java.time.Month;
 import java.time.MonthDay;
 import java.time.ZoneOffset;
-import java.util.LinkedList;
 import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.Lists;
+import com.jcabi.github.Coordinates;
 import com.jcabi.github.Github;
 import com.jcabi.github.Repo;
 import com.jcabi.github.RtGithub;
 import com.jcabi.github.Search;
 
 import io.github.oliviercailloux.st_projects.model.Project;
-import io.github.oliviercailloux.st_projects.model.ProjectOnGitHub;
 
 public class RepositoryFinder {
 	@SuppressWarnings("unused")
@@ -28,7 +27,7 @@ public class RepositoryFinder {
 
 	private LocalDate floorSearchDate;
 
-	private List<ProjectOnGitHub> ghProjects;
+	private List<Coordinates> ghProjects;
 
 	/**
 	 * Not <code>null</code>.
@@ -41,7 +40,7 @@ public class RepositoryFinder {
 		ghProjects = Lists.newLinkedList();
 	}
 
-	public List<ProjectOnGitHub> find(Project project) throws IOException {
+	public List<Coordinates> find(Project project) throws IOException {
 		final String projectName = project.getGitHubName();
 		final String searchKeywords = projectName + " in:name created:>" + floorSearchDate.toString();
 
@@ -59,8 +58,7 @@ public class RepositoryFinder {
 				}
 				continue;
 			}
-			final ProjectOnGitHub ghp = new ProjectOnGitHub(project, repo);
-			ghProjects.add(ghp);
+			ghProjects.add(repo.coordinates());
 		}
 
 		return ghProjects;
@@ -86,10 +84,10 @@ public class RepositoryFinder {
 		this.gitHub = requireNonNull(gitHub);
 	}
 
-	public List<ProjectOnGitHub> withPom() throws IOException {
-		final LinkedList<ProjectOnGitHub> withPom = Lists.newLinkedList();
-		for (ProjectOnGitHub p : ghProjects) {
-			if (hasPom(p.getRepo())) {
+	public List<Coordinates> withPom() throws IOException {
+		final List<Coordinates> withPom = Lists.newArrayList();
+		for (Coordinates p : ghProjects) {
+			if (hasPom(gitHub.repos().get(p))) {
 				withPom.add(p);
 			}
 		}

@@ -1,24 +1,27 @@
 package io.github.oliviercailloux.st_projects.model;
 
-import static java.util.Objects.requireNonNull;
+import static com.google.common.base.Preconditions.checkArgument;
 
 import java.net.URL;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Function;
 
 import javax.json.JsonObject;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.diffplug.common.base.Predicates;
+import com.google.common.base.MoreObjects;
+import com.google.common.base.MoreObjects.ToStringHelper;
+import com.google.common.base.Predicates;
+import com.google.common.collect.Comparators;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.PeekingIterator;
-
-import io.github.oliviercailloux.st_projects.utils.Utils;
 
 /**
  * An intemporal issue, that also contains a description of its current state.
@@ -26,29 +29,47 @@ import io.github.oliviercailloux.st_projects.utils.Utils;
  * @author Olivier Cailloux
  *
  */
-public class Issue {
+public class Issue implements Comparable<Issue> {
+	private static Comparator<Issue> compareDoneTimeThenNumber = null;
+
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(Issue.class);
 
 	/**
 	 * @param json
 	 *            describes the current state of this issue.
+	 * @param snaps
+	 *            at least one.
 	 */
 	public static Issue from(JsonObject json, List<IssueSnapshot> snaps) {
 		return new Issue(json, snaps);
 	}
 
-	private final JsonObject json;
+	private final RawGitHubIssue simple;
 
 	private final List<IssueSnapshot> snaps;
 
 	private Issue(JsonObject json, List<IssueSnapshot> snaps) {
+		simple = RawGitHubIssue.from(json);
+		checkArgument(snaps.size() >= 1);
 		this.snaps = snaps;
-		this.json = requireNonNull(json);
+	}
+
+	@Override
+	public int compareTo(Issue i2) {
+		if (compareDoneTimeThenNumber == null) {
+			final Function<? super Issue, Optional<Instant>> issueToDoneTime = (i) -> i.getFirstSnapshotDone()
+					.map(IssueSnapshot::getBirthTime);
+			final Comparator<Optional<Instant>> compareOptInst = Comparators
+					.emptiesLast(Comparator.<Instant>naturalOrder());
+			final Comparator<Issue> compareDoneTime = Comparator.comparing(issueToDoneTime, compareOptInst);
+			compareDoneTimeThenNumber = compareDoneTime.thenComparing(Comparator.comparing(Issue::getNumber));
+		}
+		return compareDoneTimeThenNumber.compare(this, i2);
 	}
 
 	public URL getApiURL() {
-		return Utils.newURL(json.getString("url"));
+		return simple.getApiURL();
 	}
 
 	/**
@@ -66,9 +87,9 @@ public class Issue {
 		final PeekingIterator<IssueSnapshot> snapsIt = Iterators.peekingIterator(snaps.iterator());
 		while (snapsIt.hasNext()) {
 			final IssueSnapshot snap = snapsIt.next();
-			LOGGER.debug("Looking at {}, state: {}, assignees: {}.", snap, snap.getState(), snap.getAssignees());
+			LOGGER.debug("Looking at {}, state: {}, assignees: {}.", snap, snap.isOpen(), snap.getAssignees());
 
-			if (!snap.getState().equals(IssueState.CLOSED)) {
+			if (snap.isOpen()) {
 				continue;
 			}
 
@@ -97,22 +118,36 @@ public class Issue {
 	}
 
 	public URL getHtmlURL() {
-		return Utils.newURL(json.getString("html_url"));
+		return simple.getHtmlURL();
 	}
 
 	public int getNumber() {
-		return json.getInt("number");
+		return simple.getNumber();
 	}
 
 	public String getOriginalName() {
-		return json.getString("title");
+		return snaps.iterator().next().getName();
 	}
 
-	public URL getRepoTODOURL() {
-		return Utils.newURL(json.getString("repository_url"));
+	public List<IssueSnapshot> getSnapshots() {
+		return snaps;
 	}
 
 	public boolean hasBeenRenamed() {
 		return !snaps.stream().map(IssueSnapshot::getName).allMatch(Predicates.equalTo(getOriginalName()));
+	}
+
+	@Override
+	public String toString() {
+		final ToStringHelper helper = MoreObjects.toStringHelper(this);
+		if (hasBeenRenamed()) {
+			helper.add("Original name", getOriginalName());
+			helper.add("Final name", snaps.get(snaps.size() - 1).getName());
+		} else {
+			helper.add("Name", getOriginalName());
+		}
+		helper.addValue(getHtmlURL());
+		helper.add("Snapshot nb", snaps.size());
+		return helper.toString();
 	}
 }

@@ -7,6 +7,7 @@ import java.time.Instant;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
@@ -19,16 +20,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Range;
+import com.google.common.collect.ImmutableSortedSet;
+import com.google.common.collect.UnmodifiableIterator;
 
 import io.github.oliviercailloux.st_projects.model.Functionality;
-import io.github.oliviercailloux.st_projects.model.GitHubEvent;
-import io.github.oliviercailloux.st_projects.model.GitHubIssue;
-import io.github.oliviercailloux.st_projects.model.User;
+import io.github.oliviercailloux.st_projects.model.Issue;
+import io.github.oliviercailloux.st_projects.model.IssueSnapshot;
 import io.github.oliviercailloux.st_projects.model.Project;
 import io.github.oliviercailloux.st_projects.model.ProjectOnGitHub;
-import io.github.oliviercailloux.st_projects.model.ProjectWithPossibleGitHubData;
+import io.github.oliviercailloux.st_projects.model.User;
 import io.github.oliviercailloux.st_projects.utils.Utils;
 
 public class SpreadsheetWriter {
@@ -90,15 +90,15 @@ public class SpreadsheetWriter {
 		this.wide = wide;
 	}
 
-	public void writeGeneral(List<ProjectWithPossibleGitHubData> projects) throws SpreadsheetException {
+	public void write(List<Project> projects, Map<Project, ProjectOnGitHub> ghProjects) throws SpreadsheetException {
 		try (SpreadsheetDocument doc = SpreadsheetDocument.newSpreadsheetDocument()) {
 			sheet = doc.getSheetByIndex(0);
 			sheet.setTableName("Projects");
 			curCol = 0;
 			curRow = 0;
 			if (wide) {
-				for (ProjectWithPossibleGitHubData project : projects) {
-					writeProject(project);
+				for (Project project : projects) {
+					writeProject(project, Utils.getOptionally(ghProjects, project));
 					sheet.getColumnByIndex(curCol + 2).setWidth(10);
 					curRow = 0;
 					curCol += 4;
@@ -107,9 +107,9 @@ public class SpreadsheetWriter {
 					sheet.getRowByIndex(curRow).setHeight(10, false);
 				}
 			} else {
-				for (ProjectWithPossibleGitHubData project : projects) {
+				for (Project project : projects) {
 					final int startRow = curRow;
-					writeProject(project);
+					writeProject(project, Utils.getOptionally(ghProjects, project));
 					final int lastRow = sheet.getRowCount() - 1;
 					for (curRow = startRow + 2; curRow <= lastRow; ++curRow) {
 						sheet.getRowByIndex(curRow).setHeight(10, false);
@@ -134,14 +134,6 @@ public class SpreadsheetWriter {
 		} catch (Exception e) {
 			throw new SpreadsheetException(e);
 		}
-	}
-
-	public void writeGitHubProjects(List<ProjectOnGitHub> projects) throws SpreadsheetException {
-		writeGeneral(Lists.transform(projects, (p) -> new ProjectWithPossibleGitHubData(p)));
-	}
-
-	public void writeProjects(List<Project> projects) throws SpreadsheetException {
-		writeGeneral(Lists.transform(projects, (p) -> new ProjectWithPossibleGitHubData(p)));
 	}
 
 	/**
@@ -184,15 +176,31 @@ public class SpreadsheetWriter {
 		curCol -= 4;
 	}
 
-	private void writeFct(ProjectWithPossibleGitHubData project, Functionality fct, boolean firstFct) {
+	private void writeFct(Functionality fct, boolean firstFct, Optional<ProjectOnGitHub> ghProject) {
 		final String fctName = fct.getName();
-		final Optional<GitHubIssue> issueOpt = project.getGhProject().flatMap((p) -> p.getIssue(fctName));
+		final ImmutableSortedSet<Issue> issues = ghProject.map((p) -> p.getIssuesNamed(fctName))
+				.orElseGet(ImmutableSortedSet::of);
 		final Cell cellFctName = sheet.getCellByPosition(curCol, curRow);
-		if (issueOpt.isPresent()) {
-			final URL issueUrl = issueOpt.get().getHtmlURL();
-			cellFctName.addParagraph("").appendHyperlink(fctName, Utils.toURI(issueUrl));
-		} else {
+		if (issues.isEmpty()) {
 			cellFctName.setStringValue(fctName);
+		} else {
+			final UnmodifiableIterator<Issue> issuesIt = issues.iterator();
+			final Issue main = issuesIt.next();
+			final URL issueUrl = main.getHtmlURL();
+			final Paragraph fctPar = cellFctName.addParagraph("");
+			fctPar.appendHyperlink(fctName, Utils.toURI(issueUrl));
+			if (issuesIt.hasNext()) {
+				fctPar.appendTextContent(" (");
+				int i = 2;
+				while (issuesIt.hasNext()) {
+					final Issue dupl = issuesIt.next();
+					fctPar.appendHyperlink(String.valueOf(i), Utils.toURI(dupl.getHtmlURL()));
+					if (issuesIt.hasNext()) {
+						fctPar.appendTextContent(", ");
+					}
+				}
+				fctPar.appendTextContent(")");
+			}
 		}
 		++curCol;
 		final Cell cellDescr = sheet.getCellByPosition(curCol, curRow);
@@ -212,10 +220,9 @@ public class SpreadsheetWriter {
 
 		final Cell cellAss = sheet.getCellByPosition(curCol, curRow);
 
-		final Optional<GitHubEvent> eventOptRaw = issueOpt.flatMap((i) -> i.getFirstEventDone());
-		final Range<Instant> considered = Range.atMost(ignoreAfter);
-		final Optional<GitHubEvent> eventOpt = eventOptRaw.filter((e) -> considered.contains(e.getCreatedAt()));
-		final Optional<Set<User>> assigneesOpt = eventOpt.flatMap((e) -> e.getAssignees());
+		final Optional<IssueSnapshot> issueDoneOpt = issues.isEmpty() ? Optional.empty()
+				: issues.iterator().next().getFirstSnapshotDone();
+		final Optional<Set<User>> assigneesOpt = issueDoneOpt.map((s) -> s.getAssignees());
 		final Set<User> assignees = assigneesOpt.orElse(ImmutableSet.of());
 
 		if (!assignees.isEmpty()) {
@@ -243,36 +250,34 @@ public class SpreadsheetWriter {
 		}
 	}
 
-	private void writeProject(ProjectWithPossibleGitHubData project) {
-		writeProjectTitle(project);
+	private void writeProject(Project project, Optional<ProjectOnGitHub> ghProject) {
+		writeProjectTitle(project, ghProject);
 
 		++curRow;
 		writeColumnHeaders();
 
 		++curRow;
-		final List<Functionality> functionalities = project.getProject().getFunctionalities();
+		final List<Functionality> functionalities = project.getFunctionalities();
 		final Iterator<Functionality> iterator = functionalities.iterator();
 		if (iterator.hasNext()) {
 			final Functionality fct = iterator.next();
-			writeFct(project, fct, true);
+			writeFct(fct, true, ghProject);
 			++curRow;
 		}
 		while (iterator.hasNext()) {
 			final Functionality fct = iterator.next();
-			writeFct(project, fct, false);
+			writeFct(fct, false, ghProject);
 			++curRow;
 		}
 	}
 
-	private void writeProjectTitle(ProjectWithPossibleGitHubData project) {
-		final Optional<ProjectOnGitHub> ghProject = project.getGhProject();
+	private void writeProjectTitle(Project project, Optional<ProjectOnGitHub> ghProject) {
 		/** TODO span the title over all columns. */
 		final Cell cellTitle = sheet.getCellByPosition(curCol, curRow);
 		if (ghProject.isPresent()) {
-			cellTitle.addParagraph("").appendHyperlink(project.getProject().getName(),
-					Utils.toURI(ghProject.get().getHtmlURL()));
+			cellTitle.addParagraph("").appendHyperlink(project.getName(), Utils.toURI(ghProject.get().getHtmlURL()));
 		} else {
-			cellTitle.setStringValue(project.getProject().getName());
+			cellTitle.setStringValue(project.getName());
 		}
 	}
 }

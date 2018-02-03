@@ -2,10 +2,16 @@ package io.github.oliviercailloux.st_projects.model;
 
 import static java.util.Objects.requireNonNull;
 
+import java.net.URL;
 import java.time.Instant;
 import java.util.Set;
 
+import javax.json.JsonObject;
+
 import com.google.common.collect.ImmutableSet;
+
+import io.github.oliviercailloux.st_projects.services.git_hub.GitHubJsonParser;
+import io.github.oliviercailloux.st_projects.utils.Utils;
 
 /**
  * An issue as it was at some specific time of its life.
@@ -14,22 +20,26 @@ import com.google.common.collect.ImmutableSet;
  *
  */
 public class IssueSnapshot {
-	public static IssueSnapshot of(Instant birthTime, String name, IssueState state, Set<User> assignees) {
-		return new IssueSnapshot(birthTime, name, state, assignees);
+	/**
+	 * @param json
+	 *            the json describing the event corresponding to this snapshot.
+	 */
+	public static IssueSnapshot of(JsonObject json, String name, boolean isOpen, Set<User> assignees) {
+		return new IssueSnapshot(json, name, isOpen, assignees);
 	}
 
 	private final ImmutableSet<User> assignees;
 
-	private final Instant birthTime;
+	private final boolean isOpen;
+
+	private final JsonObject json;
 
 	private final String name;
 
-	private final IssueState state;
-
-	private IssueSnapshot(Instant birthTime, String name, IssueState state, Set<User> assignees) {
-		this.birthTime = requireNonNull(birthTime);
+	private IssueSnapshot(JsonObject json, String name, boolean isOpen, Set<User> assignees) {
+		this.json = requireNonNull(json);
 		this.name = requireNonNull(name);
-		this.state = requireNonNull(state);
+		this.isOpen = isOpen;
 		this.assignees = ImmutableSet.copyOf(requireNonNull(assignees));
 	}
 
@@ -38,14 +48,22 @@ public class IssueSnapshot {
 	}
 
 	public Instant getBirthTime() {
-		return birthTime;
+		return GitHubJsonParser.getCreatedAt(json);
+	}
+
+	public int getEventId() {
+		return json.getInt("id");
 	}
 
 	public String getName() {
 		return name;
 	}
 
-	public IssueState getState() {
-		return state;
+	public boolean isOpen() {
+		return isOpen;
+	}
+
+	public URL getApiURL() {
+		return Utils.newURL(json.getString("url"));
 	}
 }

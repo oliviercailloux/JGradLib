@@ -3,7 +3,7 @@ package io.github.oliviercailloux.st_projects.model;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
-import java.util.LinkedList;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.slf4j.Logger;
@@ -18,7 +18,7 @@ public class Project {
 	/**
 	 * Not <code>null</code>.
 	 */
-	private final List<Functionality> functionalities = new LinkedList<>();
+	private final List<Functionality> functionalities = new ArrayList<>();
 
 	/**
 	 * Not <code>null</code>, not empty.
