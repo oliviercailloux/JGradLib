@@ -8,6 +8,7 @@ import java.math.BigDecimal;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.text.ParseException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
@@ -27,7 +28,6 @@ import org.asciidoctor.ast.StructuralNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.beust.jcommander.internal.Lists;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
@@ -66,7 +66,7 @@ public class FunctionalitiesReader {
 		LOGGER.info("Loading.");
 		asciidoctor = Asciidoctor.Factory.create();
 		LOGGER.info("Loaded.");
-		functionalities = Lists.newLinkedList();
+		functionalities = new ArrayList<>();
 		/**
 		 * Note that the sentence preceding the "difficulty" does not necessarily end
 		 * with a dot. (As in this example.) (Or in this example!)
@@ -129,7 +129,7 @@ public class FunctionalitiesReader {
 	 * @throws IllegalFormat
 	 */
 	public void read(Reader source) throws IOException, IllegalFormat {
-		functionalities = Lists.newLinkedList();
+		functionalities = new ArrayList<>();
 
 		doc = asciidoctor.load(CharStreams.toString(requireNonNull(source)), ImmutableMap.of());
 		LOGGER.debug("Doc title: {}.", doc.getAttribute("doctitle"));

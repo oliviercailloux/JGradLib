@@ -24,7 +24,6 @@ import javax.ws.rs.core.Response;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.beust.jcommander.internal.Lists;
 import com.google.common.base.Strings;
 
 import io.github.oliviercailloux.st_projects.model.Project;
@@ -87,7 +86,7 @@ public class RawGitHubFetcher implements AutoCloseable {
 	}
 
 	public List<Project> fetchProjects() throws IllegalFormat, IOException {
-		projects = Lists.newLinkedList();
+		projects = new ArrayList<>();
 		final Builder request = client.target(CONTENT_URI).resolveTemplate("owner", "oliviercailloux")
 				.resolveTemplate("repo", "projets").resolveTemplate("path", "EE").request(GIT_HUB_MEDIA_TYPE);
 		final String jsonFileListStr;

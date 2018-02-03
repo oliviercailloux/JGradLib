@@ -11,6 +11,7 @@ import java.io.InputStreamReader;
 import java.io.Reader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -18,7 +19,6 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.collect.Lists;
 import com.google.common.io.Files;
 
 import io.github.oliviercailloux.st_projects.model.Project;
@@ -57,7 +57,7 @@ public class ProjectReader {
 	}
 
 	public List<Project> asProjects(Path path) throws IOException, IllegalFormat {
-		final List<Project> projects = Lists.newLinkedList();
+		final List<Project> projects = new ArrayList<>();
 		final File dir = path.toFile();
 		checkArgument(dir.isDirectory());
 		final List<File> files = Arrays.asList(dir.listFiles());

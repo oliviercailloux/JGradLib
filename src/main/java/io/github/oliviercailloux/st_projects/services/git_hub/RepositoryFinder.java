@@ -38,7 +38,7 @@ public class RepositoryFinder {
 	public RepositoryFinder() {
 		floorSearchDate = getFloorSept1();
 		gitHub = new RtGithub();
-		ghProjects = Lists.newLinkedList();
+		ghProjects = new ArrayList<>();
 	}
 
 	public List<Coordinates> find(Project project) throws IOException {
