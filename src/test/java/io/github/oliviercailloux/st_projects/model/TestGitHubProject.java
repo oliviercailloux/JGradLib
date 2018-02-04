@@ -4,9 +4,13 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
+
+import javax.json.bind.Jsonb;
+import javax.json.bind.JsonbBuilder;
 
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -32,7 +36,7 @@ public class TestGitHubProject {
 		final RepositoryFinder finder = new RepositoryFinder();
 		final RtGithub gitHub = new RtGithub(Utils.getToken());
 		finder.setGitHub(gitHub);
-		final List<Coordinates> found = finder.find(new Project("Dauphine-Open-Data"));
+		final List<Coordinates> found = finder.find(Project.from("Dauphine-Open-Data"));
 		assertTrue(found.size() >= 1);
 		final List<Coordinates> foundWithPom = finder.withPom();
 		final Coordinates matching = Iterables.getOnlyElement(foundWithPom);
@@ -61,6 +65,21 @@ public class TestGitHubProject {
 		LOGGER.debug(JsonUtils.asPrettyString(userC.getJson()));
 		LOGGER.debug(JsonUtils.asPrettyString(project.getOwner().getJson()));
 		assertEquals(userC, project.getOwner());
+	}
+
+	@Test
+	public void testProjectToJson() throws Exception {
+		final Project p = Project.from("pn", ModelMocker.getFunctionalities("pn", 1),
+				Instant.parse("2018-01-01T00:00:00Z"), Instant.parse("2018-01-01T00:00:00Z"));
+		try (Jsonb jsonb = JsonbBuilder.create()) {
+			final String json = jsonb.toJson(p);
+			LOGGER.debug("Serialized json: {}.", json);
+			assertEquals(
+					"{\"name\":\"pn\",\"gitHubName\":\"pn\","
+							+ "\"functionalities\":[{\"name\":\"pn-f1\",\"description\":\"pn-d1\",\"difficulty\":1}],"
+							+ "\"lastModification\":\"2018-01-01T00:00:00Z\",\"queried\":\"2018-01-01T00:00:00Z\"}",
+					json);
+		}
 	}
 
 }

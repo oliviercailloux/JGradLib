@@ -5,6 +5,8 @@ import static java.util.Objects.requireNonNull;
 
 import java.math.BigDecimal;
 
+import javax.json.bind.annotation.JsonbPropertyOrder;
+
 import com.google.common.base.MoreObjects;
 
 /**
@@ -13,21 +15,22 @@ import com.google.common.base.MoreObjects;
  * @author Olivier Cailloux
  *
  */
+@JsonbPropertyOrder({ "name", "description", "difficulty" })
 public class Functionality {
 	/**
 	 * Not <code>null</code>, not empty.
 	 */
-	private String description;
+	private final String description;
 
 	/**
 	 * > 0
 	 */
-	private BigDecimal difficulty;
+	private final BigDecimal difficulty;
 
 	/**
 	 * Not <code>null</code>, not empty.
 	 */
-	private String name;
+	private final String name;
 
 	public Functionality(String name, String description, BigDecimal difficulty) {
 		this.name = requireNonNull(name);

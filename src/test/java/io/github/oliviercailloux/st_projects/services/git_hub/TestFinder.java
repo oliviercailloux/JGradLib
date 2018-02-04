@@ -30,7 +30,7 @@ public class TestFinder {
 
 	@Test
 	public void testFindMyRepo() throws IOException {
-		final Project myProject = new Project("XMCDA-2.2.1-JAXB");
+		final Project myProject = Project.from("XMCDA-2.2.1-JAXB");
 		final RepositoryFinder finder = new RepositoryFinder();
 		final RtGithub gitHub = new RtGithub(Utils.getToken());
 		finder.setGitHub(gitHub);
@@ -53,7 +53,7 @@ public class TestFinder {
 	 */
 	@Test(expected = AssertionError.class)
 	public void testFindTooMany() throws IOException {
-		final Project myProject = new Project("Biblio");
+		final Project myProject = Project.from("Biblio");
 		final RepositoryFinder finder = new RepositoryFinder();
 		finder.setGitHub(new RtGithub());
 		finder.setFloorSearchDate(LocalDate.of(2017, Month.SEPTEMBER, 1));
@@ -62,7 +62,7 @@ public class TestFinder {
 
 	@Test
 	public void testHasPom() throws IOException {
-		final Project myProject = new Project("XMCDA-2.2.1-JAXB");
+		final Project myProject = Project.from("XMCDA-2.2.1-JAXB");
 		final RepositoryFinder finder = new RepositoryFinder();
 		finder.setGitHub(new RtGithub(Utils.getToken()));
 		finder.setFloorSearchDate(LocalDate.of(2015, Month.DECEMBER, 1));
@@ -75,7 +75,7 @@ public class TestFinder {
 
 	@Test
 	public void testNoFindTooLate() throws IOException {
-		final Project myProject = new Project("java-course");
+		final Project myProject = Project.from("java-course");
 		final RepositoryFinder finder = new RepositoryFinder();
 		finder.setGitHub(new RtGithub(Utils.getToken()));
 		finder.setFloorSearchDate(LocalDate.of(2049, Month.OCTOBER, 4));

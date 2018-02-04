@@ -3,35 +3,78 @@ package io.github.oliviercailloux.st_projects.model;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
-import java.util.ArrayList;
+import java.time.Instant;
 import java.util.List;
+
+import javax.json.bind.annotation.JsonbPropertyOrder;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.MoreObjects;
+import com.google.common.collect.ImmutableList;
 
+/**
+ * Immutable.
+ *
+ * @author Olivier Cailloux
+ *
+ */
+@JsonbPropertyOrder({ "name", "gitHubName", "functionalities", "lastModification", "queried" })
 public class Project {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(Project.class);
 
 	/**
+	 * This constructor is appropriate when the project has just been built from
+	 * memory (e.g. for a test).
+	 */
+	public static Project from(String name) {
+		return new Project(name, ImmutableList.of(), Instant.now(), Instant.now());
+	}
+
+	/**
+	 * This constructor is appropriate when the project has just been built from
+	 * memory (e.g. for a test).
+	 */
+	public static Project from(String name, List<Functionality> functionalities) {
+		return new Project(name, functionalities, Instant.now(), Instant.now());
+	}
+
+	public static Project from(String name, List<Functionality> functionalities, Instant lastModification) {
+		return new Project(name, functionalities, lastModification, Instant.now());
+	}
+
+	public static Project from(String name, List<Functionality> functionalities, Instant lastModification,
+			Instant queried) {
+		return new Project(name, functionalities, lastModification, queried);
+	}
+
+	/**
 	 * Not <code>null</code>.
 	 */
-	private final List<Functionality> functionalities = new ArrayList<>();
+	private final ImmutableList<Functionality> functionalities;
+
+	private final Instant lastModification;
 
 	/**
 	 * Not <code>null</code>, not empty.
 	 */
-	private String name;
+	private final String name;
 
-	public Project(String name) {
+	private final Instant queried;
+
+	private Project(String name, Iterable<Functionality> functionalities, Instant lastModification, Instant queried) {
 		this.name = requireNonNull(name);
 		checkArgument(!name.isEmpty());
-		LOGGER.info("Created {}.", name);
+		this.functionalities = ImmutableList.copyOf(requireNonNull(functionalities));
+		this.queried = requireNonNull(queried);
+		this.lastModification = requireNonNull(lastModification);
+		checkArgument(lastModification.compareTo(queried) <= 0);
+		LOGGER.debug("Created {}.", name);
 	}
 
-	public List<Functionality> getFunctionalities() {
+	public ImmutableList<Functionality> getFunctionalities() {
 		return functionalities;
 	}
 
@@ -39,8 +82,16 @@ public class Project {
 		return name.replace(' ', '-');
 	}
 
+	public Instant getLastModification() {
+		return lastModification;
+	}
+
 	public String getName() {
 		return name;
+	}
+
+	public Instant getQueried() {
+		return queried;
 	}
 
 	@Override

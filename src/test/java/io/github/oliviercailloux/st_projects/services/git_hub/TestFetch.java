@@ -4,6 +4,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import java.time.Instant;
 import java.util.List;
 
 import javax.json.JsonArray;
@@ -41,9 +42,18 @@ public class TestFetch {
 	}
 
 	@Test
+	public void testRawFetchLastModification() throws Exception {
+		try (RawGitHubFetcher fetch = new RawGitHubFetcher()) {
+			final Instant lastModification = fetch.getLastModification("testrel", "Test.html").get();
+			LOGGER.debug("Last: {}.", lastModification);
+			assertEquals(Instant.parse("2016-05-02T14:11:38Z"), lastModification);
+		}
+	}
+
+	@Test
 	public void testRawFetchProjects() throws IllegalFormat, IOException {
 		try (RawGitHubFetcher fetch = new RawGitHubFetcher()) {
-//		fetch.fetchReadme();
+			// fetch.fetchReadme();
 			final List<Project> projects = fetch.fetchProjects();
 			assertTrue(projects.toString(), projects.size() >= 3);
 		}

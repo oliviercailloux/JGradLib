@@ -11,6 +11,7 @@ import java.io.InputStreamReader;
 import java.io.Reader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -21,6 +22,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.io.Files;
 
+import io.github.oliviercailloux.st_projects.model.Functionality;
 import io.github.oliviercailloux.st_projects.model.Project;
 
 public class ProjectReader {
@@ -37,18 +39,21 @@ public class ProjectReader {
 	public Project asProject(File file) throws IllegalFormat, IOException, FileNotFoundException {
 		final Project project;
 		try (InputStreamReader source = new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8)) {
-			project = asProject(source, file.getName());
+			final Instant lastModified = Instant.ofEpochMilli(file.lastModified());
+			project = asProject(source, file.getName(), lastModified);
 		}
 		return project;
 	}
 
-	public Project asProject(Reader source, String originFileName) throws IllegalFormat, IOException {
+	public Project asProject(Reader source, String originFileName, Instant lastModification)
+			throws IllegalFormat, IOException {
 		requireNonNull(source);
 		final String baseName = Files.getNameWithoutExtension(requireNonNull(originFileName));
 		checkArgument(!baseName.isEmpty());
-		final Project project = new Project(baseName);
+		requireNonNull(lastModification);
 		functionalitiesReader.read(source);
-		project.getFunctionalities().addAll(functionalitiesReader.getFunctionalities());
+		final List<Functionality> functionalities = functionalitiesReader.getFunctionalities();
+		final Project project = Project.from(baseName, functionalities, lastModification);
 		final String title = functionalitiesReader.getDoc().getAttribute("doctitle").toString();
 		if (!baseName.equals(title)) {
 			throw new IllegalFormat("Read title: " + title + ".");

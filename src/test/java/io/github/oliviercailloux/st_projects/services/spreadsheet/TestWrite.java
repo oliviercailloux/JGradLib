@@ -19,6 +19,7 @@ import org.slf4j.LoggerFactory;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableList.Builder;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.jcabi.github.Coordinates;
@@ -92,9 +93,10 @@ public class TestWrite {
 	@Test
 	public void testWriteOneProject() throws Exception {
 		LOGGER.info("Started write p1.");
-		final Project p1 = new Project("p1");
-		p1.getFunctionalities().add(new Functionality("f11", "d11", BigDecimal.ONE));
-		p1.getFunctionalities().add(new Functionality("f12", "d12", BigDecimal.TEN));
+		final Builder<Functionality> functionalitiesBuilder = ImmutableList.builder();
+		functionalitiesBuilder.add(new Functionality("f11", "d11", BigDecimal.ONE));
+		functionalitiesBuilder.add(new Functionality("f12", "d12", BigDecimal.TEN));
+		final Project p1 = Project.from("p1", functionalitiesBuilder.build());
 		final byte[] written;
 		try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
 			final SpreadsheetWriter writer = new SpreadsheetWriter();
@@ -144,10 +146,11 @@ public class TestWrite {
 
 	@Test
 	public void testWriteWithAssignees() throws Exception {
-		final Project project = new Project("testrel");
-		project.getFunctionalities().add(new Functionality("test1", "Descr test 1", BigDecimal.ONE));
-		project.getFunctionalities().add(new Functionality("f2", "Descr f2", BigDecimal.ONE));
-		project.getFunctionalities().add(new Functionality("test open", "Descr test open", BigDecimal.ONE));
+		final Builder<Functionality> functionalitiesBuilder = ImmutableList.builder();
+		functionalitiesBuilder.add(new Functionality("test1", "Descr test 1", BigDecimal.ONE));
+		functionalitiesBuilder.add(new Functionality("f2", "Descr f2", BigDecimal.ONE));
+		functionalitiesBuilder.add(new Functionality("test open", "Descr test open", BigDecimal.ONE));
+		final Project project = Project.from("testrel", functionalitiesBuilder.build());
 		final Github gitHub = new RtGithub(Utils.getToken());
 		final Coordinates.Simple coords = new Coordinates.Simple("oliviercailloux", "testrel");
 		final ProjectOnGitHub ghProject = GitHubFetcher.using(gitHub).getProject(coords);

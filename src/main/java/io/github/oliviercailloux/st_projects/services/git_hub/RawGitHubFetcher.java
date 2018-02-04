@@ -7,6 +7,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
 import javax.json.Json;
 import javax.json.JsonArray;
@@ -29,6 +30,7 @@ import com.google.common.base.Strings;
 import io.github.oliviercailloux.st_projects.model.Project;
 import io.github.oliviercailloux.st_projects.services.read.IllegalFormat;
 import io.github.oliviercailloux.st_projects.services.read.ProjectReader;
+import io.github.oliviercailloux.st_projects.utils.JsonUtils;
 import io.github.oliviercailloux.st_projects.utils.Utils;
 
 public class RawGitHubFetcher implements AutoCloseable {
@@ -36,7 +38,11 @@ public class RawGitHubFetcher implements AutoCloseable {
 
 	public static final MediaType GIT_HUB_RAW_MEDIA_TYPE = new MediaType("application", "vnd.github.v3.raw");
 
+	private static final String COMMITS_URI = "https://api.github.com/repos/{owner}/{repo}/commits?path={path}";
+
 	private static final String CONTENT_URI = "https://api.github.com/repos/{owner}/{repo}/contents/{path}";
+
+	private static final String EVENTS_URI = "https://api.github.com/repos/{owner}/{repo}/events";
 
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(RawGitHubFetcher.class);
@@ -86,39 +92,42 @@ public class RawGitHubFetcher implements AutoCloseable {
 	}
 
 	public List<Project> fetchProjects() throws IllegalFormat, IOException {
+		final JsonArray jsonFileList;
 		projects = new ArrayList<>();
-		final Builder request = client.target(CONTENT_URI).resolveTemplate("owner", "oliviercailloux")
-				.resolveTemplate("repo", "projets").resolveTemplate("path", "EE").request(GIT_HUB_MEDIA_TYPE);
-		final String jsonFileListStr;
-		try (Response response = request.get()) {
-			readRates(response);
-			jsonFileListStr = response.readEntity(String.class);
-		} catch (ProcessingException e) {
-			throw new IOException(e);
-		}
-		LOGGER.info("List: {}.", jsonFileListStr);
-		try (JsonReader jr = Json.createReader(new StringReader(jsonFileListStr))) {
-			final JsonArray jsonFileList = jr.readArray();
-			for (JsonValue jsonFileValue : jsonFileList) {
-				final JsonObject jsonFile = jsonFileValue.asJsonObject();
-				final String type = jsonFile.getString("type");
-				if (!Objects.equals(type, "file")) {
-					throw new IllegalFormat();
-				}
-				final String fileName = jsonFile.getString("name");
-				final String fileApiUrl = jsonFile.getString("git_url");
-				LOGGER.info("Reading: {}.", fileName);
-				readRaw(client.target(fileApiUrl));
-				final StringReader source = new StringReader(content);
-				final Project project;
-				try {
-					project = new ProjectReader().asProject(source, fileName);
-				} catch (IOException e) {
-					throw new IllegalStateException(e);
-				}
-				LOGGER.info("Built: {}.", project);
-				projects.add(project);
+		{
+			final Builder request = client.target(CONTENT_URI).resolveTemplate("owner", "oliviercailloux")
+					.resolveTemplate("repo", "projets").resolveTemplate("path", "EE").request(GIT_HUB_MEDIA_TYPE);
+			try (Response response = request.get()) {
+				readRates(response);
+				jsonFileList = response.readEntity(JsonArray.class);
+			} catch (ProcessingException e) {
+				throw new IOException(e);
 			}
+		}
+
+		LOGGER.debug("Read: {}.", jsonFileList);
+		for (JsonValue jsonFileValue : jsonFileList) {
+			final JsonObject jsonFile = jsonFileValue.asJsonObject();
+			final String type = jsonFile.getString("type");
+			if (!Objects.equals(type, "file")) {
+				throw new IllegalFormat();
+			}
+			final String fileName = jsonFile.getString("name");
+			final String fileApiUrl = jsonFile.getString("git_url");
+			LOGGER.info("Reading: {}.", fileName);
+			readRaw(client.target(fileApiUrl));
+			final StringReader source = new StringReader(content);
+			LOGGER.debug("Fetching modification time.");
+			final Instant lastModification = getLastModification("projets", "EE/" + fileName).get();
+			final Project project;
+			try {
+				project = new ProjectReader().asProject(source, fileName, lastModification);
+			} catch (IOException e) {
+				// string reader can’t fail!
+				throw new IllegalStateException(e);
+			}
+			LOGGER.info("Built: {}.", project);
+			projects.add(project);
 		}
 		return projects;
 	}
@@ -127,6 +136,29 @@ public class RawGitHubFetcher implements AutoCloseable {
 		final WebTarget target = client.target(README_URI).resolveTemplate("owner", "oliviercailloux")
 				.resolveTemplate("repo", "java-course");
 		readRaw(target);
+	}
+
+	public Optional<Instant> getLastModification(String repo, String path) {
+		final Builder request = client.target(COMMITS_URI).resolveTemplate("owner", "oliviercailloux")
+				.resolveTemplate("repo", repo).resolveTemplate("path", path).request(GIT_HUB_MEDIA_TYPE);
+		final JsonArray eventsArray = request.get(JsonArray.class);
+		LOGGER.debug("Commits: {}", JsonUtils.asPrettyString(eventsArray));
+		final Optional<Instant> lastMod;
+		if (eventsArray.isEmpty()) {
+			lastMod = Optional.empty();
+		} else {
+			final JsonObject commitJson = eventsArray.getJsonObject(0);
+			final String date = commitJson.getJsonObject("commit").getJsonObject("author").getString("date");
+			lastMod = Optional.of(GitHubJsonParser.asInstant(date));
+		}
+		return lastMod;
+	}
+
+	public void logRepoEvents() {
+		final Builder request = client.target(EVENTS_URI).resolveTemplate("owner", "oliviercailloux")
+				.resolveTemplate("repo", "projets").request(GIT_HUB_MEDIA_TYPE);
+		final JsonArray eventsArray = request.get(JsonArray.class);
+		LOGGER.info("Events: {}", JsonUtils.asPrettyString(eventsArray));
 	}
 
 	private void readLinks(Response response) {
@@ -153,6 +185,6 @@ public class RawGitHubFetcher implements AutoCloseable {
 		} catch (ProcessingException e) {
 			throw new IOException(e);
 		}
-		LOGGER.info("Content retrieved…\n{}.", content);
+		LOGGER.debug("Content retrieved…\n{}.", content);
 	}
 }
