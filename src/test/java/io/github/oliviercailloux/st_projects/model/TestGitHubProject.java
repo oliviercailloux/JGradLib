@@ -9,9 +9,6 @@ import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
 
-import javax.json.bind.Jsonb;
-import javax.json.bind.JsonbBuilder;
-
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -71,15 +68,11 @@ public class TestGitHubProject {
 	public void testProjectToJson() throws Exception {
 		final Project p = Project.from("pn", ModelMocker.getFunctionalities("pn", 1),
 				Instant.parse("2018-01-01T00:00:00Z"), Instant.parse("2018-01-01T00:00:00Z"));
-		try (Jsonb jsonb = JsonbBuilder.create()) {
-			final String json = jsonb.toJson(p);
-			LOGGER.debug("Serialized json: {}.", json);
-			assertEquals(
-					"{\"name\":\"pn\",\"gitHubName\":\"pn\","
-							+ "\"functionalities\":[{\"name\":\"pn-f1\",\"description\":\"pn-d1\",\"difficulty\":1}],"
-							+ "\"lastModification\":\"2018-01-01T00:00:00Z\",\"queried\":\"2018-01-01T00:00:00Z\"}",
-					json);
-		}
+		final String json = p.asJsonDetailed();
+		LOGGER.debug("Serialized json: {}.", json);
+		assertEquals("{\"name\":\"pn\",\"gitHubName\":\"pn\","
+				+ "\"functionalities\":[{\"name\":\"pn-f1\",\"description\":\"pn-d1\",\"difficulty\":1}],"
+				+ "\"lastModification\":\"2018-01-01T00:00:00Z\",\"queried\":\"2018-01-01T00:00:00Z\"}", json);
 	}
 
 }

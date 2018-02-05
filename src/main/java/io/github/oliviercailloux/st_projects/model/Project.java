@@ -6,6 +6,9 @@ import static java.util.Objects.requireNonNull;
 import java.time.Instant;
 import java.util.List;
 
+import javax.json.bind.Jsonb;
+import javax.json.bind.JsonbBuilder;
+import javax.json.bind.JsonbConfig;
 import javax.json.bind.annotation.JsonbPropertyOrder;
 
 import org.slf4j.Logger;
@@ -72,6 +75,22 @@ public class Project {
 		this.lastModification = requireNonNull(lastModification);
 		checkArgument(lastModification.compareTo(queried) <= 0);
 		LOGGER.debug("Created {}.", name);
+	}
+
+	public String asJsonDetailed() {
+		try (Jsonb jsonb = JsonbBuilder.create()) {
+			return jsonb.toJson(this);
+		} catch (Exception e) {
+			throw new IllegalStateException(e);
+		}
+	}
+
+	public String asJsonPretty() {
+		try (Jsonb jsonb = JsonbBuilder.create(new JsonbConfig().withFormatting(true))) {
+			return jsonb.toJson(this);
+		} catch (Exception e) {
+			throw new IllegalStateException(e);
+		}
 	}
 
 	public ImmutableList<Functionality> getFunctionalities() {

@@ -55,7 +55,7 @@ public class RepositoryFinder {
 			LOGGER.debug("Found repo: {} (i = {}).", repo, i);
 			if (!repo.coordinates().repo().equals(project.getGitHubName())) {
 				if (repo.coordinates().repo().equalsIgnoreCase(project.getGitHubName())) {
-					LOGGER.error("Equals only when ignoring case: {}.", project);
+					LOGGER.debug("Equals only when ignoring case: {}.", project);
 				}
 				continue;
 			}

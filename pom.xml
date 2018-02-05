@@ -5,11 +5,13 @@
 	<groupId>io.github.oliviercailloux</groupId>
 	<artifactId>st-projects</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
+	<packaging>war</packaging>
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<maven.compiler.source>1.8</maven.compiler.source>
 		<maven.compiler.target>1.8</maven.compiler.target>
+		<failOnMissingWebXml>false</failOnMissingWebXml>
 	</properties>
 
 	<dependencies>
@@ -55,24 +57,6 @@
 			<version>1.0</version>
 		</dependency>
 		<dependency>
-			<groupId>org.glassfish.jersey.bundles</groupId>
-			<artifactId>jaxrs-ri</artifactId>
-			<version>2.26</version>
-			<scope>runtime</scope>
-		</dependency>
-		<!-- JCabi is bundled with old versions of org.glassfish.jersey.core, need 
-			to specify newer ones or jaxrs-ri does not work correctly. -->
-		<dependency>
-			<groupId>org.glassfish.jersey.core</groupId>
-			<artifactId>jersey-common</artifactId>
-			<version>2.26</version>
-		</dependency>
-		<dependency>
-			<groupId>org.glassfish.jersey.core</groupId>
-			<artifactId>jersey-server</artifactId>
-			<version>2.26</version>
-		</dependency>
-		<dependency>
 			<groupId>org.apache.odftoolkit</groupId>
 			<artifactId>simple-odf</artifactId>
 			<version>0.8.2-incubating</version>
@@ -80,6 +64,10 @@
 				<exclusion>
 					<groupId>com.sun</groupId>
 					<artifactId>tools</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>xerces</groupId>
+					<artifactId>xercesImpl</artifactId>
 				</exclusion>
 				<exclusion>
 					<groupId>log4j</groupId>
@@ -95,6 +83,22 @@
 			<groupId>com.jcabi</groupId>
 			<artifactId>jcabi-github</artifactId>
 			<version>0.33.1</version>
+			<exclusions>
+				<!-- TODO with aspects, inclusion of validation.xml prevents deployment. 
+					See https://github.com/jcabi/jcabi-github/issues/1347 -->
+				<exclusion>
+					<groupId>com.jcabi</groupId>
+					<artifactId>jcabi-aspects</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>org.glassfish.jersey.core</groupId>
+					<artifactId>jersey-common</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>org.glassfish.jersey.core</groupId>
+					<artifactId>jersey-server</artifactId>
+				</exclusion>
+			</exclusions>
 		</dependency>
 		<dependency>
 			<groupId>org.eclipse.jgit</groupId>
