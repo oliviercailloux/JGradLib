@@ -6,6 +6,7 @@ import java.io.OutputStream;
 import java.math.BigDecimal;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -50,7 +51,7 @@ public class App {
 	public App() {
 		writer = new SpreadsheetWriter();
 		projects = null;
-		ghProjects = null;
+		ghProjects = new LinkedHashMap<>();
 	}
 
 	public void proceed() throws Exception {
@@ -127,12 +128,15 @@ public class App {
 			final List<Coordinates> foundWithPom = finder.withPom();
 			final int nbMatches = foundWithPom.size();
 			switch (nbMatches) {
+			case 0:
+				break;
 			case 1:
 				final Coordinates matching = Iterables.getOnlyElement(foundWithPom);
 				ghProjects.put(project, factory.getProject(matching));
 				break;
 			default:
-				throw new IllegalStateException("Found multiple matches for " + project + ".");
+				throw new IllegalStateException(
+						String.format("Found multiple matches for %s: %s.", project, foundWithPom));
 			}
 		}
 		return ghProjects;

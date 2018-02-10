@@ -5,9 +5,8 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.URL;
 import java.time.Instant;
+import java.util.Comparator;
 import java.util.List;
-import java.util.function.Function;
-import java.util.stream.Collector;
 
 import javax.json.JsonObject;
 
@@ -16,10 +15,10 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ImmutableSetMultimap;
+import com.google.common.collect.ImmutableSetMultimap.Builder;
 import com.google.common.collect.ImmutableSortedSet;
-import com.google.common.collect.MultimapBuilder;
-import com.google.common.collect.Multimaps;
-import com.google.common.collect.SortedSetMultimap;
 
 import io.github.oliviercailloux.st_projects.services.git_hub.GitHubJsonParser;
 import io.github.oliviercailloux.st_projects.utils.Utils;
@@ -32,7 +31,7 @@ public class ProjectOnGitHub {
 		return new ProjectOnGitHub(json, owner, issues);
 	}
 
-	private SortedSetMultimap<String, Issue> allIssuesByName;
+	private ImmutableSetMultimap<String, Issue> allIssuesByName;
 
 	final private List<Issue> issues;
 
@@ -44,9 +43,12 @@ public class ProjectOnGitHub {
 		this.owner = owner;
 		this.json = requireNonNull(json);
 		this.issues = requireNonNull(issues);
-		final Collector<Issue, ?, SortedSetMultimap<String, Issue>> c = Multimaps.toMultimap(Issue::getOriginalName,
-				Function.identity(), MultimapBuilder.treeKeys().treeSetValues()::build);
-		allIssuesByName = issues.stream().collect(c);
+		final Builder<String, Issue> builder = ImmutableSetMultimap.<String, Issue>builder()
+				.orderValuesBy(Comparator.<Issue>naturalOrder());
+		for (Issue issue : issues) {
+			builder.put(issue.getOriginalName(), issue);
+		}
+		allIssuesByName = builder.build();
 	}
 
 	public URL getApiURL() {
@@ -77,7 +79,13 @@ public class ProjectOnGitHub {
 	 */
 	public ImmutableSortedSet<Issue> getIssuesNamed(String name) {
 		requireNonNull(name);
-		return ImmutableSortedSet.copyOf(allIssuesByName.get(name));
+		final ImmutableSet<Issue> homonyms = allIssuesByName.get(name);
+		/**
+		 * Guaranteed by the way we built the ImmutableSetMultimap (except after
+		 * de-serialization).
+		 */
+		assert homonyms instanceof ImmutableSortedSet;
+		return (ImmutableSortedSet<Issue>) homonyms;
 	}
 
 	public String getName() {

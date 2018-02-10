@@ -55,7 +55,6 @@ public class Functionality {
 
 	@Override
 	public String toString() {
-		return MoreObjects.toStringHelper(this).addValue(name).addValue(description).add("Difficulty", difficulty)
-				.toString();
+		return MoreObjects.toStringHelper(this).addValue(name).add("Difficulty", difficulty).toString();
 	}
 }

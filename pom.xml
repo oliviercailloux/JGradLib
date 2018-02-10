@@ -86,10 +86,10 @@
 			<exclusions>
 				<!-- TODO with aspects, inclusion of validation.xml prevents deployment. 
 					See https://github.com/jcabi/jcabi-github/issues/1347 -->
-				<exclusion>
-					<groupId>com.jcabi</groupId>
-					<artifactId>jcabi-aspects</artifactId>
-				</exclusion>
+	<!-- <exclusion> -->
+	<!-- <groupId>com.jcabi</groupId> -->
+	<!-- <artifactId>jcabi-aspects</artifactId> -->
+	<!-- </exclusion> -->
 				<exclusion>
 					<groupId>org.glassfish.jersey.core</groupId>
 					<artifactId>jersey-common</artifactId>
@@ -113,11 +113,9 @@
 			<scope>runtime</scope>
 		</dependency>
 		<dependency>
-			<groupId>ch.qos.logback</groupId>
-			<artifactId>logback-classic</artifactId>
-			<version>1.2.3</version>
-			<scope>runtime</scope>
-			<optional>true</optional>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-jdk14</artifactId>
+			<version>1.7.25</version>
 		</dependency>
 
 		<dependency>
