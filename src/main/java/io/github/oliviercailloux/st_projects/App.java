@@ -67,10 +67,6 @@ public class App {
 	}
 
 	public void retrieveEE() throws Exception {
-		projectsDir = Paths.get("/home/olivier/Professions/Enseignement/Projets/EE");
-		projects = new ProjectReader().asProjects(projectsDir);
-		find();
-
 		for (ProjectOnGitHub ghProject : ghProjects.values()) {
 			new Client().retrieve(ghProject);
 		}

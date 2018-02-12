@@ -82,8 +82,8 @@ public class Client {
 			final Ref originMasterRef = repo.getRepository().exactRef("refs/remotes/origin/master");
 			assert originMasterRef != null : repo.branchList().setListMode(ListMode.REMOTE).call();
 			final MergeResult res = repo.merge().include(originMasterRef).call();
-			assert res.getMergeStatus() == MergeStatus.ALREADY_UP_TO_DATE
-					|| res.getMergeStatus() == MergeStatus.MERGED : res.getMergeStatus();
+			assert res.getMergeStatus() == MergeStatus.ALREADY_UP_TO_DATE || res.getMergeStatus() == MergeStatus.MERGED
+					|| res.getMergeStatus() == MergeStatus.FAST_FORWARD : res.getMergeStatus();
 		}
 	}
 

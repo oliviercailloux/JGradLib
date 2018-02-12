@@ -14,6 +14,88 @@
 		<failOnMissingWebXml>false</failOnMissingWebXml>
 	</properties>
 
+	<profiles>
+		<profile>
+			<id>Java SE</id>
+			<activation>
+				<activeByDefault>true</activeByDefault>
+			</activation>
+			<dependencyManagement>
+				<dependencies>
+					<dependency>
+						<groupId>org.apache.odftoolkit</groupId>
+						<artifactId>simple-odf</artifactId>
+						<version>0.8.2-incubating</version>
+						<exclusions>
+							<exclusion>
+								<groupId>com.sun</groupId>
+								<artifactId>tools</artifactId>
+							</exclusion>
+							<exclusion>
+								<groupId>log4j</groupId>
+								<artifactId>log4j</artifactId>
+							</exclusion>
+							<exclusion>
+								<groupId>org.slf4j</groupId>
+								<artifactId>slf4j-log4j12</artifactId>
+							</exclusion>
+						</exclusions>
+					</dependency>
+				</dependencies>
+			</dependencyManagement>
+			<dependencies>
+				<dependency>
+					<groupId>ch.qos.logback</groupId>
+					<artifactId>logback-classic</artifactId>
+					<version>1.2.3</version>
+					<scope>runtime</scope>
+					<optional>true</optional>
+				</dependency>
+			</dependencies>
+		</profile>
+		<profile>
+			<id>Java EE</id>
+			<activation>
+				<activeByDefault>false</activeByDefault>
+			</activation>
+			<dependencyManagement>
+				<dependencies>
+					<dependency>
+						<groupId>org.apache.odftoolkit</groupId>
+						<artifactId>simple-odf</artifactId>
+						<version>0.8.2-incubating</version>
+						<exclusions>
+							<exclusion>
+								<groupId>com.sun</groupId>
+								<artifactId>tools</artifactId>
+							</exclusion>
+							<exclusion>
+								<groupId>log4j</groupId>
+								<artifactId>log4j</artifactId>
+							</exclusion>
+							<exclusion>
+								<groupId>org.slf4j</groupId>
+								<artifactId>slf4j-log4j12</artifactId>
+							</exclusion>
+							<exclusion>
+								<groupId>xerces</groupId>
+								<artifactId>xercesImpl</artifactId>
+							</exclusion>
+						</exclusions>
+					</dependency>
+				</dependencies>
+			</dependencyManagement>
+			<dependencies>
+				<dependency>
+					<groupId>org.slf4j</groupId>
+					<artifactId>slf4j-jdk14</artifactId>
+					<version>1.7.25</version>
+					<scope>runtime</scope>
+					<optional>true</optional>
+				</dependency>
+			</dependencies>
+		</profile>
+	</profiles>
 	<dependencies>
 		<dependency>
 			<groupId>org.slf4j</groupId>
@@ -59,25 +141,6 @@
 		<dependency>
 			<groupId>org.apache.odftoolkit</groupId>
 			<artifactId>simple-odf</artifactId>
-			<version>0.8.2-incubating</version>
-			<exclusions>
-				<exclusion>
-					<groupId>com.sun</groupId>
-					<artifactId>tools</artifactId>
-				</exclusion>
-				<exclusion>
-					<groupId>xerces</groupId>
-					<artifactId>xercesImpl</artifactId>
-				</exclusion>
-				<exclusion>
-					<groupId>log4j</groupId>
-					<artifactId>log4j</artifactId>
-				</exclusion>
-				<exclusion>
-					<groupId>org.slf4j</groupId>
-					<artifactId>slf4j-log4j12</artifactId>
-				</exclusion>
-			</exclusions>
 		</dependency>
 		<dependency>
 			<groupId>com.jcabi</groupId>
@@ -86,10 +149,10 @@
 			<exclusions>
 				<!-- TODO with aspects, inclusion of validation.xml prevents deployment. 
 					See https://github.com/jcabi/jcabi-github/issues/1347 -->
-	<!-- <exclusion> -->
-	<!-- <groupId>com.jcabi</groupId> -->
-	<!-- <artifactId>jcabi-aspects</artifactId> -->
-	<!-- </exclusion> -->
+				<!-- <exclusion> -->
+				<!-- <groupId>com.jcabi</groupId> -->
+				<!-- <artifactId>jcabi-aspects</artifactId> -->
+				<!-- </exclusion> -->
 				<exclusion>
 					<groupId>org.glassfish.jersey.core</groupId>
 					<artifactId>jersey-common</artifactId>
@@ -112,11 +175,7 @@
 			<version>1.1</version>
 			<scope>runtime</scope>
 		</dependency>
-		<dependency>
-			<groupId>org.slf4j</groupId>
-			<artifactId>slf4j-jdk14</artifactId>
-			<version>1.7.25</version>
-		</dependency>
+
 
 		<dependency>
 			<groupId>junit</groupId>
