@@ -9,13 +9,16 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableList.Builder;
 import com.google.common.collect.ImmutableSortedSet;
 
+import io.github.oliviercailloux.git_hub.low.IssueBare;
+import io.github.oliviercailloux.git_hub.low.Repository;
+import io.github.oliviercailloux.git_hub.low.User;
 import io.github.oliviercailloux.st_projects.utils.Utils;
 
 public class ModelMocker {
 
-	public static void addIssue(final ProjectOnGitHub project, final String title) {
-		final Issue issue = ModelMocker.newGitHubIssue(title, Utils.EXAMPLE_URL);
-		Mockito.when(project.getIssuesNamed(title)).thenReturn(ImmutableSortedSet.of(issue));
+	public static void addIssue(RepositoryWithIssuesWithHistory project, String title) {
+		final IssueWithHistory issue = ModelMocker.newGitHubIssue(title, Utils.EXAMPLE_URL);
+		Mockito.when(project.getIssuesOriginallyNamed(title)).thenReturn(ImmutableSortedSet.of(issue));
 	}
 
 	public static ImmutableList<Functionality> getFunctionalities(String prefix, int numberOfFunctionalities) {
@@ -38,31 +41,45 @@ public class ModelMocker {
 		return c1;
 	}
 
-	public static Issue newGitHubIssue(String name, URL url) {
-		final Issue issue = Mockito.mock(Issue.class);
+	public static IssueWithHistory newGitHubIssue(String name, URL url) {
+		final IssueWithHistory issue = Mockito.mock(IssueWithHistory.class);
 		Mockito.when(issue.getOriginalName()).thenReturn(name);
-		Mockito.when(issue.getApiURL()).thenReturn(url);
-		Mockito.when(issue.getHtmlURL()).thenReturn(url);
+		final IssueBare issueBare = newIssueBare(url);
+		Mockito.when(issue.getBare()).thenReturn(issueBare);
 		return issue;
 	}
 
-	public static ProjectOnGitHub newGitHubProject(String ownerName) {
+	public static RepositoryWithIssuesWithHistory newGitHubProject(String ownerName) {
 		final User owner = newContributor(ownerName);
 		return newGitHubProject(owner, Utils.EXAMPLE_URL);
 	}
 
-	public static ProjectOnGitHub newGitHubProject(User owner, URL url) {
-		final ProjectOnGitHub ghp1 = Mockito.mock(ProjectOnGitHub.class);
-		Mockito.when(ghp1.getApiURL()).thenReturn(url);
-		Mockito.when(ghp1.getHtmlURL()).thenReturn(url);
+	public static RepositoryWithIssuesWithHistory newGitHubProject(User owner, URL url) {
+		final RepositoryWithIssuesWithHistory ghp1 = Mockito.mock(RepositoryWithIssuesWithHistory.class);
+		final Repository mockedRepo = newRepository(url);
+		Mockito.when(ghp1.getBare()).thenReturn(mockedRepo);
 		Mockito.when(ghp1.getOwner()).thenReturn(owner);
 		return ghp1;
+	}
+
+	public static IssueBare newIssueBare(URL url) {
+		final IssueBare mocked = Mockito.mock(IssueBare.class);
+		Mockito.when(mocked.getApiURL()).thenReturn(url);
+		Mockito.when(mocked.getHtmlURL()).thenReturn(url);
+		return mocked;
 	}
 
 	public static Project newProject(String name, int numberOfFunctionalities) {
 		final ImmutableList<Functionality> fcts = getFunctionalities(name, numberOfFunctionalities);
 		final Project project = Project.from(name, fcts);
 		return project;
+	}
+
+	public static Repository newRepository(URL url) {
+		final Repository mocked = Mockito.mock(Repository.class);
+		Mockito.when(mocked.getApiURL()).thenReturn(url);
+		Mockito.when(mocked.getHtmlURL()).thenReturn(url);
+		return mocked;
 	}
 
 }

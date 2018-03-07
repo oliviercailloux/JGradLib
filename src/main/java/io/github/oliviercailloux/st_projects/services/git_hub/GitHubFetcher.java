@@ -26,12 +26,14 @@ import com.jcabi.github.Event;
 import com.jcabi.github.Github;
 import com.jcabi.github.Repo;
 
-import io.github.oliviercailloux.st_projects.model.Issue;
-import io.github.oliviercailloux.st_projects.model.IssueCoordinates;
-import io.github.oliviercailloux.st_projects.model.IssueSnapshot;
-import io.github.oliviercailloux.st_projects.model.ProjectOnGitHub;
-import io.github.oliviercailloux.st_projects.model.RawGitHubIssue;
-import io.github.oliviercailloux.st_projects.model.User;
+import io.github.oliviercailloux.git_hub.high.IssueSnapshot;
+import io.github.oliviercailloux.git_hub.low.IssueEvent;
+import io.github.oliviercailloux.git_hub.low.IssueBare;
+import io.github.oliviercailloux.git_hub.low.IssueCoordinates;
+import io.github.oliviercailloux.git_hub.low.Repository;
+import io.github.oliviercailloux.git_hub.low.User;
+import io.github.oliviercailloux.st_projects.model.IssueWithHistory;
+import io.github.oliviercailloux.st_projects.model.RepositoryWithIssuesWithHistory;
 import io.github.oliviercailloux.st_projects.utils.JsonUtils;
 import io.github.oliviercailloux.st_projects.utils.Utils;
 
@@ -57,14 +59,16 @@ public class GitHubFetcher {
 		return users.get(login);
 	}
 
-	public Issue getIssue(IssueCoordinates coordinates) throws IOException {
-		final com.jcabi.github.Issue issue = getJCabiIssue(coordinates);
-		final JsonObject json = issue.json();
-		final RawGitHubIssue simpleIssue = RawGitHubIssue.from(json);
-		return getIssue(simpleIssue);
+	public RepositoryWithIssuesWithHistory getExistingProject(Coordinates coordinates) throws IOException {
+		final Repo repo = github.repos().get(coordinates);
+		final JsonObject json = repo.json();
+		final JsonObject ownerJson = json.getJsonObject("owner");
+		final String login = putUserJson(ownerJson);
+		final User owner = getCachedUser(login);
+		return RepositoryWithIssuesWithHistory.from(Repository.from(json), owner, getIssues(repo));
 	}
 
-	public Issue getIssue(RawGitHubIssue simple) throws IOException {
+	public IssueWithHistory getIssue(IssueBare simple) throws IOException {
 		final JsonObject issueJson = simple.getJson();
 		LOGGER.debug("Taking care of issue: {}.", JsonUtils.asPrettyString(issueJson));
 		final IssueCoordinates coord = simple.getCoordinates();
@@ -91,7 +95,7 @@ public class GitHubFetcher {
 		}
 
 		final List<IssueSnapshot> snaps = new ArrayList<>();
-		snaps.add(IssueSnapshot.of(issueJson, name, open, assignees));
+		snaps.add(IssueSnapshot.original(simple.getCreatedAt(), name, open, assignees));
 
 		for (JsonObject eventJson : eventsJson) {
 			final String type = eventJson.getString("event");
@@ -135,24 +139,35 @@ public class GitHubFetcher {
 			}
 			default:
 			}
-			final IssueSnapshot snap = IssueSnapshot.of(eventJson, name, open, assignees);
+			final IssueEvent event = IssueEvent.from(eventJson);
+			final IssueSnapshot snap = IssueSnapshot.of(event, name, open, assignees);
 			snaps.add(snap);
 		}
-		return Issue.from(issueJson, snaps);
+		return IssueWithHistory.from(IssueBare.from(issueJson), snaps);
+	}
+
+	public IssueWithHistory getIssue(IssueCoordinates coordinates) throws IOException {
+		final com.jcabi.github.Issue issue = getJCabiIssue(coordinates);
+		final JsonObject json = issue.json();
+		final IssueBare simpleIssue = IssueBare.from(json);
+		return getIssue(simpleIssue);
 	}
 
 	/**
-	 * Note that the returned project has all issues present in github except for
-	 * issues that are pull requests. Those are ignored by this method.
+	 * The returned project has all issues present in github except for issues that
+	 * are pull requests. Those are ignored by this method.
 	 *
 	 */
-	public ProjectOnGitHub getProject(Coordinates coordinates) throws IOException {
-		final Repo repo = github.repos().get(coordinates);
-		final JsonObject json = repo.json();
-		final JsonObject ownerJson = json.getJsonObject("owner");
-		final String login = putUserJson(ownerJson);
-		final User owner = getCachedUser(login);
-		return ProjectOnGitHub.from(json, owner, getIssues(repo));
+	public Optional<RepositoryWithIssuesWithHistory> getProject(Coordinates coordinates) throws IOException {
+		final Optional<JsonObject> optPrj;
+		try (RawGitHubFetcher rawFetcher = new RawGitHubFetcher()) {
+			rawFetcher.setToken(Utils.getToken());
+			optPrj = rawFetcher.fetchGitHubProject(coordinates);
+		}
+		if (!optPrj.isPresent()) {
+			return Optional.empty();
+		}
+		return Optional.of(getExistingProject(coordinates));
 	}
 
 	public User getUser(String login) throws IOException {
@@ -174,22 +189,22 @@ public class GitHubFetcher {
 		return login;
 	}
 
-	private List<Issue> getIssues(Repo repo) throws IOException {
+	private List<IssueWithHistory> getIssues(Repo repo) throws IOException {
 		final Iterable<com.jcabi.github.Issue> issuesIt = repo.issues().iterate(ImmutableMap.of("state", "all"));
-		final ImmutableList<RawGitHubIssue> simpleIssues = Utils.map(issuesIt, (i) -> RawGitHubIssue.from(i.json()));
-		final Iterable<RawGitHubIssue> simpleRightIssues = Iterables.filter(simpleIssues, (s) -> !s.isPullRequest());
-		final ImmutableList<Issue> issues = Utils.map(simpleRightIssues, this::getIssue);
+		final ImmutableList<IssueBare> simpleIssues = Utils.map(issuesIt, (i) -> IssueBare.from(i.json()));
+		final Iterable<IssueBare> simpleRightIssues = Iterables.filter(simpleIssues, (s) -> !s.isPullRequest());
+		final ImmutableList<IssueWithHistory> issues = Utils.map(simpleRightIssues, this::getIssue);
 		return issues;
 	}
 
 	private com.jcabi.github.Issue getJCabiIssue(final IssueCoordinates coordinates) {
-		final com.jcabi.github.Issue issue = getRepo(coordinates.getOwner(), coordinates.getRepo()).issues()
+		final com.jcabi.github.Issue issue = getRepo(coordinates.getRepositoryCoordinates()).issues()
 				.get(coordinates.getIssueNumber());
 		return issue;
 	}
 
-	private Repo getRepo(String owner, String repo) {
-		return github.repos().get(new Coordinates.Simple(owner, repo));
+	private Repo getRepo(Coordinates coordinates) {
+		return github.repos().get(coordinates);
 	}
 
 	private User getUser(JsonObject json) throws IOException {

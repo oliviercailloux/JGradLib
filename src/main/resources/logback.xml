@@ -21,7 +21,8 @@
 		</encoder>
 	</appender>
 	
-	<logger name="com.jcabi.http.request.BaseRequest" level="INFO" />
+	<logger name="org.eclipse.jgit.transport.PacketLineIn" level="INFO" />
+	<logger name="com.jcabi.http.request.BaseRequest" level="WARN" />
 
 	<root level="DEBUG">
 		<appender-ref ref="STDOUT" />

@@ -77,14 +77,6 @@ public class Project {
 		LOGGER.debug("Created {}.", name);
 	}
 
-	public String asJsonDetailed() {
-		try (Jsonb jsonb = JsonbBuilder.create()) {
-			return jsonb.toJson(this);
-		} catch (Exception e) {
-			throw new IllegalStateException(e);
-		}
-	}
-
 	public String asJsonPretty() {
 		try (Jsonb jsonb = JsonbBuilder.create(new JsonbConfig().withFormatting(true))) {
 			return jsonb.toJson(this);
@@ -101,6 +93,9 @@ public class Project {
 		return name.replace(' ', '-');
 	}
 
+	/**
+	 * @return before or equal to {@link #getQueried()}.
+	 */
 	public Instant getLastModification() {
 		return lastModification;
 	}
@@ -109,6 +104,9 @@ public class Project {
 		return name;
 	}
 
+	/**
+	 * @return after or equal to {@link #getLastModification()}.
+	 */
 	public Instant getQueried() {
 		return queried;
 	}

@@ -1,0 +1,56 @@
+query ploum($repositoryName: String!, $repositoryOwner: String!) {
+  repository(name: $repositoryName, owner: $repositoryOwner) {
+    url
+    sshUrl
+    issues(orderBy: {field: CREATED_AT, direction: ASC}, states: [OPEN, CLOSED], first: 100) {
+      totalCount
+      pageInfo {
+        hasNextPage
+      }
+      nodes {
+        title
+        url
+        repository {
+        	homepageUrl
+        	name
+        	owner
+        }
+        number
+        createdAt
+        closed
+        timeline(first: 100) {
+          totalCount
+          pageInfo {
+            hasNextPage
+          }
+          nodes {
+            __typename
+            ... on AssignedEvent {
+              createdAt
+              user {
+                login
+              }
+            }
+            ... on ClosedEvent {
+              createdAt
+            }
+            ... on ReopenedEvent {
+              createdAt
+            }
+            ... on RenamedTitleEvent {
+              createdAt
+              previousTitle
+              currentTitle
+            }
+            ... on UnassignedEvent {
+              createdAt
+              user {
+                login
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

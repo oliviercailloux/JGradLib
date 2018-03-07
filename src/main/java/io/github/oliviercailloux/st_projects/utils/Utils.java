@@ -13,8 +13,13 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Instant;
 import java.time.ZoneId;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
+import java.util.function.Supplier;
+import java.util.stream.Collector;
+import java.util.stream.Collectors;
 
 import javax.json.JsonObject;
 
@@ -38,11 +43,12 @@ public class Utils {
 		EXAMPLE_URL = newURL("http://example.com");
 	}
 
+	public static <T> Optional<T> getIf(boolean condition, Supplier<T> supplier) {
+		return condition ? Optional.of(supplier.get()) : Optional.empty();
+	}
+
 	public static <K, V> Optional<V> getOptionally(Map<K, V> map, K el) {
-		if (map.containsKey(el)) {
-			return Optional.of(map.get(el));
-		}
-		return Optional.empty();
+		return getIf(map.containsKey(el), () -> map.get(el));
 	}
 
 	public static String getToken() throws IOException {
@@ -75,14 +81,14 @@ public class Utils {
 
 	public static <F, R, T extends Throwable> ImmutableList<R> map(Iterable<F> iterable,
 			Throwing.Specific.Function<F, R, T> fct) throws T {
-		final Builder<R> issues = ImmutableList.builder();
+		final Builder<R> builder = ImmutableList.builder();
 		for (F elem : iterable) {
 			LOGGER.debug("Getting elem {}.", elem);
-			final R issueT = fct.apply(elem);
-			LOGGER.debug("Got elem {}.", elem);
-			issues.add(issueT);
+			final R mapped = fct.apply(elem);
+			LOGGER.debug("Mapped elem {}.", elem);
+			builder.add(mapped);
 		}
-		return issues.build();
+		return builder.build();
 	}
 
 	public static URL newURL(String url) {
@@ -91,6 +97,13 @@ public class Utils {
 		} catch (MalformedURLException e) {
 			throw new IllegalArgumentException(e);
 		}
+	}
+
+	public static <T, K, U> Collector<T, ?, Map<K, U>> toLinkedMap(Function<? super T, ? extends K> keyMapper,
+			Function<? super T, ? extends U> valueMapper) {
+		return Collectors.toMap(keyMapper, valueMapper, (u, v) -> {
+			throw new IllegalStateException(String.format("Duplicate key %s", u));
+		}, LinkedHashMap::new);
 	}
 
 	public static URI toURI(URL url) {

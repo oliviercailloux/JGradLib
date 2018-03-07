@@ -1,8 +1,8 @@
 package io.github.oliviercailloux.st_projects.model;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static java.util.Objects.requireNonNull;
 
-import java.net.URL;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Comparator;
@@ -10,8 +10,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
-
-import javax.json.JsonObject;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,53 +22,63 @@ import com.google.common.collect.Comparators;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.PeekingIterator;
 
+import io.github.oliviercailloux.git_hub.high.IssueSnapshot;
+import io.github.oliviercailloux.git_hub.low.IssueBare;
+import io.github.oliviercailloux.git_hub.low.User;
+
 /**
  * An intemporal issue, that also contains a description of its current state.
  *
  * @author Olivier Cailloux
  *
  */
-public class Issue implements Comparable<Issue> {
-	private static Comparator<Issue> compareDoneTimeThenNumber = null;
+public class IssueWithHistory implements Comparable<IssueWithHistory> {
+	private static Comparator<IssueWithHistory> compareDoneTimeThenNumber = null;
 
 	@SuppressWarnings("unused")
-	private static final Logger LOGGER = LoggerFactory.getLogger(Issue.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(IssueWithHistory.class);
 
 	/**
-	 * @param json
+	 * @param issue
 	 *            describes the current state of this issue.
 	 * @param snaps
 	 *            at least one.
 	 */
-	public static Issue from(JsonObject json, List<IssueSnapshot> snaps) {
-		return new Issue(json, snaps);
+	public static IssueWithHistory from(IssueBare issue, List<IssueSnapshot> snaps) {
+		return new IssueWithHistory(issue, snaps);
 	}
 
-	private final RawGitHubIssue simple;
+	private static Comparator<IssueWithHistory> getComparator() {
+		final Function<? super IssueWithHistory, Optional<Instant>> issueToDoneTime = (i) -> i.getFirstSnapshotDone()
+				.map(IssueSnapshot::getBirthTime);
+		final Comparator<Optional<Instant>> compareOptInst = Comparators
+				.emptiesLast(Comparator.<Instant>naturalOrder());
+		final Comparator<IssueWithHistory> compareDoneTime = Comparator.comparing(issueToDoneTime, compareOptInst);
+		final Comparator<IssueWithHistory> comparator = compareDoneTime
+				.thenComparing(Comparator.comparing((i) -> i.getBare().getNumber()));
+		return comparator;
+	}
+
+	private final IssueBare simple;
 
 	private final List<IssueSnapshot> snaps;
 
-	private Issue(JsonObject json, List<IssueSnapshot> snaps) {
-		simple = RawGitHubIssue.from(json);
+	private IssueWithHistory(IssueBare issue, List<IssueSnapshot> snaps) {
+		simple = requireNonNull(issue);
 		checkArgument(snaps.size() >= 1);
 		this.snaps = snaps;
 	}
 
 	@Override
-	public int compareTo(Issue i2) {
+	public int compareTo(IssueWithHistory i2) {
 		if (compareDoneTimeThenNumber == null) {
-			final Function<? super Issue, Optional<Instant>> issueToDoneTime = (i) -> i.getFirstSnapshotDone()
-					.map(IssueSnapshot::getBirthTime);
-			final Comparator<Optional<Instant>> compareOptInst = Comparators
-					.emptiesLast(Comparator.<Instant>naturalOrder());
-			final Comparator<Issue> compareDoneTime = Comparator.comparing(issueToDoneTime, compareOptInst);
-			compareDoneTimeThenNumber = compareDoneTime.thenComparing(Comparator.comparing(Issue::getNumber));
+			compareDoneTimeThenNumber = getComparator();
 		}
 		return compareDoneTimeThenNumber.compare(this, i2);
 	}
 
-	public URL getApiURL() {
-		return simple.getApiURL();
+	public IssueBare getBare() {
+		return simple;
 	}
 
 	/**
@@ -117,12 +126,12 @@ public class Issue implements Comparable<Issue> {
 		return Optional.empty();
 	}
 
-	public URL getHtmlURL() {
-		return simple.getHtmlURL();
-	}
-
-	public int getNumber() {
-		return simple.getNumber();
+	/**
+	 * Returns all the names this issue has had in its life, ordered from earliest
+	 * name to latest, thus with its original name first.
+	 */
+	public List<String> getNames() {
+		return snaps.stream().map(IssueSnapshot::getName).collect(Collectors.toList());
 	}
 
 	public String getOriginalName() {
@@ -146,7 +155,7 @@ public class Issue implements Comparable<Issue> {
 		} else {
 			helper.add("Name", getOriginalName());
 		}
-		helper.addValue(getHtmlURL());
+		helper.addValue(simple.getHtmlURL());
 		helper.add("Snapshot nb", snaps.size());
 		return helper.toString();
 	}

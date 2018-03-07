@@ -1,8 +1,9 @@
-package io.github.oliviercailloux.st_projects.model;
+package io.github.oliviercailloux.git_hub.low;
 
 import static java.util.Objects.requireNonNull;
 
 import java.net.URL;
+import java.time.Instant;
 
 import javax.json.JsonObject;
 
@@ -10,16 +11,17 @@ import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
 import com.jcabi.github.Coordinates;
 
+import io.github.oliviercailloux.st_projects.services.git_hub.GitHubJsonParser;
 import io.github.oliviercailloux.st_projects.utils.Utils;
 
-public class RawGitHubIssue {
-	public static RawGitHubIssue from(JsonObject json) {
-		return new RawGitHubIssue(json);
+public class IssueBare {
+	public static IssueBare from(JsonObject json) {
+		return new IssueBare(json);
 	}
 
 	private final JsonObject json;
 
-	private RawGitHubIssue(JsonObject json) {
+	private IssueBare(JsonObject json) {
 		this.json = requireNonNull(json);
 	}
 
@@ -30,10 +32,6 @@ public class RawGitHubIssue {
 	public IssueCoordinates getCoordinates() {
 		final Coordinates.Simple c = new Coordinates.Simple(getCoordinatesRepo());
 		return IssueCoordinates.from(c.user(), c.repo(), getNumber());
-	}
-
-	public String getCoordinatesRepo() {
-		return getRepoURL().toString().replaceAll("https://api.github.com/repos/", "");
 	}
 
 	public URL getHtmlURL() {
@@ -48,7 +46,7 @@ public class RawGitHubIssue {
 		return json.getInt("number");
 	}
 
-	public URL getRepoURL() {
+	public URL getRepositoryURL() {
 		return Utils.newURL(json.getString("repository_url"));
 	}
 
@@ -61,5 +59,13 @@ public class RawGitHubIssue {
 		final ToStringHelper helper = MoreObjects.toStringHelper(this);
 		helper.addValue(getHtmlURL());
 		return helper.toString();
+	}
+
+	private String getCoordinatesRepo() {
+		return getRepositoryURL().toString().replaceAll("https://api.github.com/repos/", "");
+	}
+
+	public Instant getCreatedAt() {
+		return GitHubJsonParser.getCreatedAt(json);
 	}
 }

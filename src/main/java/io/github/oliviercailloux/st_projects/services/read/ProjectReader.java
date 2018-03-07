@@ -39,13 +39,14 @@ public class ProjectReader {
 	public Project asProject(File file) throws IllegalFormat, IOException, FileNotFoundException {
 		final Project project;
 		try (InputStreamReader source = new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8)) {
+			final Instant queried = Instant.now();
 			final Instant lastModified = Instant.ofEpochMilli(file.lastModified());
-			project = asProject(source, file.getName(), lastModified);
+			project = asProject(source, file.getName(), lastModified, queried);
 		}
 		return project;
 	}
 
-	public Project asProject(Reader source, String originFileName, Instant lastModification)
+	public Project asProject(Reader source, String originFileName, Instant lastModification, Instant queried)
 			throws IllegalFormat, IOException {
 		requireNonNull(source);
 		final String baseName = Files.getNameWithoutExtension(requireNonNull(originFileName));
@@ -53,7 +54,7 @@ public class ProjectReader {
 		requireNonNull(lastModification);
 		functionalitiesReader.read(source);
 		final List<Functionality> functionalities = functionalitiesReader.getFunctionalities();
-		final Project project = Project.from(baseName, functionalities, lastModification);
+		final Project project = Project.from(baseName, functionalities, lastModification, queried);
 		final String title = functionalitiesReader.getDoc().getAttribute("doctitle").toString();
 		if (!baseName.equals(title)) {
 			throw new IllegalFormat("Read title: " + title + ".");

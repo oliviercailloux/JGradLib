@@ -10,10 +10,13 @@ import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.json.JsonObject;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.Lists;
+import com.jcabi.github.Content;
 import com.jcabi.github.Coordinates;
 import com.jcabi.github.Github;
 import com.jcabi.github.Repo;
@@ -63,6 +66,23 @@ public class RepositoryFinder {
 		}
 
 		return ghProjects;
+	}
+
+	public List<JsonObject> findFile(Coordinates coord, String filename) throws IOException {
+		final String searchKeywords = "repo:" + coord.user() + "/" + coord.repo() + " " + "in:path" + " " + "filename:"
+				+ filename;
+
+		ghProjects = new ArrayList<>();
+
+		LOGGER.debug("Searching for {}.", searchKeywords);
+		final Iterable<Content> found = gitHub.search().codes(searchKeywords, "", Search.Order.ASC);
+		final ArrayList<JsonObject> lst = new ArrayList<>();
+		for (Content content : found) {
+			final JsonObject json = content.json();
+			lst.add(json);
+		}
+
+		return lst;
 	}
 
 	public LocalDate getFloorSearchDate() {

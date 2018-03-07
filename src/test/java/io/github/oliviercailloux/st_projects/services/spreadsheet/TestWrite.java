@@ -26,11 +26,11 @@ import com.jcabi.github.Coordinates;
 import com.jcabi.github.Github;
 import com.jcabi.github.RtGithub;
 
+import io.github.oliviercailloux.git_hub.low.User;
 import io.github.oliviercailloux.st_projects.model.Functionality;
 import io.github.oliviercailloux.st_projects.model.ModelMocker;
 import io.github.oliviercailloux.st_projects.model.Project;
-import io.github.oliviercailloux.st_projects.model.ProjectOnGitHub;
-import io.github.oliviercailloux.st_projects.model.User;
+import io.github.oliviercailloux.st_projects.model.RepositoryWithIssuesWithHistory;
 import io.github.oliviercailloux.st_projects.services.git_hub.GitHubFetcher;
 import io.github.oliviercailloux.st_projects.utils.Utils;
 
@@ -70,7 +70,7 @@ public class TestWrite {
 	public void testWriteOneGHProject() throws Exception {
 		final Project p1 = ModelMocker.newProject("p1", 3);
 		final User c1 = ModelMocker.newContributor("c1");
-		final ProjectOnGitHub ghp1 = ModelMocker.newGitHubProject(c1, Utils.EXAMPLE_URL);
+		final RepositoryWithIssuesWithHistory ghp1 = ModelMocker.newGitHubProject(c1, Utils.EXAMPLE_URL);
 		ModelMocker.addIssue(ghp1, "p1-f1");
 		ModelMocker.addIssue(ghp1, "p1-f3");
 		final byte[] written;
@@ -117,12 +117,12 @@ public class TestWrite {
 	public void testWriteTwoGHProjectsDeep() throws Exception {
 		final Project p1 = ModelMocker.newProject("p1", 3);
 		final User c1 = ModelMocker.newContributor("c1");
-		final ProjectOnGitHub ghp1 = ModelMocker.newGitHubProject(c1, Utils.EXAMPLE_URL);
+		final RepositoryWithIssuesWithHistory ghp1 = ModelMocker.newGitHubProject(c1, Utils.EXAMPLE_URL);
 		ModelMocker.addIssue(ghp1, "p1-f1");
 		ModelMocker.addIssue(ghp1, "p1-f3");
 		final Project p2 = ModelMocker.newProject("p2", 4);
 		final User c2 = ModelMocker.newContributor("c2");
-		final ProjectOnGitHub ghp2 = ModelMocker.newGitHubProject(c2, Utils.EXAMPLE_URL);
+		final RepositoryWithIssuesWithHistory ghp2 = ModelMocker.newGitHubProject(c2, Utils.EXAMPLE_URL);
 		ModelMocker.addIssue(ghp2, "p2-f1");
 		ModelMocker.addIssue(ghp2, "p2-f2");
 
@@ -153,7 +153,7 @@ public class TestWrite {
 		final Project project = Project.from("testrel", functionalitiesBuilder.build());
 		final Github gitHub = new RtGithub(Utils.getToken());
 		final Coordinates.Simple coords = new Coordinates.Simple("oliviercailloux", "testrel");
-		final ProjectOnGitHub ghProject = GitHubFetcher.using(gitHub).getProject(coords);
+		final RepositoryWithIssuesWithHistory ghProject = GitHubFetcher.using(gitHub).getProject(coords).get();
 
 		final byte[] written;
 		try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {

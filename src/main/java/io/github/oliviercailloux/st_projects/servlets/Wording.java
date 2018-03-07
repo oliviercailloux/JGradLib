@@ -5,6 +5,9 @@ import java.util.Optional;
 
 import javax.enterprise.context.RequestScoped;
 import javax.inject.Inject;
+import javax.json.bind.Jsonb;
+import javax.json.bind.JsonbBuilder;
+import javax.json.bind.JsonbConfig;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
@@ -43,12 +46,16 @@ public class Wording {
 		if (!project.isPresent()) {
 			return null;
 		}
-		return project.get().asJsonPretty();
+		try (Jsonb jsonb = JsonbBuilder.create(new JsonbConfig().withFormatting(true))) {
+			return jsonb.toJson(project.get());
+		} catch (Exception e) {
+			throw new IllegalStateException(e);
+		}
 	}
 
 	@Path("update")
 	@GET
-	public void update() throws IllegalFormat, IOException {
+	public void update() throws IllegalFormat {
 		LOGGER.info("Test log.");
 		monitor.update();
 	}

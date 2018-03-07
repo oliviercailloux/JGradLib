@@ -9,6 +9,9 @@ import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
 
+import javax.json.bind.Jsonb;
+import javax.json.bind.JsonbBuilder;
+
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,6 +21,7 @@ import com.jcabi.github.Coordinates;
 import com.jcabi.github.Github;
 import com.jcabi.github.RtGithub;
 
+import io.github.oliviercailloux.git_hub.low.User;
 import io.github.oliviercailloux.st_projects.services.git_hub.GitHubFetcher;
 import io.github.oliviercailloux.st_projects.services.git_hub.RepositoryFinder;
 import io.github.oliviercailloux.st_projects.utils.JsonUtils;
@@ -37,9 +41,10 @@ public class TestGitHubProject {
 		assertTrue(found.size() >= 1);
 		final List<Coordinates> foundWithPom = finder.withPom();
 		final Coordinates matching = Iterables.getOnlyElement(foundWithPom);
-		final ProjectOnGitHub project = GitHubFetcher.using(gitHub).getProject(matching);
-		assertTrue(project.getIssuesNamed("Course").toString(), project.getIssuesNamed("Course").size() == 1);
-		assertFalse(project.getIssuesNamed("Triple").size() == 1);
+		final RepositoryWithIssuesWithHistory project = GitHubFetcher.using(gitHub).getProject(matching).get();
+		assertTrue(project.getIssuesOriginallyNamed("Course").toString(),
+				project.getIssuesOriginallyNamed("Course").size() == 1);
+		assertFalse(project.getIssuesOriginallyNamed("Triple").size() == 1);
 	}
 
 	@Test
@@ -49,14 +54,16 @@ public class TestGitHubProject {
 		final Github gitHub = new RtGithub(Utils.getToken());
 		final GitHubFetcher factory = GitHubFetcher.using(gitHub);
 		final Coordinates.Simple coords = new Coordinates.Simple("oliviercailloux", "testrel");
-		final ProjectOnGitHub project = factory.getProject(coords);
-		assertEquals(Utils.newURL("https://api.github.com/repos/oliviercailloux/testrel"), project.getApiURL());
-		assertEquals(Utils.newURL("https://github.com/oliviercailloux/testrel"), project.getHtmlURL());
-		assertEquals(LocalDateTime.of(2016, 04, 15, 10, 33, 27).toInstant(ZoneOffset.UTC), project.getCreatedAt());
-		assertEquals(4, project.getIssues().size());
-		assertTrue(project.getIssuesNamed("test1").size() == 1);
-		assertFalse(project.getIssuesNamed("non-existant").size() == 1);
-		assertEquals("testrel", project.getName());
+		final RepositoryWithIssuesWithHistory project = factory.getProject(coords).get();
+		assertEquals(Utils.newURL("https://api.github.com/repos/oliviercailloux/testrel"),
+				project.getBare().getApiURL());
+		assertEquals(Utils.newURL("https://github.com/oliviercailloux/testrel/"), project.getBare().getHtmlURL());
+		assertEquals(LocalDateTime.of(2016, 04, 15, 10, 33, 27).toInstant(ZoneOffset.UTC),
+				project.getBare().getCreatedAt());
+		assertEquals(5, project.getIssues().size());
+		assertTrue(project.getIssuesOriginallyNamed("test1").size() == 1);
+		assertFalse(project.getIssuesOriginallyNamed("non-existant").size() == 1);
+		assertEquals("testrel", project.getBare().getName());
 
 		final User userC = GitHubFetcher.using(gitHub).getUser("oliviercailloux");
 		LOGGER.debug(JsonUtils.asPrettyString(userC.getJson()));
@@ -68,7 +75,12 @@ public class TestGitHubProject {
 	public void testProjectToJson() throws Exception {
 		final Project p = Project.from("pn", ModelMocker.getFunctionalities("pn", 1),
 				Instant.parse("2018-01-01T00:00:00Z"), Instant.parse("2018-01-01T00:00:00Z"));
-		final String json = p.asJsonDetailed();
+		final String json;
+		try (Jsonb jsonb = JsonbBuilder.create()) {
+			json = jsonb.toJson(p);
+		} catch (Exception e) {
+			throw new IllegalStateException(e);
+		}
 		LOGGER.debug("Serialized json: {}.", json);
 		assertEquals("{\"name\":\"pn\",\"gitHubName\":\"pn\","
 				+ "\"functionalities\":[{\"name\":\"pn-f1\",\"description\":\"pn-d1\",\"difficulty\":1}],"

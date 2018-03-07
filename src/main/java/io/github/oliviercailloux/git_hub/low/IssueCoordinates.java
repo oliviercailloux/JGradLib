@@ -1,6 +1,8 @@
-package io.github.oliviercailloux.st_projects.model;
+package io.github.oliviercailloux.git_hub.low;
 
 import static java.util.Objects.requireNonNull;
+
+import com.jcabi.github.Coordinates;
 
 public class IssueCoordinates {
 	public static IssueCoordinates from(String owner, String repo, int issue) {
@@ -27,7 +29,11 @@ public class IssueCoordinates {
 		return owner;
 	}
 
-	public String getRepo() {
+	public String getRepositoryName() {
 		return repo;
+	}
+
+	public Coordinates getRepositoryCoordinates() {
+		return new Coordinates.Simple(owner, repo);
 	}
 }

@@ -17,7 +17,7 @@ import org.eclipse.jgit.lib.Ref;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.github.oliviercailloux.st_projects.model.ProjectOnGitHub;
+import io.github.oliviercailloux.git_hub.low.Repository;
 
 public class Client {
 	@SuppressWarnings("unused")
@@ -47,29 +47,29 @@ public class Client {
 		}
 	}
 
-	public void clone(ProjectOnGitHub project) throws GitAPIException {
-		final File projectDirFile = getProjectDirectoryAsFile(project);
+	public void clone(Repository repo) throws GitAPIException {
+		final File projectDirFile = getProjectDirectoryAsFile(repo);
 		final CloneCommand cloneCmd = Git.cloneRepository();
-		LOGGER.info("Cloning {}.", project.getName());
-		cloneCmd.setURI(project.getSshURLString());
+		LOGGER.info("Cloning {}.", repo.getName());
+		cloneCmd.setURI(repo.getSshURLString());
 		cloneCmd.setDirectory(projectDirFile);
 		cloneCmd.call();
 	}
 
-	public void retrieve(ProjectOnGitHub project) throws GitAPIException, IOException {
-		final String name = project.getName();
+	public void retrieve(Repository repo) throws GitAPIException, IOException, IllegalStateException {
+		final String name = repo.getName();
 		final Path outputProjectDir = outputBaseDir.resolve(name);
 		if (Files.exists(outputProjectDir)) {
-			update(project);
+			update(repo);
 		} else {
-			clone(project);
+			clone(repo);
 		}
 	}
 
-	public void update(ProjectOnGitHub project) throws GitAPIException, IOException {
-		try (Git repo = Git.open(getProjectDirectoryAsFile(project))) {
-			LOGGER.info("Updating {}.", project.getName());
-			repo.fetch().call();
+	public void update(Repository repo) throws GitAPIException, IOException, IllegalStateException {
+		try (Git git = Git.open(getProjectDirectoryAsFile(repo))) {
+			LOGGER.info("Updating {}.", repo.getName());
+			git.fetch().call();
 
 //			final Ref masterRef = repo.getRepository().exactRef("refs/heads/master");
 //			assert masterRef != null : repo.branchList().call();
@@ -77,18 +77,21 @@ public class Client {
 //			assert masterCommit != null : masterRef.getObjectId();
 //			final CheckoutCommand checkoutCmd = repo.checkout();
 //			checkoutCmd.setStartPoint(masterCommit).call();
-			repo.checkout().setName("master").call();
+			git.checkout().setName("master").call();
 
-			final Ref originMasterRef = repo.getRepository().exactRef("refs/remotes/origin/master");
-			assert originMasterRef != null : repo.branchList().setListMode(ListMode.REMOTE).call();
-			final MergeResult res = repo.merge().include(originMasterRef).call();
-			assert res.getMergeStatus() == MergeStatus.ALREADY_UP_TO_DATE || res.getMergeStatus() == MergeStatus.MERGED
-					|| res.getMergeStatus() == MergeStatus.FAST_FORWARD : res.getMergeStatus();
+			final Ref originMasterRef = git.getRepository().exactRef("refs/remotes/origin/master");
+			assert originMasterRef != null : git.branchList().setListMode(ListMode.REMOTE).call();
+			final MergeResult res = git.merge().include(originMasterRef).call();
+			final boolean rightState = res.getMergeStatus() == MergeStatus.ALREADY_UP_TO_DATE
+					|| res.getMergeStatus() == MergeStatus.MERGED || res.getMergeStatus() == MergeStatus.FAST_FORWARD;
+			if (!rightState) {
+				throw new IllegalStateException("Illegal merge result: " + res.getMergeStatus());
+			}
 		}
 	}
 
-	private File getProjectDirectoryAsFile(ProjectOnGitHub project) {
-		final String name = project.getName();
+	private File getProjectDirectoryAsFile(Repository repo) {
+		final String name = repo.getName();
 		final Path outputProjectDir = outputBaseDir.resolve(name);
 		final File projectDirFile = outputProjectDir.toFile();
 		return projectDirFile;

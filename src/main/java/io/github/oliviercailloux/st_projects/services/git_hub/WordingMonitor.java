@@ -1,6 +1,5 @@
 package io.github.oliviercailloux.st_projects.services.git_hub;
 
-import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
 
@@ -28,7 +27,7 @@ public class WordingMonitor {
 		return nameToProject.keySet().toString();
 	}
 
-	public void update() throws IllegalFormat, IOException {
+	public void update() throws IllegalFormat {
 		final List<Project> projects;
 		try (RawGitHubFetcher fetcher = new RawGitHubFetcher()) {
 			projects = fetcher.fetchProjects();
