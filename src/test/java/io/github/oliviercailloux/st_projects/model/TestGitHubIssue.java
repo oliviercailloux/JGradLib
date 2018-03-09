@@ -33,7 +33,7 @@ public class TestGitHubIssue {
 	public void testAssignees() throws Exception {
 		final Coordinates.Simple coord = new Coordinates.Simple("badga", "Collaborative-exams");
 		try (GitHubFetcher factory = GitHubFetcher.using(Utils.getToken())) {
-			final RepositoryWithIssuesWithHistoryQL repo = factory.getExistingProject(coord);
+			final RepositoryWithIssuesWithHistoryQL repo = factory.getProject(coord).get();
 			final IssueWithHistoryQL issue = repo.getIssuesNamed("Servlets").iterator().next();
 			assertEquals("Servlets", issue.getOriginalName());
 			final Optional<IssueSnapshotQL> optDone = issue.getFirstSnapshotDone();
@@ -60,7 +60,7 @@ public class TestGitHubIssue {
 	public void testHist() throws Exception {
 		final Coordinates.Simple coord = new Coordinates.Simple("oliviercailloux", "testrel");
 		try (GitHubFetcher factory = GitHubFetcher.using(Utils.getToken())) {
-			final RepositoryWithIssuesWithHistoryQL repo = factory.getExistingProject(coord);
+			final RepositoryWithIssuesWithHistoryQL repo = factory.getProject(coord).get();
 			final IssueWithHistoryQL issue = repo.getIssuesNamed("test1").iterator().next();
 			LOGGER.info("Issue: {}.", issue);
 			assertEquals(Utils.newURL("https://github.com/oliviercailloux/testrel/issues/2"),
@@ -82,8 +82,8 @@ public class TestGitHubIssue {
 	public void testOpen() throws Exception {
 		final Coordinates.Simple coord = new Coordinates.Simple("oliviercailloux", "testrel");
 		try (GitHubFetcher factory = GitHubFetcher.using(Utils.getToken())) {
-			final RepositoryWithIssuesWithHistoryQL repo = factory.getExistingProject(coord);
-			final IssueWithHistoryQL issue = repo.getIssuesNamed("test1").iterator().next();
+			final RepositoryWithIssuesWithHistoryQL repo = factory.getProject(coord).get();
+			final IssueWithHistoryQL issue = repo.getIssuesNamed("test open").iterator().next();
 			LOGGER.info("Issue: {}.", issue);
 			assertEquals(Utils.newURL("https://github.com/oliviercailloux/testrel/issues/3"),
 					issue.getBare().getHtmlURL());

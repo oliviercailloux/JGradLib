@@ -38,6 +38,15 @@ public class TestFetch {
 	private static final Logger LOGGER = LoggerFactory.getLogger(TestFetch.class);
 
 	@Test
+	public void testFetchAbsentGitHubProject() throws Exception {
+		try (GitHubFetcher fetcher = GitHubFetcher.using(Utils.getToken())) {
+			final Coordinates.Simple coord = new Coordinates.Simple("this-user-does-not-exist-dfqfaglmkj45858", "repo");
+			final Optional<RepositoryWithIssuesWithHistoryQL> opt = fetcher.getProject(coord);
+			assertTrue(!opt.isPresent());
+		}
+	}
+
+	@Test
 	public void testFetchAssignees() throws Exception {
 		final Github github = new RtGithub(Utils.getToken());
 		final Repo repo = github.repos().get(new Coordinates.Simple("waffleio", "waffle.io"));
@@ -136,7 +145,7 @@ public class TestFetch {
 	public void testIssuesHistory() throws Exception {
 		final Coordinates.Simple coord = new Coordinates.Simple("MAMERY-DOUMBIA", "Dauphine-Pole-Info");
 		try (GitHubFetcher fetcher = GitHubFetcher.using(Utils.getToken())) {
-			final RepositoryWithIssuesWithHistoryQL project = fetcher.getExistingProject(coord);
+			final RepositoryWithIssuesWithHistoryQL project = fetcher.getProject(coord).get();
 			assertEquals(1, project.getIssuesOriginallyNamed("PHP").size());
 		}
 	}
@@ -146,7 +155,7 @@ public class TestFetch {
 		try (RawGitHubFetcher rawFetcher = new RawGitHubFetcher()) {
 			rawFetcher.setToken(Utils.getToken());
 			final Coordinates.Simple coord = new Coordinates.Simple("this-user-does-not-exist-dfqfaglmkj45858", "repo");
-//			final User user = fetcher.getUser(username);
+			// final User user = fetcher.getUser(username);
 			final Optional<JsonObject> opt = rawFetcher.fetchGitHubProject(coord);
 			assertTrue(!opt.isPresent());
 		}

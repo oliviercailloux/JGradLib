@@ -241,7 +241,7 @@ public class App {
 					break;
 				case 1:
 					final Coordinates matching = Iterables.getOnlyElement(foundWithPom);
-					ghProjects.put(project, factory.getExistingProject(matching));
+					ghProjects.put(project, factory.getProject(matching).get());
 					break;
 				default:
 					throw new IllegalStateException(

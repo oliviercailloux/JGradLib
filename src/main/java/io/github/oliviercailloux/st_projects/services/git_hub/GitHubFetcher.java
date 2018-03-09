@@ -32,13 +32,10 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Strings;
 import com.jcabi.github.Coordinates;
-import com.jcabi.github.Github;
-import com.jcabi.github.RtGithub;
 
 import io.github.oliviercailloux.git_hub.low.User;
 import io.github.oliviercailloux.st_projects.model.RepositoryWithIssuesWithHistoryQL;
 import io.github.oliviercailloux.st_projects.utils.JsonUtils;
-import io.github.oliviercailloux.st_projects.utils.Utils;
 
 public class GitHubFetcher implements AutoCloseable {
 	@SuppressWarnings("unused")
@@ -51,8 +48,6 @@ public class GitHubFetcher implements AutoCloseable {
 	public final String GRAPHQL_ENDPOINT = "https://api.github.com/graphql";
 
 	private final Client client;
-
-	private Github github;
 
 	/**
 	 * Not <code>null</code>.
@@ -67,9 +62,8 @@ public class GitHubFetcher implements AutoCloseable {
 
 	private GitHubFetcher(String token) {
 		this.token = requireNonNull(token);
-		this.github = new RtGithub(token);
 		rateLimit = "";
-		rateReset = Instant.EPOCH;
+		rateReset = null;
 		client = ClientBuilder.newClient();
 	}
 
@@ -84,7 +78,7 @@ public class GitHubFetcher implements AutoCloseable {
 		return users.get(login);
 	}
 
-	public RepositoryWithIssuesWithHistoryQL getExistingProject(Coordinates coordinates) throws IOException {
+	public Optional<RepositoryWithIssuesWithHistoryQL> getProject(Coordinates coordinates) throws IOException {
 		final WebTarget target = client.target(GRAPHQL_ENDPOINT);
 		final Builder request = target.request();
 		if (token.length() >= 1) {
@@ -109,39 +103,14 @@ public class GitHubFetcher implements AutoCloseable {
 			ret = response.readEntity(JsonObject.class);
 		}
 		if (ret.containsKey("errors")) {
-			throw new WebApplicationException(ret.toString());
+			LOGGER.debug("Error: {}.", ret.toString());
+			return Optional.empty();
 		}
 		final JsonObject data = ret.getJsonObject("data");
 		LOGGER.debug(JsonUtils.asPrettyString(data));
 		final JsonObject repositoryJson = data.getJsonObject("repository");
 		final RepositoryWithIssuesWithHistoryQL repo = RepositoryWithIssuesWithHistoryQL.from(repositoryJson);
-		return repo;
-	}
-
-	/**
-	 * The returned project has all issues present in github except for issues that
-	 * are pull requests. Those are ignored by this method.
-	 *
-	 */
-	public Optional<RepositoryWithIssuesWithHistoryQL> getProject(Coordinates coordinates) throws IOException {
-		final Optional<JsonObject> optPrj;
-		try (RawGitHubFetcher rawFetcher = new RawGitHubFetcher()) {
-			rawFetcher.setToken(Utils.getToken());
-			optPrj = rawFetcher.fetchGitHubProject(coordinates);
-		}
-		if (!optPrj.isPresent()) {
-			return Optional.empty();
-		}
-		return Optional.of(getExistingProject(coordinates));
-	}
-
-	public User getUser(String login) throws IOException {
-		if (!users.containsKey(requireNonNull(login))) {
-			final com.jcabi.github.User user = github.users().get(login);
-			final JsonObject json = user.json();
-			users.put(login, User.from(json));
-		}
-		return users.get(login);
+		return Optional.of(repo);
 	}
 
 	public String putUserJson(JsonObject json) {
@@ -166,6 +135,7 @@ public class GitHubFetcher implements AutoCloseable {
 			rateReset = Instant.ofEpochSecond(Integer.parseInt(rateResetString));
 			LOGGER.debug("Rate reset: {}.", rateReset);
 		} else {
+			rateReset = null;
 			LOGGER.debug("No rate reset info.");
 		}
 	}

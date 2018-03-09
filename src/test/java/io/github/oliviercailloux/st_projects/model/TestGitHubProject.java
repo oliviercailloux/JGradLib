@@ -35,7 +35,7 @@ public class TestGitHubProject {
 		try (GitHubFetcher fetcher = GitHubFetcher.using(Utils.getToken())) {
 			fetcher.setToken(Utils.getToken());
 			final RepositoryWithIssuesWithHistoryQL repo = fetcher
-					.getExistingProject(new Coordinates.Simple("MAMERY-DOUMBIA", "Dauphine-Pole-Info"));
+					.getProject(new Coordinates.Simple("MAMERY-DOUMBIA", "Dauphine-Pole-Info")).get();
 			LOGGER.debug("Issues with history: {}.", repo.getIssues());
 			assertEquals(13, repo.getIssues().size());
 		}
