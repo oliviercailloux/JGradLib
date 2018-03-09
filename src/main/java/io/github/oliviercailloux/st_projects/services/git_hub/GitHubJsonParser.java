@@ -21,4 +21,10 @@ public class GitHubJsonParser {
 		return asInstant(gitHubTemporal);
 	}
 
+	public static Instant getCreatedAtBetterSpelling(JsonObject json) {
+		requireNonNull(json);
+		final String gitHubTemporal = json.getString("createdAt");
+		return asInstant(gitHubTemporal);
+	}
+
 }

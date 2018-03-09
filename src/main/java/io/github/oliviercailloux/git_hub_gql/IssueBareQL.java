@@ -1,15 +1,21 @@
 package io.github.oliviercailloux.git_hub_gql;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import java.net.URL;
 import java.time.Instant;
+import java.util.List;
+import java.util.stream.Collectors;
 
+import javax.json.JsonArray;
 import javax.json.JsonObject;
+import javax.json.JsonValue;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
+import com.google.common.collect.Streams;
 
 import io.github.oliviercailloux.git_hub.low.IssueCoordinates;
 import io.github.oliviercailloux.st_projects.services.git_hub.GitHubJsonParser;
@@ -36,7 +42,15 @@ public class IssueBareQL {
 	}
 
 	public Instant getCreatedAt() {
-		return GitHubJsonParser.getCreatedAt(json);
+		return GitHubJsonParser.getCreatedAtBetterSpelling(json);
+	}
+
+	public List<IssueEventQL> getEvents() {
+		final JsonObject timeline = json.getJsonObject("timeline");
+		final JsonArray events = timeline.getJsonArray("nodes");
+		checkState(timeline.getInt("totalCount") == events.size());
+		return events.stream().map(JsonValue::asJsonObject).map(IssueEventQL::from).flatMap(Streams::stream)
+				.collect(Collectors.toList());
 	}
 
 	public URL getHtmlURL() {
@@ -53,6 +67,10 @@ public class IssueBareQL {
 
 	public URL getRepositoryURL() {
 		return Utils.newURL(json.getJsonObject("repository").getString("homepageUrl"));
+	}
+
+	public String getTitle() {
+		return json.getString("title");
 	}
 
 	@Override

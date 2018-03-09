@@ -18,10 +18,8 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.Iterables;
 import com.jcabi.github.Coordinates;
-import com.jcabi.github.Github;
 import com.jcabi.github.RtGithub;
 
-import io.github.oliviercailloux.git_hub.low.User;
 import io.github.oliviercailloux.st_projects.services.git_hub.GitHubFetcher;
 import io.github.oliviercailloux.st_projects.services.git_hub.RepositoryFinder;
 import io.github.oliviercailloux.st_projects.utils.JsonUtils;
@@ -33,6 +31,17 @@ public class TestGitHubProject {
 	private static final Logger LOGGER = LoggerFactory.getLogger(TestGitHubProject.class);
 
 	@Test
+	public void testGetRepo() throws Exception {
+		try (GitHubFetcher fetcher = GitHubFetcher.using(Utils.getToken())) {
+			fetcher.setToken(Utils.getToken());
+			final RepositoryWithIssuesWithHistoryQL repo = fetcher
+					.getExistingProject(new Coordinates.Simple("MAMERY-DOUMBIA", "Dauphine-Pole-Info"));
+			LOGGER.debug("Issues with history: {}.", repo.getIssues());
+			assertEquals(13, repo.getIssues().size());
+		}
+	}
+
+	@Test
 	public void testGithubIssues() throws Exception {
 		final RepositoryFinder finder = new RepositoryFinder();
 		final RtGithub gitHub = new RtGithub(Utils.getToken());
@@ -41,7 +50,8 @@ public class TestGitHubProject {
 		assertTrue(found.size() >= 1);
 		final List<Coordinates> foundWithPom = finder.withPom();
 		final Coordinates matching = Iterables.getOnlyElement(foundWithPom);
-		final RepositoryWithIssuesWithHistory project = GitHubFetcher.using(gitHub).getProject(matching).get();
+		final RepositoryWithIssuesWithHistoryQL project = GitHubFetcher.using(Utils.getToken()).getProject(matching)
+				.get();
 		assertTrue(project.getIssuesOriginallyNamed("Course").toString(),
 				project.getIssuesOriginallyNamed("Course").size() == 1);
 		assertFalse(project.getIssuesOriginallyNamed("Triple").size() == 1);
@@ -51,24 +61,20 @@ public class TestGitHubProject {
 	public void testProject() throws Exception {
 		Utils.logLimits();
 
-		final Github gitHub = new RtGithub(Utils.getToken());
-		final GitHubFetcher factory = GitHubFetcher.using(gitHub);
-		final Coordinates.Simple coords = new Coordinates.Simple("oliviercailloux", "testrel");
-		final RepositoryWithIssuesWithHistory project = factory.getProject(coords).get();
-		assertEquals(Utils.newURL("https://api.github.com/repos/oliviercailloux/testrel"),
-				project.getBare().getApiURL());
-		assertEquals(Utils.newURL("https://github.com/oliviercailloux/testrel/"), project.getBare().getHtmlURL());
-		assertEquals(LocalDateTime.of(2016, 04, 15, 10, 33, 27).toInstant(ZoneOffset.UTC),
-				project.getBare().getCreatedAt());
-		assertEquals(5, project.getIssues().size());
-		assertTrue(project.getIssuesOriginallyNamed("test1").size() == 1);
-		assertFalse(project.getIssuesOriginallyNamed("non-existant").size() == 1);
-		assertEquals("testrel", project.getBare().getName());
+		try (GitHubFetcher factory = GitHubFetcher.using(Utils.getToken())) {
+			final Coordinates.Simple coords = new Coordinates.Simple("oliviercailloux", "testrel");
+			final RepositoryWithIssuesWithHistoryQL project = factory.getProject(coords).get();
+			assertEquals(Utils.newURL("https://github.com/oliviercailloux/testrel/"), project.getBare().getHtmlURL());
+			assertEquals(LocalDateTime.of(2016, 04, 15, 10, 33, 27).toInstant(ZoneOffset.UTC),
+					project.getBare().getCreatedAt());
+			assertEquals(5, project.getIssues().size());
+			assertTrue(project.getIssuesOriginallyNamed("test1").size() == 1);
+			assertFalse(project.getIssuesOriginallyNamed("non-existant").size() == 1);
+			assertEquals("testrel", project.getBare().getName());
 
-		final User userC = GitHubFetcher.using(gitHub).getUser("oliviercailloux");
-		LOGGER.debug(JsonUtils.asPrettyString(userC.getJson()));
-		LOGGER.debug(JsonUtils.asPrettyString(project.getOwner().getJson()));
-		assertEquals(userC, project.getOwner());
+			LOGGER.debug(JsonUtils.asPrettyString(project.getOwner().getJson()));
+			assertEquals("oliviercailloux", project.getOwner().getLogin());
+		}
 	}
 
 	@Test

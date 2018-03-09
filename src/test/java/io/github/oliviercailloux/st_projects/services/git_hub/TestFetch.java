@@ -28,7 +28,7 @@ import com.jcabi.github.RtGithub;
 
 import io.github.oliviercailloux.git_hub.low.SearchResult;
 import io.github.oliviercailloux.st_projects.model.Project;
-import io.github.oliviercailloux.st_projects.model.RepositoryWithIssuesWithHistory;
+import io.github.oliviercailloux.st_projects.model.RepositoryWithIssuesWithHistoryQL;
 import io.github.oliviercailloux.st_projects.services.read.IllegalFormat;
 import io.github.oliviercailloux.st_projects.utils.Utils;
 
@@ -135,9 +135,10 @@ public class TestFetch {
 	@Test
 	public void testIssuesHistory() throws Exception {
 		final Coordinates.Simple coord = new Coordinates.Simple("MAMERY-DOUMBIA", "Dauphine-Pole-Info");
-		final GitHubFetcher fetcher = GitHubFetcher.using(new RtGithub(Utils.getToken()));
-		final RepositoryWithIssuesWithHistory project = fetcher.getExistingProject(coord);
-		assertEquals(1, project.getIssuesOriginallyNamed("PHP").size());
+		try (GitHubFetcher fetcher = GitHubFetcher.using(Utils.getToken())) {
+			final RepositoryWithIssuesWithHistoryQL project = fetcher.getExistingProject(coord);
+			assertEquals(1, project.getIssuesOriginallyNamed("PHP").size());
+		}
 	}
 
 	@Test

@@ -37,14 +37,11 @@ import com.google.common.collect.Iterables;
 import com.jcabi.github.Coordinates;
 import com.jcabi.github.RtGithub;
 
-import graphql.ExecutionInput;
-import graphql.schema.idl.SchemaParser;
-import graphql.schema.idl.TypeDefinitionRegistry;
 import io.github.oliviercailloux.git_hub.low.CommitGitHubDescription;
-import io.github.oliviercailloux.git_hub.low.Repository;
 import io.github.oliviercailloux.git_hub.low.SearchResult;
+import io.github.oliviercailloux.git_hub_gql.RepositoryQL;
 import io.github.oliviercailloux.st_projects.model.Project;
-import io.github.oliviercailloux.st_projects.model.RepositoryWithIssuesWithHistory;
+import io.github.oliviercailloux.st_projects.model.RepositoryWithIssuesWithHistoryQL;
 import io.github.oliviercailloux.st_projects.services.git.Client;
 import io.github.oliviercailloux.st_projects.services.git_hub.GitHubFetcher;
 import io.github.oliviercailloux.st_projects.services.git_hub.RawGitHubFetcher;
@@ -74,7 +71,7 @@ public class App {
 		}
 	}
 
-	private final Map<Project, RepositoryWithIssuesWithHistory> ghProjects;
+	private final Map<Project, RepositoryWithIssuesWithHistoryQL> ghProjects;
 
 	private List<Project> projects;
 
@@ -104,23 +101,6 @@ public class App {
 		return idsToUsernames;
 	}
 
-	public void jql() {
-//		RuntimeWiring runtimeWiring = RuntimeWiring.newRuntimeWiring()
-//				.type("Query", builder -> builder.dataFetcher("hello", new StaticDataFetcher("world"))).build();
-//		SchemaGenerator schemaGenerator = new SchemaGenerator();
-//		GraphQLSchema graphQLSchema = schemaGenerator.makeExecutableSchema(typeDefinitionRegistry, runtimeWiring);
-//		GraphQL build = GraphQL.newGraphQL(graphQLSchema).build();
-//		ExecutionResult executionResult = build.execute(executionInput);
-//		System.out.println(executionResult.getData().toString());
-
-		String schema = "type Query{hello: String}";
-		SchemaParser schemaParser = new SchemaParser();
-		TypeDefinitionRegistry typeDefinitionRegistry = schemaParser.parse(schema);
-		ExecutionInput executionInput = ExecutionInput.newExecutionInput().query("{hello}").build();
-		System.out.println(executionInput.toString());
-		// Prints: {hello=world}
-	}
-
 	public void proceed() throws IOException, IllegalFormat, SpreadsheetException, GitAPIException {
 		Utils.logLimits();
 //		writeSEProjects();
@@ -135,12 +115,12 @@ public class App {
 
 	public void reportL3Works(Writer output) throws IOException {
 		final RtGithub gitHub = new RtGithub(Utils.getToken());
-		final GitHubFetcher fetcher = GitHubFetcher.using(gitHub);
 		final Pattern packageRegex = Pattern.compile("^[ \\h]*package .*", Pattern.DOTALL | Pattern.MULTILINE);
 		final Pattern javadocRegex = Pattern.compile("^[ \\v\\h]*/\\*\\*.*", Pattern.DOTALL | Pattern.MULTILINE);
 		final RepositoryFinder finder = new RepositoryFinder();
 		finder.setGitHub(gitHub);
-		try (RawGitHubFetcher rawFetcher = new RawGitHubFetcher()) {
+		try (RawGitHubFetcher rawFetcher = new RawGitHubFetcher();
+				GitHubFetcher fetcher = GitHubFetcher.using(Utils.getToken())) {
 			rawFetcher.setToken(Utils.getToken());
 
 			final Map<Integer, String> idsToUsernames = getIdsToUsernames();
@@ -155,7 +135,7 @@ public class App {
 				output.write("= Id: " + id + " (" + coord.user() + ")\n");
 				final URL base = Utils.newURL("https://github.com/");
 				final URL userPath = new URL(base, coord.user());
-				final Optional<RepositoryWithIssuesWithHistory> prjOpt = fetcher.getProject(coord);
+				final Optional<RepositoryWithIssuesWithHistoryQL> prjOpt = fetcher.getProject(coord);
 				if (!prjOpt.isPresent()) {
 					output.write(userPath + "\n");
 					output.write("Project not found.\n");
@@ -197,10 +177,10 @@ public class App {
 
 	public void retrieveEE() throws IOException, GitAPIException {
 		final Client client = new Client();
-		final Stream<Repository> repositoriesStream = ghProjects.values().stream()
-				.map(RepositoryWithIssuesWithHistory::getBare);
-		final Iterable<Repository> it = repositoriesStream::iterator;
-		for (Repository repository : it) {
+		final Stream<RepositoryQL> repositoriesStream = ghProjects.values().stream()
+				.map(RepositoryWithIssuesWithHistoryQL::getBare);
+		final Iterable<RepositoryQL> it = repositoriesStream::iterator;
+		for (RepositoryQL repository : it) {
 			client.retrieve(repository);
 		}
 	}
@@ -245,29 +225,30 @@ public class App {
 		writeGHProjects();
 	}
 
-	private Map<Project, RepositoryWithIssuesWithHistory> find() throws IOException {
+	private Map<Project, RepositoryWithIssuesWithHistoryQL> find() throws IOException {
 		final RepositoryFinder finder = new RepositoryFinder();
 		final RtGithub gitHub = new RtGithub(Utils.getToken());
 		finder.setGitHub(gitHub);
-		final GitHubFetcher factory = GitHubFetcher.using(gitHub);
-		for (Project project : projects) {
-			LOGGER.info("Searching for {}.", project);
-			final List<Coordinates> found = finder.find(project);
-			LOGGER.info("Found: {}.", found);
-			final List<Coordinates> foundWithPom = finder.withPom();
-			final int nbMatches = foundWithPom.size();
-			switch (nbMatches) {
-			case 0:
-				break;
-			case 1:
-				final Coordinates matching = Iterables.getOnlyElement(foundWithPom);
-				ghProjects.put(project, factory.getExistingProject(matching));
-				break;
-			default:
-				throw new IllegalStateException(
-						String.format("Found multiple matches for %s: %s.", project, foundWithPom));
+		try (GitHubFetcher factory = GitHubFetcher.using(Utils.getToken())) {
+			for (Project project : projects) {
+				LOGGER.info("Searching for {}.", project);
+				final List<Coordinates> found = finder.find(project);
+				LOGGER.info("Found: {}.", found);
+				final List<Coordinates> foundWithPom = finder.withPom();
+				final int nbMatches = foundWithPom.size();
+				switch (nbMatches) {
+				case 0:
+					break;
+				case 1:
+					final Coordinates matching = Iterables.getOnlyElement(foundWithPom);
+					ghProjects.put(project, factory.getExistingProject(matching));
+					break;
+				default:
+					throw new IllegalStateException(
+							String.format("Found multiple matches for %s: %s.", project, foundWithPom));
+				}
 			}
+			return ghProjects;
 		}
-		return ghProjects;
 	}
 }

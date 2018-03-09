@@ -20,7 +20,7 @@ import com.jcabi.github.Coordinates;
 import com.jcabi.github.RtGithub;
 
 import io.github.oliviercailloux.st_projects.model.Project;
-import io.github.oliviercailloux.st_projects.model.RepositoryWithIssuesWithHistory;
+import io.github.oliviercailloux.st_projects.model.RepositoryWithIssuesWithHistoryQL;
 import io.github.oliviercailloux.st_projects.utils.Utils;
 
 public class TestFinder {
@@ -37,12 +37,14 @@ public class TestFinder {
 		finder.setFloorSearchDate(LocalDate.of(2015, Month.DECEMBER, 1));
 		final List<Coordinates> found = finder.find(myProject);
 		assertFalse(found.isEmpty());
-		final GitHubFetcher factory = GitHubFetcher.using(gitHub);
-		final ImmutableList<RepositoryWithIssuesWithHistory> projects = Utils.map(found, (c) -> factory.getProject(c).get());
-		final Instant realCreation = LocalDateTime.of(2016, Month.JULY, 29, 17, 34, 19).toInstant(ZoneOffset.UTC);
-		final RepositoryWithIssuesWithHistory project = projects.get(0);
-		LOGGER.debug("Created at: {}." + project.getBare().getCreatedAt());
-		assertTrue(projects.stream().anyMatch((p) -> p.getBare().getCreatedAt().equals(realCreation)));
+		try (GitHubFetcher factory = GitHubFetcher.using(Utils.getToken())) {
+			final ImmutableList<RepositoryWithIssuesWithHistoryQL> projects = Utils.map(found,
+					(c) -> factory.getProject(c).get());
+			final Instant realCreation = LocalDateTime.of(2016, Month.JULY, 29, 17, 34, 19).toInstant(ZoneOffset.UTC);
+			final RepositoryWithIssuesWithHistoryQL project = projects.get(0);
+			LOGGER.debug("Created at: {}." + project.getBare().getCreatedAt());
+			assertTrue(projects.stream().anyMatch((p) -> p.getBare().getCreatedAt().equals(realCreation)));
+		}
 	}
 
 	/**

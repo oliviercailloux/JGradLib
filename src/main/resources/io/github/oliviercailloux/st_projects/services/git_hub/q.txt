@@ -2,6 +2,13 @@ query ploum($repositoryName: String!, $repositoryOwner: String!) {
   repository(name: $repositoryName, owner: $repositoryOwner) {
     url
     sshUrl
+    id
+    name
+    createdAt
+    owner {
+      login
+      url
+    }
     issues(orderBy: {field: CREATED_AT, direction: ASC}, states: [OPEN, CLOSED], first: 100) {
       totalCount
       pageInfo {
@@ -29,6 +36,7 @@ query ploum($repositoryName: String!, $repositoryOwner: String!) {
               createdAt
               user {
                 login
+                url
               }
             }
             ... on ClosedEvent {
@@ -46,6 +54,7 @@ query ploum($repositoryName: String!, $repositoryOwner: String!) {
               createdAt
               user {
                 login
+                url
               }
             }
           }

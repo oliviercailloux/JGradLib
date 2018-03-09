@@ -4,19 +4,36 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 
+import javax.json.Json;
+import javax.json.JsonBuilderFactory;
 import javax.json.JsonObject;
+import javax.servlet.http.HttpServletResponse;
+import javax.ws.rs.WebApplicationException;
+import javax.ws.rs.client.Client;
+import javax.ws.rs.client.ClientBuilder;
+import javax.ws.rs.client.Entity;
+import javax.ws.rs.client.Invocation.Builder;
+import javax.ws.rs.client.WebTarget;
+import javax.ws.rs.core.HttpHeaders;
+import javax.ws.rs.core.Response;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
@@ -25,32 +42,55 @@ import com.jcabi.github.Coordinates;
 import com.jcabi.github.Event;
 import com.jcabi.github.Github;
 import com.jcabi.github.Repo;
+import com.jcabi.github.RtGithub;
 
 import io.github.oliviercailloux.git_hub.high.IssueSnapshot;
-import io.github.oliviercailloux.git_hub.low.IssueEvent;
 import io.github.oliviercailloux.git_hub.low.IssueBare;
 import io.github.oliviercailloux.git_hub.low.IssueCoordinates;
-import io.github.oliviercailloux.git_hub.low.Repository;
+import io.github.oliviercailloux.git_hub.low.IssueEvent;
 import io.github.oliviercailloux.git_hub.low.User;
 import io.github.oliviercailloux.st_projects.model.IssueWithHistory;
-import io.github.oliviercailloux.st_projects.model.RepositoryWithIssuesWithHistory;
+import io.github.oliviercailloux.st_projects.model.IssueWithHistoryQL;
+import io.github.oliviercailloux.st_projects.model.RepositoryWithIssuesWithHistoryQL;
 import io.github.oliviercailloux.st_projects.utils.JsonUtils;
 import io.github.oliviercailloux.st_projects.utils.Utils;
 
-public class GitHubFetcher {
+public class GitHubFetcher implements AutoCloseable {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(GitHubFetcher.class);
 
-	public static GitHubFetcher using(Github github) {
-		return new GitHubFetcher(github);
+	public static GitHubFetcher using(String token) {
+		return new GitHubFetcher(token);
 	}
+
+	public final String GRAPHQL_ENDPOINT = "https://api.github.com/graphql";
+
+	private final Client client;
 
 	private Github github;
 
+	/**
+	 * Not <code>null</code>.
+	 */
+	private String rateLimit;
+
+	private Instant rateReset;
+
+	private String token;
+
 	private final Map<String, User> users = new LinkedHashMap<>();
 
-	private GitHubFetcher(Github github) {
-		this.github = requireNonNull(github);
+	private GitHubFetcher(String token) {
+		this.token = requireNonNull(token);
+		this.github = new RtGithub(token);
+		rateLimit = "";
+		rateReset = Instant.EPOCH;
+		client = ClientBuilder.newClient();
+	}
+
+	@Override
+	public void close() {
+		client.close();
 	}
 
 	public User getCachedUser(String login) {
@@ -59,13 +99,38 @@ public class GitHubFetcher {
 		return users.get(login);
 	}
 
-	public RepositoryWithIssuesWithHistory getExistingProject(Coordinates coordinates) throws IOException {
-		final Repo repo = github.repos().get(coordinates);
-		final JsonObject json = repo.json();
-		final JsonObject ownerJson = json.getJsonObject("owner");
-		final String login = putUserJson(ownerJson);
-		final User owner = getCachedUser(login);
-		return RepositoryWithIssuesWithHistory.from(Repository.from(json), owner, getIssues(repo));
+	public RepositoryWithIssuesWithHistoryQL getExistingProject(Coordinates coordinates) throws IOException {
+		final WebTarget target = client.target(GRAPHQL_ENDPOINT);
+		final Builder request = target.request();
+		if (token.length() >= 1) {
+			request.header(HttpHeaders.AUTHORIZATION, String.format("token %s", token));
+		}
+		final String queryGQL;
+		try (BufferedReader r = new BufferedReader(
+				new InputStreamReader(getClass().getResourceAsStream("q.txt"), StandardCharsets.UTF_8))) {
+			queryGQL = r.lines().collect(Collectors.joining("\n"));
+		}
+		final JsonBuilderFactory factory = Json.createBuilderFactory(null);
+		final JsonObject varsJson = factory.createObjectBuilder().add("repositoryName", coordinates.repo())
+				.add("repositoryOwner", coordinates.user()).build();
+		final JsonObject queryJson = factory.createObjectBuilder().add("query", queryGQL).add("variables", varsJson)
+				.build();
+		final JsonObject ret;
+		try (Response response = request.post(Entity.json(queryJson))) {
+			readRates(response);
+			if (response.getStatus() != HttpServletResponse.SC_OK) {
+				throw new WebApplicationException(response);
+			}
+			ret = response.readEntity(JsonObject.class);
+		}
+		if (ret.containsKey("errors")) {
+			throw new WebApplicationException(ret.toString());
+		}
+		final JsonObject data = ret.getJsonObject("data");
+		LOGGER.debug(JsonUtils.asPrettyString(data));
+		final JsonObject repositoryJson = data.getJsonObject("repository");
+		final RepositoryWithIssuesWithHistoryQL repo = RepositoryWithIssuesWithHistoryQL.from(repositoryJson);
+		return repo;
 	}
 
 	public IssueWithHistory getIssue(IssueBare simple) throws IOException {
@@ -158,7 +223,7 @@ public class GitHubFetcher {
 	 * are pull requests. Those are ignored by this method.
 	 *
 	 */
-	public Optional<RepositoryWithIssuesWithHistory> getProject(Coordinates coordinates) throws IOException {
+	public Optional<RepositoryWithIssuesWithHistoryQL> getProject(Coordinates coordinates) throws IOException {
 		final Optional<JsonObject> optPrj;
 		try (RawGitHubFetcher rawFetcher = new RawGitHubFetcher()) {
 			rawFetcher.setToken(Utils.getToken());
@@ -189,12 +254,8 @@ public class GitHubFetcher {
 		return login;
 	}
 
-	private List<IssueWithHistory> getIssues(Repo repo) throws IOException {
-		final Iterable<com.jcabi.github.Issue> issuesIt = repo.issues().iterate(ImmutableMap.of("state", "all"));
-		final ImmutableList<IssueBare> simpleIssues = Utils.map(issuesIt, (i) -> IssueBare.from(i.json()));
-		final Iterable<IssueBare> simpleRightIssues = Iterables.filter(simpleIssues, (s) -> !s.isPullRequest());
-		final ImmutableList<IssueWithHistory> issues = Utils.map(simpleRightIssues, this::getIssue);
-		return issues;
+	public void setToken(String token) {
+		this.token = requireNonNull(token);
 	}
 
 	private com.jcabi.github.Issue getJCabiIssue(final IssueCoordinates coordinates) {
@@ -210,4 +271,17 @@ public class GitHubFetcher {
 	private User getUser(JsonObject json) throws IOException {
 		return getUser(json.getString("login"));
 	}
+
+	private void readRates(Response response) {
+		rateLimit = Strings.nullToEmpty(response.getHeaderString("X-RateLimit-Remaining"));
+		LOGGER.debug("Rate limit: {}.", rateLimit);
+		final String rateResetString = Strings.nullToEmpty(response.getHeaderString("X-RateLimit-Reset"));
+		if (!rateResetString.isEmpty()) {
+			rateReset = Instant.ofEpochSecond(Integer.parseInt(rateResetString));
+			LOGGER.debug("Rate reset: {}.", rateReset);
+		} else {
+			LOGGER.debug("No rate reset info.");
+		}
+	}
+
 }
