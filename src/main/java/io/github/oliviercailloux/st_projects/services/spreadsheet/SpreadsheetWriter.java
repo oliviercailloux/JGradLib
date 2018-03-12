@@ -23,7 +23,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.UnmodifiableIterator;
 
-import io.github.oliviercailloux.git_hub.graph_ql.IssueSnapshotQL;
+import io.github.oliviercailloux.git_hub.graph_ql.IssueSnapshot;
 import io.github.oliviercailloux.git_hub.graph_ql.User;
 import io.github.oliviercailloux.st_projects.model.Functionality;
 import io.github.oliviercailloux.st_projects.model.IssueWithHistory;
@@ -237,7 +237,7 @@ public class SpreadsheetWriter {
 
 		final Cell cellAss = sheet.getCellByPosition(curCol, curRow);
 
-		final Optional<IssueSnapshotQL> issueDoneOpt = issues.isEmpty() ? Optional.empty()
+		final Optional<IssueSnapshot> issueDoneOpt = issues.isEmpty() ? Optional.empty()
 				: issues.iterator().next().getFirstSnapshotDone();
 		final Optional<Set<User>> assigneesOpt = issueDoneOpt.map((s) -> s.getAssignees());
 		final Set<User> assignees = assigneesOpt.orElse(ImmutableSet.of());

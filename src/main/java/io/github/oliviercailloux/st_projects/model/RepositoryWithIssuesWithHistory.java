@@ -25,7 +25,7 @@ import com.google.common.collect.ImmutableSetMultimap.Builder;
 
 import io.github.oliviercailloux.git_hub.graph_ql.IssueBare;
 import io.github.oliviercailloux.git_hub.graph_ql.IssueEvent;
-import io.github.oliviercailloux.git_hub.graph_ql.IssueSnapshotQL;
+import io.github.oliviercailloux.git_hub.graph_ql.IssueSnapshot;
 import io.github.oliviercailloux.git_hub.graph_ql.RenamedTitleEvent;
 import io.github.oliviercailloux.git_hub.graph_ql.Repository;
 import io.github.oliviercailloux.git_hub.graph_ql.User;
@@ -174,8 +174,8 @@ public class RepositoryWithIssuesWithHistory {
 			}
 		}
 
-		final List<IssueSnapshotQL> snaps = new ArrayList<>();
-		IssueSnapshotQL snap = IssueSnapshotQL.of(issueBare.getCreatedAt(), name, open, ImmutableSet.of());
+		final List<IssueSnapshot> snaps = new ArrayList<>();
+		IssueSnapshot snap = IssueSnapshot.of(issueBare.getCreatedAt(), name, open, ImmutableSet.of());
 		snaps.add(snap);
 
 		for (IssueEvent event : events) {

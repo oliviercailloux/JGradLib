@@ -14,9 +14,9 @@ public class RenamedTitleEvent extends IssueEvent {
 	}
 
 	@Override
-	public IssueSnapshotQL applyTo(IssueSnapshotQL snap) {
+	public IssueSnapshot applyTo(IssueSnapshot snap) {
 		checkArgument(snap.getName().equals(getPreviousTitle()));
-		return IssueSnapshotQL.of(getCreatedAt(), getCurrentTitle(), snap.isOpen(), snap.getAssignees());
+		return IssueSnapshot.of(getCreatedAt(), getCurrentTitle(), snap.isOpen(), snap.getAssignees());
 	}
 
 	public String getCurrentTitle() {

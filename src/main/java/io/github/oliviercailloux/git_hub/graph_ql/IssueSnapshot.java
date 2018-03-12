@@ -13,9 +13,9 @@ import com.google.common.collect.ImmutableSet;
  * @author Olivier Cailloux
  *
  */
-public class IssueSnapshotQL {
-	public static IssueSnapshotQL of(Instant birthTime, String name, boolean isOpen, Set<User> assignees) {
-		return new IssueSnapshotQL(birthTime, name, isOpen, assignees);
+public class IssueSnapshot {
+	public static IssueSnapshot of(Instant birthTime, String name, boolean isOpen, Set<User> assignees) {
+		return new IssueSnapshot(birthTime, name, isOpen, assignees);
 	}
 
 	private final ImmutableSet<User> assignees;
@@ -26,7 +26,7 @@ public class IssueSnapshotQL {
 
 	private final String name;
 
-	private IssueSnapshotQL(Instant birthTime, String name, boolean isOpen, Set<User> assignees) {
+	private IssueSnapshot(Instant birthTime, String name, boolean isOpen, Set<User> assignees) {
 		this.birthTime = requireNonNull(birthTime);
 		this.name = requireNonNull(name);
 		this.isOpen = isOpen;

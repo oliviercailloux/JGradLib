@@ -11,9 +11,9 @@ public class ClosedEvent extends IssueEvent {
 	}
 
 	@Override
-	public IssueSnapshotQL applyTo(IssueSnapshotQL snap) {
+	public IssueSnapshot applyTo(IssueSnapshot snap) {
 		checkArgument(snap.isOpen());
-		return IssueSnapshotQL.of(getCreatedAt(), snap.getName(), false, snap.getAssignees());
+		return IssueSnapshot.of(getCreatedAt(), snap.getName(), false, snap.getAssignees());
 	}
 
 }

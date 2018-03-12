@@ -4,10 +4,13 @@ import com.google.common.base.CaseFormat;
 
 public enum IssueEventType {
 	ASSIGNED, CLOSED, RENAMED_TITLE, REOPENED, UNASSIGNED;
-	@SuppressWarnings("unchecked")
-	public <T extends IssueEvent> Class<T> toClass() {
+	public Class<? extends IssueEvent> toClass() {
 		try {
-			return (Class<T>) Class.forName(toString());
+			final Class<?> c = Class.forName(toString());
+			assert IssueEvent.class.isAssignableFrom(c);
+			@SuppressWarnings("unchecked")
+			final Class<? extends IssueEvent> cc = (Class<? extends IssueEvent>) c;
+			return cc;
 		} catch (ClassNotFoundException e) {
 			throw new IllegalStateException(e);
 		}

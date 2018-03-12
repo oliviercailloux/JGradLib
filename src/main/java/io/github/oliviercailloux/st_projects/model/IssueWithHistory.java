@@ -23,7 +23,7 @@ import com.google.common.collect.Iterators;
 import com.google.common.collect.PeekingIterator;
 
 import io.github.oliviercailloux.git_hub.graph_ql.IssueBare;
-import io.github.oliviercailloux.git_hub.graph_ql.IssueSnapshotQL;
+import io.github.oliviercailloux.git_hub.graph_ql.IssueSnapshot;
 import io.github.oliviercailloux.git_hub.graph_ql.User;
 
 /**
@@ -44,13 +44,13 @@ public class IssueWithHistory implements Comparable<IssueWithHistory> {
 	 * @param snaps
 	 *            at least one.
 	 */
-	public static IssueWithHistory from(IssueBare issue, List<IssueSnapshotQL> snaps) {
+	public static IssueWithHistory from(IssueBare issue, List<IssueSnapshot> snaps) {
 		return new IssueWithHistory(issue, snaps);
 	}
 
 	private static Comparator<IssueWithHistory> getComparator() {
 		final Function<? super IssueWithHistory, Optional<Instant>> issueToDoneTime = (i) -> i.getFirstSnapshotDone()
-				.map(IssueSnapshotQL::getBirthTime);
+				.map(IssueSnapshot::getBirthTime);
 		final Comparator<Optional<Instant>> compareOptInst = Comparators
 				.emptiesLast(Comparator.<Instant>naturalOrder());
 		final Comparator<IssueWithHistory> compareDoneTime = Comparator.comparing(issueToDoneTime, compareOptInst);
@@ -61,9 +61,9 @@ public class IssueWithHistory implements Comparable<IssueWithHistory> {
 
 	private final IssueBare simple;
 
-	private final List<IssueSnapshotQL> snaps;
+	private final List<IssueSnapshot> snaps;
 
-	private IssueWithHistory(IssueBare issue, List<IssueSnapshotQL> snaps) {
+	private IssueWithHistory(IssueBare issue, List<IssueSnapshot> snaps) {
 		simple = requireNonNull(issue);
 		checkArgument(snaps.size() >= 1);
 		this.snaps = snaps;
@@ -90,12 +90,12 @@ public class IssueWithHistory implements Comparable<IssueWithHistory> {
 	 *         closed (in which case a second snapshot with the second assignee
 	 *         exists just after the first snapshot with the first assignee).
 	 */
-	public Optional<IssueSnapshotQL> getFirstSnapshotDone() {
+	public Optional<IssueSnapshot> getFirstSnapshotDone() {
 		final Instant fourMinutesInThePast = Instant.now().minus(Duration.ofMinutes(4));
 
-		final PeekingIterator<IssueSnapshotQL> snapsIt = Iterators.peekingIterator(snaps.iterator());
+		final PeekingIterator<IssueSnapshot> snapsIt = Iterators.peekingIterator(snaps.iterator());
 		while (snapsIt.hasNext()) {
-			final IssueSnapshotQL snap = snapsIt.next();
+			final IssueSnapshot snap = snapsIt.next();
 			LOGGER.debug("Looking at {}, state: {}, assignees: {}.", snap, snap.isOpen(), snap.getAssignees());
 
 			if (snap.isOpen()) {
@@ -109,7 +109,7 @@ public class IssueWithHistory implements Comparable<IssueWithHistory> {
 			}
 
 			if (snapsIt.hasNext()) {
-				final IssueSnapshotQL nextSnap = snapsIt.peek();
+				final IssueSnapshot nextSnap = snapsIt.peek();
 				final Instant nextSnapBirth = nextSnap.getBirthTime();
 				final Instant thisSnapPlus3m = thisSnapBirth.plus(Duration.ofMinutes(3));
 				if (nextSnapBirth.isBefore(thisSnapPlus3m)) {
@@ -131,19 +131,19 @@ public class IssueWithHistory implements Comparable<IssueWithHistory> {
 	 * name to latest, thus with its original name first.
 	 */
 	public List<String> getNames() {
-		return snaps.stream().map(IssueSnapshotQL::getName).collect(Collectors.toList());
+		return snaps.stream().map(IssueSnapshot::getName).collect(Collectors.toList());
 	}
 
 	public String getOriginalName() {
 		return snaps.iterator().next().getName();
 	}
 
-	public List<IssueSnapshotQL> getSnapshots() {
+	public List<IssueSnapshot> getSnapshots() {
 		return snaps;
 	}
 
 	public boolean hasBeenRenamed() {
-		return !snaps.stream().map(IssueSnapshotQL::getName).allMatch(Predicates.equalTo(getOriginalName()));
+		return !snaps.stream().map(IssueSnapshot::getName).allMatch(Predicates.equalTo(getOriginalName()));
 	}
 
 	@Override

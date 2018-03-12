@@ -19,7 +19,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 
 import io.github.oliviercailloux.git_hub.RepositoryCoordinates;
-import io.github.oliviercailloux.git_hub.graph_ql.IssueSnapshotQL;
+import io.github.oliviercailloux.git_hub.graph_ql.IssueSnapshot;
 import io.github.oliviercailloux.git_hub.graph_ql.User;
 import io.github.oliviercailloux.st_projects.services.git_hub.GitHubFetcher;
 import io.github.oliviercailloux.st_projects.utils.Utils;
@@ -36,7 +36,7 @@ public class TestGitHubIssue {
 			final RepositoryWithIssuesWithHistory repo = factory.getProject(coord).get();
 			final IssueWithHistory issue = repo.getIssuesNamed("Servlets").iterator().next();
 			assertEquals("Servlets", issue.getOriginalName());
-			final Optional<IssueSnapshotQL> optDone = issue.getFirstSnapshotDone();
+			final Optional<IssueSnapshot> optDone = issue.getFirstSnapshotDone();
 			assertTrue(optDone.isPresent());
 			final ImmutableSet<User> assignees = optDone.get().getAssignees();
 			final Stream<String> loginsStream = assignees.stream().map((u) -> u.getLogin());
@@ -68,11 +68,11 @@ public class TestGitHubIssue {
 			assertEquals("test1", issue.getOriginalName());
 			assertEquals(2, issue.getBare().getNumber());
 
-			final IssueSnapshotQL snapshot = issue.getSnapshots().get(1);
+			final IssueSnapshot snapshot = issue.getSnapshots().get(1);
 
 			assertEquals(LocalDateTime.of(2017, 10, 19, 14, 50, 22).toInstant(ZoneOffset.UTC), snapshot.getBirthTime());
 
-			final IssueSnapshotQL done = issue.getFirstSnapshotDone().get();
+			final IssueSnapshot done = issue.getFirstSnapshotDone().get();
 			final Set<User> actual = done.getAssignees();
 			assertEquals("bnegreve", Iterables.getOnlyElement(actual).getLogin());
 		}
@@ -89,7 +89,7 @@ public class TestGitHubIssue {
 					issue.getBare().getHtmlURL());
 			assertEquals("test open", issue.getOriginalName());
 			assertEquals(3, issue.getBare().getNumber());
-			final List<IssueSnapshotQL> snapshots = issue.getSnapshots();
+			final List<IssueSnapshot> snapshots = issue.getSnapshots();
 			assertTrue(snapshots.get(0).isOpen());
 			assertTrue(!snapshots.get(1).isOpen());
 			assertTrue(snapshots.get(2).isOpen());

@@ -15,10 +15,10 @@ public class UnassignedEvent extends IssueEvent {
 	}
 
 	@Override
-	public IssueSnapshotQL applyTo(IssueSnapshotQL snap) {
+	public IssueSnapshot applyTo(IssueSnapshot snap) {
 		final User user = getUser();
 		checkArgument(snap.getAssignees().contains(user));
-		return IssueSnapshotQL.of(getCreatedAt(), snap.getName(), snap.isOpen(), snap.getAssignees().stream()
+		return IssueSnapshot.of(getCreatedAt(), snap.getName(), snap.isOpen(), snap.getAssignees().stream()
 				.filter(Predicate.isEqual(user).negate()).collect(ImmutableSet.toImmutableSet()));
 	}
 

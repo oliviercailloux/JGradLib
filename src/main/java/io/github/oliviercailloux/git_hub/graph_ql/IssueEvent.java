@@ -42,7 +42,7 @@ public abstract class IssueEvent {
 		this.json = requireNonNull(json);
 	}
 
-	public abstract IssueSnapshotQL applyTo(IssueSnapshotQL snap);
+	public abstract IssueSnapshot applyTo(IssueSnapshot snap);
 
 	public Instant getCreatedAt() {
 		return GitHubJsonParser.getCreatedAtBetterSpelling(json);
