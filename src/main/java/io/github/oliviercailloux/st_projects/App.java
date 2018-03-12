@@ -34,11 +34,11 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.Iterables;
-import com.jcabi.github.Coordinates;
 
+import io.github.oliviercailloux.git_hub.RepositoryCoordinates;
+import io.github.oliviercailloux.git_hub.graph_ql.Repository;
 import io.github.oliviercailloux.git_hub.low.CommitGitHubDescription;
 import io.github.oliviercailloux.git_hub.low.SearchResult;
-import io.github.oliviercailloux.git_hub_gql.Repository;
 import io.github.oliviercailloux.st_projects.model.Project;
 import io.github.oliviercailloux.st_projects.model.RepositoryWithIssuesWithHistory;
 import io.github.oliviercailloux.st_projects.services.git.Client;
@@ -126,10 +126,10 @@ public class App {
 					Comparator.naturalOrder());
 			for (Integer id : idsSorted.keySet()) {
 				final String username = idsSorted.get(id);
-				final Coordinates.Simple coord = new Coordinates.Simple(username, repo);
-				output.write("= Id: " + id + " (" + coord.user() + ")\n");
+				final RepositoryCoordinates coord = RepositoryCoordinates.from(username, repo);
+				output.write("= Id: " + id + " (" + coord.getOwner() + ")\n");
 				final URL base = Utils.newURL("https://github.com/");
-				final URL userPath = new URL(base, coord.user());
+				final URL userPath = new URL(base, coord.getOwner());
 				final Optional<RepositoryWithIssuesWithHistory> prjOpt = fetcher.getProject(coord);
 				if (!prjOpt.isPresent()) {
 					output.write(userPath + "\n");

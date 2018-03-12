@@ -22,14 +22,15 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSetMultimap;
 import com.google.common.collect.ImmutableSetMultimap.Builder;
-import com.google.common.collect.ImmutableSortedSet;
 
-import io.github.oliviercailloux.git_hub_gql.IssueBare;
-import io.github.oliviercailloux.git_hub_gql.IssueEvent;
-import io.github.oliviercailloux.git_hub_gql.IssueSnapshotQL;
-import io.github.oliviercailloux.git_hub_gql.RenamedTitleEvent;
-import io.github.oliviercailloux.git_hub_gql.Repository;
-import io.github.oliviercailloux.git_hub_gql.User;
+import io.github.oliviercailloux.git_hub.graph_ql.IssueBare;
+import io.github.oliviercailloux.git_hub.graph_ql.IssueEvent;
+import io.github.oliviercailloux.git_hub.graph_ql.IssueSnapshotQL;
+import io.github.oliviercailloux.git_hub.graph_ql.RenamedTitleEvent;
+import io.github.oliviercailloux.git_hub.graph_ql.Repository;
+import io.github.oliviercailloux.git_hub.graph_ql.User;
+
+import com.google.common.collect.ImmutableSortedSet;
 
 /**
  *

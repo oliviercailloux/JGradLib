@@ -29,8 +29,8 @@ import com.diffplug.common.base.Errors;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.Resources;
-import com.jcabi.github.Coordinates;
 
+import io.github.oliviercailloux.git_hub.RepositoryCoordinates;
 import io.github.oliviercailloux.st_projects.model.Project;
 import io.github.oliviercailloux.st_projects.model.RepositoryWithIssuesWithHistory;
 import io.github.oliviercailloux.st_projects.utils.JsonUtils;
@@ -93,9 +93,10 @@ public class GitHubFetcher implements AutoCloseable {
 				.filter((r) -> r.getBare().getName().equals(project.getGitHubName())).collect(Collectors.toList());
 	}
 
-	public Optional<RepositoryWithIssuesWithHistory> getProject(Coordinates coordinates) {
-		final JsonObject varsJson = jsonBuilderFactory.createObjectBuilder().add("repositoryName", coordinates.repo())
-				.add("repositoryOwner", coordinates.user()).build();
+	public Optional<RepositoryWithIssuesWithHistory> getProject(RepositoryCoordinates coordinates) {
+		final JsonObject varsJson = jsonBuilderFactory.createObjectBuilder()
+				.add("repositoryName", coordinates.getRepositoryName()).add("repositoryOwner", coordinates.getOwner())
+				.build();
 		return queryOpt("repository", ImmutableList.of("repositoryWithIssuesWithHistory"), varsJson)
 				.map((d) -> d.getJsonObject("repository")).map(RepositoryWithIssuesWithHistory::from);
 	}

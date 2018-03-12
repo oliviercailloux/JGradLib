@@ -9,9 +9,9 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableList.Builder;
 import com.google.common.collect.ImmutableSortedSet;
 
-import io.github.oliviercailloux.git_hub_gql.IssueBare;
-import io.github.oliviercailloux.git_hub_gql.Repository;
-import io.github.oliviercailloux.git_hub_gql.User;
+import io.github.oliviercailloux.git_hub.graph_ql.IssueBare;
+import io.github.oliviercailloux.git_hub.graph_ql.Repository;
+import io.github.oliviercailloux.git_hub.graph_ql.User;
 import io.github.oliviercailloux.st_projects.utils.Utils;
 
 public class ModelMocker {

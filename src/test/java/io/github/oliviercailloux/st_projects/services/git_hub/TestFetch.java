@@ -11,7 +11,6 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
-import javax.json.JsonArray;
 import javax.json.JsonObject;
 
 import org.eclipse.jgit.lib.ObjectId;
@@ -19,13 +18,7 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.jcabi.github.Coordinates;
-import com.jcabi.github.Github;
-import com.jcabi.github.Issue;
-import com.jcabi.github.Issues;
-import com.jcabi.github.Repo;
-import com.jcabi.github.RtGithub;
-
+import io.github.oliviercailloux.git_hub.RepositoryCoordinates;
 import io.github.oliviercailloux.git_hub.low.SearchResult;
 import io.github.oliviercailloux.st_projects.model.Project;
 import io.github.oliviercailloux.st_projects.model.RepositoryWithIssuesWithHistory;
@@ -40,27 +33,16 @@ public class TestFetch {
 	@Test
 	public void testFetchAbsentGitHubProject() throws Exception {
 		try (GitHubFetcher fetcher = GitHubFetcher.using(Utils.getToken())) {
-			final Coordinates.Simple coord = new Coordinates.Simple("this-user-does-not-exist-dfqfaglmkj45858", "repo");
+			final RepositoryCoordinates coord = RepositoryCoordinates.from("this-user-does-not-exist-dfqfaglmkj45858",
+					"repo");
 			final Optional<RepositoryWithIssuesWithHistory> opt = fetcher.getProject(coord);
 			assertTrue(!opt.isPresent());
 		}
 	}
 
 	@Test
-	public void testFetchAssignees() throws Exception {
-		final Github github = new RtGithub(Utils.getToken());
-		final Repo repo = github.repos().get(new Coordinates.Simple("waffleio", "waffle.io"));
-		final Issues issues = repo.issues();
-		final Issue issue = issues.get(3259);
-		final JsonArray jsonArray = issue.json().getJsonArray("assignees");
-		LOGGER.debug("Issue assignees: {}.", jsonArray);
-		assertEquals(2, jsonArray.size());
-		/** https://github.com/waffleio/waffle.io/issues/3259 */
-	}
-
-	@Test
 	public void testFindFileCreationExists() throws Exception {
-		final Coordinates.Simple coord = new Coordinates.Simple("Raphaaal", "Java-L3-Eck-Ex");
+		final RepositoryCoordinates coord = RepositoryCoordinates.from("Raphaaal", "Java-L3-Eck-Ex");
 		try (RawGitHubFetcher rawFetcher = new RawGitHubFetcher()) {
 			rawFetcher.setToken(Utils.getToken());
 			final Optional<ObjectId> found = rawFetcher.getCreationSha(coord, Paths.get("EE34BreakLine.java"));
@@ -73,7 +55,7 @@ public class TestFetch {
 
 	@Test
 	public void testFindFileCreationExists2() throws Exception {
-		final Coordinates.Simple coord = new Coordinates.Simple("ynestacamille", "Java-L3-Eck-Ex");
+		final RepositoryCoordinates coord = RepositoryCoordinates.from("ynestacamille", "Java-L3-Eck-Ex");
 		try (RawGitHubFetcher rawFetcher = new RawGitHubFetcher()) {
 			rawFetcher.setToken(Utils.getToken());
 			final List<SearchResult> paths = rawFetcher.searchForCode(coord, "class", "java");
@@ -98,7 +80,7 @@ public class TestFetch {
 
 	@Test(expected = IllegalStateException.class)
 	public void testFindFileCreationExistsOld() throws Exception {
-		final Coordinates.Simple coord = new Coordinates.Simple("oliviercailloux", "java-course");
+		final RepositoryCoordinates coord = RepositoryCoordinates.from("oliviercailloux", "java-course");
 		try (RawGitHubFetcher rawFetcher = new RawGitHubFetcher()) {
 			rawFetcher.setToken(Utils.getToken());
 			final Optional<ObjectId> found = rawFetcher.getCreationSha(coord, Paths.get("JSON.adoc"));
@@ -111,7 +93,7 @@ public class TestFetch {
 
 	@Test
 	public void testFindFileCreationNotExists() throws Exception {
-		final Coordinates.Simple coord = new Coordinates.Simple("oliviercailloux", "testrel");
+		final RepositoryCoordinates coord = RepositoryCoordinates.from("oliviercailloux", "testrel");
 		try (RawGitHubFetcher rawFetcher = new RawGitHubFetcher()) {
 			rawFetcher.setToken(Utils.getToken());
 			final Optional<ObjectId> found = rawFetcher.getCreationSha(coord, Paths.get("dfsddqgqd.ttt"));
@@ -121,7 +103,7 @@ public class TestFetch {
 
 	@Test
 	public void testFindFilePaths() throws Exception {
-		final Coordinates.Simple coord = new Coordinates.Simple("oliviercailloux", "java-course");
+		final RepositoryCoordinates coord = RepositoryCoordinates.from("oliviercailloux", "java-course");
 		try (RawGitHubFetcher rawFetcher = new RawGitHubFetcher()) {
 			final List<SearchResult> found = rawFetcher.searchForFile(coord, "JSON", "adoc");
 			LOGGER.debug(found.toString());
@@ -131,8 +113,8 @@ public class TestFetch {
 
 	@Test
 	public void testFindFilePathsByCode() throws Exception {
-		final Coordinates.Simple coord = new Coordinates.Simple("oliviercailloux", "java-course");
-		// final Coordinates.Simple coord = new Coordinates.Simple("Raphaaal",
+		final RepositoryCoordinates coord = RepositoryCoordinates.from("oliviercailloux", "java-course");
+		// final RepositoryCoordinates coord = RepositoryCoordinates.from("Raphaaal",
 		// "Java-L3-Eck-Ex");
 		try (RawGitHubFetcher rawFetcher = new RawGitHubFetcher()) {
 			final List<SearchResult> found = rawFetcher.searchForCode(coord, "vote", "java");
@@ -143,7 +125,7 @@ public class TestFetch {
 
 	@Test
 	public void testIssuesHistory() throws Exception {
-		final Coordinates.Simple coord = new Coordinates.Simple("MAMERY-DOUMBIA", "Dauphine-Pole-Info");
+		final RepositoryCoordinates coord = RepositoryCoordinates.from("MAMERY-DOUMBIA", "Dauphine-Pole-Info");
 		try (GitHubFetcher fetcher = GitHubFetcher.using(Utils.getToken())) {
 			final RepositoryWithIssuesWithHistory project = fetcher.getProject(coord).get();
 			assertEquals(1, project.getIssuesOriginallyNamed("PHP").size());
@@ -154,7 +136,8 @@ public class TestFetch {
 	public void testRawFetchAbsentGitHubProject() throws Exception {
 		try (RawGitHubFetcher rawFetcher = new RawGitHubFetcher()) {
 			rawFetcher.setToken(Utils.getToken());
-			final Coordinates.Simple coord = new Coordinates.Simple("this-user-does-not-exist-dfqfaglmkj45858", "repo");
+			final RepositoryCoordinates coord = RepositoryCoordinates.from("this-user-does-not-exist-dfqfaglmkj45858",
+					"repo");
 			// final User user = fetcher.getUser(username);
 			final Optional<JsonObject> opt = rawFetcher.fetchGitHubProject(coord);
 			assertTrue(!opt.isPresent());
@@ -165,7 +148,7 @@ public class TestFetch {
 	public void testRawFetchGitHubProject() throws Exception {
 		try (RawGitHubFetcher rawFetcher = new RawGitHubFetcher()) {
 			rawFetcher.setToken(Utils.getToken());
-			final Coordinates.Simple coord = new Coordinates.Simple("oliviercailloux", "java-course");
+			final RepositoryCoordinates coord = RepositoryCoordinates.from("oliviercailloux", "java-course");
 			// final User user = fetcher.getUser(username);
 			final Optional<JsonObject> opt = rawFetcher.fetchGitHubProject(coord);
 			assertTrue(opt.isPresent());
@@ -174,7 +157,7 @@ public class TestFetch {
 
 	@Test
 	public void testRawFetchLastModification() throws Exception {
-		final Coordinates.Simple coord = new Coordinates.Simple("oliviercailloux", "testrel");
+		final RepositoryCoordinates coord = RepositoryCoordinates.from("oliviercailloux", "testrel");
 		try (RawGitHubFetcher rawFetcher = new RawGitHubFetcher()) {
 			rawFetcher.setToken(Utils.getToken());
 			final Instant lastModification = rawFetcher.getLastModification(coord, Paths.get("Test.html")).get();
@@ -190,13 +173,6 @@ public class TestFetch {
 			final List<Project> projects = rawFetcher.fetchProjects();
 			assertTrue(projects.toString(), projects.size() >= 3);
 		}
-	}
-
-	@Test(expected = AssertionError.class)
-	public void testUnauthorized() throws Exception {
-		final Github github = new RtGithub("invalid", "invalid-password");
-		final Repo repo = github.repos().get(new Coordinates.Simple("waffleio", "waffle.io"));
-		repo.json();
 	}
 
 }

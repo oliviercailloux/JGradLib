@@ -49,6 +49,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.MoreCollectors;
 import com.jcabi.github.Coordinates;
 
+import io.github.oliviercailloux.git_hub.RepositoryCoordinates;
 import io.github.oliviercailloux.git_hub.low.CommitGitHubDescription;
 import io.github.oliviercailloux.git_hub.low.Event;
 import io.github.oliviercailloux.git_hub.low.SearchResult;
@@ -138,19 +139,19 @@ public class RawGitHubFetcher implements AutoCloseable {
 		return jsonEventDetails;
 	}
 
-	public Optional<JsonObject> fetchGitHubProject(Coordinates coord) {
-		final WebTarget target = client.target(REPOS_URI).resolveTemplate("owner", coord.user()).resolveTemplate("repo",
-				coord.repo());
+	public Optional<JsonObject> fetchGitHubProject(RepositoryCoordinates coord) {
+		final WebTarget target = client.target(REPOS_URI).resolveTemplate("owner", coord.getOwner())
+				.resolveTemplate("repo", coord.getRepositoryName());
 		return getContent(target, JsonObject.class);
 	}
 
 	public List<Project> fetchProjects() throws IllegalFormat {
 		final JsonArray jsonFileList;
 		List<Project> projects = new ArrayList<>();
-		final Coordinates.Simple coord = new Coordinates.Simple("oliviercailloux", "projets");
+		final RepositoryCoordinates coord = RepositoryCoordinates.from("oliviercailloux", "projets");
 		{
-			final WebTarget target = client.target(CONTENT_URI).resolveTemplate("owner", coord.user())
-					.resolveTemplate("repo", coord.repo()).resolveTemplate("path", "EE");
+			final WebTarget target = client.target(CONTENT_URI).resolveTemplate("owner", coord.getOwner())
+					.resolveTemplate("repo", coord.getRepositoryName()).resolveTemplate("path", "EE");
 			jsonFileList = getContent(target, JsonArray.class).get();
 		}
 
@@ -182,17 +183,13 @@ public class RawGitHubFetcher implements AutoCloseable {
 		return projects;
 	}
 
-	public List<CommitGitHubDescription> getCommitsGitHubDescriptions(Coordinates repositoryCoordinates, Path path) {
+	public List<CommitGitHubDescription> getCommitsGitHubDescriptions(RepositoryCoordinates repositoryCoordinates,
+			Path path) {
 		final WebTarget target = client.target(COMMITS_BY_PATH_URI)
-				.resolveTemplate("owner", repositoryCoordinates.user())
-				.resolveTemplate("repo", repositoryCoordinates.repo()).resolveTemplate("path", path.toString());
+				.resolveTemplate("owner", repositoryCoordinates.getOwner())
+				.resolveTemplate("repo", repositoryCoordinates.getRepositoryName())
+				.resolveTemplate("path", path.toString());
 		return getContentAsList(target, CommitGitHubDescription::from);
-	}
-
-	public Optional<String> getContents(Coordinates repositoryCoordinates, Path path) {
-		final WebTarget target = client.target(FILE_URI).resolveTemplate("owner", repositoryCoordinates.user())
-				.resolveTemplate("repo", repositoryCoordinates.repo()).resolveTemplate("path", path.toString());
-		return getContent(target, String.class, GIT_HUB_RAW_MEDIA_TYPE);
 	}
 
 	public Optional<String> getContents(Coordinates repositoryCoordinates, Path path, ObjectId sha) {
@@ -203,12 +200,19 @@ public class RawGitHubFetcher implements AutoCloseable {
 		return getContent(target, String.class, GIT_HUB_RAW_MEDIA_TYPE);
 	}
 
-	public Optional<ObjectId> getCreationSha(Coordinates repositoryCoordinates, Path path) {
+	public Optional<String> getContents(RepositoryCoordinates repositoryCoordinates, Path path) {
+		final WebTarget target = client.target(FILE_URI).resolveTemplate("owner", repositoryCoordinates.getOwner())
+				.resolveTemplate("repo", repositoryCoordinates.getRepositoryName())
+				.resolveTemplate("path", path.toString());
+		return getContent(target, String.class, GIT_HUB_RAW_MEDIA_TYPE);
+	}
+
+	public Optional<ObjectId> getCreationSha(RepositoryCoordinates repositoryCoordinates, Path path) {
 		final List<CommitGitHubDescription> descriptions = getCommitsGitHubDescriptions(repositoryCoordinates, path);
 		return Utils.getIf(!descriptions.isEmpty(), () -> descriptions.get(descriptions.size() - 1).getSha());
 	}
 
-	public Optional<Instant> getLastModification(Coordinates repositoryCoordinates, Path path) {
+	public Optional<Instant> getLastModification(RepositoryCoordinates repositoryCoordinates, Path path) {
 		final List<CommitGitHubDescription> descriptions = getCommitsGitHubDescriptions(repositoryCoordinates, path);
 		return Utils.getIf(!descriptions.isEmpty(), () -> GitHubJsonParser.asInstant(
 				descriptions.get(0).getJson().getJsonObject("commit").getJsonObject("author").getString("date")));
@@ -219,9 +223,9 @@ public class RawGitHubFetcher implements AutoCloseable {
 	 * indeed from this repo, it might be impossible to retrieve its received time.
 	 *
 	 */
-	public Optional<Instant> getReceivedTime(Coordinates repositoryCoordinates, ObjectId sha) {
-		final WebTarget target = client.target(EVENTS_URI).resolveTemplate("owner", repositoryCoordinates.user())
-				.resolveTemplate("repo", repositoryCoordinates.repo());
+	public Optional<Instant> getReceivedTime(RepositoryCoordinates repositoryCoordinates, ObjectId sha) {
+		final WebTarget target = client.target(EVENTS_URI).resolveTemplate("owner", repositoryCoordinates.getOwner())
+				.resolveTemplate("repo", repositoryCoordinates.getRepositoryName());
 		final List<Event> events = getContentAsList(target, Event::from);
 		final Stream<Event> pushEvents = events.stream().filter((e) -> e.getPushPayload().isPresent());
 		final Stream<Event> pushEventsForLog = events.stream().filter((e) -> e.getPushPayload().isPresent());
@@ -245,11 +249,12 @@ public class RawGitHubFetcher implements AutoCloseable {
 		LOGGER.info("Events: {}", JsonUtils.asPrettyString(eventsArray.get()));
 	}
 
-	public List<SearchResult> searchForCode(Coordinates repositoryCoordinates, String code, String extension) {
+	public List<SearchResult> searchForCode(RepositoryCoordinates repositoryCoordinates, String code,
+			String extension) {
 		checkArgument(!code.isEmpty());
 		checkArgument(!extension.isEmpty());
-		final String searchKeywords = "repo:" + repositoryCoordinates.user() + "/" + repositoryCoordinates.repo() + " "
-				+ "extension:" + extension + " " + code;
+		final String searchKeywords = "repo:" + repositoryCoordinates.getOwner() + "/"
+				+ repositoryCoordinates.getRepositoryName() + " " + "extension:" + extension + " " + code;
 		return searchFor(searchKeywords);
 	}
 
@@ -271,11 +276,13 @@ public class RawGitHubFetcher implements AutoCloseable {
 	 * TODO check encoding of filename
 	 *
 	 */
-	public List<SearchResult> searchForFile(Coordinates repositoryCoordinates, String filename, String extension) {
+	public List<SearchResult> searchForFile(RepositoryCoordinates repositoryCoordinates, String filename,
+			String extension) {
 		checkArgument(!filename.isEmpty());
 		checkArgument(!extension.isEmpty());
-		final String searchKeywords = "repo:" + repositoryCoordinates.user() + "/" + repositoryCoordinates.repo() + " "
-				+ "extension:" + extension + " " + "filename:" + filename;
+		final String searchKeywords = "repo:" + repositoryCoordinates.getOwner() + "/"
+				+ repositoryCoordinates.getRepositoryName() + " " + "extension:" + extension + " " + "filename:"
+				+ filename;
 		final Predicate<String> includedForbidden = (forbidden) -> filename.contains(forbidden);
 		checkArgument(FORBIDDEN_IN_SEARCH.stream().noneMatch(includedForbidden),
 				FORBIDDEN_IN_SEARCH.stream().filter(includedForbidden).collect(Collectors.toList()));

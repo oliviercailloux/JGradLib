@@ -17,10 +17,10 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
-import com.jcabi.github.Coordinates;
 
-import io.github.oliviercailloux.git_hub_gql.IssueSnapshotQL;
-import io.github.oliviercailloux.git_hub_gql.User;
+import io.github.oliviercailloux.git_hub.RepositoryCoordinates;
+import io.github.oliviercailloux.git_hub.graph_ql.IssueSnapshotQL;
+import io.github.oliviercailloux.git_hub.graph_ql.User;
 import io.github.oliviercailloux.st_projects.services.git_hub.GitHubFetcher;
 import io.github.oliviercailloux.st_projects.utils.Utils;
 
@@ -31,7 +31,7 @@ public class TestGitHubIssue {
 
 	@Test
 	public void testAssignees() throws Exception {
-		final Coordinates.Simple coord = new Coordinates.Simple("badga", "Collaborative-exams");
+		final RepositoryCoordinates coord = RepositoryCoordinates.from("badga", "Collaborative-exams");
 		try (GitHubFetcher factory = GitHubFetcher.using(Utils.getToken())) {
 			final RepositoryWithIssuesWithHistory repo = factory.getProject(coord).get();
 			final IssueWithHistory issue = repo.getIssuesNamed("Servlets").iterator().next();
@@ -49,7 +49,7 @@ public class TestGitHubIssue {
 	@Test
 	public void testDupl() throws Exception {
 		try (GitHubFetcher factory = GitHubFetcher.using(Utils.getToken())) {
-			final Coordinates.Simple coords = new Coordinates.Simple("benzait27", "Dauphine-Open-Data");
+			final RepositoryCoordinates coords = RepositoryCoordinates.from("benzait27", "Dauphine-Open-Data");
 			final RepositoryWithIssuesWithHistory ghProject = factory.getProject(coords).get();
 			final IssueWithHistory issue = ghProject.getIssuesOriginallyNamed("Course").iterator().next();
 			assertEquals(1, issue.getBare().getNumber());
@@ -58,7 +58,7 @@ public class TestGitHubIssue {
 
 	@Test
 	public void testHist() throws Exception {
-		final Coordinates.Simple coord = new Coordinates.Simple("oliviercailloux", "testrel");
+		final RepositoryCoordinates coord = RepositoryCoordinates.from("oliviercailloux", "testrel");
 		try (GitHubFetcher factory = GitHubFetcher.using(Utils.getToken())) {
 			final RepositoryWithIssuesWithHistory repo = factory.getProject(coord).get();
 			final IssueWithHistory issue = repo.getIssuesNamed("test1").iterator().next();
@@ -80,7 +80,7 @@ public class TestGitHubIssue {
 
 	@Test
 	public void testOpen() throws Exception {
-		final Coordinates.Simple coord = new Coordinates.Simple("oliviercailloux", "testrel");
+		final RepositoryCoordinates coord = RepositoryCoordinates.from("oliviercailloux", "testrel");
 		try (GitHubFetcher factory = GitHubFetcher.using(Utils.getToken())) {
 			final RepositoryWithIssuesWithHistory repo = factory.getProject(coord).get();
 			final IssueWithHistory issue = repo.getIssuesNamed("test open").iterator().next();

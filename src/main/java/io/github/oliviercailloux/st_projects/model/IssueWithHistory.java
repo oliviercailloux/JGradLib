@@ -22,9 +22,9 @@ import com.google.common.collect.Comparators;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.PeekingIterator;
 
-import io.github.oliviercailloux.git_hub_gql.IssueBare;
-import io.github.oliviercailloux.git_hub_gql.IssueSnapshotQL;
-import io.github.oliviercailloux.git_hub_gql.User;
+import io.github.oliviercailloux.git_hub.graph_ql.IssueBare;
+import io.github.oliviercailloux.git_hub.graph_ql.IssueSnapshotQL;
+import io.github.oliviercailloux.git_hub.graph_ql.User;
 
 /**
  * An intemporal issue, that also contains a description of its current state.

@@ -22,9 +22,9 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableList.Builder;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
-import com.jcabi.github.Coordinates;
 
-import io.github.oliviercailloux.git_hub_gql.User;
+import io.github.oliviercailloux.git_hub.RepositoryCoordinates;
+import io.github.oliviercailloux.git_hub.graph_ql.User;
 import io.github.oliviercailloux.st_projects.model.Functionality;
 import io.github.oliviercailloux.st_projects.model.ModelMocker;
 import io.github.oliviercailloux.st_projects.model.Project;
@@ -149,7 +149,7 @@ public class TestWrite {
 		functionalitiesBuilder.add(new Functionality("f2", "Descr f2", BigDecimal.ONE));
 		functionalitiesBuilder.add(new Functionality("test open", "Descr test open", BigDecimal.ONE));
 		final Project project = Project.from("testrel", functionalitiesBuilder.build());
-		final Coordinates.Simple coords = new Coordinates.Simple("oliviercailloux", "testrel");
+		final RepositoryCoordinates coords = RepositoryCoordinates.from("oliviercailloux", "testrel");
 		final RepositoryWithIssuesWithHistory ghProject;
 		try (GitHubFetcher factory = GitHubFetcher.using(Utils.getToken())) {
 			ghProject = factory.getProject(coords).get();

@@ -17,7 +17,7 @@ import org.eclipse.jgit.lib.Ref;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.github.oliviercailloux.git_hub_gql.Repository;
+import io.github.oliviercailloux.git_hub.graph_ql.Repository;
 
 public class Client {
 	@SuppressWarnings("unused")

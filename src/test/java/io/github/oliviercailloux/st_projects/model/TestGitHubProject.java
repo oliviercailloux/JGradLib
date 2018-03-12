@@ -18,8 +18,8 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
-import com.jcabi.github.Coordinates;
 
+import io.github.oliviercailloux.git_hub.RepositoryCoordinates;
 import io.github.oliviercailloux.st_projects.services.git_hub.GitHubFetcher;
 import io.github.oliviercailloux.st_projects.utils.JsonUtils;
 import io.github.oliviercailloux.st_projects.utils.Utils;
@@ -34,7 +34,7 @@ public class TestGitHubProject {
 		try (GitHubFetcher fetcher = GitHubFetcher.using(Utils.getToken())) {
 			fetcher.setToken(Utils.getToken());
 			final RepositoryWithIssuesWithHistory repo = fetcher
-					.getProject(new Coordinates.Simple("MAMERY-DOUMBIA", "Dauphine-Pole-Info")).get();
+					.getProject(RepositoryCoordinates.from("MAMERY-DOUMBIA", "Dauphine-Pole-Info")).get();
 			LOGGER.debug("Issues with history: {}.", repo.getIssues());
 			assertEquals(13, repo.getIssues().size());
 		}
@@ -62,7 +62,7 @@ public class TestGitHubProject {
 		Utils.logLimits();
 
 		try (GitHubFetcher factory = GitHubFetcher.using(Utils.getToken())) {
-			final Coordinates.Simple coords = new Coordinates.Simple("oliviercailloux", "testrel");
+			final RepositoryCoordinates coords = RepositoryCoordinates.from("oliviercailloux", "testrel");
 			final RepositoryWithIssuesWithHistory project = factory.getProject(coords).get();
 			assertEquals(Utils.newURL("https://github.com/oliviercailloux/testrel/"), project.getBare().getHtmlURL());
 			assertEquals(LocalDateTime.of(2016, 04, 15, 10, 33, 27).toInstant(ZoneOffset.UTC),

@@ -1,4 +1,4 @@
-package io.github.oliviercailloux.git_hub_gql;
+package io.github.oliviercailloux.git_hub.graph_ql;
 
 import static java.util.Objects.requireNonNull;
 

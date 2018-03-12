@@ -1,4 +1,4 @@
-package io.github.oliviercailloux.git_hub_gql;
+package io.github.oliviercailloux.git_hub.graph_ql;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
@@ -17,7 +17,7 @@ import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
 import com.google.common.collect.Streams;
 
-import io.github.oliviercailloux.git_hub.low.IssueCoordinates;
+import io.github.oliviercailloux.git_hub.IssueCoordinates;
 import io.github.oliviercailloux.st_projects.services.git_hub.GitHubJsonParser;
 import io.github.oliviercailloux.st_projects.utils.Utils;
 
