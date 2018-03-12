@@ -21,14 +21,14 @@ import io.github.oliviercailloux.git_hub.low.IssueCoordinates;
 import io.github.oliviercailloux.st_projects.services.git_hub.GitHubJsonParser;
 import io.github.oliviercailloux.st_projects.utils.Utils;
 
-public class IssueBareQL {
-	public static IssueBareQL from(JsonObject json) {
-		return new IssueBareQL(json);
+public class IssueBare {
+	public static IssueBare from(JsonObject json) {
+		return new IssueBare(json);
 	}
 
 	private final JsonObject json;
 
-	private IssueBareQL(JsonObject json) {
+	private IssueBare(JsonObject json) {
 		this.json = requireNonNull(json);
 		checkArgument(json.containsKey("repository"));
 		checkArgument(json.containsKey("createdAt"));
@@ -45,11 +45,11 @@ public class IssueBareQL {
 		return GitHubJsonParser.getCreatedAtBetterSpelling(json);
 	}
 
-	public List<IssueEventQL> getEvents() {
+	public List<IssueEvent> getEvents() {
 		final JsonObject timeline = json.getJsonObject("timeline");
 		final JsonArray events = timeline.getJsonArray("nodes");
 		checkState(timeline.getInt("totalCount") == events.size());
-		return events.stream().map(JsonValue::asJsonObject).map(IssueEventQL::from).flatMap(Streams::stream)
+		return events.stream().map(JsonValue::asJsonObject).map(IssueEvent::from).flatMap(Streams::stream)
 				.collect(Collectors.toList());
 	}
 

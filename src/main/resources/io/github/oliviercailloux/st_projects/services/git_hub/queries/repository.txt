@@ -1,0 +1,5 @@
+query repository($repositoryName: String!, $repositoryOwner: String!) {
+  repository(name: $repositoryName, owner: $repositoryOwner) {
+    ...repositoryWithIssuesWithHistory
+  }
+}

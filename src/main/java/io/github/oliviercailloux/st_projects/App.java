@@ -35,17 +35,15 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.Iterables;
 import com.jcabi.github.Coordinates;
-import com.jcabi.github.RtGithub;
 
 import io.github.oliviercailloux.git_hub.low.CommitGitHubDescription;
 import io.github.oliviercailloux.git_hub.low.SearchResult;
-import io.github.oliviercailloux.git_hub_gql.RepositoryQL;
+import io.github.oliviercailloux.git_hub_gql.Repository;
 import io.github.oliviercailloux.st_projects.model.Project;
-import io.github.oliviercailloux.st_projects.model.RepositoryWithIssuesWithHistoryQL;
+import io.github.oliviercailloux.st_projects.model.RepositoryWithIssuesWithHistory;
 import io.github.oliviercailloux.st_projects.services.git.Client;
 import io.github.oliviercailloux.st_projects.services.git_hub.GitHubFetcher;
 import io.github.oliviercailloux.st_projects.services.git_hub.RawGitHubFetcher;
-import io.github.oliviercailloux.st_projects.services.git_hub.RepositoryFinder;
 import io.github.oliviercailloux.st_projects.services.read.FunctionalitiesReader;
 import io.github.oliviercailloux.st_projects.services.read.IllegalFormat;
 import io.github.oliviercailloux.st_projects.services.read.ProjectReader;
@@ -71,7 +69,7 @@ public class App {
 		}
 	}
 
-	private final Map<Project, RepositoryWithIssuesWithHistoryQL> ghProjects;
+	private final Map<Project, RepositoryWithIssuesWithHistory> ghProjects;
 
 	private List<Project> projects;
 
@@ -114,11 +112,8 @@ public class App {
 	}
 
 	public void reportL3Works(Writer output) throws IOException {
-		final RtGithub gitHub = new RtGithub(Utils.getToken());
 		final Pattern packageRegex = Pattern.compile("^[ \\h]*package .*", Pattern.DOTALL | Pattern.MULTILINE);
 		final Pattern javadocRegex = Pattern.compile("^[ \\v\\h]*/\\*\\*.*", Pattern.DOTALL | Pattern.MULTILINE);
-		final RepositoryFinder finder = new RepositoryFinder();
-		finder.setGitHub(gitHub);
 		try (RawGitHubFetcher rawFetcher = new RawGitHubFetcher();
 				GitHubFetcher fetcher = GitHubFetcher.using(Utils.getToken())) {
 			rawFetcher.setToken(Utils.getToken());
@@ -135,7 +130,7 @@ public class App {
 				output.write("= Id: " + id + " (" + coord.user() + ")\n");
 				final URL base = Utils.newURL("https://github.com/");
 				final URL userPath = new URL(base, coord.user());
-				final Optional<RepositoryWithIssuesWithHistoryQL> prjOpt = fetcher.getProject(coord);
+				final Optional<RepositoryWithIssuesWithHistory> prjOpt = fetcher.getProject(coord);
 				if (!prjOpt.isPresent()) {
 					output.write(userPath + "\n");
 					output.write("Project not found.\n");
@@ -177,10 +172,10 @@ public class App {
 
 	public void retrieveEE() throws IOException, GitAPIException {
 		final Client client = new Client();
-		final Stream<RepositoryQL> repositoriesStream = ghProjects.values().stream()
-				.map(RepositoryWithIssuesWithHistoryQL::getBare);
-		final Iterable<RepositoryQL> it = repositoriesStream::iterator;
-		for (RepositoryQL repository : it) {
+		final Stream<Repository> repositoriesStream = ghProjects.values().stream()
+				.map(RepositoryWithIssuesWithHistory::getBare);
+		final Iterable<Repository> it = repositoriesStream::iterator;
+		for (Repository repository : it) {
 			client.retrieve(repository);
 		}
 	}
@@ -189,14 +184,15 @@ public class App {
 		LOGGER.info("Started.");
 		projectsDir = Paths.get("/home/olivier/Professions/Enseignement/Projets/EE");
 		projects = new ProjectReader().asProjects(projectsDir);
-		final RepositoryFinder finder = new RepositoryFinder();
-		finder.setGitHub(new RtGithub(Utils.getToken()));
-//		finder.setFloorSearchDate(LocalDate.of(2017, Month.NOVEMBER, 5));
-		for (Project project : projects) {
-			final List<Coordinates> found = finder.find(project);
-			LOGGER.info("Found for {}: {}.", project.getName(), found);
-			final List<Coordinates> foundWithPom = finder.withPom();
-			LOGGER.info("Found with POM for {}: {}.", project.getName(), foundWithPom);
+		try (GitHubFetcher finder = GitHubFetcher.using(Utils.getToken())) {
+			for (Project project : projects) {
+				final List<RepositoryWithIssuesWithHistory> found = finder.find(project,
+						Instant.parse("2017-11-05T00:00:00Z"));
+				LOGGER.info("Found for {}: {}.", project.getName(), found);
+				final List<RepositoryWithIssuesWithHistory> foundWithPom = found.stream()
+						.filter((r) -> r.getFiles().contains("pom.xml")).collect(Collectors.toList());
+				LOGGER.info("Found with POM for {}: {}.", project.getName(), foundWithPom);
+			}
 		}
 	}
 
@@ -225,23 +221,21 @@ public class App {
 		writeGHProjects();
 	}
 
-	private Map<Project, RepositoryWithIssuesWithHistoryQL> find() throws IOException {
-		final RepositoryFinder finder = new RepositoryFinder();
-		final RtGithub gitHub = new RtGithub(Utils.getToken());
-		finder.setGitHub(gitHub);
-		try (GitHubFetcher factory = GitHubFetcher.using(Utils.getToken())) {
+	private Map<Project, RepositoryWithIssuesWithHistory> find() throws IOException {
+		try (GitHubFetcher finder = GitHubFetcher.using(Utils.getToken())) {
 			for (Project project : projects) {
 				LOGGER.info("Searching for {}.", project);
-				final List<Coordinates> found = finder.find(project);
+				final List<RepositoryWithIssuesWithHistory> found = finder.find(project, Instant.EPOCH);
 				LOGGER.info("Found: {}.", found);
-				final List<Coordinates> foundWithPom = finder.withPom();
+				final List<RepositoryWithIssuesWithHistory> foundWithPom = found.stream()
+						.filter((r) -> r.getFiles().contains("pom.xml")).collect(Collectors.toList());
 				final int nbMatches = foundWithPom.size();
 				switch (nbMatches) {
 				case 0:
 					break;
 				case 1:
-					final Coordinates matching = Iterables.getOnlyElement(foundWithPom);
-					ghProjects.put(project, factory.getProject(matching).get());
+					final RepositoryWithIssuesWithHistory matching = Iterables.getOnlyElement(foundWithPom);
+					ghProjects.put(project, matching);
 					break;
 				default:
 					throw new IllegalStateException(

@@ -17,7 +17,7 @@ import org.eclipse.jgit.lib.Ref;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.github.oliviercailloux.git_hub_gql.RepositoryQL;
+import io.github.oliviercailloux.git_hub_gql.Repository;
 
 public class Client {
 	@SuppressWarnings("unused")
@@ -47,7 +47,7 @@ public class Client {
 		}
 	}
 
-	public void clone(RepositoryQL repo) throws GitAPIException {
+	public void clone(Repository repo) throws GitAPIException {
 		final File projectDirFile = getProjectDirectoryAsFile(repo);
 		final CloneCommand cloneCmd = Git.cloneRepository();
 		LOGGER.info("Cloning {}.", repo.getName());
@@ -56,7 +56,7 @@ public class Client {
 		cloneCmd.call();
 	}
 
-	public void retrieve(RepositoryQL repo) throws GitAPIException, IOException, IllegalStateException {
+	public void retrieve(Repository repo) throws GitAPIException, IOException, IllegalStateException {
 		final String name = repo.getName();
 		final Path outputProjectDir = outputBaseDir.resolve(name);
 		if (Files.exists(outputProjectDir)) {
@@ -66,7 +66,7 @@ public class Client {
 		}
 	}
 
-	public void update(RepositoryQL repo) throws GitAPIException, IOException, IllegalStateException {
+	public void update(Repository repo) throws GitAPIException, IOException, IllegalStateException {
 		try (Git git = Git.open(getProjectDirectoryAsFile(repo))) {
 			LOGGER.info("Updating {}.", repo.getName());
 			git.fetch().call();
@@ -90,7 +90,7 @@ public class Client {
 		}
 	}
 
-	private File getProjectDirectoryAsFile(RepositoryQL repo) {
+	private File getProjectDirectoryAsFile(Repository repo) {
 		final String name = repo.getName();
 		final Path outputProjectDir = outputBaseDir.resolve(name);
 		final File projectDirFile = outputProjectDir.toFile();

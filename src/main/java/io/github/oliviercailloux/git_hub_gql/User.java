@@ -12,9 +12,9 @@ import com.google.common.base.MoreObjects;
 
 import io.github.oliviercailloux.st_projects.utils.Utils;
 
-public class UserQL {
-	public static UserQL from(JsonObject json) {
-		return new UserQL(json);
+public class User {
+	public static User from(JsonObject json) {
+		return new User(json);
 	}
 
 	/**
@@ -22,7 +22,7 @@ public class UserQL {
 	 */
 	private final JsonObject json;
 
-	private UserQL(JsonObject json) {
+	private User(JsonObject json) {
 		this.json = requireNonNull(json);
 		checkArgument(json.containsKey("login"));
 		checkArgument(json.containsKey("url"));
@@ -30,10 +30,10 @@ public class UserQL {
 
 	@Override
 	public boolean equals(Object o2) {
-		if (!(o2 instanceof UserQL)) {
+		if (!(o2 instanceof User)) {
 			return false;
 		}
-		final UserQL c2 = (UserQL) o2;
+		final User c2 = (User) o2;
 		return Objects.equals(getLogin(), c2.getLogin());
 	}
 

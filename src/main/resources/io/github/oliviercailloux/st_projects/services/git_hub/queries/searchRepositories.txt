@@ -1,0 +1,16 @@
+query search($queryString: String!) {
+  search(query: $queryString, type: REPOSITORY, first: 49) {
+    repositoryCount
+    pageInfo {
+      hasNextPage
+    }
+    edges {
+      node {
+        __typename
+        ... on Repository {
+          ...repositoryWithIssuesWithHistory
+        }
+      }
+    }
+  }
+}

@@ -8,7 +8,7 @@ import javax.json.JsonObject;
 
 import com.google.common.collect.ImmutableSet;
 
-public class UnassignedEvent extends IssueEventQL {
+public class UnassignedEvent extends IssueEvent {
 
 	protected UnassignedEvent(JsonObject json) {
 		super(json);
@@ -16,14 +16,14 @@ public class UnassignedEvent extends IssueEventQL {
 
 	@Override
 	public IssueSnapshotQL applyTo(IssueSnapshotQL snap) {
-		final UserQL user = getUser();
+		final User user = getUser();
 		checkArgument(snap.getAssignees().contains(user));
 		return IssueSnapshotQL.of(getCreatedAt(), snap.getName(), snap.isOpen(), snap.getAssignees().stream()
 				.filter(Predicate.isEqual(user).negate()).collect(ImmutableSet.toImmutableSet()));
 	}
 
-	public UserQL getUser() {
-		return UserQL.from(getJson().getJsonObject("user"));
+	public User getUser() {
+		return User.from(getJson().getJsonObject("user"));
 	}
 
 }

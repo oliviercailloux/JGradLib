@@ -4,7 +4,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 
 import javax.json.JsonObject;
 
-public class ReopenedEvent extends IssueEventQL {
+public class ReopenedEvent extends IssueEvent {
 
 	protected ReopenedEvent(JsonObject json) {
 		super(json);

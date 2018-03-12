@@ -11,15 +11,15 @@ import javax.json.JsonObject;
 import io.github.oliviercailloux.st_projects.services.git_hub.GitHubJsonParser;
 import io.github.oliviercailloux.st_projects.utils.Utils;
 
-public class RepositoryQL {
+public class Repository {
 
-	public static RepositoryQL from(JsonObject json) {
-		return new RepositoryQL(json);
+	public static Repository from(JsonObject json) {
+		return new Repository(json);
 	}
 
 	private final JsonObject json;
 
-	private RepositoryQL(JsonObject json) {
+	private Repository(JsonObject json) {
 		this.json = requireNonNull(json);
 		checkArgument(json.containsKey("createdAt"));
 		checkArgument(json.containsKey("url"));
@@ -45,8 +45,8 @@ public class RepositoryQL {
 		return json.getString("name");
 	}
 
-	public UserQL getOwner() {
-		return UserQL.from(json.getJsonObject("owner"));
+	public User getOwner() {
+		return User.from(json.getJsonObject("owner"));
 	}
 
 	public URL getSshURL() {

@@ -16,6 +16,7 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.jcabi.github.Coordinates;
 import com.jcabi.github.RtGithub;
@@ -34,7 +35,7 @@ public class TestGitHubProject {
 	public void testGetRepo() throws Exception {
 		try (GitHubFetcher fetcher = GitHubFetcher.using(Utils.getToken())) {
 			fetcher.setToken(Utils.getToken());
-			final RepositoryWithIssuesWithHistoryQL repo = fetcher
+			final RepositoryWithIssuesWithHistory repo = fetcher
 					.getProject(new Coordinates.Simple("MAMERY-DOUMBIA", "Dauphine-Pole-Info")).get();
 			LOGGER.debug("Issues with history: {}.", repo.getIssues());
 			assertEquals(13, repo.getIssues().size());
@@ -43,18 +44,19 @@ public class TestGitHubProject {
 
 	@Test
 	public void testGithubIssues() throws Exception {
-		final RepositoryFinder finder = new RepositoryFinder();
-		final RtGithub gitHub = new RtGithub(Utils.getToken());
-		finder.setGitHub(gitHub);
-		final List<Coordinates> found = finder.find(Project.from("Dauphine-Open-Data"));
+		final Project myProject = Project.from("Dauphine-Open-Data");
+		final List<RepositoryWithIssuesWithHistory> found;
+		try (GitHubFetcher fetcher = GitHubFetcher.using(Utils.getToken())) {
+			found = fetcher.find(myProject, Instant.EPOCH);
+		}
 		assertTrue(found.size() >= 1);
-		final List<Coordinates> foundWithPom = finder.withPom();
-		final Coordinates matching = Iterables.getOnlyElement(foundWithPom);
-		final RepositoryWithIssuesWithHistoryQL project = GitHubFetcher.using(Utils.getToken()).getProject(matching)
-				.get();
-		assertTrue(project.getIssuesOriginallyNamed("Course").toString(),
-				project.getIssuesOriginallyNamed("Course").size() == 1);
-		assertFalse(project.getIssuesOriginallyNamed("Triple").size() == 1);
+
+		final ImmutableList<RepositoryWithIssuesWithHistory> foundWithPom = found.stream()
+				.filter((r) -> r.getFiles().contains("pom.xml")).collect(ImmutableList.toImmutableList());
+		final RepositoryWithIssuesWithHistory repository = Iterables.getOnlyElement(foundWithPom);
+		assertTrue(repository.getIssuesOriginallyNamed("Course").toString(),
+				repository.getIssuesOriginallyNamed("Course").size() == 1);
+		assertFalse(repository.getIssuesOriginallyNamed("Triple").size() == 1);
 	}
 
 	@Test
@@ -63,7 +65,7 @@ public class TestGitHubProject {
 
 		try (GitHubFetcher factory = GitHubFetcher.using(Utils.getToken())) {
 			final Coordinates.Simple coords = new Coordinates.Simple("oliviercailloux", "testrel");
-			final RepositoryWithIssuesWithHistoryQL project = factory.getProject(coords).get();
+			final RepositoryWithIssuesWithHistory project = factory.getProject(coords).get();
 			assertEquals(Utils.newURL("https://github.com/oliviercailloux/testrel/"), project.getBare().getHtmlURL());
 			assertEquals(LocalDateTime.of(2016, 04, 15, 10, 33, 27).toInstant(ZoneOffset.UTC),
 					project.getBare().getCreatedAt());

@@ -5,7 +5,6 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.time.Instant;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.Month;
 import java.time.ZoneOffset;
@@ -16,11 +15,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
-import com.jcabi.github.Coordinates;
-import com.jcabi.github.RtGithub;
 
 import io.github.oliviercailloux.st_projects.model.Project;
-import io.github.oliviercailloux.st_projects.model.RepositoryWithIssuesWithHistoryQL;
+import io.github.oliviercailloux.st_projects.model.RepositoryWithIssuesWithHistory;
 import io.github.oliviercailloux.st_projects.utils.Utils;
 
 public class TestFinder {
@@ -31,58 +28,49 @@ public class TestFinder {
 	@Test
 	public void testFindMyRepo() throws IOException {
 		final Project myProject = Project.from("XMCDA-2.2.1-JAXB");
-		final RepositoryFinder finder = new RepositoryFinder();
-		final RtGithub gitHub = new RtGithub(Utils.getToken());
-		finder.setGitHub(gitHub);
-		finder.setFloorSearchDate(LocalDate.of(2015, Month.DECEMBER, 1));
-		final List<Coordinates> found = finder.find(myProject);
-		assertFalse(found.isEmpty());
-		try (GitHubFetcher factory = GitHubFetcher.using(Utils.getToken())) {
-			final ImmutableList<RepositoryWithIssuesWithHistoryQL> projects = Utils.map(found,
-					(c) -> factory.getProject(c).get());
-			final Instant realCreation = LocalDateTime.of(2016, Month.JULY, 29, 17, 34, 19).toInstant(ZoneOffset.UTC);
-			final RepositoryWithIssuesWithHistoryQL project = projects.get(0);
-			LOGGER.debug("Created at: {}." + project.getBare().getCreatedAt());
-			assertTrue(projects.stream().anyMatch((p) -> p.getBare().getCreatedAt().equals(realCreation)));
+		final List<RepositoryWithIssuesWithHistory> repositories;
+		try (GitHubFetcher fetcher = GitHubFetcher.using(Utils.getToken())) {
+			repositories = fetcher.find(myProject, Instant.parse("2015-12-01T00:00:00Z"));
 		}
+		assertFalse(repositories.isEmpty());
+		final Instant expectedCreation = LocalDateTime.of(2016, Month.JULY, 29, 17, 34, 19).toInstant(ZoneOffset.UTC);
+		final RepositoryWithIssuesWithHistory firstFound = repositories.get(0);
+		LOGGER.debug("Created at: {}." + firstFound.getBare().getCreatedAt());
+		assertTrue(repositories.stream().anyMatch((p) -> p.getBare().getCreatedAt().equals(expectedCreation)));
 	}
 
-	/**
-	 * Fails because not-authenticated, apparently limited to 300 search results
-	 * (according to my tests).
-	 *
-	 * @throws IOException
-	 */
-	@Test(expected = AssertionError.class)
+	@Test(expected = UnsupportedOperationException.class)
 	public void testFindTooMany() throws IOException {
 		final Project myProject = Project.from("Biblio");
-		final RepositoryFinder finder = new RepositoryFinder();
-		finder.setGitHub(new RtGithub());
-		finder.setFloorSearchDate(LocalDate.of(2017, Month.SEPTEMBER, 1));
-		finder.find(myProject);
+		try (GitHubFetcher fetcher = GitHubFetcher.using(Utils.getToken())) {
+			fetcher.find(myProject, Instant.parse("2017-09-01T00:00:00Z"));
+		}
 	}
 
 	@Test
 	public void testHasPom() throws IOException {
 		final Project myProject = Project.from("XMCDA-2.2.1-JAXB");
-		final RepositoryFinder finder = new RepositoryFinder();
-		finder.setGitHub(new RtGithub(Utils.getToken()));
-		finder.setFloorSearchDate(LocalDate.of(2015, Month.DECEMBER, 1));
-		final List<Coordinates> found = finder.find(myProject);
-		LOGGER.info("Found: {}.", found);
-		final List<Coordinates> pom = finder.withPom();
-		LOGGER.info("With POM: {}.", pom);
-		assertFalse(pom.isEmpty());
+		final List<RepositoryWithIssuesWithHistory> found;
+		try (GitHubFetcher fetcher = GitHubFetcher.using(Utils.getToken())) {
+			found = fetcher.find(myProject, Instant.parse("2015-12-01T00:00:00Z"));
+		}
+		assertTrue(found.size() >= 1);
+
+		final ImmutableList<RepositoryWithIssuesWithHistory> foundWithPom = found.stream()
+				.filter((r) -> r.getFiles().contains("pom.xml")).collect(ImmutableList.toImmutableList());
+		LOGGER.debug("Found: {}.", found);
+		LOGGER.debug("With POM: {}.", foundWithPom);
+		assertFalse(foundWithPom.isEmpty());
 	}
 
 	@Test
 	public void testNoFindTooLate() throws IOException {
 		final Project myProject = Project.from("java-course");
-		final RepositoryFinder finder = new RepositoryFinder();
-		finder.setGitHub(new RtGithub(Utils.getToken()));
-		finder.setFloorSearchDate(LocalDate.of(2049, Month.OCTOBER, 4));
-		final List<Coordinates> found = finder.find(myProject);
-		assertTrue(found.isEmpty());
+		try (GitHubFetcher finder = GitHubFetcher.using(Utils.getToken())) {
+			final List<RepositoryWithIssuesWithHistory> found = finder.find(myProject,
+					Instant.parse("2049-10-04T00:00:00Z"));
+			assertTrue(found.isEmpty());
+		}
 	}
 
 }

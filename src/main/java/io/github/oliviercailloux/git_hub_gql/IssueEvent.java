@@ -12,12 +12,12 @@ import org.slf4j.LoggerFactory;
 
 import io.github.oliviercailloux.st_projects.services.git_hub.GitHubJsonParser;
 
-public abstract class IssueEventQL {
+public abstract class IssueEvent {
 
 	@SuppressWarnings("unused")
-	private static final Logger LOGGER = LoggerFactory.getLogger(IssueEventQL.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(IssueEvent.class);
 
-	public static Optional<IssueEventQL> from(JsonObject json) {
+	public static Optional<IssueEvent> from(JsonObject json) {
 		final String type = json.getString("__typename");
 		switch (type) {
 		case "AssignedEvent":
@@ -38,7 +38,7 @@ public abstract class IssueEventQL {
 
 	private final JsonObject json;
 
-	protected IssueEventQL(JsonObject json) {
+	protected IssueEvent(JsonObject json) {
 		this.json = requireNonNull(json);
 	}
 

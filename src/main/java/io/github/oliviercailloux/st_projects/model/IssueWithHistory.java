@@ -22,9 +22,9 @@ import com.google.common.collect.Comparators;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.PeekingIterator;
 
-import io.github.oliviercailloux.git_hub_gql.IssueBareQL;
+import io.github.oliviercailloux.git_hub_gql.IssueBare;
 import io.github.oliviercailloux.git_hub_gql.IssueSnapshotQL;
-import io.github.oliviercailloux.git_hub_gql.UserQL;
+import io.github.oliviercailloux.git_hub_gql.User;
 
 /**
  * An intemporal issue, that also contains a description of its current state.
@@ -32,11 +32,11 @@ import io.github.oliviercailloux.git_hub_gql.UserQL;
  * @author Olivier Cailloux
  *
  */
-public class IssueWithHistoryQL implements Comparable<IssueWithHistoryQL> {
-	private static Comparator<IssueWithHistoryQL> compareDoneTimeThenNumber = null;
+public class IssueWithHistory implements Comparable<IssueWithHistory> {
+	private static Comparator<IssueWithHistory> compareDoneTimeThenNumber = null;
 
 	@SuppressWarnings("unused")
-	private static final Logger LOGGER = LoggerFactory.getLogger(IssueWithHistoryQL.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(IssueWithHistory.class);
 
 	/**
 	 * @param issue
@@ -44,40 +44,40 @@ public class IssueWithHistoryQL implements Comparable<IssueWithHistoryQL> {
 	 * @param snaps
 	 *            at least one.
 	 */
-	public static IssueWithHistoryQL from(IssueBareQL issue, List<IssueSnapshotQL> snaps) {
-		return new IssueWithHistoryQL(issue, snaps);
+	public static IssueWithHistory from(IssueBare issue, List<IssueSnapshotQL> snaps) {
+		return new IssueWithHistory(issue, snaps);
 	}
 
-	private static Comparator<IssueWithHistoryQL> getComparator() {
-		final Function<? super IssueWithHistoryQL, Optional<Instant>> issueToDoneTime = (i) -> i.getFirstSnapshotDone()
+	private static Comparator<IssueWithHistory> getComparator() {
+		final Function<? super IssueWithHistory, Optional<Instant>> issueToDoneTime = (i) -> i.getFirstSnapshotDone()
 				.map(IssueSnapshotQL::getBirthTime);
 		final Comparator<Optional<Instant>> compareOptInst = Comparators
 				.emptiesLast(Comparator.<Instant>naturalOrder());
-		final Comparator<IssueWithHistoryQL> compareDoneTime = Comparator.comparing(issueToDoneTime, compareOptInst);
-		final Comparator<IssueWithHistoryQL> comparator = compareDoneTime
+		final Comparator<IssueWithHistory> compareDoneTime = Comparator.comparing(issueToDoneTime, compareOptInst);
+		final Comparator<IssueWithHistory> comparator = compareDoneTime
 				.thenComparing(Comparator.comparing((i) -> i.getBare().getNumber()));
 		return comparator;
 	}
 
-	private final IssueBareQL simple;
+	private final IssueBare simple;
 
 	private final List<IssueSnapshotQL> snaps;
 
-	private IssueWithHistoryQL(IssueBareQL issue, List<IssueSnapshotQL> snaps) {
+	private IssueWithHistory(IssueBare issue, List<IssueSnapshotQL> snaps) {
 		simple = requireNonNull(issue);
 		checkArgument(snaps.size() >= 1);
 		this.snaps = snaps;
 	}
 
 	@Override
-	public int compareTo(IssueWithHistoryQL i2) {
+	public int compareTo(IssueWithHistory i2) {
 		if (compareDoneTimeThenNumber == null) {
 			compareDoneTimeThenNumber = getComparator();
 		}
 		return compareDoneTimeThenNumber.compare(this, i2);
 	}
 
-	public IssueBareQL getBare() {
+	public IssueBare getBare() {
 		return simple;
 	}
 
@@ -118,7 +118,7 @@ public class IssueWithHistoryQL implements Comparable<IssueWithHistoryQL> {
 				}
 			}
 
-			final Set<UserQL> assignees = snap.getAssignees();
+			final Set<User> assignees = snap.getAssignees();
 			if (assignees.size() >= 1 && assignees.size() <= 2) {
 				return Optional.of(snap);
 			}

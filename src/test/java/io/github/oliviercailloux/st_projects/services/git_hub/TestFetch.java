@@ -28,7 +28,7 @@ import com.jcabi.github.RtGithub;
 
 import io.github.oliviercailloux.git_hub.low.SearchResult;
 import io.github.oliviercailloux.st_projects.model.Project;
-import io.github.oliviercailloux.st_projects.model.RepositoryWithIssuesWithHistoryQL;
+import io.github.oliviercailloux.st_projects.model.RepositoryWithIssuesWithHistory;
 import io.github.oliviercailloux.st_projects.services.read.IllegalFormat;
 import io.github.oliviercailloux.st_projects.utils.Utils;
 
@@ -41,7 +41,7 @@ public class TestFetch {
 	public void testFetchAbsentGitHubProject() throws Exception {
 		try (GitHubFetcher fetcher = GitHubFetcher.using(Utils.getToken())) {
 			final Coordinates.Simple coord = new Coordinates.Simple("this-user-does-not-exist-dfqfaglmkj45858", "repo");
-			final Optional<RepositoryWithIssuesWithHistoryQL> opt = fetcher.getProject(coord);
+			final Optional<RepositoryWithIssuesWithHistory> opt = fetcher.getProject(coord);
 			assertTrue(!opt.isPresent());
 		}
 	}
@@ -145,7 +145,7 @@ public class TestFetch {
 	public void testIssuesHistory() throws Exception {
 		final Coordinates.Simple coord = new Coordinates.Simple("MAMERY-DOUMBIA", "Dauphine-Pole-Info");
 		try (GitHubFetcher fetcher = GitHubFetcher.using(Utils.getToken())) {
-			final RepositoryWithIssuesWithHistoryQL project = fetcher.getProject(coord).get();
+			final RepositoryWithIssuesWithHistory project = fetcher.getProject(coord).get();
 			assertEquals(1, project.getIssuesOriginallyNamed("PHP").size());
 		}
 	}

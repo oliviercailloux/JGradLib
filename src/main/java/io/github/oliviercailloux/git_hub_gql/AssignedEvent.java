@@ -9,7 +9,7 @@ import javax.json.JsonObject;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Streams;
 
-public class AssignedEvent extends IssueEventQL {
+public class AssignedEvent extends IssueEvent {
 
 	protected AssignedEvent(JsonObject json) {
 		super(json);
@@ -17,14 +17,14 @@ public class AssignedEvent extends IssueEventQL {
 
 	@Override
 	public IssueSnapshotQL applyTo(IssueSnapshotQL snap) {
-		final UserQL user = getUser();
+		final User user = getUser();
 		checkArgument(!snap.getAssignees().contains(user));
 		return IssueSnapshotQL.of(getCreatedAt(), snap.getName(), snap.isOpen(),
 				Streams.concat(snap.getAssignees().stream(), Stream.of(user)).collect(ImmutableSet.toImmutableSet()));
 	}
 
-	public UserQL getUser() {
-		return UserQL.from(getJson().getJsonObject("user"));
+	public User getUser() {
+		return User.from(getJson().getJsonObject("user"));
 	}
 
 }

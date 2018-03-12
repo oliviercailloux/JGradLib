@@ -14,11 +14,11 @@ import com.google.common.collect.ImmutableSet;
  *
  */
 public class IssueSnapshotQL {
-	public static IssueSnapshotQL of(Instant birthTime, String name, boolean isOpen, Set<UserQL> assignees) {
+	public static IssueSnapshotQL of(Instant birthTime, String name, boolean isOpen, Set<User> assignees) {
 		return new IssueSnapshotQL(birthTime, name, isOpen, assignees);
 	}
 
-	private final ImmutableSet<UserQL> assignees;
+	private final ImmutableSet<User> assignees;
 
 	private final Instant birthTime;
 
@@ -26,14 +26,14 @@ public class IssueSnapshotQL {
 
 	private final String name;
 
-	private IssueSnapshotQL(Instant birthTime, String name, boolean isOpen, Set<UserQL> assignees) {
+	private IssueSnapshotQL(Instant birthTime, String name, boolean isOpen, Set<User> assignees) {
 		this.birthTime = requireNonNull(birthTime);
 		this.name = requireNonNull(name);
 		this.isOpen = isOpen;
 		this.assignees = ImmutableSet.copyOf(requireNonNull(assignees));
 	}
 
-	public ImmutableSet<UserQL> getAssignees() {
+	public ImmutableSet<User> getAssignees() {
 		return assignees;
 	}
 

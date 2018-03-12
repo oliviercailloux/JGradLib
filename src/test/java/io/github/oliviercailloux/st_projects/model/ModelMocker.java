@@ -9,15 +9,15 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableList.Builder;
 import com.google.common.collect.ImmutableSortedSet;
 
-import io.github.oliviercailloux.git_hub_gql.IssueBareQL;
-import io.github.oliviercailloux.git_hub_gql.RepositoryQL;
-import io.github.oliviercailloux.git_hub_gql.UserQL;
+import io.github.oliviercailloux.git_hub_gql.IssueBare;
+import io.github.oliviercailloux.git_hub_gql.Repository;
+import io.github.oliviercailloux.git_hub_gql.User;
 import io.github.oliviercailloux.st_projects.utils.Utils;
 
 public class ModelMocker {
 
-	public static void addIssue(RepositoryWithIssuesWithHistoryQL project, String title) {
-		final IssueWithHistoryQL issue = ModelMocker.newGitHubIssue(title, Utils.EXAMPLE_URL);
+	public static void addIssue(RepositoryWithIssuesWithHistory project, String title) {
+		final IssueWithHistory issue = ModelMocker.newGitHubIssue(title, Utils.EXAMPLE_URL);
 		Mockito.when(project.getIssuesOriginallyNamed(title)).thenReturn(ImmutableSortedSet.of(issue));
 	}
 
@@ -30,40 +30,40 @@ public class ModelMocker {
 		return fcts;
 	}
 
-	public static UserQL newContributor(String name) {
+	public static User newContributor(String name) {
 		return newContributor(name, Utils.EXAMPLE_URL);
 	}
 
-	public static UserQL newContributor(String login, URL url) {
-		final UserQL c1 = Mockito.mock(UserQL.class);
+	public static User newContributor(String login, URL url) {
+		final User c1 = Mockito.mock(User.class);
 		Mockito.when(c1.getLogin()).thenReturn(login);
 		Mockito.when(c1.getHtmlURL()).thenReturn(url);
 		return c1;
 	}
 
-	public static IssueWithHistoryQL newGitHubIssue(String name, URL url) {
-		final IssueWithHistoryQL issue = Mockito.mock(IssueWithHistoryQL.class);
+	public static IssueWithHistory newGitHubIssue(String name, URL url) {
+		final IssueWithHistory issue = Mockito.mock(IssueWithHistory.class);
 		Mockito.when(issue.getOriginalName()).thenReturn(name);
-		final IssueBareQL issueBare = newIssueBare(url);
+		final IssueBare issueBare = newIssueBare(url);
 		Mockito.when(issue.getBare()).thenReturn(issueBare);
 		return issue;
 	}
 
-	public static RepositoryWithIssuesWithHistoryQL newGitHubProject(String ownerName) {
-		final UserQL owner = newContributor(ownerName);
+	public static RepositoryWithIssuesWithHistory newGitHubProject(String ownerName) {
+		final User owner = newContributor(ownerName);
 		return newGitHubProject(owner, Utils.EXAMPLE_URL);
 	}
 
-	public static RepositoryWithIssuesWithHistoryQL newGitHubProject(UserQL owner, URL url) {
-		final RepositoryWithIssuesWithHistoryQL ghp1 = Mockito.mock(RepositoryWithIssuesWithHistoryQL.class);
-		final RepositoryQL mockedRepo = newRepository(url);
+	public static RepositoryWithIssuesWithHistory newGitHubProject(User owner, URL url) {
+		final RepositoryWithIssuesWithHistory ghp1 = Mockito.mock(RepositoryWithIssuesWithHistory.class);
+		final Repository mockedRepo = newRepository(url);
 		Mockito.when(ghp1.getBare()).thenReturn(mockedRepo);
 		Mockito.when(ghp1.getOwner()).thenReturn(owner);
 		return ghp1;
 	}
 
-	public static IssueBareQL newIssueBare(URL url) {
-		final IssueBareQL mocked = Mockito.mock(IssueBareQL.class);
+	public static IssueBare newIssueBare(URL url) {
+		final IssueBare mocked = Mockito.mock(IssueBare.class);
 		Mockito.when(mocked.getHtmlURL()).thenReturn(url);
 		return mocked;
 	}
@@ -74,8 +74,8 @@ public class ModelMocker {
 		return project;
 	}
 
-	public static RepositoryQL newRepository(URL url) {
-		final RepositoryQL mocked = Mockito.mock(RepositoryQL.class);
+	public static Repository newRepository(URL url) {
+		final Repository mocked = Mockito.mock(Repository.class);
 		Mockito.when(mocked.getHtmlURL()).thenReturn(url);
 		return mocked;
 	}

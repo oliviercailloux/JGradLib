@@ -8,7 +8,6 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 import javax.json.JsonArray;
 import javax.json.JsonObject;
@@ -19,17 +18,18 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSetMultimap;
 import com.google.common.collect.ImmutableSetMultimap.Builder;
 import com.google.common.collect.ImmutableSortedSet;
 
-import io.github.oliviercailloux.git_hub_gql.IssueBareQL;
-import io.github.oliviercailloux.git_hub_gql.IssueEventQL;
+import io.github.oliviercailloux.git_hub_gql.IssueBare;
+import io.github.oliviercailloux.git_hub_gql.IssueEvent;
 import io.github.oliviercailloux.git_hub_gql.IssueSnapshotQL;
 import io.github.oliviercailloux.git_hub_gql.RenamedTitleEvent;
-import io.github.oliviercailloux.git_hub_gql.RepositoryQL;
-import io.github.oliviercailloux.git_hub_gql.UserQL;
+import io.github.oliviercailloux.git_hub_gql.Repository;
+import io.github.oliviercailloux.git_hub_gql.User;
 
 /**
  *
@@ -40,42 +40,44 @@ import io.github.oliviercailloux.git_hub_gql.UserQL;
  * @author Olivier Cailloux
  *
  */
-public class RepositoryWithIssuesWithHistoryQL {
+public class RepositoryWithIssuesWithHistory {
 	@SuppressWarnings("unused")
-	private static final Logger LOGGER = LoggerFactory.getLogger(RepositoryWithIssuesWithHistoryQL.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(RepositoryWithIssuesWithHistory.class);
 
-	public static RepositoryWithIssuesWithHistoryQL from(JsonObject json) {
-		return new RepositoryWithIssuesWithHistoryQL(json);
+	public static RepositoryWithIssuesWithHistory from(JsonObject json) {
+		return new RepositoryWithIssuesWithHistory(json);
 	}
 
-	private final ImmutableSetMultimap<String, IssueWithHistoryQL> allIssuesByName;
+	private final ImmutableSetMultimap<String, IssueWithHistory> allIssuesByName;
 
-	private final ImmutableSetMultimap<String, IssueWithHistoryQL> allIssuesByOriginalName;
+	private final ImmutableSetMultimap<String, IssueWithHistory> allIssuesByOriginalName;
 
-	final private List<IssueWithHistoryQL> issues;
+	private final ImmutableList<String> files;
 
-	private final RepositoryQL repository;
+	final private ImmutableList<IssueWithHistory> issues;
 
-	private RepositoryWithIssuesWithHistoryQL(JsonObject json) {
-		repository = RepositoryQL.from(json);
+	private final Repository repository;
+
+	private RepositoryWithIssuesWithHistory(JsonObject json) {
+		repository = Repository.from(json);
 		final JsonObject issuesJson = json.getJsonObject("issues");
 		final JsonArray nodes = issuesJson.getJsonArray("nodes");
 		checkArgument(issuesJson.getInt("totalCount") == nodes.size());
 		checkArgument(!issuesJson.getJsonObject("pageInfo").getBoolean("hasNextPage"));
-		issues = nodes.stream().map(JsonValue::asJsonObject).map(IssueBareQL::from).map(this::getIssue)
-				.collect(Collectors.toList());
+		issues = nodes.stream().map(JsonValue::asJsonObject).map(IssueBare::from).map(this::getIssue)
+				.collect(ImmutableList.toImmutableList());
 		{
-			final Builder<String, IssueWithHistoryQL> builderByOriginalName = ImmutableSetMultimap
-					.<String, IssueWithHistoryQL>builder().orderValuesBy(Comparator.<IssueWithHistoryQL>naturalOrder());
-			for (IssueWithHistoryQL issue : issues) {
+			final Builder<String, IssueWithHistory> builderByOriginalName = ImmutableSetMultimap
+					.<String, IssueWithHistory>builder().orderValuesBy(Comparator.<IssueWithHistory>naturalOrder());
+			for (IssueWithHistory issue : issues) {
 				builderByOriginalName.put(issue.getOriginalName(), issue);
 			}
 			allIssuesByOriginalName = builderByOriginalName.build();
 		}
 		{
-			final Builder<String, IssueWithHistoryQL> builderByName = ImmutableSetMultimap
-					.<String, IssueWithHistoryQL>builder().orderValuesBy(Comparator.<IssueWithHistoryQL>naturalOrder());
-			for (IssueWithHistoryQL issue : issues) {
+			final Builder<String, IssueWithHistory> builderByName = ImmutableSetMultimap
+					.<String, IssueWithHistory>builder().orderValuesBy(Comparator.<IssueWithHistory>naturalOrder());
+			for (IssueWithHistory issue : issues) {
 				final List<String> names = issue.getNames();
 				for (String name : names) {
 					builderByName.put(name, issue);
@@ -83,13 +85,26 @@ public class RepositoryWithIssuesWithHistoryQL {
 			}
 			allIssuesByName = builderByName.build();
 		}
+		{
+			files = json.getJsonObject("masterObject").getJsonArray("entries").stream().map(JsonValue::asJsonObject)
+					.filter((e) -> e.getString("type").equals("blob")).map((e) -> e.getString("name"))
+					.collect(ImmutableList.toImmutableList());
+		}
+
 	}
 
-	public RepositoryQL getBare() {
+	public Repository getBare() {
 		return repository;
 	}
 
-	public List<IssueWithHistoryQL> getIssues() {
+	/**
+	 * @return the first-level files in this repository.
+	 */
+	public ImmutableList<String> getFiles() {
+		return files;
+	}
+
+	public ImmutableList<IssueWithHistory> getIssues() {
 		checkState(issues != null);
 		return issues;
 	}
@@ -101,15 +116,15 @@ public class RepositoryWithIssuesWithHistoryQL {
 	 *
 	 * @return may be empty.
 	 */
-	public ImmutableSortedSet<IssueWithHistoryQL> getIssuesNamed(String name) {
+	public ImmutableSortedSet<IssueWithHistory> getIssuesNamed(String name) {
 		requireNonNull(name);
-		final ImmutableSet<IssueWithHistoryQL> homonyms = allIssuesByName.get(name);
+		final ImmutableSet<IssueWithHistory> homonyms = allIssuesByName.get(name);
 		/**
 		 * Guaranteed by the way we built the ImmutableSetMultimap (except after
 		 * de-serialization).
 		 */
 		assert homonyms instanceof ImmutableSortedSet;
-		return (ImmutableSortedSet<IssueWithHistoryQL>) homonyms;
+		return (ImmutableSortedSet<IssueWithHistory>) homonyms;
 	}
 
 	/**
@@ -119,18 +134,18 @@ public class RepositoryWithIssuesWithHistoryQL {
 	 *
 	 * @return may be empty.
 	 */
-	public ImmutableSortedSet<IssueWithHistoryQL> getIssuesOriginallyNamed(String name) {
+	public ImmutableSortedSet<IssueWithHistory> getIssuesOriginallyNamed(String name) {
 		requireNonNull(name);
-		final ImmutableSet<IssueWithHistoryQL> homonyms = allIssuesByOriginalName.get(name);
-		/**
-		 * Guaranteed by the way we built the ImmutableSetMultimap (except after
-		 * de-serialization).
-		 */
+		final ImmutableSet<IssueWithHistory> homonyms = allIssuesByOriginalName
+				.get(name);/**
+							 * Guaranteed by the way we built the ImmutableSetMultimap (except after
+							 * de-serialization).
+							 */
 		assert homonyms instanceof ImmutableSortedSet;
-		return (ImmutableSortedSet<IssueWithHistoryQL>) homonyms;
+		return (ImmutableSortedSet<IssueWithHistory>) homonyms;
 	}
 
-	public UserQL getOwner() {
+	public User getOwner() {
 		return repository.getOwner();
 	}
 
@@ -141,9 +156,9 @@ public class RepositoryWithIssuesWithHistoryQL {
 		return helper.toString();
 	}
 
-	private IssueWithHistoryQL getIssue(IssueBareQL issueBare) {
+	private IssueWithHistory getIssue(IssueBare issueBare) {
 		LOGGER.debug("Taking care of issue: {}.", issueBare);
-		final List<IssueEventQL> events = issueBare.getEvents();
+		final List<IssueEvent> events = issueBare.getEvents();
 
 		boolean open = true;
 		final String name;
@@ -162,10 +177,10 @@ public class RepositoryWithIssuesWithHistoryQL {
 		IssueSnapshotQL snap = IssueSnapshotQL.of(issueBare.getCreatedAt(), name, open, ImmutableSet.of());
 		snaps.add(snap);
 
-		for (IssueEventQL event : events) {
+		for (IssueEvent event : events) {
 			snap = event.applyTo(snap);
 			snaps.add(snap);
 		}
-		return IssueWithHistoryQL.from(issueBare, snaps);
+		return IssueWithHistory.from(issueBare, snaps);
 	}
 }

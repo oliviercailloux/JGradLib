@@ -20,7 +20,7 @@ import com.google.common.collect.Iterables;
 import com.jcabi.github.Coordinates;
 
 import io.github.oliviercailloux.git_hub_gql.IssueSnapshotQL;
-import io.github.oliviercailloux.git_hub_gql.UserQL;
+import io.github.oliviercailloux.git_hub_gql.User;
 import io.github.oliviercailloux.st_projects.services.git_hub.GitHubFetcher;
 import io.github.oliviercailloux.st_projects.utils.Utils;
 
@@ -33,12 +33,12 @@ public class TestGitHubIssue {
 	public void testAssignees() throws Exception {
 		final Coordinates.Simple coord = new Coordinates.Simple("badga", "Collaborative-exams");
 		try (GitHubFetcher factory = GitHubFetcher.using(Utils.getToken())) {
-			final RepositoryWithIssuesWithHistoryQL repo = factory.getProject(coord).get();
-			final IssueWithHistoryQL issue = repo.getIssuesNamed("Servlets").iterator().next();
+			final RepositoryWithIssuesWithHistory repo = factory.getProject(coord).get();
+			final IssueWithHistory issue = repo.getIssuesNamed("Servlets").iterator().next();
 			assertEquals("Servlets", issue.getOriginalName());
 			final Optional<IssueSnapshotQL> optDone = issue.getFirstSnapshotDone();
 			assertTrue(optDone.isPresent());
-			final ImmutableSet<UserQL> assignees = optDone.get().getAssignees();
+			final ImmutableSet<User> assignees = optDone.get().getAssignees();
 			final Stream<String> loginsStream = assignees.stream().map((u) -> u.getLogin());
 			final Set<String> logins = loginsStream.collect(Collectors.toSet());
 			final ImmutableSet<String> expected = ImmutableSet.of("jeffazzam");
@@ -50,8 +50,8 @@ public class TestGitHubIssue {
 	public void testDupl() throws Exception {
 		try (GitHubFetcher factory = GitHubFetcher.using(Utils.getToken())) {
 			final Coordinates.Simple coords = new Coordinates.Simple("benzait27", "Dauphine-Open-Data");
-			final RepositoryWithIssuesWithHistoryQL ghProject = factory.getProject(coords).get();
-			final IssueWithHistoryQL issue = ghProject.getIssuesOriginallyNamed("Course").iterator().next();
+			final RepositoryWithIssuesWithHistory ghProject = factory.getProject(coords).get();
+			final IssueWithHistory issue = ghProject.getIssuesOriginallyNamed("Course").iterator().next();
 			assertEquals(1, issue.getBare().getNumber());
 		}
 	}
@@ -60,8 +60,8 @@ public class TestGitHubIssue {
 	public void testHist() throws Exception {
 		final Coordinates.Simple coord = new Coordinates.Simple("oliviercailloux", "testrel");
 		try (GitHubFetcher factory = GitHubFetcher.using(Utils.getToken())) {
-			final RepositoryWithIssuesWithHistoryQL repo = factory.getProject(coord).get();
-			final IssueWithHistoryQL issue = repo.getIssuesNamed("test1").iterator().next();
+			final RepositoryWithIssuesWithHistory repo = factory.getProject(coord).get();
+			final IssueWithHistory issue = repo.getIssuesNamed("test1").iterator().next();
 			LOGGER.info("Issue: {}.", issue);
 			assertEquals(Utils.newURL("https://github.com/oliviercailloux/testrel/issues/2"),
 					issue.getBare().getHtmlURL());
@@ -73,7 +73,7 @@ public class TestGitHubIssue {
 			assertEquals(LocalDateTime.of(2017, 10, 19, 14, 50, 22).toInstant(ZoneOffset.UTC), snapshot.getBirthTime());
 
 			final IssueSnapshotQL done = issue.getFirstSnapshotDone().get();
-			final Set<UserQL> actual = done.getAssignees();
+			final Set<User> actual = done.getAssignees();
 			assertEquals("bnegreve", Iterables.getOnlyElement(actual).getLogin());
 		}
 	}
@@ -82,8 +82,8 @@ public class TestGitHubIssue {
 	public void testOpen() throws Exception {
 		final Coordinates.Simple coord = new Coordinates.Simple("oliviercailloux", "testrel");
 		try (GitHubFetcher factory = GitHubFetcher.using(Utils.getToken())) {
-			final RepositoryWithIssuesWithHistoryQL repo = factory.getProject(coord).get();
-			final IssueWithHistoryQL issue = repo.getIssuesNamed("test open").iterator().next();
+			final RepositoryWithIssuesWithHistory repo = factory.getProject(coord).get();
+			final IssueWithHistory issue = repo.getIssuesNamed("test open").iterator().next();
 			LOGGER.info("Issue: {}.", issue);
 			assertEquals(Utils.newURL("https://github.com/oliviercailloux/testrel/issues/3"),
 					issue.getBare().getHtmlURL());

@@ -5,7 +5,7 @@ import com.google.common.base.CaseFormat;
 public enum IssueEventType {
 	ASSIGNED, CLOSED, RENAMED_TITLE, REOPENED, UNASSIGNED;
 	@SuppressWarnings("unchecked")
-	public <T extends IssueEventQL> Class<T> toClass() {
+	public <T extends IssueEvent> Class<T> toClass() {
 		try {
 			return (Class<T>) Class.forName(toString());
 		} catch (ClassNotFoundException e) {

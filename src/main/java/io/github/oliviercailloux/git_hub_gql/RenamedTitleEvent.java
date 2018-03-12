@@ -4,7 +4,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 
 import javax.json.JsonObject;
 
-public class RenamedTitleEvent extends IssueEventQL {
+public class RenamedTitleEvent extends IssueEvent {
 
 	protected RenamedTitleEvent(JsonObject json) {
 		super(json);
