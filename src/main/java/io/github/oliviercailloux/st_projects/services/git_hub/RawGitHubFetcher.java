@@ -47,7 +47,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.MoreCollectors;
-import com.jcabi.github.Coordinates;
 
 import io.github.oliviercailloux.git_hub.RepositoryCoordinates;
 import io.github.oliviercailloux.git_hub.low.CommitGitHubDescription;
@@ -192,18 +191,18 @@ public class RawGitHubFetcher implements AutoCloseable {
 		return getContentAsList(target, CommitGitHubDescription::from);
 	}
 
-	public Optional<String> getContents(Coordinates repositoryCoordinates, Path path, ObjectId sha) {
-		final WebTarget target = client.target(FILE_IN_COMMIT_URI)
-				.resolveTemplate("owner", repositoryCoordinates.user())
-				.resolveTemplate("repo", repositoryCoordinates.repo()).resolveTemplate("path", path.toString())
-				.resolveTemplate("sha", sha);
-		return getContent(target, String.class, GIT_HUB_RAW_MEDIA_TYPE);
-	}
-
 	public Optional<String> getContents(RepositoryCoordinates repositoryCoordinates, Path path) {
 		final WebTarget target = client.target(FILE_URI).resolveTemplate("owner", repositoryCoordinates.getOwner())
 				.resolveTemplate("repo", repositoryCoordinates.getRepositoryName())
 				.resolveTemplate("path", path.toString());
+		return getContent(target, String.class, GIT_HUB_RAW_MEDIA_TYPE);
+	}
+
+	public Optional<String> getContents(RepositoryCoordinates repositoryCoordinates, Path path, ObjectId sha) {
+		final WebTarget target = client.target(FILE_IN_COMMIT_URI)
+				.resolveTemplate("owner", repositoryCoordinates.getOwner())
+				.resolveTemplate("repo", repositoryCoordinates.getRepositoryName())
+				.resolveTemplate("path", path.toString()).resolveTemplate("sha", sha);
 		return getContent(target, String.class, GIT_HUB_RAW_MEDIA_TYPE);
 	}
 
@@ -242,9 +241,9 @@ public class RawGitHubFetcher implements AutoCloseable {
 		return matchingEvent.map(Event::getCreatedAt);
 	}
 
-	public void logRepositoryEvents(Coordinates repositoryCoordinates) {
-		final WebTarget target = client.target(EVENTS_URI).resolveTemplate("owner", repositoryCoordinates.user())
-				.resolveTemplate("repo", repositoryCoordinates.repo());
+	public void logRepositoryEvents(RepositoryCoordinates repositoryCoordinates) {
+		final WebTarget target = client.target(EVENTS_URI).resolveTemplate("owner", repositoryCoordinates.getOwner())
+				.resolveTemplate("repo", repositoryCoordinates.getRepositoryName());
 		final Optional<JsonArray> eventsArray = getContent(target, JsonArray.class);
 		LOGGER.info("Events: {}", JsonUtils.asPrettyString(eventsArray.get()));
 	}

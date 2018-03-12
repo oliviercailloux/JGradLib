@@ -11,8 +11,6 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.time.Instant;
-import java.time.ZoneId;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -21,17 +19,12 @@ import java.util.function.Supplier;
 import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
-import javax.json.JsonObject;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.diffplug.common.base.Throwing;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableList.Builder;
-import com.jcabi.github.Github;
-import com.jcabi.github.Limits;
-import com.jcabi.github.RtGithub;
 
 public class Utils {
 	public static final URL EXAMPLE_URL;
@@ -60,23 +53,6 @@ public class Utils {
 		checkState(Files.exists(path));
 		final String content = new String(Files.readAllBytes(path), StandardCharsets.UTF_8);
 		return content.replaceAll("\n", "");
-	}
-
-	public static void logLimits() throws IOException {
-		final String token = getToken();
-		checkState(token != null);
-		final Github gitHub = new RtGithub(token);
-		logLimits(gitHub);
-	}
-
-	public static void logLimits(Github gitHub) throws IOException {
-		final JsonObject json = gitHub.limits().get(Limits.CORE).json();
-		final int limit = json.getJsonNumber("limit").intValue();
-		final int remaining = json.getJsonNumber("remaining").intValue();
-		final int reset = json.getJsonNumber("reset").intValue();
-		LOGGER.info("Limit: {}.", limit);
-		LOGGER.info("Remaining: {}.", remaining);
-		LOGGER.info("Reset time: {}.", Instant.ofEpochSecond(reset).atZone(ZoneId.systemDefault()));
 	}
 
 	public static <F, R, T extends Throwable> ImmutableList<R> map(Iterable<F> iterable,

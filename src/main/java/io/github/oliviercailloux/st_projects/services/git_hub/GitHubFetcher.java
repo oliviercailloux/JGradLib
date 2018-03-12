@@ -111,7 +111,7 @@ public class GitHubFetcher implements AutoCloseable {
 			throw new IllegalStateException(ret.toString());
 		}
 		final JsonObject data = ret.getJsonObject("data");
-		LOGGER.info(JsonUtils.asPrettyString(data));
+		LOGGER.debug(JsonUtils.asPrettyString(data));
 		return data;
 	}
 
@@ -124,7 +124,7 @@ public class GitHubFetcher implements AutoCloseable {
 			dataOpt = Optional.empty();
 		} else {
 			final JsonObject data = ret.getJsonObject("data");
-			LOGGER.info(JsonUtils.asPrettyString(data));
+			LOGGER.debug(JsonUtils.asPrettyString(data));
 			dataOpt = Optional.of(data);
 		}
 		return dataOpt;

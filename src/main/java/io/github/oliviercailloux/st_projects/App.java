@@ -100,7 +100,6 @@ public class App {
 	}
 
 	public void proceed() throws IOException, IllegalFormat, SpreadsheetException, GitAPIException {
-		Utils.logLimits();
 //		writeSEProjects();
 		projectsDir = Paths.get("/home/olivier/Professions/Enseignement/Projets/EE");
 		suffix = "EE";

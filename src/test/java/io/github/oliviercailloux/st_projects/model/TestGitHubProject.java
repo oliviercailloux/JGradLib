@@ -59,8 +59,6 @@ public class TestGitHubProject {
 
 	@Test
 	public void testProject() throws Exception {
-		Utils.logLimits();
-
 		try (GitHubFetcher factory = GitHubFetcher.using(Utils.getToken())) {
 			final RepositoryCoordinates coords = RepositoryCoordinates.from("oliviercailloux", "testrel");
 			final RepositoryWithIssuesWithHistory project = factory.getProject(coords).get();
