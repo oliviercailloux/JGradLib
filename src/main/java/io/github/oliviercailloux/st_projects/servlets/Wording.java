@@ -1,6 +1,5 @@
 package io.github.oliviercailloux.st_projects.servlets;
 
-import java.io.IOException;
 import java.util.Optional;
 
 import javax.enterprise.context.RequestScoped;

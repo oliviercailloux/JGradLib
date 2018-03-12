@@ -19,10 +19,8 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.jcabi.github.Coordinates;
-import com.jcabi.github.RtGithub;
 
 import io.github.oliviercailloux.st_projects.services.git_hub.GitHubFetcher;
-import io.github.oliviercailloux.st_projects.services.git_hub.RepositoryFinder;
 import io.github.oliviercailloux.st_projects.utils.JsonUtils;
 import io.github.oliviercailloux.st_projects.utils.Utils;
 
