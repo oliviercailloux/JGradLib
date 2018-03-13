@@ -21,6 +21,7 @@ import org.slf4j.LoggerFactory;
 import io.github.oliviercailloux.git_hub.RepositoryCoordinates;
 import io.github.oliviercailloux.git_hub.low.SearchResult;
 import io.github.oliviercailloux.st_projects.model.Project;
+import io.github.oliviercailloux.st_projects.model.RepositoryWithFiles;
 import io.github.oliviercailloux.st_projects.model.RepositoryWithIssuesWithHistory;
 import io.github.oliviercailloux.st_projects.services.read.IllegalFormat;
 import io.github.oliviercailloux.st_projects.utils.Utils;
@@ -37,6 +38,16 @@ public class TestFetch {
 					"repo");
 			final Optional<RepositoryWithIssuesWithHistory> opt = fetcher.getProject(coord);
 			assertTrue(!opt.isPresent());
+		}
+	}
+
+	@Test
+	public void testFetchFiles() throws Exception {
+		final RepositoryCoordinates coord = RepositoryCoordinates.from("oliviercailloux", "projets");
+		try (GitHubFetcher fetcher = GitHubFetcher.using(Utils.getToken())) {
+			final Optional<RepositoryWithFiles> found = fetcher.getRepositoryWithFiles(coord, Paths.get("EE/"));
+			final RepositoryWithFiles repo = found.get();
+			assertEquals(repo.getFiles().toString(), 7, repo.getFiles().size());
 		}
 	}
 

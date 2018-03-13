@@ -19,7 +19,7 @@ fragment repositoryWithIssuesWithHistory on Repository {
 	}
 	pomObject: object(expression: "master:pom.xml") {
 		__typename
-		commitResourcePath
+		oid
 		commitUrl
 	}
 	issues(orderBy: {field: CREATED_AT, direction: ASC}, states: [OPEN, CLOSED], first: 100) {

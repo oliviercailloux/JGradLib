@@ -1,6 +1,5 @@
 package io.github.oliviercailloux.st_projects.model;
 
-import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
@@ -9,7 +8,6 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 
-import javax.json.JsonArray;
 import javax.json.JsonObject;
 import javax.json.JsonValue;
 
@@ -22,6 +20,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSetMultimap;
 import com.google.common.collect.ImmutableSetMultimap.Builder;
+import com.google.common.collect.ImmutableSortedSet;
 
 import io.github.oliviercailloux.git_hub.graph_ql.IssueBare;
 import io.github.oliviercailloux.git_hub.graph_ql.IssueEvent;
@@ -29,14 +28,12 @@ import io.github.oliviercailloux.git_hub.graph_ql.IssueSnapshot;
 import io.github.oliviercailloux.git_hub.graph_ql.RenamedTitleEvent;
 import io.github.oliviercailloux.git_hub.graph_ql.Repository;
 import io.github.oliviercailloux.git_hub.graph_ql.User;
-
-import com.google.common.collect.ImmutableSortedSet;
+import io.github.oliviercailloux.st_projects.utils.JsonUtils;
 
 /**
  *
- * TODO forbid pull requests as issues. Simplify ordering of issue with history:
- * use only the first one created among homonyms, and use only their original
- * name.
+ * TODO simplify ordering of issue with history: use only the first one created
+ * among homonyms, and use only their original name.
  *
  * @author Olivier Cailloux
  *
@@ -61,11 +58,7 @@ public class RepositoryWithIssuesWithHistory {
 
 	private RepositoryWithIssuesWithHistory(JsonObject json) {
 		repository = Repository.from(json);
-		final JsonObject issuesJson = json.getJsonObject("issues");
-		final JsonArray nodes = issuesJson.getJsonArray("nodes");
-		checkArgument(issuesJson.getInt("totalCount") == nodes.size());
-		checkArgument(!issuesJson.getJsonObject("pageInfo").getBoolean("hasNextPage"));
-		issues = nodes.stream().map(JsonValue::asJsonObject).map(IssueBare::from).map(this::getIssue)
+		issues = JsonUtils.getContent(json.getJsonObject("issues")).map(IssueBare::from).map(this::getIssue)
 				.collect(ImmutableList.toImmutableList());
 		{
 			final Builder<String, IssueWithHistory> builderByOriginalName = ImmutableSetMultimap

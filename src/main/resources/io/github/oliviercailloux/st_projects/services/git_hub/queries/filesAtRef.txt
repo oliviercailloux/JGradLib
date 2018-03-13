@@ -1,0 +1,75 @@
+#(ref, path) should be something like ("master:blah", "blah"). The path serves to filter the commit history, the ref serves to list the content.
+query filesAtRef($repositoryName: String!, $repositoryOwner: String!, $ref: String!, $path: String!) {
+  repository(name: $repositoryName, owner: $repositoryOwner) {
+	url
+	sshUrl
+	id
+	name
+	createdAt
+	owner {
+	  login
+	  url
+	}
+	masterTree: object(expression: "master:") {
+		__typename
+		oid
+		commitUrl
+		... on Tree{
+			entries{
+				name
+				type
+				object {
+					__typename
+					oid
+					commitUrl
+				}
+			}
+		}
+	}
+	masterCommit: object(expression: "master") {
+		__typename
+		oid
+		commitUrl
+		... on Commit {
+			history(path: $path, first: 100) {
+				totalCount
+				pageInfo {
+				  hasNextPage
+				}
+				nodes {
+					author {
+						name
+						user {
+							login
+						}
+						#The timestamp of the Git action. GitTimestamp. An ISO-8601 encoded date string. Not converted in UTC.
+						date
+					}
+					authoredDate
+					committedDate
+					committer {
+						name
+						user {
+							login
+						}
+						#The timestamp of the Git action. GitTimestamp. An ISO-8601 encoded date string. Not converted in UTC.
+						date
+					}
+					committedViaWeb
+					oid
+					pushedDate
+				}
+			}
+		}
+	}
+	refTree: object(expression: $ref) {
+		__typename
+		... on Tree{
+			entries{
+				name
+				type
+			}
+		}
+	}
+  }
+}

@@ -3,6 +3,7 @@ package io.github.oliviercailloux.st_projects.services.git_hub;
 import static java.util.Objects.requireNonNull;
 
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -28,10 +29,12 @@ import org.slf4j.LoggerFactory;
 import com.diffplug.common.base.Errors;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Streams;
 import com.google.common.io.Resources;
 
 import io.github.oliviercailloux.git_hub.RepositoryCoordinates;
 import io.github.oliviercailloux.st_projects.model.Project;
+import io.github.oliviercailloux.st_projects.model.RepositoryWithFiles;
 import io.github.oliviercailloux.st_projects.model.RepositoryWithIssuesWithHistory;
 import io.github.oliviercailloux.st_projects.utils.JsonUtils;
 
@@ -101,6 +104,15 @@ public class GitHubFetcher implements AutoCloseable {
 				.map((d) -> d.getJsonObject("repository")).map(RepositoryWithIssuesWithHistory::from);
 	}
 
+	public Optional<RepositoryWithFiles> getRepositoryWithFiles(RepositoryCoordinates coordinates, Path path) {
+		final String pathString = Streams.stream(path.iterator()).map(Path::toString).collect(Collectors.joining("/"));
+		final JsonObject varsJson = jsonBuilderFactory.createObjectBuilder()
+				.add("repositoryName", coordinates.getRepositoryName()).add("repositoryOwner", coordinates.getOwner())
+				.add("ref", "master:" + pathString).add("path", pathString).build();
+		return queryOpt("filesAtRef", ImmutableList.of(), varsJson).map((d) -> d.getJsonObject("repository"))
+				.map((r) -> RepositoryWithFiles.from(r, path));
+	}
+
 	public void setToken(String token) {
 		this.token = requireNonNull(token);
 	}
@@ -120,11 +132,11 @@ public class GitHubFetcher implements AutoCloseable {
 
 		final Optional<JsonObject> dataOpt;
 		if (ret.containsKey("errors")) {
-			LOGGER.debug("Error: {}.", ret.toString());
+			LOGGER.info("Error: {}.", ret.toString());
 			dataOpt = Optional.empty();
 		} else {
 			final JsonObject data = ret.getJsonObject("data");
-			LOGGER.debug(JsonUtils.asPrettyString(data));
+			LOGGER.info(JsonUtils.asPrettyString(data));
 			dataOpt = Optional.of(data);
 		}
 		return dataOpt;
