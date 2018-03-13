@@ -33,7 +33,7 @@ public class TestGitHubIssue {
 	public void testAssignees() throws Exception {
 		final RepositoryCoordinates coord = RepositoryCoordinates.from("badga", "Collaborative-exams");
 		try (GitHubFetcher factory = GitHubFetcher.using(Utils.getToken())) {
-			final RepositoryWithIssuesWithHistory repo = factory.getProject(coord).get();
+			final RepositoryWithIssuesWithHistory repo = factory.getRepository(coord).get();
 			final IssueWithHistory issue = repo.getIssuesNamed("Servlets").iterator().next();
 			assertEquals("Servlets", issue.getOriginalName());
 			final Optional<IssueSnapshot> optDone = issue.getFirstSnapshotDone();
@@ -50,7 +50,7 @@ public class TestGitHubIssue {
 	public void testDupl() throws Exception {
 		try (GitHubFetcher factory = GitHubFetcher.using(Utils.getToken())) {
 			final RepositoryCoordinates coords = RepositoryCoordinates.from("benzait27", "Dauphine-Open-Data");
-			final RepositoryWithIssuesWithHistory ghProject = factory.getProject(coords).get();
+			final RepositoryWithIssuesWithHistory ghProject = factory.getRepository(coords).get();
 			final IssueWithHistory issue = ghProject.getIssuesOriginallyNamed("Course").iterator().next();
 			assertEquals(1, issue.getBare().getNumber());
 		}
@@ -60,7 +60,7 @@ public class TestGitHubIssue {
 	public void testHist() throws Exception {
 		final RepositoryCoordinates coord = RepositoryCoordinates.from("oliviercailloux", "testrel");
 		try (GitHubFetcher factory = GitHubFetcher.using(Utils.getToken())) {
-			final RepositoryWithIssuesWithHistory repo = factory.getProject(coord).get();
+			final RepositoryWithIssuesWithHistory repo = factory.getRepository(coord).get();
 			final IssueWithHistory issue = repo.getIssuesNamed("test1").iterator().next();
 			LOGGER.info("Issue: {}.", issue);
 			assertEquals(Utils.newURL("https://github.com/oliviercailloux/testrel/issues/2"),
@@ -82,7 +82,7 @@ public class TestGitHubIssue {
 	public void testOpen() throws Exception {
 		final RepositoryCoordinates coord = RepositoryCoordinates.from("oliviercailloux", "testrel");
 		try (GitHubFetcher factory = GitHubFetcher.using(Utils.getToken())) {
-			final RepositoryWithIssuesWithHistory repo = factory.getProject(coord).get();
+			final RepositoryWithIssuesWithHistory repo = factory.getRepository(coord).get();
 			final IssueWithHistory issue = repo.getIssuesNamed("test open").iterator().next();
 			LOGGER.info("Issue: {}.", issue);
 			assertEquals(Utils.newURL("https://github.com/oliviercailloux/testrel/issues/3"),

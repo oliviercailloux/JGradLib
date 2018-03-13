@@ -9,11 +9,8 @@ import java.io.StringReader;
 import java.net.URI;
 import java.net.URL;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
@@ -53,9 +50,6 @@ import io.github.oliviercailloux.git_hub.low.CommitGitHubDescription;
 import io.github.oliviercailloux.git_hub.low.Event;
 import io.github.oliviercailloux.git_hub.low.SearchResult;
 import io.github.oliviercailloux.git_hub.low.SearchResults;
-import io.github.oliviercailloux.st_projects.model.Project;
-import io.github.oliviercailloux.st_projects.services.read.IllegalFormat;
-import io.github.oliviercailloux.st_projects.services.read.ProjectReader;
 import io.github.oliviercailloux.st_projects.utils.JsonUtils;
 import io.github.oliviercailloux.st_projects.utils.Utils;
 
@@ -71,8 +65,6 @@ public class RawGitHubFetcher implements AutoCloseable {
 	 * https://developer.github.com/v3/repos/commits/
 	 */
 	private static final String COMMITS_BY_PATH_URI = "https://api.github.com/repos/{owner}/{repo}/commits?path={path}";
-
-	private static final String CONTENT_URI = "https://api.github.com/repos/{owner}/{repo}/contents/{path}";
 
 	/**
 	 * https://developer.github.com/v3/activity/events/#list-repository-events
@@ -93,6 +85,10 @@ public class RawGitHubFetcher implements AutoCloseable {
 	 */
 	private static final String SEARCH_CODE_URI = "https://api.github.com/search/code";
 
+	public static RawGitHubFetcher using(String token) {
+		return new RawGitHubFetcher(token);
+	}
+
 	private final Client client;
 
 	/**
@@ -107,11 +103,11 @@ public class RawGitHubFetcher implements AutoCloseable {
 	 */
 	private String token;
 
-	public RawGitHubFetcher() {
+	private RawGitHubFetcher(String token) {
 		rateLimit = "";
 		rateReset = Instant.EPOCH;
 		client = ClientBuilder.newClient();
-		token = "";
+		this.token = requireNonNull(token);
 	}
 
 	@Override
@@ -144,44 +140,6 @@ public class RawGitHubFetcher implements AutoCloseable {
 		return getContent(target, JsonObject.class);
 	}
 
-	public List<Project> fetchProjects() throws IllegalFormat {
-		final JsonArray jsonFileList;
-		List<Project> projects = new ArrayList<>();
-		final RepositoryCoordinates coord = RepositoryCoordinates.from("oliviercailloux", "projets");
-		{
-			final WebTarget target = client.target(CONTENT_URI).resolveTemplate("owner", coord.getOwner())
-					.resolveTemplate("repo", coord.getRepositoryName()).resolveTemplate("path", "EE");
-			jsonFileList = getContent(target, JsonArray.class).get();
-		}
-
-		LOGGER.debug("Read: {}.", jsonFileList);
-		for (JsonValue jsonFileValue : jsonFileList) {
-			final JsonObject jsonFile = jsonFileValue.asJsonObject();
-			final String type = jsonFile.getString("type");
-			if (!Objects.equals(type, "file")) {
-				throw new IllegalFormat();
-			}
-			final String fileName = jsonFile.getString("name");
-			final String fileApiUrl = jsonFile.getString("git_url");
-			LOGGER.info("Reading: {}.", fileName);
-			final String content = getContent(client.target(fileApiUrl), String.class, GIT_HUB_RAW_MEDIA_TYPE).get();
-			final StringReader source = new StringReader(content);
-			LOGGER.debug("Fetching modification time.");
-			final Instant lastModification = getLastModification(coord, Paths.get("EE", fileName)).get();
-			final Instant queried = Instant.now();
-			final Project project;
-			try {
-				project = new ProjectReader().asProject(source, fileName, lastModification, queried);
-			} catch (IOException e) {
-				// string reader can’t fail!
-				throw new IllegalStateException(e);
-			}
-			LOGGER.info("Built: {}.", project);
-			projects.add(project);
-		}
-		return projects;
-	}
-
 	public List<CommitGitHubDescription> getCommitsGitHubDescriptions(RepositoryCoordinates repositoryCoordinates,
 			Path path) {
 		final WebTarget target = client.target(COMMITS_BY_PATH_URI)
@@ -191,14 +149,14 @@ public class RawGitHubFetcher implements AutoCloseable {
 		return getContentAsList(target, CommitGitHubDescription::from);
 	}
 
-	public Optional<String> getContents(RepositoryCoordinates repositoryCoordinates, Path path) {
+	public Optional<String> getContent(RepositoryCoordinates repositoryCoordinates, Path path) {
 		final WebTarget target = client.target(FILE_URI).resolveTemplate("owner", repositoryCoordinates.getOwner())
 				.resolveTemplate("repo", repositoryCoordinates.getRepositoryName())
 				.resolveTemplate("path", path.toString());
 		return getContent(target, String.class, GIT_HUB_RAW_MEDIA_TYPE);
 	}
 
-	public Optional<String> getContents(RepositoryCoordinates repositoryCoordinates, Path path, ObjectId sha) {
+	public Optional<String> getContent(RepositoryCoordinates repositoryCoordinates, Path path, ObjectId sha) {
 		final WebTarget target = client.target(FILE_IN_COMMIT_URI)
 				.resolveTemplate("owner", repositoryCoordinates.getOwner())
 				.resolveTemplate("repo", repositoryCoordinates.getRepositoryName())

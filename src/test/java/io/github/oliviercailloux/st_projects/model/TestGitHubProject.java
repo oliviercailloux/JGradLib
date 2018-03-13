@@ -34,7 +34,7 @@ public class TestGitHubProject {
 		try (GitHubFetcher fetcher = GitHubFetcher.using(Utils.getToken())) {
 			fetcher.setToken(Utils.getToken());
 			final RepositoryWithIssuesWithHistory repo = fetcher
-					.getProject(RepositoryCoordinates.from("MAMERY-DOUMBIA", "Dauphine-Pole-Info")).get();
+					.getRepository(RepositoryCoordinates.from("MAMERY-DOUMBIA", "Dauphine-Pole-Info")).get();
 			LOGGER.debug("Issues with history: {}.", repo.getIssues());
 			assertEquals(13, repo.getIssues().size());
 		}
@@ -61,7 +61,7 @@ public class TestGitHubProject {
 	public void testProject() throws Exception {
 		try (GitHubFetcher factory = GitHubFetcher.using(Utils.getToken())) {
 			final RepositoryCoordinates coords = RepositoryCoordinates.from("oliviercailloux", "testrel");
-			final RepositoryWithIssuesWithHistory project = factory.getProject(coords).get();
+			final RepositoryWithIssuesWithHistory project = factory.getRepository(coords).get();
 			assertEquals(Utils.newURL("https://github.com/oliviercailloux/testrel/"), project.getBare().getHtmlURL());
 			assertEquals(LocalDateTime.of(2016, 04, 15, 10, 33, 27).toInstant(ZoneOffset.UTC),
 					project.getBare().getCreatedAt());

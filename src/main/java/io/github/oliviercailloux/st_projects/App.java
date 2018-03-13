@@ -27,6 +27,7 @@ import javax.json.JsonArray;
 import javax.json.JsonReader;
 import javax.json.JsonValue;
 
+import org.asciidoctor.Asciidoctor;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.lib.ObjectId;
 import org.slf4j.Logger;
@@ -103,7 +104,7 @@ public class App {
 //		writeSEProjects();
 		projectsDir = Paths.get("/home/olivier/Professions/Enseignement/Projets/EE");
 		suffix = "EE";
-		projects = new ProjectReader().asProjects(projectsDir);
+		projects = ProjectReader.using(Asciidoctor.Factory.create()).asProjects(projectsDir);
 		find();
 		writeGHProjects();
 		retrieveEE();
@@ -113,9 +114,8 @@ public class App {
 	public void reportL3Works(Writer output) throws IOException {
 		final Pattern packageRegex = Pattern.compile("^[ \\h]*package .*", Pattern.DOTALL | Pattern.MULTILINE);
 		final Pattern javadocRegex = Pattern.compile("^[ \\v\\h]*/\\*\\*.*", Pattern.DOTALL | Pattern.MULTILINE);
-		try (RawGitHubFetcher rawFetcher = new RawGitHubFetcher();
+		try (RawGitHubFetcher rawFetcher = RawGitHubFetcher.using(Utils.getToken());
 				GitHubFetcher fetcher = GitHubFetcher.using(Utils.getToken())) {
-			rawFetcher.setToken(Utils.getToken());
 
 			final Map<Integer, String> idsToUsernames = getIdsToUsernames();
 
@@ -129,7 +129,7 @@ public class App {
 				output.write("= Id: " + id + " (" + coord.getOwner() + ")\n");
 				final URL base = Utils.newURL("https://github.com/");
 				final URL userPath = new URL(base, coord.getOwner());
-				final Optional<RepositoryWithIssuesWithHistory> prjOpt = fetcher.getProject(coord);
+				final Optional<RepositoryWithIssuesWithHistory> prjOpt = fetcher.getRepository(coord);
 				if (!prjOpt.isPresent()) {
 					output.write(userPath + "\n");
 					output.write("Project not found.\n");
@@ -141,7 +141,7 @@ public class App {
 						.map(SearchResult::getPath);
 				final Iterable<Path> pathsIt = paths::iterator;
 				for (Path path : pathsIt) {
-					final String contents = rawFetcher.getContents(coord, path).get();
+					final String contents = rawFetcher.getContent(coord, path).get();
 					LOGGER.debug("Contents: {}.", contents);
 					final String noPack = packageRegex.matcher(contents).find() ? "" : " NO-PACK";
 					final String noJavadoc = javadocRegex.matcher(contents).find() ? "" : " NO-DOC";
@@ -182,7 +182,7 @@ public class App {
 	public void searchForGHProjectsFromLocal() throws IOException, IllegalFormat {
 		LOGGER.info("Started.");
 		projectsDir = Paths.get("/home/olivier/Professions/Enseignement/Projets/EE");
-		projects = new ProjectReader().asProjects(projectsDir);
+		projects = ProjectReader.using(Asciidoctor.Factory.create()).asProjects(projectsDir);
 		try (GitHubFetcher finder = GitHubFetcher.using(Utils.getToken())) {
 			for (Project project : projects) {
 				final List<RepositoryWithIssuesWithHistory> found = finder.find(project,
@@ -213,8 +213,12 @@ public class App {
 	public void writeSEProjects() throws IOException, IllegalFormat, SpreadsheetException {
 		projectsDir = Paths.get("/home/olivier/Professions/Enseignement/Projets/SE");
 		suffix = "SE";
-		final ProjectReader projectReader = new ProjectReader();
-		projectReader.setFunctionalitiesReader(new FunctionalitiesReader(Optional.of(BigDecimal.valueOf(1d))));
+		LOGGER.info("Loading.");
+		final Asciidoctor asciidoctor = Asciidoctor.Factory.create();
+		LOGGER.info("Loaded.");
+		final FunctionalitiesReader rd = FunctionalitiesReader.usingDefault(asciidoctor, BigDecimal.valueOf(1d));
+		final ProjectReader projectReader = ProjectReader.using(Asciidoctor.Factory.create());
+		projectReader.setFunctionalitiesReader(rd);
 		projects = projectReader.asProjects(projectsDir);
 		find();
 		writeGHProjects();

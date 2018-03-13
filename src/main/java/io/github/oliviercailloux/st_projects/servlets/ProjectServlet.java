@@ -1,6 +1,7 @@
 package io.github.oliviercailloux.st_projects.servlets;
 
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import javax.enterprise.context.RequestScoped;
 import javax.inject.Inject;
@@ -17,31 +18,31 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.github.oliviercailloux.st_projects.model.Project;
-import io.github.oliviercailloux.st_projects.services.git_hub.WordingMonitor;
+import io.github.oliviercailloux.st_projects.services.git_hub.ProjectsMonitor;
 import io.github.oliviercailloux.st_projects.services.read.IllegalFormat;
 
-@Path("wording")
+@Path("project")
 @RequestScoped
-public class Wording {
+public class ProjectServlet {
 	@SuppressWarnings("unused")
-	private static final Logger LOGGER = LoggerFactory.getLogger(Wording.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(ProjectServlet.class);
 
 	@Inject
-	private WordingMonitor monitor;
+	private ProjectsMonitor monitor;
 
 	@Path("list")
 	@GET
 	@Produces(MediaType.TEXT_PLAIN)
-	public String getList() {
+	public String getSEList() {
 		LOGGER.info("Test log list.");
-		return monitor.getProjectNames();
+		return monitor.getSEProjects().stream().map(Project::getName).collect(Collectors.joining("\n"));
 	}
 
 	@Path("get/{project}")
 	@GET
 	@Produces(MediaType.TEXT_PLAIN)
-	public String getWording(@PathParam("project") String projectName) {
-		final Optional<Project> project = monitor.getProject(projectName);
+	public String getSEProject(@PathParam("project") String projectName) {
+		final Optional<Project> project = monitor.getSEProject(projectName);
 		if (!project.isPresent()) {
 			return null;
 		}

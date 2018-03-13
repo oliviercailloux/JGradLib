@@ -36,7 +36,7 @@ public class TestFetch {
 		try (GitHubFetcher fetcher = GitHubFetcher.using(Utils.getToken())) {
 			final RepositoryCoordinates coord = RepositoryCoordinates.from("this-user-does-not-exist-dfqfaglmkj45858",
 					"repo");
-			final Optional<RepositoryWithIssuesWithHistory> opt = fetcher.getProject(coord);
+			final Optional<RepositoryWithIssuesWithHistory> opt = fetcher.getRepository(coord);
 			assertTrue(!opt.isPresent());
 		}
 	}
@@ -47,15 +47,14 @@ public class TestFetch {
 		try (GitHubFetcher fetcher = GitHubFetcher.using(Utils.getToken())) {
 			final Optional<RepositoryWithFiles> found = fetcher.getRepositoryWithFiles(coord, Paths.get("EE/"));
 			final RepositoryWithFiles repo = found.get();
-			assertEquals(repo.getFiles().toString(), 7, repo.getFiles().size());
+			assertEquals(repo.getFileNames().toString(), 7, repo.getFileNames().size());
 		}
 	}
 
 	@Test
 	public void testFindFileCreationExists() throws Exception {
 		final RepositoryCoordinates coord = RepositoryCoordinates.from("Raphaaal", "Java-L3-Eck-Ex");
-		try (RawGitHubFetcher rawFetcher = new RawGitHubFetcher()) {
-			rawFetcher.setToken(Utils.getToken());
+		try (RawGitHubFetcher rawFetcher = RawGitHubFetcher.using(Utils.getToken())) {
 			final Optional<ObjectId> found = rawFetcher.getCreationSha(coord, Paths.get("EE34BreakLine.java"));
 			final ObjectId sha = found.get();
 			LOGGER.info(sha.toString());
@@ -67,8 +66,7 @@ public class TestFetch {
 	@Test
 	public void testFindFileCreationExists2() throws Exception {
 		final RepositoryCoordinates coord = RepositoryCoordinates.from("ynestacamille", "Java-L3-Eck-Ex");
-		try (RawGitHubFetcher rawFetcher = new RawGitHubFetcher()) {
-			rawFetcher.setToken(Utils.getToken());
+		try (RawGitHubFetcher rawFetcher = RawGitHubFetcher.using(Utils.getToken())) {
 			final List<SearchResult> paths = rawFetcher.searchForCode(coord, "class", "java");
 			for (SearchResult res : paths) {
 				final Path path = res.getPath();
@@ -92,8 +90,7 @@ public class TestFetch {
 	@Test(expected = IllegalStateException.class)
 	public void testFindFileCreationExistsOld() throws Exception {
 		final RepositoryCoordinates coord = RepositoryCoordinates.from("oliviercailloux", "java-course");
-		try (RawGitHubFetcher rawFetcher = new RawGitHubFetcher()) {
-			rawFetcher.setToken(Utils.getToken());
+		try (RawGitHubFetcher rawFetcher = RawGitHubFetcher.using(Utils.getToken())) {
 			final Optional<ObjectId> found = rawFetcher.getCreationSha(coord, Paths.get("JSON.adoc"));
 			final ObjectId sha = found.get();
 			LOGGER.debug(sha.getName());
@@ -105,8 +102,7 @@ public class TestFetch {
 	@Test
 	public void testFindFileCreationNotExists() throws Exception {
 		final RepositoryCoordinates coord = RepositoryCoordinates.from("oliviercailloux", "testrel");
-		try (RawGitHubFetcher rawFetcher = new RawGitHubFetcher()) {
-			rawFetcher.setToken(Utils.getToken());
+		try (RawGitHubFetcher rawFetcher = RawGitHubFetcher.using(Utils.getToken())) {
 			final Optional<ObjectId> found = rawFetcher.getCreationSha(coord, Paths.get("dfsddqgqd.ttt"));
 			assertFalse(found.isPresent());
 		}
@@ -115,7 +111,7 @@ public class TestFetch {
 	@Test
 	public void testFindFilePaths() throws Exception {
 		final RepositoryCoordinates coord = RepositoryCoordinates.from("oliviercailloux", "java-course");
-		try (RawGitHubFetcher rawFetcher = new RawGitHubFetcher()) {
+		try (RawGitHubFetcher rawFetcher = RawGitHubFetcher.using(Utils.getToken())) {
 			final List<SearchResult> found = rawFetcher.searchForFile(coord, "JSON", "adoc");
 			LOGGER.debug(found.toString());
 			assertEquals(2, found.size());
@@ -127,7 +123,7 @@ public class TestFetch {
 		final RepositoryCoordinates coord = RepositoryCoordinates.from("oliviercailloux", "java-course");
 		// final RepositoryCoordinates coord = RepositoryCoordinates.from("Raphaaal",
 		// "Java-L3-Eck-Ex");
-		try (RawGitHubFetcher rawFetcher = new RawGitHubFetcher()) {
+		try (RawGitHubFetcher rawFetcher = RawGitHubFetcher.using(Utils.getToken())) {
 			final List<SearchResult> found = rawFetcher.searchForCode(coord, "vote", "java");
 			LOGGER.debug(found.toString());
 			assertEquals(2, found.size());
@@ -138,15 +134,14 @@ public class TestFetch {
 	public void testIssuesHistory() throws Exception {
 		final RepositoryCoordinates coord = RepositoryCoordinates.from("MAMERY-DOUMBIA", "Dauphine-Pole-Info");
 		try (GitHubFetcher fetcher = GitHubFetcher.using(Utils.getToken())) {
-			final RepositoryWithIssuesWithHistory project = fetcher.getProject(coord).get();
+			final RepositoryWithIssuesWithHistory project = fetcher.getRepository(coord).get();
 			assertEquals(1, project.getIssuesOriginallyNamed("PHP").size());
 		}
 	}
 
 	@Test
 	public void testRawFetchAbsentGitHubProject() throws Exception {
-		try (RawGitHubFetcher rawFetcher = new RawGitHubFetcher()) {
-			rawFetcher.setToken(Utils.getToken());
+		try (RawGitHubFetcher rawFetcher = RawGitHubFetcher.using(Utils.getToken())) {
 			final RepositoryCoordinates coord = RepositoryCoordinates.from("this-user-does-not-exist-dfqfaglmkj45858",
 					"repo");
 			// final User user = fetcher.getUser(username);
@@ -157,8 +152,7 @@ public class TestFetch {
 
 	@Test
 	public void testRawFetchGitHubProject() throws Exception {
-		try (RawGitHubFetcher rawFetcher = new RawGitHubFetcher()) {
-			rawFetcher.setToken(Utils.getToken());
+		try (RawGitHubFetcher rawFetcher = RawGitHubFetcher.using(Utils.getToken())) {
 			final RepositoryCoordinates coord = RepositoryCoordinates.from("oliviercailloux", "java-course");
 			// final User user = fetcher.getUser(username);
 			final Optional<JsonObject> opt = rawFetcher.fetchGitHubProject(coord);
@@ -169,20 +163,10 @@ public class TestFetch {
 	@Test
 	public void testRawFetchLastModification() throws Exception {
 		final RepositoryCoordinates coord = RepositoryCoordinates.from("oliviercailloux", "testrel");
-		try (RawGitHubFetcher rawFetcher = new RawGitHubFetcher()) {
-			rawFetcher.setToken(Utils.getToken());
+		try (RawGitHubFetcher rawFetcher = RawGitHubFetcher.using(Utils.getToken())) {
 			final Instant lastModification = rawFetcher.getLastModification(coord, Paths.get("Test.html")).get();
 			LOGGER.debug("Last: {}.", lastModification);
 			assertEquals(Instant.parse("2016-05-02T14:11:38Z"), lastModification);
-		}
-	}
-
-	@Test
-	public void testRawFetchProjects() throws IllegalFormat, IOException {
-		try (RawGitHubFetcher rawFetcher = new RawGitHubFetcher()) {
-			rawFetcher.setToken(Utils.getToken());
-			final List<Project> projects = rawFetcher.fetchProjects();
-			assertTrue(projects.toString(), projects.size() >= 3);
 		}
 	}
 

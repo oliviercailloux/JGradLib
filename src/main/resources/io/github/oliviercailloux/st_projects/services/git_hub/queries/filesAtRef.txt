@@ -11,10 +11,19 @@ query filesAtRef($repositoryName: String!, $repositoryOwner: String!, $ref: Stri
 	}
 	refTree: object(expression: $ref) {
 		__typename
-		... on Tree{
-			entries{
+		... on Tree {
+			entries {
 				name
 				type
+				object {
+					__typename
+					oid
+					... on Blob {
+						isBinary
+						isTruncated
+						text
+					}
+				}
 			}
 		}
 	}

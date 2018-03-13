@@ -152,7 +152,7 @@ public class TestWrite {
 		final RepositoryCoordinates coords = RepositoryCoordinates.from("oliviercailloux", "testrel");
 		final RepositoryWithIssuesWithHistory ghProject;
 		try (GitHubFetcher factory = GitHubFetcher.using(Utils.getToken())) {
-			ghProject = factory.getProject(coords).get();
+			ghProject = factory.getRepository(coords).get();
 		}
 		final byte[] written;
 		try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {

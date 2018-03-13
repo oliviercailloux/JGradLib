@@ -96,7 +96,7 @@ public class GitHubFetcher implements AutoCloseable {
 				.filter((r) -> r.getBare().getName().equals(project.getGitHubName())).collect(Collectors.toList());
 	}
 
-	public Optional<RepositoryWithIssuesWithHistory> getProject(RepositoryCoordinates coordinates) {
+	public Optional<RepositoryWithIssuesWithHistory> getRepository(RepositoryCoordinates coordinates) {
 		final JsonObject varsJson = jsonBuilderFactory.createObjectBuilder()
 				.add("repositoryName", coordinates.getRepositoryName()).add("repositoryOwner", coordinates.getOwner())
 				.build();

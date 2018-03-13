@@ -1,13 +1,14 @@
 package io.github.oliviercailloux.st_projects.services.read;
 
+import static java.util.Objects.requireNonNull;
 import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
-import java.util.Optional;
 
+import org.asciidoctor.Asciidoctor;
 import org.asciidoctor.ast.DescriptionListEntry;
 import org.asciidoctor.ast.ListItem;
 import org.junit.Test;
@@ -16,6 +17,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.io.CharStreams;
 
 import io.github.oliviercailloux.st_projects.model.Functionality;
 
@@ -26,10 +28,13 @@ public class TestRead {
 
 	@Test
 	public void test() throws IOException, IllegalFormat {
-		final FunctionalitiesReader reader = new FunctionalitiesReader();
+		LOGGER.info("Loading.");
+		final Asciidoctor asciidoctor = Asciidoctor.Factory.create();
+		LOGGER.info("Loaded.");
+		final FunctionalitiesReader reader = FunctionalitiesReader.using(asciidoctor);
 		try (InputStreamReader sourceReader = new InputStreamReader(
 				getClass().getResourceAsStream("Assisted Board Games.adoc"), StandardCharsets.UTF_8)) {
-			reader.read(sourceReader);
+			reader.read(CharStreams.toString(requireNonNull(sourceReader)));
 		}
 	}
 
@@ -41,7 +46,10 @@ public class TestRead {
 
 		final DescriptionListEntry input = getMockedInput(termText, fullDescrText);
 
-		final FunctionalitiesReader functionalitiesReader = new FunctionalitiesReader();
+		LOGGER.info("Loading.");
+		final Asciidoctor asciidoctor = Asciidoctor.Factory.create();
+		LOGGER.info("Loaded.");
+		final FunctionalitiesReader functionalitiesReader = FunctionalitiesReader.using(asciidoctor);
 
 		final Functionality obtained = functionalitiesReader.asFunctionality(input);
 		assertEquals(termText, obtained.getName());
@@ -57,7 +65,10 @@ public class TestRead {
 
 		final DescriptionListEntry input = getMockedInput(termText, fullDescrText);
 
-		final FunctionalitiesReader functionalitiesReader = new FunctionalitiesReader();
+		LOGGER.info("Loading.");
+		final Asciidoctor asciidoctor = Asciidoctor.Factory.create();
+		LOGGER.info("Loaded.");
+		final FunctionalitiesReader functionalitiesReader = FunctionalitiesReader.using(asciidoctor);
 
 		final Functionality obtained = functionalitiesReader.asFunctionality(input);
 		assertEquals(termText, obtained.getName());
@@ -72,8 +83,11 @@ public class TestRead {
 
 		final DescriptionListEntry input = getMockedInput(termText, descrText);
 
-		final FunctionalitiesReader functionalitiesReader = new FunctionalitiesReader(
-				Optional.of(BigDecimal.valueOf(4.5d)));
+		LOGGER.info("Loading.");
+		final Asciidoctor asciidoctor = Asciidoctor.Factory.create();
+		LOGGER.info("Loaded.");
+		final FunctionalitiesReader functionalitiesReader = FunctionalitiesReader.usingDefault(asciidoctor,
+				BigDecimal.valueOf(4.5d));
 
 		final Functionality obtained = functionalitiesReader.asFunctionality(input);
 		assertEquals(termText, obtained.getName());

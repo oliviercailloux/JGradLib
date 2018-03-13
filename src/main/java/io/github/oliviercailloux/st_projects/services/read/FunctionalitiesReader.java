@@ -3,7 +3,6 @@ package io.github.oliviercailloux.st_projects.services.read;
 import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
-import java.io.Reader;
 import java.math.BigDecimal;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
@@ -31,7 +30,6 @@ import org.slf4j.LoggerFactory;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
-import com.google.common.io.CharStreams;
 
 import io.github.oliviercailloux.st_projects.model.Functionality;
 
@@ -41,6 +39,14 @@ public class FunctionalitiesReader {
 
 	public static Logger getLogger() {
 		return LOGGER;
+	}
+
+	public static FunctionalitiesReader using(Asciidoctor asciidoctor) {
+		return new FunctionalitiesReader(asciidoctor, Optional.empty());
+	}
+
+	public static FunctionalitiesReader usingDefault(Asciidoctor asciidoctor, BigDecimal defaultDifficulty) {
+		return new FunctionalitiesReader(asciidoctor, Optional.of(defaultDifficulty));
 	}
 
 	private final Asciidoctor asciidoctor;
@@ -58,18 +64,13 @@ public class FunctionalitiesReader {
 
 	private final DecimalFormat numberFormatter;
 
-	public FunctionalitiesReader() {
-		this(Optional.empty());
-	}
-
-	public FunctionalitiesReader(Optional<BigDecimal> defaultDifficulty) {
-		LOGGER.info("Loading.");
-		asciidoctor = Asciidoctor.Factory.create();
-		LOGGER.info("Loaded.");
+	private FunctionalitiesReader(Asciidoctor asciidoctor, Optional<BigDecimal> defaultDifficulty) {
+		this.asciidoctor = asciidoctor;
 		functionalities = new ArrayList<>();
 		/**
 		 * Note that the sentence preceding the "difficulty" does not necessarily end
-		 * with a dot. (As in this example.) (Or in this example!)
+		 * with a dot. Because not every sentence ends with a dot. (As in this example.)
+		 * (Or in this example!)
 		 */
 		difficultyRegExp = Pattern.compile("^(?<Description>.*) \\((?<Difficulty>[0-9,]+)\\)$");
 		numberFormatter = (DecimalFormat) NumberFormat.getInstance(Locale.FRENCH);
@@ -123,15 +124,13 @@ public class FunctionalitiesReader {
 	/**
 	 * Sets the document and functionalities (at least one).
 	 *
-	 * @param source
-	 *            not <code>null</code>.
 	 * @throws IOException
 	 * @throws IllegalFormat
 	 */
-	public void read(Reader source) throws IOException, IllegalFormat {
+	public void read(String source) throws IllegalFormat {
 		functionalities = new ArrayList<>();
 
-		doc = asciidoctor.load(CharStreams.toString(requireNonNull(source)), ImmutableMap.of());
+		doc = asciidoctor.load(source, ImmutableMap.of());
 		LOGGER.debug("Doc title: {}.", doc.getAttribute("doctitle"));
 
 		final List<StructuralNode> blocks = doc.blocks();
