@@ -16,7 +16,6 @@ import com.google.common.collect.ImmutableList;
 
 import io.github.oliviercailloux.git_hub.graph_ql.Repository;
 import io.github.oliviercailloux.git_hub.graph_ql.User;
-import io.github.oliviercailloux.st_projects.utils.JsonUtils;
 
 public class RepositoryWithFiles {
 	@SuppressWarnings("unused")
@@ -39,10 +38,6 @@ public class RepositoryWithFiles {
 			files = json.getJsonObject("refTree").getJsonArray("entries").stream().map(JsonValue::asJsonObject)
 					.filter((e) -> e.getString("type").equals("blob")).map((e) -> e.getString("name"))
 					.collect(ImmutableList.toImmutableList());
-		}
-		{
-			final JsonObject history = json.getJsonObject("masterCommit").getJsonObject("history");
-			JsonUtils.getContent(history);
 		}
 	}
 
