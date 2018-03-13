@@ -9,22 +9,6 @@ query filesAtRef($repositoryName: String!, $repositoryOwner: String!, $ref: Stri
 	  login
 	  url
 	}
-	masterTree: object(expression: "master:") {
-		__typename
-		oid
-		commitUrl
-		... on Tree{
-			entries{
-				name
-				type
-				object {
-					__typename
-					oid
-					commitUrl
-				}
-			}
-		}
-	}
 	refTree: object(expression: $ref) {
 		__typename
 		... on Tree{
