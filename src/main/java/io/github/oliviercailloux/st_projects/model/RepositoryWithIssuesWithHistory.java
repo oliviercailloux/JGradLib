@@ -6,7 +6,10 @@ import static java.util.Objects.requireNonNull;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collector;
+import java.util.stream.Collectors;
 
 import javax.json.JsonObject;
 import javax.json.JsonValue;
@@ -29,15 +32,8 @@ import io.github.oliviercailloux.git_hub.graph_ql.RenamedTitleEvent;
 import io.github.oliviercailloux.git_hub.graph_ql.Repository;
 import io.github.oliviercailloux.git_hub.graph_ql.User;
 import io.github.oliviercailloux.st_projects.utils.JsonUtils;
+import io.github.oliviercailloux.st_projects.utils.Utils;
 
-/**
- *
- * TODO simplify ordering of issue with history: use only the first one created
- * among homonyms, and use only their original name.
- *
- * @author Olivier Cailloux
- *
- */
 public class RepositoryWithIssuesWithHistory {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(RepositoryWithIssuesWithHistory.class);
@@ -52,13 +48,27 @@ public class RepositoryWithIssuesWithHistory {
 
 	private final ImmutableList<String> files;
 
+	/**
+	 * Not <code>null</code>.
+	 */
 	final private ImmutableList<IssueWithHistory> issues;
+
+	private final boolean issuesComplete;
 
 	private final Repository repository;
 
 	private RepositoryWithIssuesWithHistory(JsonObject json) {
+		LOGGER.debug(JsonUtils.asPrettyString(json));
 		repository = Repository.from(json);
-		issues = JsonUtils.getContent(json.getJsonObject("issues")).map(IssueBare::from).map(this::getIssue)
+		final JsonObject issuesConnection = json.getJsonObject("issues");
+		/**
+		 * We have to possibly account for incomplete issues list: some repository may
+		 * match some search criteria of ours while being a huge repository with many
+		 * issues. In such case, it is still useful to create an object of this class
+		 * for debug output and inspection of the results.
+		 */
+		issuesComplete = Utils.isConnectionComplete(issuesConnection);
+		issues = Utils.getContent(issuesConnection, true).map(IssueBare::from).map(this::getIssue)
 				.collect(ImmutableList.toImmutableList());
 		{
 			final Builder<String, IssueWithHistory> builderByOriginalName = ImmutableSetMultimap
@@ -80,9 +90,10 @@ public class RepositoryWithIssuesWithHistory {
 			allIssuesByName = builderByName.build();
 		}
 		{
-			files = json.getJsonObject("masterObject").getJsonArray("entries").stream().map(JsonValue::asJsonObject)
-					.filter((e) -> e.getString("type").equals("blob")).map((e) -> e.getString("name"))
-					.collect(ImmutableList.toImmutableList());
+			files = json.isNull("masterObject") ? ImmutableList.of()
+					: json.getJsonObject("masterObject").getJsonArray("entries").stream().map(JsonValue::asJsonObject)
+							.filter((e) -> e.getString("type").equals("blob")).map((e) -> e.getString("name"))
+							.collect(ImmutableList.toImmutableList());
 		}
 
 	}
@@ -99,8 +110,35 @@ public class RepositoryWithIssuesWithHistory {
 	}
 
 	public ImmutableList<IssueWithHistory> getIssues() {
-		checkState(issues != null);
+		checkState(issuesComplete);
 		return issues;
+	}
+
+	/**
+	 * Returns all the issues that have that name as original name or a name
+	 * corresponding to the same functionality, for example, "function-2"
+	 * corresponds to the name "function". The returned set is ordered by alphabetic
+	 * order of name. No two issues in the set have the same name. In case of
+	 * homonyms, the issue kept for a given name is the one that has the earliest
+	 * date of “first done”.
+	 *
+	 * @return may be empty.
+	 */
+	public ImmutableSortedSet<IssueWithHistory> getIssuesCorrespondingTo(String name) {
+		checkState(issuesComplete);
+		final Collector<IssueWithHistory, ?, ImmutableSortedSet<IssueWithHistory>> collector = ImmutableSortedSet
+				.toImmutableSortedSet(Comparator.naturalOrder());
+		final Map<String, IssueWithHistory> collected = issues.stream()
+				.filter((i) -> i.getOriginalName().matches(name + "(-[2-9]+\\d*)?"))
+				.collect(Collectors.groupingBy(IssueWithHistory::getOriginalName,
+						Collectors.collectingAndThen(collector, (l) -> l.iterator().next())));
+		final ImmutableSortedSet<IssueWithHistory> issuesM = collected.values().stream().collect(
+				ImmutableSortedSet.toImmutableSortedSet(Comparator.comparing(IssueWithHistory::getOriginalName)));
+		if (issuesM.isEmpty() || !issuesM.iterator().next().getOriginalName().equals(name)) {
+//			LOGGER.info("Oops with {}.", issuesM);
+			return ImmutableSortedSet.of();
+		}
+		return issuesM;
 	}
 
 	/**
@@ -111,6 +149,7 @@ public class RepositoryWithIssuesWithHistory {
 	 * @return may be empty.
 	 */
 	public ImmutableSortedSet<IssueWithHistory> getIssuesNamed(String name) {
+		checkState(issuesComplete);
 		requireNonNull(name);
 		final ImmutableSet<IssueWithHistory> homonyms = allIssuesByName.get(name);
 		/**
@@ -129,14 +168,27 @@ public class RepositoryWithIssuesWithHistory {
 	 * @return may be empty.
 	 */
 	public ImmutableSortedSet<IssueWithHistory> getIssuesOriginallyNamed(String name) {
+		checkState(issuesComplete);
+		/**
+		 * TODO bug if an issue is named Resources, another ResourcesBlah then renamed
+		 * to Resources-2, another Resources-3, then we get Resources and Resources-3
+		 * written.
+		 *
+		 * TODO bug apparently if an issue is called WSCallRank and another is called
+		 * WSCall (see XM-GUI).
+		 */
 		requireNonNull(name);
-		final ImmutableSet<IssueWithHistory> homonyms = allIssuesByOriginalName
-				.get(name);/**
-							 * Guaranteed by the way we built the ImmutableSetMultimap (except after
-							 * de-serialization).
-							 */
+		final ImmutableSet<IssueWithHistory> homonyms = allIssuesByOriginalName.get(name);
+		/**
+		 * Guaranteed by the way we built the ImmutableSetMultimap (except after
+		 * de-serialization).
+		 */
 		assert homonyms instanceof ImmutableSortedSet;
 		return (ImmutableSortedSet<IssueWithHistory>) homonyms;
+	}
+
+	public ImmutableList<IssueWithHistory> getIssuesSample() {
+		return issues;
 	}
 
 	public User getOwner() {
@@ -146,7 +198,7 @@ public class RepositoryWithIssuesWithHistory {
 	@Override
 	public String toString() {
 		final ToStringHelper helper = MoreObjects.toStringHelper(this);
-		helper.addValue(repository.getName());
+		helper.addValue(repository.getCoordinates());
 		return helper.toString();
 	}
 

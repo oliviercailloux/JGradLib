@@ -3,11 +3,13 @@ package io.github.oliviercailloux.git_hub.low;
 import static java.util.Objects.requireNonNull;
 
 import java.net.URL;
+import java.time.Instant;
 
 import javax.json.JsonObject;
 
 import org.eclipse.jgit.lib.ObjectId;
 
+import io.github.oliviercailloux.st_projects.services.git_hub.GitHubJsonParser;
 import io.github.oliviercailloux.st_projects.utils.Utils;
 
 /**
@@ -33,8 +35,20 @@ public class CommitGitHubDescription {
 		return Utils.newURL(json.getString("url"));
 	}
 
+	public Instant getCommitterCommitDate() {
+		return GitHubJsonParser.asInstant(getJsonCommitter().getString("date"));
+	}
+
 	public String getCommitterName() {
-		return json.getJsonObject("commit").getJsonObject("committer").getString("name");
+		return getJsonCommitter().getString("name");
+	}
+
+	private JsonObject getJsonCommitter() {
+		return getJsonCommmit().getJsonObject("committer");
+	}
+
+	private JsonObject getJsonCommmit() {
+		return json.getJsonObject("commit");
 	}
 
 	public URL getHtmlURL() {

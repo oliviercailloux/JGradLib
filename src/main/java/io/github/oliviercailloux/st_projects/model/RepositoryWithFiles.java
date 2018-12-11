@@ -2,9 +2,12 @@ package io.github.oliviercailloux.st_projects.model;
 
 import static java.util.Objects.requireNonNull;
 
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.nio.file.Path;
 import java.util.AbstractMap;
 import java.util.AbstractMap.SimpleEntry;
+import java.util.Optional;
 
 import javax.json.JsonObject;
 import javax.json.JsonValue;
@@ -15,10 +18,10 @@ import org.slf4j.LoggerFactory;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 
 import io.github.oliviercailloux.git_hub.graph_ql.Repository;
 import io.github.oliviercailloux.git_hub.graph_ql.User;
+import io.github.oliviercailloux.st_projects.utils.Utils;
 
 public class RepositoryWithFiles {
 	@SuppressWarnings("unused")
@@ -28,7 +31,7 @@ public class RepositoryWithFiles {
 		return new RepositoryWithFiles(json, path);
 	}
 
-	private final ImmutableMap<String, String> contentFromFileNames;
+	private final ImmutableMap<Path, String> contentFromFileNames;
 
 	private final Path path;
 
@@ -40,7 +43,8 @@ public class RepositoryWithFiles {
 		{
 			contentFromFileNames = json.getJsonObject("refTree").getJsonArray("entries").stream()
 					.map(JsonValue::asJsonObject).filter((e) -> e.getString("type").equals("blob"))
-					.map((e) -> new AbstractMap.SimpleEntry<>(e.getString("name"), e.getJsonObject("object")))
+					.map((e) -> new AbstractMap.SimpleEntry<>(path.resolve(e.getString("name")),
+							e.getJsonObject("object")))
 					.filter(((e) -> {
 						final boolean binary = e.getValue().getBoolean("isBinary");
 						if (!binary) {
@@ -49,7 +53,7 @@ public class RepositoryWithFiles {
 							}
 						}
 						return !binary;
-					})).collect(ImmutableMap.<SimpleEntry<String, JsonObject>, String, String>toImmutableMap(
+					})).collect(ImmutableMap.<SimpleEntry<Path, JsonObject>, Path, String>toImmutableMap(
 							SimpleEntry::getKey, (e) -> e.getValue().getString("text")));
 		}
 	}
@@ -58,19 +62,16 @@ public class RepositoryWithFiles {
 		return repository;
 	}
 
-	public String getContent(String fileName) {
-		return contentFromFileNames.get(fileName);
+	public Optional<String> getContent(Path file) {
+		return Utils.getOptionally(contentFromFileNames, file);
 	}
 
-	public ImmutableMap<String, String> getContentFromFileNames() {
+	public Optional<String> getContent(String fileName) {
+		return Utils.getOptionally(contentFromFileNames, path.resolve(fileName));
+	}
+
+	public ImmutableMap<Path, String> getContentFromFileNames() {
 		return contentFromFileNames;
-	}
-
-	/**
-	 * @return the first-level files in this repository.
-	 */
-	public ImmutableSet<String> getFileNames() {
-		return contentFromFileNames.keySet();
 	}
 
 	public User getOwner() {
@@ -81,10 +82,23 @@ public class RepositoryWithFiles {
 		return path;
 	}
 
+	public URL getURL(Path completePath) {
+		/**
+		 * TODO obtain an url, but https://developer.github.com/v4/object/treeentry/
+		 * does not give it.
+		 */
+		try {
+			return new URL(repository.getURL(), "blob/master/" + Utils.getEncoded(completePath));
+		} catch (MalformedURLException e) {
+			throw new IllegalArgumentException(e);
+		}
+	}
+
 	@Override
 	public String toString() {
 		final ToStringHelper helper = MoreObjects.toStringHelper(this);
 		helper.addValue(repository.getName());
+		helper.add("files", contentFromFileNames.keySet());
 		return helper.toString();
 	}
 }

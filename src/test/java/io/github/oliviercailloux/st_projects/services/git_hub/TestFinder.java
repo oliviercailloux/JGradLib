@@ -1,7 +1,8 @@
 package io.github.oliviercailloux.st_projects.services.git_hub;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.time.Instant;
@@ -10,7 +11,7 @@ import java.time.Month;
 import java.time.ZoneOffset;
 import java.util.List;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,11 +40,12 @@ public class TestFinder {
 		assertTrue(repositories.stream().anyMatch((p) -> p.getBare().getCreatedAt().equals(expectedCreation)));
 	}
 
-	@Test(expected = UnsupportedOperationException.class)
+	@Test
 	public void testFindTooMany() throws IOException {
 		final Project myProject = Project.from("Biblio");
 		try (GitHubFetcher fetcher = GitHubFetcher.using(Utils.getToken())) {
-			fetcher.find(myProject, Instant.parse("2017-09-01T00:00:00Z"));
+			assertThrows(UnsupportedOperationException.class,
+					() -> fetcher.find(myProject, Instant.parse("2017-09-01T00:00:00Z")));
 		}
 	}
 

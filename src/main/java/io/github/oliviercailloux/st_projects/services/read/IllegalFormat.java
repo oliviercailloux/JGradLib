@@ -1,6 +1,6 @@
 package io.github.oliviercailloux.st_projects.services.read;
 
-public class IllegalFormat extends Exception {
+public class IllegalFormat extends RuntimeException {
 
 	private static final long serialVersionUID = 1L;
 

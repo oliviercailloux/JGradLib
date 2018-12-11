@@ -1,7 +1,7 @@
 package io.github.oliviercailloux.st_projects.services.read;
 
 import static java.util.Objects.requireNonNull;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -11,7 +11,7 @@ import java.nio.charset.StandardCharsets;
 import org.asciidoctor.Asciidoctor;
 import org.asciidoctor.ast.DescriptionListEntry;
 import org.asciidoctor.ast.ListItem;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -73,7 +73,7 @@ public class TestRead {
 		final Functionality obtained = functionalitiesReader.asFunctionality(input);
 		assertEquals(termText, obtained.getName());
 		assertEquals(descrText, obtained.getDescription());
-		assertEquals(3.0d, obtained.getDifficulty().doubleValue(), 0d);
+		assertEquals(3.0d, obtained.getDifficulty().doubleValue());
 	}
 
 	@Test
@@ -92,7 +92,7 @@ public class TestRead {
 		final Functionality obtained = functionalitiesReader.asFunctionality(input);
 		assertEquals(termText, obtained.getName());
 		assertEquals(descrText, obtained.getDescription());
-		assertEquals(4.5d, obtained.getDifficulty().doubleValue(), 0d);
+		assertEquals(4.5d, obtained.getDifficulty().doubleValue());
 	}
 
 	private DescriptionListEntry getMockedInput(final String termText, final String fullDescrText) {

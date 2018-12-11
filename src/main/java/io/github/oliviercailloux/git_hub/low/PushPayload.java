@@ -3,10 +3,13 @@ package io.github.oliviercailloux.git_hub.low;
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import javax.json.JsonObject;
 import javax.json.JsonValue;
+
+import org.eclipse.jgit.lib.ObjectId;
 
 /**
  * <p>
@@ -35,5 +38,14 @@ public class PushPayload {
 
 	public int getId() {
 		return json.getInt("id");
+	}
+
+	public Optional<ObjectId> getBefore() {
+		return json.containsKey("before") ? Optional.of(ObjectId.fromString(json.getString("before")))
+				: Optional.empty();
+	}
+
+	public Optional<ObjectId> getHead() {
+		return json.containsKey("head") ? Optional.of(ObjectId.fromString(json.getString("head"))) : Optional.empty();
 	}
 }

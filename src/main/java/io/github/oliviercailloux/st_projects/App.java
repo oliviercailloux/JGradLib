@@ -2,12 +2,10 @@ package io.github.oliviercailloux.st_projects;
 
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
-import java.io.OutputStreamWriter;
 import java.io.Writer;
-import java.math.BigDecimal;
 import java.net.URL;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -18,97 +16,85 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ExecutionException;
+import java.util.function.Function;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import javax.json.Json;
-import javax.json.JsonArray;
-import javax.json.JsonReader;
-import javax.json.JsonValue;
-
 import org.asciidoctor.Asciidoctor;
+import org.eclipse.jgit.api.errors.CheckoutConflictException;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.lib.ObjectId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.Predicates;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedMap;
-import com.google.common.collect.Iterables;
+import com.google.common.collect.ImmutableSortedSet;
+import com.google.common.collect.Streams;
 
 import io.github.oliviercailloux.git_hub.RepositoryCoordinates;
 import io.github.oliviercailloux.git_hub.graph_ql.Repository;
 import io.github.oliviercailloux.git_hub.low.CommitGitHubDescription;
 import io.github.oliviercailloux.git_hub.low.SearchResult;
+import io.github.oliviercailloux.st_projects.model.Functionality;
+import io.github.oliviercailloux.st_projects.model.IssueWithHistory;
 import io.github.oliviercailloux.st_projects.model.Project;
 import io.github.oliviercailloux.st_projects.model.RepositoryWithIssuesWithHistory;
 import io.github.oliviercailloux.st_projects.services.git.Client;
 import io.github.oliviercailloux.st_projects.services.git_hub.GitHubFetcher;
+import io.github.oliviercailloux.st_projects.services.git_hub.ProjectsMonitor;
 import io.github.oliviercailloux.st_projects.services.git_hub.RawGitHubFetcher;
-import io.github.oliviercailloux.st_projects.services.read.FunctionalitiesReader;
 import io.github.oliviercailloux.st_projects.services.read.IllegalFormat;
-import io.github.oliviercailloux.st_projects.services.read.ProjectReader;
+import io.github.oliviercailloux.st_projects.services.read.UsernamesReader;
 import io.github.oliviercailloux.st_projects.services.spreadsheet.SpreadsheetException;
 import io.github.oliviercailloux.st_projects.services.spreadsheet.SpreadsheetWriter;
 import io.github.oliviercailloux.st_projects.utils.Utils;
 
-public class App {
+public class App implements AutoCloseable {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(App.class);
 
 	public static void main(String[] args) throws Exception {
-		final App app = new App();
-//		app.proceed();
-//		final RawGitHubGraphQLFetcher fetcher = new RawGitHubGraphQLFetcher();
-//		fetcher.setToken(Utils.getToken());
-//		fetcher.log();
-//		final Pattern javadocRegex = Pattern.compile("^[ \\v\\h]*/\\*\\*.*", Pattern.DOTALL);
-//		System.out.println(javadocRegex.matcher("	/** \n").find());
-		final OutputStream out = Files.newOutputStream(Paths.get("out.txt"));
-		try (Writer output = new OutputStreamWriter(out, StandardCharsets.UTF_8)) {
-			app.reportL3Works(output);
+
+		try (App app = new App()) {
+			app.proceed();
 		}
 	}
 
-	private final Map<Project, RepositoryWithIssuesWithHistory> ghProjects;
+	private final Map<Project, RepositoryWithIssuesWithHistory> cachedProjects;
 
-	private List<Project> projects;
-
-	private Path projectsDir;
-
-	private String suffix;
+	private ProjectsMonitor projectsMonitor;
 
 	private SpreadsheetWriter writer;
 
 	public App() {
 		writer = new SpreadsheetWriter();
-		projects = null;
-		ghProjects = new LinkedHashMap<>();
+		cachedProjects = new LinkedHashMap<>();
+		projectsMonitor = null;
 		// TODO restore fct ignore after. Update client: don’t need history.
 	}
 
-	public Map<Integer, String> getIdsToUsernames() throws IOException {
-		final Path inp = Paths.get("usernames.json");
-		final JsonArray json;
-		try (JsonReader jr = Json.createReader(Files.newInputStream(inp))) {
-			json = jr.readArray();
-		}
-		final Map<Integer, String> idsToUsernames = json.stream().sequential().map(JsonValue::asJsonObject)
-				.filter((o) -> !o.isNull("username"))
-				.collect(Utils.toLinkedMap((o) -> o.getInt("studentId"), (o) -> o.getString("username")));
-		LOGGER.info("Got: {}.", idsToUsernames);
-		return idsToUsernames;
+	@Override
+	public void close() throws Exception {
+		projectsMonitor.close();
 	}
 
-	public void proceed() throws IOException, IllegalFormat, SpreadsheetException, GitAPIException {
-//		writeSEProjects();
-		projectsDir = Paths.get("/home/olivier/Professions/Enseignement/Projets/EE");
-		suffix = "EE";
-		projects = ProjectReader.using(Asciidoctor.Factory.create()).asProjects(projectsDir);
-		find();
-		writeGHProjects();
-		retrieveEE();
-//		searchForGHProjectsFromLocal();
+	public void proceed() throws IOException, IllegalFormat, SpreadsheetException, GitAPIException,
+			InterruptedException, ExecutionException {
+		init();
+//		projectsMonitor.showLastCommitsValidity();
+		writeGHProjects(projectsMonitor.getSEProjects(), "SE");
+//		writeGHProjects(projectsMonitor.getEEProjects(), "EE");
+		retrieveCached();
+//		final OutputStream out = Files.newOutputStream(Paths.get("out.txt"));
+//		try (Writer output = new OutputStreamWriter(out, StandardCharsets.UTF_8)) {
+//			reportL3Works(output);
+//		}
 	}
 
 	public void reportL3Works(Writer output) throws IOException {
@@ -117,10 +103,15 @@ public class App {
 		try (RawGitHubFetcher rawFetcher = RawGitHubFetcher.using(Utils.getToken());
 				GitHubFetcher fetcher = GitHubFetcher.using(Utils.getToken())) {
 
-			final Map<Integer, String> idsToUsernames = getIdsToUsernames();
+			final Map<Integer, String> idsToUsernames;
+			try (InputStream inputStream = Files.newInputStream(Paths.get("usernames.json"))) {
+				final UsernamesReader reader = new UsernamesReader();
+				reader.read(inputStream);
+				idsToUsernames = reader.getIdsToGitHubUsernames();
+			}
 
 			final String repo = "Java-L3-Eck-Ex";
-			final Instant deadline = Instant.parse("2018-03-04T00:00:00Z");
+			final Instant deadline = Instant.parse("2018-03-20T00:00:00Z");
 			final ImmutableSortedMap<Integer, String> idsSorted = ImmutableSortedMap.copyOf(idsToUsernames,
 					Comparator.naturalOrder());
 			for (Integer id : idsSorted.keySet()) {
@@ -135,7 +126,7 @@ public class App {
 					output.write("Project not found.\n");
 					continue;
 				}
-				final URL repoUrl = prjOpt.get().getBare().getHtmlURL();
+				final URL repoUrl = prjOpt.get().getBare().getURL();
 				output.write(repoUrl + "\n");
 				final Stream<Path> paths = rawFetcher.searchForCode(coord, "class", "java").stream()
 						.map(SearchResult::getPath);
@@ -169,83 +160,77 @@ public class App {
 		}
 	}
 
-	public void retrieveEE() throws IOException, GitAPIException {
-		final Client client = new Client();
-		final Stream<Repository> repositoriesStream = ghProjects.values().stream()
+	public void retrieveCached() throws IOException, GitAPIException {
+		final Stream<Repository> repositoriesStream = cachedProjects.values().stream()
 				.map(RepositoryWithIssuesWithHistory::getBare);
 		final Iterable<Repository> it = repositoriesStream::iterator;
 		for (Repository repository : it) {
-			client.retrieve(repository);
-		}
-	}
-
-	public void searchForGHProjectsFromLocal() throws IOException, IllegalFormat {
-		LOGGER.info("Started.");
-		projectsDir = Paths.get("/home/olivier/Professions/Enseignement/Projets/EE");
-		projects = ProjectReader.using(Asciidoctor.Factory.create()).asProjects(projectsDir);
-		try (GitHubFetcher finder = GitHubFetcher.using(Utils.getToken())) {
-			for (Project project : projects) {
-				final List<RepositoryWithIssuesWithHistory> found = finder.find(project,
-						Instant.parse("2017-11-05T00:00:00Z"));
-				LOGGER.info("Found for {}: {}.", project.getName(), found);
-				final List<RepositoryWithIssuesWithHistory> foundWithPom = found.stream()
-						.filter((r) -> r.getFiles().contains("pom.xml")).collect(Collectors.toList());
-				LOGGER.info("Found with POM for {}: {}.", project.getName(), foundWithPom);
+			final Client client = Client.aboutAndUsing(
+					RepositoryCoordinates.from(repository.getOwner().getLogin(), repository.getName()),
+					Paths.get("../../En cours"));
+			LOGGER.info("Retrieving {}.", repository);
+			try {
+				client.retrieve();
+			} catch (CheckoutConflictException e) {
+				LOGGER.error(String.format("Retrieving %s.", repository), e);
 			}
 		}
 	}
 
-	public void writeGHProjects() throws IOException, SpreadsheetException {
+	public void writeGHProjects(Iterable<Project> projects, String suffix) throws IOException, SpreadsheetException {
+		cache(projects);
 		LOGGER.info("Started write GH projects.");
-		try (OutputStream out = new FileOutputStream("Deep-" + suffix + ".ods")) {
-			writer.setWide(false);
-			writer.setOutputStream(out);
-			writer.write(projects, ghProjects);
-		}
 		try (OutputStream out = new FileOutputStream("Wide-" + suffix + ".ods")) {
 			writer.setWide(true);
 			writer.setOutputStream(out);
-			writer.write(projects, ghProjects);
+			writer.write(projects, cachedProjects);
 		}
 		LOGGER.info("Finished write GH projects.");
 	}
 
-	public void writeSEProjects() throws IOException, IllegalFormat, SpreadsheetException {
-		projectsDir = Paths.get("/home/olivier/Professions/Enseignement/Projets/SE");
-		suffix = "SE";
+	private void cache(Iterable<Project> projects) throws IOException {
+		Iterable<Project> nonCachedProjects = Streams.stream(projects)
+				.filter(Predicates.not(cachedProjects.keySet()::contains))::iterator;
+		try (GitHubFetcher finder = GitHubFetcher.using(Utils.getToken())) {
+			for (Project project : nonCachedProjects) {
+				final List<RepositoryWithIssuesWithHistory> found = projectsMonitor.getRepositories(project);
+				LOGGER.info("Searching for {}, found {}.", project, found);
+
+				final ImmutableSortedSet<String> fctNames = project.getFunctionalities().stream()
+						.map(Functionality::getName)
+						.collect(ImmutableSortedSet.toImmutableSortedSet(Comparator.naturalOrder()));
+				final Function<RepositoryWithIssuesWithHistory, Long> fctCounter = CacheBuilder.newBuilder()
+						.build(CacheLoader.from((r) -> r.getIssues().stream().map(IssueWithHistory::getOriginalName)
+								.filter(fctNames::contains).count()));
+				final Comparator<RepositoryWithIssuesWithHistory> byFctCount = Comparator
+						.<RepositoryWithIssuesWithHistory, Long>comparing(fctCounter);
+
+				final ImmutableList<RepositoryWithIssuesWithHistory> repoByMatch = ImmutableList
+						.sortedCopyOf(byFctCount.reversed(), found);
+
+				if (repoByMatch.size() >= 1) {
+					final RepositoryWithIssuesWithHistory matching = repoByMatch.iterator().next();
+					cachedProjects.put(project, matching);
+				}
+				if (repoByMatch.size() >= 2 && fctCounter.apply(repoByMatch.get(1)) >= 1) {
+					throw new IllegalStateException(
+							String.format("Found multiple close matches for %s: %s.", project, found));
+				}
+			}
+		}
+	}
+
+	private void init() throws IOException, InterruptedException, ExecutionException {
+		initBareProjectsMonitor();
+		projectsMonitor.updateProjectsAsync();
+		projectsMonitor.updateRepositoriesAsync();
+		projectsMonitor.await();
+	}
+
+	private void initBareProjectsMonitor() throws IOException {
 		LOGGER.info("Loading.");
 		final Asciidoctor asciidoctor = Asciidoctor.Factory.create();
 		LOGGER.info("Loaded.");
-		final FunctionalitiesReader rd = FunctionalitiesReader.usingDefault(asciidoctor, BigDecimal.valueOf(1d));
-		final ProjectReader projectReader = ProjectReader.using(Asciidoctor.Factory.create());
-		projectReader.setFunctionalitiesReader(rd);
-		projects = projectReader.asProjects(projectsDir);
-		find();
-		writeGHProjects();
-	}
-
-	private Map<Project, RepositoryWithIssuesWithHistory> find() throws IOException {
-		try (GitHubFetcher finder = GitHubFetcher.using(Utils.getToken())) {
-			for (Project project : projects) {
-				LOGGER.info("Searching for {}.", project);
-				final List<RepositoryWithIssuesWithHistory> found = finder.find(project, Instant.EPOCH);
-				LOGGER.info("Found: {}.", found);
-				final List<RepositoryWithIssuesWithHistory> foundWithPom = found.stream()
-						.filter((r) -> r.getFiles().contains("pom.xml")).collect(Collectors.toList());
-				final int nbMatches = foundWithPom.size();
-				switch (nbMatches) {
-				case 0:
-					break;
-				case 1:
-					final RepositoryWithIssuesWithHistory matching = Iterables.getOnlyElement(foundWithPom);
-					ghProjects.put(project, matching);
-					break;
-				default:
-					throw new IllegalStateException(
-							String.format("Found multiple matches for %s: %s.", project, foundWithPom));
-				}
-			}
-			return ghProjects;
-		}
+		projectsMonitor = ProjectsMonitor.using(asciidoctor, Utils.getToken());
 	}
 }

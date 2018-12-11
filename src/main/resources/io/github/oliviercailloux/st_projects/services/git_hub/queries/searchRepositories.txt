@@ -1,5 +1,5 @@
 query search($queryString: String!) {
-  search(query: $queryString, type: REPOSITORY, first: 49) {
+  search(query: $queryString, type: REPOSITORY, first: 80) {
     repositoryCount
     pageInfo {
       hasNextPage

@@ -1,10 +1,10 @@
 package io.github.oliviercailloux.st_projects.services.git_hub;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Instant;
@@ -14,16 +14,14 @@ import java.util.Optional;
 import javax.json.JsonObject;
 
 import org.eclipse.jgit.lib.ObjectId;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.github.oliviercailloux.git_hub.RepositoryCoordinates;
 import io.github.oliviercailloux.git_hub.low.SearchResult;
-import io.github.oliviercailloux.st_projects.model.Project;
 import io.github.oliviercailloux.st_projects.model.RepositoryWithFiles;
 import io.github.oliviercailloux.st_projects.model.RepositoryWithIssuesWithHistory;
-import io.github.oliviercailloux.st_projects.services.read.IllegalFormat;
 import io.github.oliviercailloux.st_projects.utils.Utils;
 
 public class TestFetch {
@@ -31,7 +29,7 @@ public class TestFetch {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(TestFetch.class);
 
-	@Test
+	@org.junit.jupiter.api.Test
 	public void testFetchAbsentGitHubProject() throws Exception {
 		try (GitHubFetcher fetcher = GitHubFetcher.using(Utils.getToken())) {
 			final RepositoryCoordinates coord = RepositoryCoordinates.from("this-user-does-not-exist-dfqfaglmkj45858",
@@ -47,15 +45,19 @@ public class TestFetch {
 		try (GitHubFetcher fetcher = GitHubFetcher.using(Utils.getToken())) {
 			final Optional<RepositoryWithFiles> found = fetcher.getRepositoryWithFiles(coord, Paths.get("EE/"));
 			final RepositoryWithFiles repo = found.get();
-			assertEquals(repo.getFileNames().toString(), 7, repo.getFileNames().size());
+			assertEquals(7, repo.getContentFromFileNames().size());
 		}
 	}
 
-	@Test
+	/**
+	 * @Test Disabled because requires to find a recent file and not too much
+	 *       touched.
+	 */
 	public void testFindFileCreationExists() throws Exception {
-		final RepositoryCoordinates coord = RepositoryCoordinates.from("Raphaaal", "Java-L3-Eck-Ex");
+		final RepositoryCoordinates coord = RepositoryCoordinates.from("tonyseg", "Rapport");
 		try (RawGitHubFetcher rawFetcher = RawGitHubFetcher.using(Utils.getToken())) {
-			final Optional<ObjectId> found = rawFetcher.getCreationSha(coord, Paths.get("EE34BreakLine.java"));
+			final Optional<ObjectId> found = rawFetcher.getCreationSha(coord,
+					Paths.get("Presentation_12_octobre_2018.pdf"));
 			final ObjectId sha = found.get();
 			LOGGER.info(sha.toString());
 			final Instant receivedTime = rawFetcher.getReceivedTime(coord, sha).get();
@@ -87,15 +89,14 @@ public class TestFetch {
 		}
 	}
 
-	@Test(expected = IllegalStateException.class)
+	@Test
 	public void testFindFileCreationExistsOld() throws Exception {
 		final RepositoryCoordinates coord = RepositoryCoordinates.from("oliviercailloux", "java-course");
 		try (RawGitHubFetcher rawFetcher = RawGitHubFetcher.using(Utils.getToken())) {
 			final Optional<ObjectId> found = rawFetcher.getCreationSha(coord, Paths.get("JSON.adoc"));
 			final ObjectId sha = found.get();
 			LOGGER.debug(sha.getName());
-			final Instant receivedTime = rawFetcher.getReceivedTime(coord, sha).get();
-			assertEquals(Instant.parse("2018-02-17T22:45:05Z"), receivedTime);
+			assertThrows(IllegalStateException.class, () -> rawFetcher.getReceivedTime(coord, sha).get());
 		}
 	}
 

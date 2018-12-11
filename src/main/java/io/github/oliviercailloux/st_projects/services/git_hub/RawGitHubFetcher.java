@@ -10,9 +10,11 @@ import java.net.URI;
 import java.net.URL;
 import java.nio.file.Path;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.BinaryOperator;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -48,6 +50,7 @@ import com.google.common.collect.MoreCollectors;
 import io.github.oliviercailloux.git_hub.RepositoryCoordinates;
 import io.github.oliviercailloux.git_hub.low.CommitGitHubDescription;
 import io.github.oliviercailloux.git_hub.low.Event;
+import io.github.oliviercailloux.git_hub.low.EventType;
 import io.github.oliviercailloux.git_hub.low.SearchResult;
 import io.github.oliviercailloux.git_hub.low.SearchResults;
 import io.github.oliviercailloux.st_projects.utils.JsonUtils;
@@ -60,6 +63,11 @@ public class RawGitHubFetcher implements AutoCloseable {
 	public static final MediaType GIT_HUB_MEDIA_TYPE = new MediaType("application", "vnd.github.v3+json");
 
 	public static final MediaType GIT_HUB_RAW_MEDIA_TYPE = new MediaType("application", "vnd.github.v3.raw");
+
+	/**
+	 * https://developer.github.com/v3/repos/commits/
+	 */
+	private static final String COMMITS_URI = "https://api.github.com/repos/{owner}/{repo}/commits";
 
 	/**
 	 * https://developer.github.com/v3/repos/commits/
@@ -103,6 +111,11 @@ public class RawGitHubFetcher implements AutoCloseable {
 	 */
 	private String token;
 
+	/**
+	 * https://developer.github.com/v3/repos/#list-organization-repositories
+	 */
+	private static final String LIST_ORG_REPOS = "https://api.github.com/orgs/{org}/repos";
+
 	private RawGitHubFetcher(String token) {
 		rateLimit = "";
 		rateReset = Instant.EPOCH;
@@ -140,20 +153,38 @@ public class RawGitHubFetcher implements AutoCloseable {
 		return getContent(target, JsonObject.class);
 	}
 
+	public List<CommitGitHubDescription> getCommitsGitHubDescriptions(RepositoryCoordinates repositoryCoordinates) {
+		return getCommitsGitHubDescriptions(repositoryCoordinates, false);
+	}
+
+	public List<CommitGitHubDescription> getCommitsGitHubDescriptions(RepositoryCoordinates repositoryCoordinates,
+			boolean truncate) {
+		final WebTarget target = client.target(COMMITS_URI).resolveTemplate("owner", repositoryCoordinates.getOwner())
+				.resolveTemplate("repo", repositoryCoordinates.getRepositoryName());
+		return getContentAsList(target, CommitGitHubDescription::from, truncate);
+	}
+
 	public List<CommitGitHubDescription> getCommitsGitHubDescriptions(RepositoryCoordinates repositoryCoordinates,
 			Path path) {
+		return getCommitsGitHubDescriptions(repositoryCoordinates, path, false);
+	}
+
+	public List<CommitGitHubDescription> getCommitsGitHubDescriptions(RepositoryCoordinates repositoryCoordinates,
+			Path path, boolean truncate) {
 		final WebTarget target = client.target(COMMITS_BY_PATH_URI)
 				.resolveTemplate("owner", repositoryCoordinates.getOwner())
 				.resolveTemplate("repo", repositoryCoordinates.getRepositoryName())
 				.resolveTemplate("path", path.toString());
-		return getContentAsList(target, CommitGitHubDescription::from);
+		return getContentAsList(target, CommitGitHubDescription::from, truncate);
 	}
 
 	public Optional<String> getContent(RepositoryCoordinates repositoryCoordinates, Path path) {
 		final WebTarget target = client.target(FILE_URI).resolveTemplate("owner", repositoryCoordinates.getOwner())
 				.resolveTemplate("repo", repositoryCoordinates.getRepositoryName())
 				.resolveTemplate("path", path.toString());
-		return getContent(target, String.class, GIT_HUB_RAW_MEDIA_TYPE);
+		return getContent(target, String.class, GIT_HUB_RAW_MEDIA_TYPE, Optional.of((v1, v2) -> {
+			throw new UnsupportedOperationException();
+		}));
 	}
 
 	public Optional<String> getContent(RepositoryCoordinates repositoryCoordinates, Path path, ObjectId sha) {
@@ -161,12 +192,18 @@ public class RawGitHubFetcher implements AutoCloseable {
 				.resolveTemplate("owner", repositoryCoordinates.getOwner())
 				.resolveTemplate("repo", repositoryCoordinates.getRepositoryName())
 				.resolveTemplate("path", path.toString()).resolveTemplate("sha", sha);
-		return getContent(target, String.class, GIT_HUB_RAW_MEDIA_TYPE);
+		return getContent(target, String.class, GIT_HUB_RAW_MEDIA_TYPE, Optional.of((v1, v2) -> {
+			throw new UnsupportedOperationException();
+		}));
 	}
 
-	public Optional<ObjectId> getCreationSha(RepositoryCoordinates repositoryCoordinates, Path path) {
-		final List<CommitGitHubDescription> descriptions = getCommitsGitHubDescriptions(repositoryCoordinates, path);
-		return Utils.getIf(!descriptions.isEmpty(), () -> descriptions.get(descriptions.size() - 1).getSha());
+	public ImmutableList<RepositoryCoordinates> getRepositories(String org) {
+		return getRepositories(org, false);
+	}
+
+	public ImmutableList<RepositoryCoordinates> getRepositories(String org, boolean truncate) {
+		final WebTarget target = client.target(LIST_ORG_REPOS).resolveTemplate("org", org);
+		return getContentAsList(target, RepositoryCoordinates::from, truncate);
 	}
 
 	public Optional<Instant> getLastModification(RepositoryCoordinates repositoryCoordinates, Path path) {
@@ -181,22 +218,28 @@ public class RawGitHubFetcher implements AutoCloseable {
 	 *
 	 */
 	public Optional<Instant> getReceivedTime(RepositoryCoordinates repositoryCoordinates, ObjectId sha) {
-		final WebTarget target = client.target(EVENTS_URI).resolveTemplate("owner", repositoryCoordinates.getOwner())
-				.resolveTemplate("repo", repositoryCoordinates.getRepositoryName());
-		final List<Event> events = getContentAsList(target, Event::from);
-		final Stream<Event> pushEvents = events.stream().filter((e) -> e.getPushPayload().isPresent());
-		final Stream<Event> pushEventsForLog = events.stream().filter((e) -> e.getPushPayload().isPresent());
-		LOGGER.debug("All (searching for {}): {}.", sha, pushEventsForLog
-				.<String>map((e) -> JsonUtils.asPrettyString(e.getJson())).collect(Collectors.joining(", ")));
-		final Stream<Event> matchingEvents = pushEvents
+		final ImmutableList<Event> pushEvents = getPushEvents(repositoryCoordinates);
+		LOGGER.info("Push events: {}.", pushEvents);
+		final Stream<Event> matchingEvents = pushEvents.stream()
 				.filter((e) -> e.getPushPayload().get().getCommits().stream().anyMatch((c) -> {
-					LOGGER.debug("Comparing {} to {}.", c.getSha(), sha);
+					LOGGER.info("Comparing {} to {}.", c.getSha(), sha);
 					return c.getSha().equals(sha);
 				}));
 		final Optional<Event> matchingEvent = matchingEvents.collect(MoreCollectors.toOptional());
 		LOGGER.debug("Matching: {}.",
 				JsonUtils.asPrettyString(matchingEvent.<JsonValue>map(Event::getJson).orElse(JsonValue.NULL)));
 		return matchingEvent.map(Event::getCreatedAt);
+	}
+
+	public ImmutableList<Event> getStartEvent(RepositoryCoordinates repositoryCoordinates) {
+		final WebTarget target = client.target(EVENTS_URI).resolveTemplate("owner", repositoryCoordinates.getOwner())
+				.resolveTemplate("repo", repositoryCoordinates.getRepositoryName());
+		final List<Event> events = getContentAsList(target, Event::from, false);
+		final ImmutableList<Event> startEvents = events.stream()
+				.filter((e) -> e.getType().equals(EventType.CREATE_EVENT)).collect(ImmutableList.toImmutableList());
+		LOGGER.info("All: {}.", startEvents.stream().<String>map((e) -> JsonUtils.asPrettyString(e.getJson()))
+				.collect(Collectors.joining(", ")));
+		return startEvents;
 	}
 
 	public void logRepositoryEvents(RepositoryCoordinates repositoryCoordinates) {
@@ -251,46 +294,86 @@ public class RawGitHubFetcher implements AutoCloseable {
 	}
 
 	private <T extends JsonValue> Optional<T> getContent(WebTarget target, Class<T> c) {
-		return getContent(target, c, GIT_HUB_MEDIA_TYPE);
+		return getContent(target, c, GIT_HUB_MEDIA_TYPE, Optional.of((v1, v2) -> {
+			throw new UnsupportedOperationException();
+		}));
 	}
 
-	private <T> Optional<T> getContent(WebTarget target, Class<T> c, MediaType type) {
+	private Optional<JsonArray> getContentArray(WebTarget target, boolean truncate) {
+		final Optional<BinaryOperator<JsonArray>> accumulator;
+		if (truncate) {
+			accumulator = Optional.empty();
+		} else {
+			accumulator = Optional
+					.of((v1, v2) -> JsonUtils.addAllTo(JsonUtils.addAllTo(Json.createArrayBuilder(), v1), v2).build());
+		}
+		return getContent(target, JsonArray.class, GIT_HUB_MEDIA_TYPE, accumulator);
+	}
+
+	private <T> Optional<T> getContent(WebTarget target, Class<T> c, MediaType type,
+			Optional<BinaryOperator<T>> accumulator) {
+		requireNonNull(target);
 		if (JsonValue.class.isAssignableFrom(c)) {
 			checkArgument(type.equals(GIT_HUB_MEDIA_TYPE));
 		}
 		LOGGER.debug(target.toString());
-		final Builder request = target.request(type);
-		if (token.length() >= 1) {
-			request.header(HttpHeaders.AUTHORIZATION, String.format("token %s", token));
-		}
+		WebTarget currentTarget = target;
+		final List<T> contents = new ArrayList<>();
+		while (currentTarget != null) {
+			final Builder request = currentTarget.request(type);
+			if (token.length() >= 1) {
+				request.header(HttpHeaders.AUTHORIZATION, String.format("token %s", token));
+			}
 
-		try (Response response = request.get()) {
-			readRates(response);
-			final ImmutableMap<String, URI> links = readLinks(response);
-			checkState(!links.containsKey("next"), "Unsupported request: is paginated.");
-			final T content = response.readEntity(c);
-			final String contentStr;
-			if (JsonValue.class.isAssignableFrom(c)) {
-				final JsonValue contentAsJson = JsonValue.class.cast(content);
-				contentStr = JsonUtils.asPrettyString(contentAsJson);
-			} else {
-				contentStr = content.toString();
+			final WebTarget nextTarget;
+			try (Response response = request.get()) {
+				readRates(response);
+				final ImmutableMap<String, URI> links = readLinks(response);
+
+				if (accumulator.isPresent() && links.containsKey("next")) {
+					final URI next = links.get("next");
+					LOGGER.info("Next: {}.", next);
+					nextTarget = client.target(next);
+				} else {
+					nextTarget = null;
+				}
+
+				final T content = response.readEntity(c);
+
+				final String contentStr;
+				if (content instanceof JsonValue) {
+					final JsonValue contentAsJson = (JsonValue) content;
+					contentStr = JsonUtils.asPrettyString(contentAsJson);
+				} else {
+					contentStr = content.toString();
+				}
+				LOGGER.debug("Got: {}.", contentStr);
+
+				if (response.getStatus() == HttpServletResponse.SC_NOT_FOUND) {
+					assert nextTarget == null;
+					assert currentTarget.equals(target);
+					return Optional.empty();
+				} else if (response.getStatus() != HttpServletResponse.SC_OK) {
+					throw new WebApplicationException(response);
+				}
+				contents.add(content);
 			}
-			LOGGER.debug("Got: {}.", contentStr);
-			if (response.getStatus() == HttpServletResponse.SC_NOT_FOUND) {
-				return Optional.empty();
-			} else if (response.getStatus() != HttpServletResponse.SC_OK) {
-				throw new WebApplicationException(response);
-			}
-			return Optional.of(content);
+			currentTarget = nextTarget;
 		}
+		if (contents.size() == 1) {
+			return Optional.of(contents.get(0));
+		}
+		LOGGER.info("Size: {}.", contents.size());
+		assert accumulator.isPresent();
+		return contents.stream().reduce(accumulator.get());
 	}
 
-	private <T> List<T> getContentAsList(WebTarget target, Function<JsonObject, ? extends T> jsonDeser) {
-		final Optional<JsonArray> respOpt = getContent(target, JsonArray.class);
+	private <T> ImmutableList<T> getContentAsList(WebTarget target, Function<JsonObject, ? extends T> jsonDeser,
+			boolean truncate) {
+		final Optional<JsonArray> respOpt = getContentArray(target, truncate);
 		final Function<JsonArray, Stream<JsonObject>> arrayToObjects = (a) -> a.stream().map(JsonValue::asJsonObject);
 		final Stream<JsonObject> objects = respOpt.map(arrayToObjects).orElse(Stream.empty());
-		return objects.map(jsonDeser).collect(Collectors.toList());
+		return objects.map(jsonDeser).collect(ImmutableList.toImmutableList());
 	}
 
 	private ImmutableMap<String, URI> readLinks(Response response) {
@@ -326,5 +409,27 @@ public class RawGitHubFetcher implements AutoCloseable {
 			return respOpt.get().getItems();
 		}
 		return ImmutableList.of();
+	}
+
+	public Optional<ObjectId> getCreationSha(RepositoryCoordinates repositoryCoordinates, Path path) {
+		final List<CommitGitHubDescription> descriptions = getCommitsGitHubDescriptions(repositoryCoordinates, path);
+		return Utils.getIf(!descriptions.isEmpty(), () -> descriptions.get(descriptions.size() - 1).getSha());
+	}
+
+	public ImmutableList<Event> getPushEvents(RepositoryCoordinates repositoryCoordinates) {
+		final ImmutableList<Event> events = getEvents(repositoryCoordinates);
+		final ImmutableList<Event> pushEvents = events.stream().filter((e) -> e.getPushPayload().isPresent())
+				.collect(ImmutableList.toImmutableList());
+		LOGGER.debug("All: {}.", pushEvents.stream().<String>map((e) -> JsonUtils.asPrettyString(e.getJson()))
+				.collect(Collectors.joining(", ")));
+		return pushEvents;
+	}
+
+	public ImmutableList<Event> getEvents(RepositoryCoordinates repositoryCoordinates) {
+		final WebTarget target = client.target(EVENTS_URI).resolveTemplate("owner", repositoryCoordinates.getOwner())
+				.resolveTemplate("repo", repositoryCoordinates.getRepositoryName());
+		final ImmutableList<Event> events = getContentAsList(target, Event::from, false);
+		LOGGER.debug("Events: {}.", events);
+		return events;
 	}
 }

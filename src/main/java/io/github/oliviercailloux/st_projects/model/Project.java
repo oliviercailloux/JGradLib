@@ -3,6 +3,7 @@ package io.github.oliviercailloux.st_projects.model;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
+import java.net.URL;
 import java.time.Instant;
 import java.util.List;
 
@@ -17,13 +18,15 @@ import org.slf4j.LoggerFactory;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 
+import io.github.oliviercailloux.st_projects.utils.Utils;
+
 /**
  * Immutable.
  *
  * @author Olivier Cailloux
  *
  */
-@JsonbPropertyOrder({ "name", "gitHubName", "functionalities", "lastModification", "queried" })
+@JsonbPropertyOrder({ "name", "gitHubName", "URL", "functionalities", "lastModification", "queried" })
 public class Project {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(Project.class);
@@ -33,7 +36,7 @@ public class Project {
 	 * memory (e.g. for a test).
 	 */
 	public static Project from(String name) {
-		return new Project(name, ImmutableList.of(), Instant.now(), Instant.now());
+		return new Project(name, Utils.EXAMPLE_URL, ImmutableList.of(), Instant.now(), Instant.now());
 	}
 
 	/**
@@ -41,16 +44,25 @@ public class Project {
 	 * memory (e.g. for a test).
 	 */
 	public static Project from(String name, List<Functionality> functionalities) {
-		return new Project(name, functionalities, Instant.now(), Instant.now());
+		return new Project(name, Utils.EXAMPLE_URL, functionalities, Instant.now(), Instant.now());
 	}
 
 	public static Project from(String name, List<Functionality> functionalities, Instant lastModification) {
-		return new Project(name, functionalities, lastModification, Instant.now());
+		return new Project(name, Utils.EXAMPLE_URL, functionalities, lastModification, Instant.now());
 	}
 
 	public static Project from(String name, List<Functionality> functionalities, Instant lastModification,
 			Instant queried) {
-		return new Project(name, functionalities, lastModification, queried);
+		/**
+		 * TODO remove all the constructors that have no URLs, which really should not
+		 * exist, I suppose.
+		 */
+		return new Project(name, Utils.EXAMPLE_URL, functionalities, lastModification, queried);
+	}
+
+	public static Project from(String name, URL url, List<Functionality> functionalities, Instant lastModification,
+			Instant queried) {
+		return new Project(name, url, functionalities, lastModification, queried);
 	}
 
 	/**
@@ -67,8 +79,14 @@ public class Project {
 
 	private final Instant queried;
 
-	private Project(String name, Iterable<Functionality> functionalities, Instant lastModification, Instant queried) {
+	private URL url;
+
+	private Project(String name, URL url, Iterable<Functionality> functionalities, Instant lastModification,
+			Instant queried) {
 		this.name = requireNonNull(name);
+		this.url = requireNonNull(url);
+		/** Just to check for conformance. */
+		Utils.toURI(url);
 		checkArgument(!name.isEmpty());
 		this.functionalities = ImmutableList.copyOf(requireNonNull(functionalities));
 		this.queried = requireNonNull(queried);
@@ -111,9 +129,16 @@ public class Project {
 		return queried;
 	}
 
+	/**
+	 * @return {@link Utils#EXAMPLE_URL} if the url is not set.
+	 */
+	public URL getURL() {
+		return url;
+	}
+
 	@Override
 	public String toString() {
-		return MoreObjects.toStringHelper(this).addValue(name).addValue(functionalities).toString();
+		return MoreObjects.toStringHelper(this).addValue(name).toString();
 	}
 
 }

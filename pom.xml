@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>io.github.oliviercailloux</groupId>
@@ -13,6 +14,30 @@
 		<maven.compiler.target>1.8</maven.compiler.target>
 		<failOnMissingWebXml>false</failOnMissingWebXml>
 	</properties>
+
+	<build>
+		<finalName>st-projects</finalName>
+		<!-- <plugins> -->
+		<!-- <plugin> -->
+		<!-- <groupId>org.apache.maven.plugins</groupId> -->
+		<!-- <artifactId>maven-war-plugin</artifactId> -->
+		<!-- <version>2.4</version> -->
+		<!-- <configuration> -->
+		<!-- <archive> -->
+		<!-- <manifestEntries> -->
+		<!-- <Dependencies>org.asciidoctor</Dependencies> -->
+		<!-- </manifestEntries> -->
+		<!-- </archive> -->
+		<!-- </configuration> -->
+		<!-- </plugin> -->
+		<!-- </plugins> -->
+		<plugins>
+			<plugin>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<version>2.22.0</version>
+			</plugin>
+		</plugins>
+	</build>
 
 	<profiles>
 		<profile>
@@ -56,6 +81,12 @@
 					<artifactId>jaxrs-ri</artifactId>
 					<version>2.26</version>
 					<scope>runtime</scope>
+					<exclusions>
+						<exclusion>
+							<groupId>org.eclipse</groupId>
+							<artifactId>yasson</artifactId>
+						</exclusion>
+					</exclusions>
 				</dependency>
 			</dependencies>
 		</profile>
@@ -91,18 +122,37 @@
 					</dependency>
 				</dependencies>
 			</dependencyManagement>
-			<dependencies>
-				<dependency>
-					<groupId>org.slf4j</groupId>
-					<artifactId>slf4j-jdk14</artifactId>
-					<version>1.7.25</version>
-					<scope>runtime</scope>
-					<optional>true</optional>
-				</dependency>
-			</dependencies>
+			<!-- <dependencies> -->
+			<!-- <dependency> -->
+			<!-- <groupId>org.slf4j</groupId> -->
+			<!-- <artifactId>slf4j-jdk14</artifactId> -->
+			<!-- <version>1.7.25</version> -->
+			<!-- <scope>runtime</scope> -->
+			<!-- </dependency> -->
+			<!-- </dependencies> -->
 		</profile>
 	</profiles>
 	<dependencies>
+		<dependency>
+			<groupId>io.github.classgraph</groupId>
+			<artifactId>classgraph</artifactId>
+			<version>4.4.7</version>
+		</dependency>
+		<dependency>
+			<groupId>com.univocity</groupId>
+			<artifactId>univocity-parsers</artifactId>
+			<version>2.7.6</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.maven.shared</groupId>
+			<artifactId>maven-invoker</artifactId>
+			<version>3.0.1</version>
+		</dependency>
+		<dependency>
+			<groupId>javax</groupId>
+			<artifactId>javaee-api</artifactId>
+			<version>8.0</version>
+		</dependency>
 		<dependency>
 			<groupId>org.slf4j</groupId>
 			<artifactId>slf4j-api</artifactId>
@@ -111,7 +161,7 @@
 		<dependency>
 			<groupId>com.google.guava</groupId>
 			<artifactId>guava</artifactId>
-			<version>23.0</version>
+			<version>26.0-jre</version>
 		</dependency>
 		<dependency>
 			<groupId>com.diffplug.durian</groupId>
@@ -121,33 +171,27 @@
 		<dependency>
 			<groupId>org.asciidoctor</groupId>
 			<artifactId>asciidoctorj</artifactId>
-			<version>1.6.0-alpha.5</version>
+			<version>1.6.0-alpha.6</version>
+			<scope>provided</scope>
 		</dependency>
 		<dependency>
-			<groupId>javax.servlet</groupId>
-			<artifactId>javax.servlet-api</artifactId>
-			<version>3.1.0</version>
+			<groupId>org.jruby</groupId>
+			<artifactId>jruby-complete</artifactId>
+			<version>9.1.12.0</version>
 		</dependency>
-		<dependency>
-			<groupId>javax.ws.rs</groupId>
-			<artifactId>javax.ws.rs-api</artifactId>
-			<version>2.1</version>
-		</dependency>
-		<dependency>
-			<groupId>javax.json</groupId>
-			<artifactId>javax.json-api</artifactId>
-			<version>1.1</version>
-		</dependency>
+		<!-- Got transitively from jersey jaxrs bundle (but runtime scope?) -->
 		<dependency>
 			<groupId>javax.json.bind</groupId>
 			<artifactId>javax.json.bind-api</artifactId>
 			<version>1.0</version>
 		</dependency>
+		<!-- Should switch to 1.0.2 for avoiding bug with @jsontransient, but this 
+			creates other problems. -->
 		<dependency>
 			<groupId>org.eclipse</groupId>
 			<artifactId>yasson</artifactId>
-			<scope>runtime</scope>
 			<version>1.0</version>
+			<scope>runtime</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.apache.odftoolkit</groupId>
@@ -156,26 +200,31 @@
 		<dependency>
 			<groupId>org.eclipse.jgit</groupId>
 			<artifactId>org.eclipse.jgit</artifactId>
-			<version>4.8.0.201706111038-r</version>
+			<version>5.1.2.201810061102-r</version>
+			<exclusions>
+				<exclusion>
+					<!-- TODO Check whether this exclusion is required. -->
+					<groupId>org.apache.httpcomponents</groupId>
+					<artifactId>httpclient</artifactId>
+				</exclusion>
+			</exclusions>
 		</dependency>
-		<dependency>
-			<groupId>com.graphql-java</groupId>
-			<artifactId>graphql-java</artifactId>
-			<version>7.0</version>
-		</dependency>
+		<!-- <dependency> -->
+		<!-- <groupId>com.graphql-java</groupId> -->
+		<!-- <artifactId>graphql-java</artifactId> -->
+		<!-- <version>7.0</version> -->
+		<!-- </dependency> -->
+
+		<!-- <dependency> -->
+		<!-- <groupId>org.glassfish</groupId> -->
+		<!-- <artifactId>javax.json</artifactId> -->
+		<!-- <version>1.0.4</version> WRONG VER! -->
+		<!-- </dependency> -->
 
 		<dependency>
-			<groupId>org.glassfish</groupId>
-			<artifactId>javax.json</artifactId>
-			<version>1.1</version>
-			<scope>runtime</scope>
-		</dependency>
-
-
-		<dependency>
-			<groupId>junit</groupId>
-			<artifactId>junit</artifactId>
-			<version>4.12</version>
+			<groupId>org.junit.jupiter</groupId>
+			<artifactId>junit-jupiter-engine</artifactId>
+			<version>5.2.0</version>
 			<scope>test</scope>
 		</dependency>
 		<dependency>

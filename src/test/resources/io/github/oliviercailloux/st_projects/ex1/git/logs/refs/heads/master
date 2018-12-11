@@ -1,0 +1,6 @@
+0000000000000000000000000000000000000000 f382feaad2a10af934719d7dfa55e24e5f1869b8 Olivier Cailloux <olivier.cailloux@dauphine.fr> 1538291159 +0200	commit (initial): Hello
+f382feaad2a10af934719d7dfa55e24e5f1869b8 854d1b55b98aca007f4f3c650c6ae46e56bde226 Olivier Cailloux <olivier.cailloux@dauphine.fr> 1538294259 +0200	merge dev: Fast-forward
+854d1b55b98aca007f4f3c650c6ae46e56bde226 2fb18aae6c5b18dd15570f7d96ebf562ff6559da Olivier Cailloux <olivier.cailloux@dauphine.fr> 1538294309 +0200	commit (merge): Merge branch 'dev2'
+2fb18aae6c5b18dd15570f7d96ebf562ff6559da 3546335822e028e5d7e5c4272a9f1af549bd5243 Olivier Cailloux <olivier.cailloux@dauphine.fr> 1538294487 +0200	commit: My name
+3546335822e028e5d7e5c4272a9f1af549bd5243 720774d026d3515a05d428678f236ab41987040e Olivier Cailloux <olivier.cailloux@dauphine.fr> 1538295133 +0200	commit: newer
+720774d026d3515a05d428678f236ab41987040e 3193b5e1724dad94bd952297d62215310d351f33 Olivier Cailloux <olivier.cailloux@dauphine.fr> 1538295375 +0200	merge refs/remotes/origin/master: Merge made by the 'recursive' strategy.

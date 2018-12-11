@@ -1,5 +1,6 @@
 package io.github.oliviercailloux.st_projects.services.git_hub;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.nio.charset.StandardCharsets;
@@ -39,6 +40,8 @@ import io.github.oliviercailloux.st_projects.model.RepositoryWithIssuesWithHisto
 import io.github.oliviercailloux.st_projects.utils.JsonUtils;
 
 public class GitHubFetcher implements AutoCloseable {
+	public static final String GRAPHQL_ENDPOINT = "https://api.github.com/graphql";
+
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(GitHubFetcher.class);
 
@@ -49,9 +52,7 @@ public class GitHubFetcher implements AutoCloseable {
 		return new GitHubFetcher(token);
 	}
 
-	public final String GRAPHQL_ENDPOINT = "https://api.github.com/graphql";
-
-	private final Client client;
+	private Client client;
 
 	private final JsonBuilderFactory jsonBuilderFactory;
 
@@ -62,10 +63,11 @@ public class GitHubFetcher implements AutoCloseable {
 
 	private Instant rateReset;
 
-	private String token;
+	private final String token;
 
 	private GitHubFetcher(String token) {
 		this.token = requireNonNull(token);
+		checkArgument(token.length() >= 1, "Authorization token required for Graph QL GitHub API.");
 		rateLimit = "";
 		rateReset = null;
 		client = ClientBuilder.newClient();
@@ -77,7 +79,8 @@ public class GitHubFetcher implements AutoCloseable {
 		client.close();
 	}
 
-	public List<RepositoryWithIssuesWithHistory> find(Project project, Instant floorSearchDate) {
+	public List<RepositoryWithIssuesWithHistory> find(Project project, Instant floorSearchDate)
+			throws UnsupportedOperationException {
 		final JsonObject varsJson = jsonBuilderFactory.createObjectBuilder()
 				.add("queryString",
 						"\"" + project.getGitHubName() + "\"" + " in:name created:>=" + floorSearchDate.toString())
@@ -86,35 +89,41 @@ public class GitHubFetcher implements AutoCloseable {
 				varsJson);
 		final JsonObject searchRes = res.getJsonObject("search");
 		final int nb = searchRes.getInt("repositoryCount");
-		if (searchRes.getJsonObject("pageInfo").getBoolean("hasNextPage")) {
-			throw new UnsupportedOperationException("Too many results.");
-		}
 		final JsonArray edges = searchRes.getJsonArray("edges");
-		assert edges.size() == nb;
-		return edges.stream().map((v) -> v.asJsonObject().getJsonObject("node"))
-				.map(RepositoryWithIssuesWithHistory::from)
+		final List<RepositoryWithIssuesWithHistory> found = edges.stream()
+				.map((v) -> v.asJsonObject().getJsonObject("node")).map(RepositoryWithIssuesWithHistory::from)
+				.collect(Collectors.toList());
+		final List<RepositoryWithIssuesWithHistory> matching = found.stream()
 				.filter((r) -> r.getBare().getName().equals(project.getGitHubName())).collect(Collectors.toList());
+		if (searchRes.getJsonObject("pageInfo").getBoolean("hasNextPage")) {
+			throw new UnsupportedOperationException("Too many results (" + nb + "), partial list is: " + found + ".");
+		}
+		assert edges.size() == nb;
+		return matching;
 	}
 
 	public Optional<RepositoryWithIssuesWithHistory> getRepository(RepositoryCoordinates coordinates) {
 		final JsonObject varsJson = jsonBuilderFactory.createObjectBuilder()
 				.add("repositoryName", coordinates.getRepositoryName()).add("repositoryOwner", coordinates.getOwner())
 				.build();
+		/**
+		 * TODO check why queryOpt is used here (thereby masking errors) instead of
+		 * query.
+		 */
 		return queryOpt("repository", ImmutableList.of("repositoryWithIssuesWithHistory"), varsJson)
 				.map((d) -> d.getJsonObject("repository")).map(RepositoryWithIssuesWithHistory::from);
 	}
 
 	public Optional<RepositoryWithFiles> getRepositoryWithFiles(RepositoryCoordinates coordinates, Path path) {
+		LOGGER.info("Getting files from {}, {}.", coordinates, path);
 		final String pathString = Streams.stream(path.iterator()).map(Path::toString).collect(Collectors.joining("/"));
 		final JsonObject varsJson = jsonBuilderFactory.createObjectBuilder()
 				.add("repositoryName", coordinates.getRepositoryName()).add("repositoryOwner", coordinates.getOwner())
 				.add("ref", "master:" + pathString).build();
-		return queryOpt("filesAtRef", ImmutableList.of(), varsJson).map((d) -> d.getJsonObject("repository"))
-				.map((r) -> RepositoryWithFiles.from(r, path));
-	}
-
-	public void setToken(String token) {
-		this.token = requireNonNull(token);
+		final Optional<RepositoryWithFiles> repo = queryOpt("filesAtRef", ImmutableList.of(), varsJson)
+				.map((d) -> d.getJsonObject("repository")).map((r) -> RepositoryWithFiles.from(r, path));
+		LOGGER.info("Got: {}.", repo);
+		return repo;
 	}
 
 	private JsonObject query(String queryName, List<String> fragmentNames, JsonObject variables) {
@@ -165,7 +174,14 @@ public class GitHubFetcher implements AutoCloseable {
 		try (Response response = request.post(Entity.json(queryJson))) {
 			readRates(response);
 			if (response.getStatus() != HttpServletResponse.SC_OK) {
-				throw new WebApplicationException(response);
+				String message;
+				try {
+					ret = response.readEntity(JsonObject.class);
+					message = JsonUtils.asPrettyString(ret);
+				} catch (Exception masqued) {
+					message = "(and could not read entity: " + masqued.getMessage() + ")";
+				}
+				throw new WebApplicationException(message, response);
 			}
 			ret = response.readEntity(JsonObject.class);
 		}

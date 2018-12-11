@@ -33,12 +33,15 @@ fragment repositoryWithIssuesWithHistory on Repository {
 	    repository {
 	    	homepageUrl
 	    	name
-	    	owner
+			owner {
+			  login
+			  url
+			}
 	    }
 	    number
 	    createdAt
 	    closed
-	    timeline(first: 100) {
+	    timeline(first: 20) {
 	      totalCount
 	      pageInfo {
 	        hasNextPage

@@ -7,7 +7,10 @@ import java.util.Optional;
 
 import javax.json.JsonObject;
 
+import com.google.common.base.MoreObjects;
+
 import io.github.oliviercailloux.st_projects.services.git_hub.GitHubJsonParser;
+import io.github.oliviercailloux.st_projects.utils.JsonUtils;
 import io.github.oliviercailloux.st_projects.utils.Utils;
 
 /**
@@ -52,6 +55,11 @@ public class Event {
 
 	public EventType getType() {
 		return EventType.from(json.getString("type"));
+	}
+
+	@Override
+	public String toString() {
+		return MoreObjects.toStringHelper(this).addValue(JsonUtils.asPrettyString(json)).toString();
 	}
 
 }

@@ -1,0 +1,73 @@
+package io.github.oliviercailloux.st_projects.ex1;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.time.Instant;
+import java.util.EnumSet;
+import java.util.Optional;
+
+import org.eclipse.jgit.lib.AnyObjectId;
+import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.google.common.collect.ImmutableList;
+
+import io.github.oliviercailloux.git_hub.RepositoryCoordinates;
+import io.github.oliviercailloux.git_hub.low.Event;
+import io.github.oliviercailloux.st_projects.model.StudentOnGitHub;
+import io.github.oliviercailloux.st_projects.model.StudentOnMyCourse;
+import io.github.oliviercailloux.st_projects.services.git.Client;
+import io.github.oliviercailloux.st_projects.services.git_hub.RawGitHubFetcher;
+
+public class Ex1Test {
+	@Test
+	void testGrader() throws Exception {
+		final String path = this.getClass().getResource("git").toString();
+		/** For now we cheat and use a file-based access to the classpath. */
+		LOGGER.info("Using path: {}.", path);
+		final RepositoryCoordinates coordinates = Mockito.mock(RepositoryCoordinates.class);
+		Mockito.when(coordinates.getOwner()).thenReturn("oliviercailloux");
+		Mockito.when(coordinates.getRepositoryName()).thenReturn("sol-ex-1");
+		Mockito.when(coordinates.getSshURLString()).thenReturn(path);
+		final Ex1Grader grader = new Ex1Grader();
+		@SuppressWarnings("resource")
+		final RawGitHubFetcher fetcher = Mockito.mock(RawGitHubFetcher.class);
+		grader.setRawGitHubFetcherSupplier(() -> fetcher);
+		final Event lastEvent = Mockito.mock(Event.class);
+		Mockito.when(lastEvent.getCreatedAt()).thenReturn(Instant.now());
+		Mockito.when(fetcher.getEvents(coordinates)).thenReturn(ImmutableList.of(lastEvent));
+		grader.grade(coordinates,
+				StudentOnGitHub.with("ocaillou", StudentOnMyCourse.with(1, "Olivier", "Cailloux", "ocailloux")), true);
+		LOGGER.info("Evaluation: {}.", grader.getEvaluation());
+		LOGGER.info("Comments: {}.", grader.getComments());
+		/** Because: no deadline set. */
+		assertTrue(grader.getPass().contains(Ex1Criterion.ON_TIME));
+		assertEquals(EnumSet.range(Ex1Criterion.SUBMITTED_GITHUB_USER_NAME, Ex1Criterion.MERGE2_COMMIT),
+				grader.getPass());
+	}
+
+	@Test
+	void testClient() throws Exception {
+		final String path = this.getClass().getResource("git").toString();
+		/** For now we cheat and use a file-based access to the classpath. */
+		LOGGER.info("Using path: {}.", path);
+		final RepositoryCoordinates coordinates = Mockito.mock(RepositoryCoordinates.class);
+		Mockito.when(coordinates.getOwner()).thenReturn("oliviercailloux");
+		Mockito.when(coordinates.getRepositoryName()).thenReturn("sol-ex-1");
+		Mockito.when(coordinates.getSshURLString()).thenReturn(path);
+		final Client client = Client.about(coordinates);
+		client.update();
+		final String blob = client.fetchBlob("master", "bold.txt");
+		LOGGER.info("Blob: {}.", blob);
+		assertTrue(blob.startsWith("alternative approach"));
+		final Optional<AnyObjectId> dir = client.getBlobId("master", "src");
+		assertFalse(dir.isPresent());
+	}
+
+	@SuppressWarnings("unused")
+	private static final Logger LOGGER = LoggerFactory.getLogger(Ex1Test.class);
+}

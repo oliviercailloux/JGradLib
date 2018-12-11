@@ -76,7 +76,7 @@ public class ModelMocker {
 
 	public static Repository newRepository(URL url) {
 		final Repository mocked = Mockito.mock(Repository.class);
-		Mockito.when(mocked.getHtmlURL()).thenReturn(url);
+		Mockito.when(mocked.getURL()).thenReturn(url);
 		return mocked;
 	}
 

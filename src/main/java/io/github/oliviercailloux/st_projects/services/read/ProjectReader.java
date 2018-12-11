@@ -9,6 +9,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.time.Instant;
@@ -22,7 +23,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.io.CharStreams;
-import com.google.common.io.Files;
 
 import io.github.oliviercailloux.st_projects.model.Functionality;
 import io.github.oliviercailloux.st_projects.model.Project;
@@ -60,25 +60,21 @@ public class ProjectReader {
 		try (InputStreamReader source = new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8)) {
 			final Instant queried = Instant.now();
 			final Instant lastModified = Instant.ofEpochMilli(file.lastModified());
-			project = asProject(CharStreams.toString(requireNonNull(source)), file.getName(), lastModified, queried);
+			project = asProject(CharStreams.toString(requireNonNull(source)), file.toURI().toURL(), lastModified,
+					queried);
 		}
 		return project;
 	}
 
-	public Project asProject(String source, String originFileName, Instant lastModification, Instant queried)
-			throws IllegalFormat {
+	public Project asProject(String source, URL url, Instant lastModification, Instant queried) throws IllegalFormat {
 		requireNonNull(source);
-		final String baseName = Files.getNameWithoutExtension(requireNonNull(originFileName));
-		checkArgument(!baseName.isEmpty());
+		requireNonNull(url);
 		requireNonNull(lastModification);
 		checkState(functionalitiesReader != null);
 		functionalitiesReader.read(source);
 		final List<Functionality> functionalities = functionalitiesReader.getFunctionalities();
 		final String title = functionalitiesReader.getDoc().getAttribute("doctitle").toString();
-		final Project project = Project.from(title, functionalities, lastModification, queried);
-		if (!baseName.equals(title)) {
-			throw new IllegalFormat("Read title: " + title + ".");
-		}
+		final Project project = Project.from(title, url, functionalities, lastModification, queried);
 		return project;
 	}
 

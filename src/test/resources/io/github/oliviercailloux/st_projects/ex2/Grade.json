@@ -1,0 +1,21 @@
+{
+    "student": {
+        "gitHubUsername": "g",
+        "studentId": 1,
+        "myCourseUsername": "u",
+        "firstName": "f",
+        "lastName": "l"
+    },
+    "gradeValues": [
+        {
+            "criterion": "ENC",
+            "points": 1.0,
+            "comment": ""
+        },
+        {
+            "criterion": "ANNOT",
+            "points": 0.0,
+            "comment": ""
+        }
+    ]
+}

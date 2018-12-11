@@ -1,9 +1,14 @@
 package io.github.oliviercailloux.st_projects.services.spreadsheet;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
 import java.io.OutputStream;
 import java.net.URL;
 import java.text.NumberFormat;
 import java.time.Instant;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
+import java.util.GregorianCalendar;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
@@ -21,11 +26,11 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedSet;
-import com.google.common.collect.UnmodifiableIterator;
 
-import io.github.oliviercailloux.git_hub.graph_ql.IssueSnapshot;
+import io.github.oliviercailloux.git_hub.graph_ql.Repository;
 import io.github.oliviercailloux.git_hub.graph_ql.User;
 import io.github.oliviercailloux.st_projects.model.Functionality;
+import io.github.oliviercailloux.st_projects.model.GradedProject;
 import io.github.oliviercailloux.st_projects.model.IssueWithHistory;
 import io.github.oliviercailloux.st_projects.model.Project;
 import io.github.oliviercailloux.st_projects.model.RepositoryWithIssuesWithHistory;
@@ -90,7 +95,7 @@ public class SpreadsheetWriter {
 		this.wide = wide;
 	}
 
-	public void write(List<Project> projects, Map<Project, RepositoryWithIssuesWithHistory> ghProjects)
+	public void write(Iterable<Project> projects, Map<Project, RepositoryWithIssuesWithHistory> ghProjects)
 			throws SpreadsheetException {
 		try (SpreadsheetDocument doc = SpreadsheetDocument.newSpreadsheetDocument()) {
 			sheet = doc.getSheetByIndex(0);
@@ -102,7 +107,7 @@ public class SpreadsheetWriter {
 					writeProject(project, Utils.getOptionally(ghProjects, project));
 					sheet.getColumnByIndex(curCol + 2).setWidth(10);
 					curRow = 0;
-					curCol += 4;
+					curCol += 9;
 				}
 				for (curRow = 2; curRow < sheet.getRowCount(); ++curRow) {
 					sheet.getRowByIndex(curRow).setHeight(10, false);
@@ -173,51 +178,17 @@ public class SpreadsheetWriter {
 		} else {
 			diffColLabel = "Difficulty";
 		}
-		writeInRow("Issue", "Description", diffColLabel, "Ass @ done");
-		curCol -= 4;
+		writeInRow("Issue", "Description", diffColLabel, "Ass @ done", "Done", "Date grade", "Comments", "Diff acc",
+				"Raw grade", "Final grade");
+		curCol -= 10;
 	}
 
-	private void writeFct(Functionality fct, boolean firstFct, Optional<RepositoryWithIssuesWithHistory> ghProject) {
+	private void writeFct(Functionality fct, boolean firstFct, GradedProject project) {
 		final String fctName = fct.getName();
-		final ImmutableSortedSet<IssueWithHistory> issues;
-		final boolean usedOriginalNames;
-		{
-			final ImmutableSortedSet<IssueWithHistory> issuesAmongOriginalNames = ghProject
-					.map((p) -> p.getIssuesOriginallyNamed(fctName)).orElseGet(ImmutableSortedSet::of);
-			if (!issuesAmongOriginalNames.isEmpty()) {
-				issues = issuesAmongOriginalNames;
-				usedOriginalNames = true;
-			} else {
-				final ImmutableSortedSet<IssueWithHistory> issuesAmongAllNames = ghProject
-						.map((p) -> p.getIssuesNamed(fctName)).orElseGet(ImmutableSortedSet::of);
-				issues = issuesAmongAllNames;
-				usedOriginalNames = false;
-			}
-		}
-		final Cell cellFctName = sheet.getCellByPosition(curCol, curRow);
+		final ImmutableSortedSet<IssueWithHistory> issues = project.getIssuesCorrespondingTo(fct);
 		if (issues.isEmpty()) {
+			final Cell cellFctName = sheet.getCellByPosition(curCol, curRow);
 			cellFctName.setStringValue(fctName);
-		} else {
-			final UnmodifiableIterator<IssueWithHistory> issuesIt = issues.iterator();
-			final IssueWithHistory main = issuesIt.next();
-			final URL issueUrl = main.getBare().getHtmlURL();
-			final Paragraph fctPar = cellFctName.addParagraph("");
-			fctPar.appendHyperlink(fctName, Utils.toURI(issueUrl));
-			if (issuesIt.hasNext()) {
-				fctPar.appendTextContent(" (");
-				int i = 2;
-				while (issuesIt.hasNext()) {
-					final IssueWithHistory dupl = issuesIt.next();
-					fctPar.appendHyperlink(String.valueOf(i), Utils.toURI(dupl.getBare().getHtmlURL()));
-					if (issuesIt.hasNext()) {
-						fctPar.appendTextContent(", ");
-					}
-				}
-				fctPar.appendTextContent(")");
-			}
-			if (!usedOriginalNames) {
-				fctPar.appendTextContent(" RENAMED");
-			}
 		}
 		++curCol;
 		final Cell cellDescr = sheet.getCellByPosition(curCol, curRow);
@@ -233,30 +204,55 @@ public class SpreadsheetWriter {
 			cellDiff.setFormula("=" + adr + "+" + numberFormatter.format(fct.getDifficulty()));
 		}
 
-		++curCol;
+		curCol -= 2;
+		if (!issues.isEmpty()) {
+			checkArgument(issues.iterator().next().getOriginalName().equals(fctName));
+		}
+		if (!issues.isEmpty()) {
+			/**
+			 * We need to cancel the first row increment: we start writing at the very
+			 * position we are at.
+			 */
+			--curRow;
+		}
+		for (IssueWithHistory issue : issues) {
+			++curRow;
+			final URL issueUrl = issue.getBare().getHtmlURL();
+			final Cell issueCell = sheet.getCellByPosition(curCol, curRow);
+			LOGGER.debug("Writing {} at row {}.", issue.getBare().getHtmlURL(), curRow);
+			issueCell.addParagraph("").appendHyperlink(issue.getOriginalName(), Utils.toURI(issueUrl));
 
-		final Cell cellAss = sheet.getCellByPosition(curCol, curRow);
+			final Set<User> assignees = issue.getFirstSnapshotDone().map((s) -> s.getAssignees())
+					.orElse(ImmutableSet.of());
 
-		final Optional<IssueSnapshot> issueDoneOpt = issues.isEmpty() ? Optional.empty()
-				: issues.iterator().next().getFirstSnapshotDone();
-		final Optional<Set<User>> assigneesOpt = issueDoneOpt.map((s) -> s.getAssignees());
-		final Set<User> assignees = assigneesOpt.orElse(ImmutableSet.of());
+			if (!assignees.isEmpty()) {
+				curCol += 3;
 
-		if (!assignees.isEmpty()) {
-			final Paragraph p = cellAss.addParagraph("");
-			final Iterator<User> assigneesIt = assignees.iterator();
-			if (assigneesIt.hasNext()) {
-				final User assignee = assigneesIt.next();
-				p.appendHyperlink(assignee.getLogin(), Utils.toURI(assignee.getHtmlURL()));
+				final Cell cellAss = sheet.getCellByPosition(curCol, curRow);
+				final Paragraph p = cellAss.addParagraph("");
+				final Iterator<User> assigneesIt = assignees.iterator();
+				{
+					final User assignee = assigneesIt.next();
+					p.appendHyperlink(assignee.getLogin(), Utils.toURI(assignee.getHtmlURL()));
+				}
+				while (assigneesIt.hasNext()) {
+					final User assignee = assigneesIt.next();
+					p.appendTextContent(", ", false);
+					p.appendHyperlink(assignee.getLogin(), Utils.toURI(assignee.getHtmlURL()));
+				}
+
+				curCol -= 3;
 			}
-			while (assigneesIt.hasNext()) {
-				final User assignee = assigneesIt.next();
-				p.appendTextContentNotCollapsed(", ");
-				p.appendHyperlink(assignee.getLogin(), Utils.toURI(assignee.getHtmlURL()));
+			final Optional<Instant> doneTime = issue.getFirstSnapshotDone().map((s) -> s.getBirthTime());
+			if (doneTime.isPresent()) {
+				curCol += 4;
+				final Cell cellDone = sheet.getCellByPosition(curCol, curRow);
+				final ZonedDateTime zonedDoneTime = ZonedDateTime.ofInstant(doneTime.get(), ZoneOffset.UTC);
+				cellDone.setDateTimeValue(GregorianCalendar.from(zonedDoneTime));
+				cellDone.setFormatString("d MMM yy");
+				curCol -= 4;
 			}
 		}
-
-		curCol -= 3;
 	}
 
 	private void writeInRow(String... strings) {
@@ -268,7 +264,9 @@ public class SpreadsheetWriter {
 	}
 
 	private void writeProject(Project project, Optional<RepositoryWithIssuesWithHistory> ghProject) {
-		writeProjectTitle(project, ghProject);
+		final GradedProject gradedProject = ghProject.isPresent() ? GradedProject.from(project, ghProject.get())
+				: GradedProject.from(project);
+		writeProjectTitle(gradedProject);
 
 		++curRow;
 		writeColumnHeaders();
@@ -278,24 +276,27 @@ public class SpreadsheetWriter {
 		final Iterator<Functionality> iterator = functionalities.iterator();
 		if (iterator.hasNext()) {
 			final Functionality fct = iterator.next();
-			writeFct(fct, true, ghProject);
+			writeFct(fct, true, gradedProject);
 			++curRow;
 		}
 		while (iterator.hasNext()) {
 			final Functionality fct = iterator.next();
-			writeFct(fct, false, ghProject);
+			writeFct(fct, false, gradedProject);
 			++curRow;
 		}
 	}
 
-	private void writeProjectTitle(Project project, Optional<RepositoryWithIssuesWithHistory> ghProject) {
-		/** TODO span the title over all columns. */
-		final Cell cellTitle = sheet.getCellByPosition(curCol, curRow);
-		if (ghProject.isPresent()) {
-			cellTitle.addParagraph("").appendHyperlink(project.getName(),
-					Utils.toURI(ghProject.get().getBare().getHtmlURL()));
-		} else {
-			cellTitle.setStringValue(project.getName());
+	private void writeProjectTitle(GradedProject project) {
+		{
+			final Cell cellTitle = sheet.getCellByPosition(curCol, curRow);
+			final Paragraph paragraph = cellTitle.addParagraph("");
+			paragraph.appendHyperlink(project.getName(), Utils.toURI(project.getProject().getURL()));
+		}
+		final Optional<Repository> bare = project.getBareRepository();
+		if (bare.isPresent()) {
+			final Cell cellRepo = sheet.getCellByPosition(curCol + 1, curRow);
+			final Paragraph paragraph = cellRepo.addParagraph("");
+			paragraph.appendHyperlink("repo", Utils.toURI(bare.get().getURL()));
 		}
 	}
 }

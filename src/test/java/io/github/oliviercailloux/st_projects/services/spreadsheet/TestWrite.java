@@ -1,14 +1,14 @@
 package io.github.oliviercailloux.st_projects.services.spreadsheet;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.math.BigDecimal;
 import java.util.List;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.odftoolkit.simple.SpreadsheetDocument;
 import org.odftoolkit.simple.table.Cell;
 import org.odftoolkit.simple.table.Table;
@@ -148,6 +148,7 @@ public class TestWrite {
 		functionalitiesBuilder.add(new Functionality("test1", "Descr test 1", BigDecimal.ONE));
 		functionalitiesBuilder.add(new Functionality("f2", "Descr f2", BigDecimal.ONE));
 		functionalitiesBuilder.add(new Functionality("test open", "Descr test open", BigDecimal.ONE));
+		functionalitiesBuilder.add(new Functionality("AFct", "Descr afct", BigDecimal.TEN));
 		final Project project = Project.from("testrel", functionalitiesBuilder.build());
 		final RepositoryCoordinates coords = RepositoryCoordinates.from("oliviercailloux", "testrel");
 		final RepositoryWithIssuesWithHistory ghProject;
@@ -165,8 +166,8 @@ public class TestWrite {
 		try (SpreadsheetDocument doc = SpreadsheetDocument.loadDocument(input)) {
 			assertEquals(1, doc.getTableList().size());
 			final Table sheet = Iterables.getOnlyElement(doc.getTableList());
-			assertEquals(5, sheet.getRowCount());
-			assertEquals(4, sheet.getColumnCount());
+			assertEquals(7, sheet.getRowCount());
+			assertEquals(9, sheet.getColumnCount());
 		}
 		save(written);
 	}
