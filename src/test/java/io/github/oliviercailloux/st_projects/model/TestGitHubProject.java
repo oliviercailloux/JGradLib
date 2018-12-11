@@ -20,8 +20,10 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.UnmodifiableIterator;
 
-import io.github.oliviercailloux.git_hub.RepositoryCoordinates;
-import io.github.oliviercailloux.st_projects.services.git_hub.GitHubFetcher;
+import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
+import io.github.oliviercailloux.git.git_hub.model.graph_ql.IssueWithHistory;
+import io.github.oliviercailloux.git.git_hub.model.graph_ql.RepositoryWithIssuesWithHistory;
+import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherQL;
 import io.github.oliviercailloux.st_projects.utils.JsonUtils;
 import io.github.oliviercailloux.st_projects.utils.Utils;
 
@@ -32,7 +34,7 @@ public class TestGitHubProject {
 
 	@Test
 	public void testGetRepo() throws Exception {
-		try (GitHubFetcher fetcher = GitHubFetcher.using(Utils.getToken())) {
+		try (GitHubFetcherQL fetcher = GitHubFetcherQL.using(Utils.getToken())) {
 			final RepositoryWithIssuesWithHistory repo = fetcher
 					.getRepository(RepositoryCoordinates.from("MAMERY-DOUMBIA", "Dauphine-Pole-Info")).get();
 			LOGGER.debug("Issues with history: {}.", repo.getIssues());
@@ -44,8 +46,8 @@ public class TestGitHubProject {
 	public void testGithubIssues() throws Exception {
 		final Project myProject = Project.from("Dauphine-Open-Data");
 		final List<RepositoryWithIssuesWithHistory> found;
-		try (GitHubFetcher fetcher = GitHubFetcher.using(Utils.getToken())) {
-			found = fetcher.find(myProject, Instant.EPOCH);
+		try (GitHubFetcherQL fetcher = GitHubFetcherQL.using(Utils.getToken())) {
+			found = fetcher.find(myProject.getGitHubName(), Instant.EPOCH);
 		}
 		assertTrue(found.size() >= 1);
 
@@ -60,7 +62,7 @@ public class TestGitHubProject {
 	@Test
 	public void testHomonymIssues() throws Exception {
 		final RepositoryWithIssuesWithHistory repo;
-		try (GitHubFetcher fetcher = GitHubFetcher.using(Utils.getToken())) {
+		try (GitHubFetcherQL fetcher = GitHubFetcherQL.using(Utils.getToken())) {
 			repo = fetcher.getRepository(RepositoryCoordinates.from("oliviercailloux", "testrel")).get();
 		}
 		final ImmutableSortedSet<IssueWithHistory> issues = repo.getIssuesCorrespondingTo("AFct");
@@ -77,7 +79,7 @@ public class TestGitHubProject {
 
 	@Test
 	public void testProject() throws Exception {
-		try (GitHubFetcher factory = GitHubFetcher.using(Utils.getToken())) {
+		try (GitHubFetcherQL factory = GitHubFetcherQL.using(Utils.getToken())) {
 			final RepositoryCoordinates coords = RepositoryCoordinates.from("oliviercailloux", "testrel");
 			final RepositoryWithIssuesWithHistory project = factory.getRepository(coords).get();
 			assertEquals(Utils.newURL("https://github.com/oliviercailloux/testrel/"), project.getBare().getURL());

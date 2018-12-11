@@ -9,9 +9,11 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableList.Builder;
 import com.google.common.collect.ImmutableSortedSet;
 
-import io.github.oliviercailloux.git_hub.graph_ql.IssueBare;
-import io.github.oliviercailloux.git_hub.graph_ql.Repository;
-import io.github.oliviercailloux.git_hub.graph_ql.User;
+import io.github.oliviercailloux.git.git_hub.model.graph_ql.IssueBare;
+import io.github.oliviercailloux.git.git_hub.model.graph_ql.IssueWithHistory;
+import io.github.oliviercailloux.git.git_hub.model.graph_ql.Repository;
+import io.github.oliviercailloux.git.git_hub.model.graph_ql.RepositoryWithIssuesWithHistory;
+import io.github.oliviercailloux.git.git_hub.model.graph_ql.User;
 import io.github.oliviercailloux.st_projects.utils.Utils;
 
 public class ModelMocker {

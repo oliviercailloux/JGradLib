@@ -38,19 +38,19 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
-import io.github.oliviercailloux.git_hub.RepositoryCoordinates;
-import io.github.oliviercailloux.git_hub.low.Event;
+import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
+import io.github.oliviercailloux.git.git_hub.model.v3.Event;
+import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherV3;
 import io.github.oliviercailloux.st_projects.model.StudentOnGitHub;
 import io.github.oliviercailloux.st_projects.services.git.Client;
 import io.github.oliviercailloux.st_projects.services.git.GitHistory;
-import io.github.oliviercailloux.st_projects.services.git_hub.RawGitHubFetcher;
 import io.github.oliviercailloux.st_projects.utils.Utils;
 
 public class Ex2Grader {
 	private StudentOnGitHub student;
 	private ImmutableMap.Builder<GradeCriterion, SingleGrade> gradesBuilder;
 	private Instant ignoreAfter;
-	private Supplier<RawGitHubFetcher> fetcherSupplier;
+	private Supplier<GitHubFetcherV3> fetcherSupplier;
 	private Client client;
 
 	public Ex2Grader() {
@@ -61,7 +61,7 @@ public class Ex2Grader {
 		ignoreAfter = Instant.MAX;
 		fetcherSupplier = () -> {
 			try {
-				return RawGitHubFetcher.using(Utils.getToken());
+				return GitHubFetcherV3.using(Utils.getToken());
 			} catch (IOException e) {
 				throw new IllegalStateException(e);
 			}
@@ -330,7 +330,7 @@ public class Ex2Grader {
 		this.ignoreAfter = requireNonNull(ignoreAfter);
 	}
 
-	void setRawGitHubFetcherSupplier(Supplier<RawGitHubFetcher> supplier) {
+	void setRawGitHubFetcherSupplier(Supplier<GitHubFetcherV3> supplier) {
 		fetcherSupplier = supplier;
 	}
 
@@ -347,7 +347,6 @@ public class Ex2Grader {
 				putGrade(SingleGrade.max(Ex2Criterion.REPO_EXISTS));
 			}
 		}
-		Event lastConsideredEvent;
 		if (client.hasCachedContent()) {
 			client.checkout("master");
 			getEvents();
@@ -358,68 +357,13 @@ public class Ex2Grader {
 			final ImmutableList<RevCommit> commitsOnTime = commits.stream()
 					.filter((c) -> !receivedAt.get(c.getId()).isAfter(ignoreAfter))
 					.collect(ImmutableList.toImmutableList());
+			LOGGER.info("Commits: {}; on time: {}.", commits, commitsOnTime);
 			checkState(Comparators.isInOrder(commitsOnTime,
 					Comparator.<RevCommit, Instant>comparing((c) -> receivedAt.get(c.getId())).reversed()));
-			final RevCommit lastCommitOnTime = commitsOnTime.get(commitsOnTime.size() - 1);
+			final RevCommit lastCommitOnTime = commitsOnTime.get(0);
 
-			final ImmutableList<Event> eventsNotIgnored = allEvents.stream()
-					.filter((e) -> e.getCreatedAt().compareTo(ignoreAfter) <= 0)
-					.collect(ImmutableList.toImmutableList());
-			/** FIXME Those events could be empty. */
-			checkState(eventsNotIgnored.size() >= 1);
-
-			final Optional<Event> lastConsideredPushEvent = eventsNotIgnored.stream()
-					.filter((e) -> e.getPushPayload().isPresent())
-					.filter((e) -> e.getPushPayload().get().getHead().isPresent()).findFirst();
-			/**
-			 * A push may have as only effect a move of head, so we need to consider head
-			 * and not the commits inside (otherwise we may miss a backwards head move and
-			 * stick to a commit that has been cancelled).
-			 */
-//					.filter((e) -> e.getPushPayload().get().getCommits().size() >= 1).findFirst();
-			if (!lastConsideredPushEvent.isPresent()) {
-				lastConsideredEvent = eventsNotIgnored.get(0);
-				LOGGER.debug("No push; considering as last: {}.", lastConsideredEvent);
-				LOGGER.debug("Events: {}.", allEvents);
-				final ObjectId id;
-				/**
-				 * Let’s try to take the just-too-late-event and use its commit before
-				 * (sometimes works).
-				 */
-				final Optional<Event> justTooLate = allEvents.stream()
-						.filter((e) -> e.getCreatedAt().compareTo(ignoreAfter) > 0).findFirst();
-				final Optional<Event> justTooLatePush = justTooLate.filter((e) -> e.getPushPayload().isPresent())
-						.filter((e) -> e.getPushPayload().get().getBefore().isPresent());
-				if (justTooLatePush.isPresent()) {
-					id = justTooLatePush.get().getPushPayload().get().getBefore().get();
-				} else {
-					/**
-					 * Let’s try to get the nodes from the graph, which should be ordered by time
-					 * (most recent first).
-					 */
-					final ImmutableList<RevCommit> listCommits = ImmutableList.copyOf(commits);
-					checkState(Comparators.isInOrder(listCommits,
-							Comparator.<RevCommit, Instant>comparing((c) -> client.getCreationTime(c)).reversed()));
-					final Optional<RevCommit> ceilingCommit = listCommits.stream()
-							.filter((c) -> client.getCreationTime(c).compareTo(ignoreAfter) <= 0).findFirst();
-					checkState(ceilingCommit.isPresent());
-					id = ceilingCommit.get().getId();
-//					final Set<RevCommit> firsts = history.getFirsts();
-//					checkState(firsts.size() == 1);
-//					id = firsts.stream().collect(MoreCollectors.onlyElement());
-				}
-				// FIXME should specify somewhere the commit that is used.
-				client.checkout(id.getName());
-			} else {
-				lastConsideredEvent = lastConsideredPushEvent.get();
-//				final List<PayloadCommitDescription> commits = lastConsideredEvent.getPushPayload().get().getCommits();
-//				final PayloadCommitDescription commit = commits.get(commits.size() - 1);
-//				final ObjectId sha = commit.getSha();
-				final ObjectId sha = lastConsideredEvent.getPushPayload().get().getHead().get();
-				LOGGER.info("Checking out {}.", sha);
-				client.checkout(sha.getName());
-			}
-			submitted = lastConsideredEvent.getCreatedAt();
+			client.checkout(lastCommitOnTime);
+			submitted = receivedAt.get(lastCommitOnTime);
 		}
 
 		return client.hasCachedContent();
@@ -468,7 +412,7 @@ public class Ex2Grader {
 	public List<Event> getEvents() {
 		// FIXME: two push events at the same second break the map.
 		checkState(client.hasCachedContent());
-		try (RawGitHubFetcher fetcher = fetcherSupplier.get()) {
+		try (GitHubFetcherV3 fetcher = fetcherSupplier.get()) {
 			allEvents = fetcher.getEvents(client.getCoordinates());
 //			eventsS = allEvents.stream().filter((e) -> e.getPushPayload().isPresent()).collect(
 //					ImmutableSortedMap.toImmutableSortedMap(Comparator.naturalOrder(), Event::getCreatedAt, (e) -> e));

@@ -8,10 +8,10 @@ import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.github.oliviercailloux.git_hub.RepositoryCoordinates;
+import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
+import io.github.oliviercailloux.git.git_hub.model.graph_ql.RepositoryWithIssuesWithHistory;
+import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherQL;
 import io.github.oliviercailloux.st_projects.model.Project;
-import io.github.oliviercailloux.st_projects.model.RepositoryWithIssuesWithHistory;
-import io.github.oliviercailloux.st_projects.services.git_hub.GitHubFetcher;
 import io.github.oliviercailloux.st_projects.utils.JsonUtils;
 import io.github.oliviercailloux.st_projects.utils.Utils;
 
@@ -23,7 +23,7 @@ public class TestProjectServlet {
 	public void testMix() throws Exception {
 		final Project myProject = Project.from("java-course");
 		final RepositoryWithIssuesWithHistory repository;
-		try (GitHubFetcher fetcher = GitHubFetcher.using(Utils.getToken())) {
+		try (GitHubFetcherQL fetcher = GitHubFetcherQL.using(Utils.getToken())) {
 			repository = fetcher.getRepository(RepositoryCoordinates.from("oliviercailloux", "java-course")).get();
 		}
 		final ProjectServlet srv = ProjectServlet.using(Asciidoctor.Factory.create(), Utils.getToken());

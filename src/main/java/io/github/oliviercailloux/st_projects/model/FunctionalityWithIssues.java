@@ -14,6 +14,7 @@ import java.util.stream.StreamSupport;
 import org.odftoolkit.simple.text.Paragraph;
 import org.odftoolkit.simple.text.ParagraphContainer;
 
+import io.github.oliviercailloux.git.git_hub.model.graph_ql.IssueWithHistory;
 import io.github.oliviercailloux.st_projects.utils.Utils;
 
 public class FunctionalityWithIssues {

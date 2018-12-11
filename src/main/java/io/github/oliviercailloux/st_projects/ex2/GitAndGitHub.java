@@ -24,10 +24,10 @@ import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.PeekingIterator;
 
-import io.github.oliviercailloux.git_hub.low.Event;
-import io.github.oliviercailloux.git_hub.low.EventType;
-import io.github.oliviercailloux.git_hub.low.PayloadCommitDescription;
-import io.github.oliviercailloux.git_hub.low.PushPayload;
+import io.github.oliviercailloux.git.git_hub.model.v3.Event;
+import io.github.oliviercailloux.git.git_hub.model.v3.EventType;
+import io.github.oliviercailloux.git.git_hub.model.v3.PayloadCommitDescription;
+import io.github.oliviercailloux.git.git_hub.model.v3.PushPayload;
 import io.github.oliviercailloux.st_projects.services.git.Client;
 
 public class GitAndGitHub {

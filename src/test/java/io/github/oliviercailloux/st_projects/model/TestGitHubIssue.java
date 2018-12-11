@@ -18,10 +18,12 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 
-import io.github.oliviercailloux.git_hub.RepositoryCoordinates;
-import io.github.oliviercailloux.git_hub.graph_ql.IssueSnapshot;
-import io.github.oliviercailloux.git_hub.graph_ql.User;
-import io.github.oliviercailloux.st_projects.services.git_hub.GitHubFetcher;
+import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
+import io.github.oliviercailloux.git.git_hub.model.graph_ql.IssueSnapshot;
+import io.github.oliviercailloux.git.git_hub.model.graph_ql.IssueWithHistory;
+import io.github.oliviercailloux.git.git_hub.model.graph_ql.RepositoryWithIssuesWithHistory;
+import io.github.oliviercailloux.git.git_hub.model.graph_ql.User;
+import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherQL;
 import io.github.oliviercailloux.st_projects.utils.Utils;
 
 public class TestGitHubIssue {
@@ -32,7 +34,7 @@ public class TestGitHubIssue {
 	@Test
 	public void testAssignees() throws Exception {
 		final RepositoryCoordinates coord = RepositoryCoordinates.from("badga", "Collaborative-exams");
-		try (GitHubFetcher factory = GitHubFetcher.using(Utils.getToken())) {
+		try (GitHubFetcherQL factory = GitHubFetcherQL.using(Utils.getToken())) {
 			final RepositoryWithIssuesWithHistory repo = factory.getRepository(coord).get();
 			final IssueWithHistory issue = repo.getIssuesNamed("Servlets").iterator().next();
 			assertEquals("Servlets", issue.getOriginalName());
@@ -48,7 +50,7 @@ public class TestGitHubIssue {
 
 	@Test
 	public void testDupl() throws Exception {
-		try (GitHubFetcher factory = GitHubFetcher.using(Utils.getToken())) {
+		try (GitHubFetcherQL factory = GitHubFetcherQL.using(Utils.getToken())) {
 			final RepositoryCoordinates coords = RepositoryCoordinates.from("benzait27", "Dauphine-Open-Data");
 			final RepositoryWithIssuesWithHistory ghProject = factory.getRepository(coords).get();
 			final IssueWithHistory issue = ghProject.getIssuesOriginallyNamed("Course").iterator().next();
@@ -59,7 +61,7 @@ public class TestGitHubIssue {
 	@Test
 	public void testHist() throws Exception {
 		final RepositoryCoordinates coord = RepositoryCoordinates.from("oliviercailloux", "testrel");
-		try (GitHubFetcher factory = GitHubFetcher.using(Utils.getToken())) {
+		try (GitHubFetcherQL factory = GitHubFetcherQL.using(Utils.getToken())) {
 			final RepositoryWithIssuesWithHistory repo = factory.getRepository(coord).get();
 			final IssueWithHistory issue = repo.getIssuesNamed("test1").iterator().next();
 			LOGGER.info("Issue: {}.", issue);
@@ -81,7 +83,7 @@ public class TestGitHubIssue {
 	@Test
 	public void testOpen() throws Exception {
 		final RepositoryCoordinates coord = RepositoryCoordinates.from("oliviercailloux", "testrel");
-		try (GitHubFetcher factory = GitHubFetcher.using(Utils.getToken())) {
+		try (GitHubFetcherQL factory = GitHubFetcherQL.using(Utils.getToken())) {
 			final RepositoryWithIssuesWithHistory repo = factory.getRepository(coord).get();
 			final IssueWithHistory issue = repo.getIssuesNamed("test open").iterator().next();
 			LOGGER.info("Issue: {}.", issue);

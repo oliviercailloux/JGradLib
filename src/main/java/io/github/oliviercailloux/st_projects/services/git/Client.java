@@ -45,7 +45,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
 
-import io.github.oliviercailloux.git_hub.RepositoryCoordinates;
+import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 
 public class Client {
 	public static Client aboutAndUsing(RepositoryCoordinates coordinates, Path path) {

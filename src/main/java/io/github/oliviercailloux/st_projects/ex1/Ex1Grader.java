@@ -64,12 +64,12 @@ import com.google.common.collect.MoreCollectors;
 import com.google.common.collect.Streams;
 import com.google.common.graph.Traverser;
 
-import io.github.oliviercailloux.git_hub.RepositoryCoordinates;
-import io.github.oliviercailloux.git_hub.low.Event;
+import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
+import io.github.oliviercailloux.git.git_hub.model.v3.Event;
+import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherV3;
 import io.github.oliviercailloux.st_projects.model.StudentOnGitHub;
 import io.github.oliviercailloux.st_projects.services.git.Client;
 import io.github.oliviercailloux.st_projects.services.git.GitHistory;
-import io.github.oliviercailloux.st_projects.services.git_hub.RawGitHubFetcher;
 import io.github.oliviercailloux.st_projects.utils.Utils;
 
 public class Ex1Grader {
@@ -93,7 +93,7 @@ public class Ex1Grader {
 
 	private final EnumMap<Ex1Criterion, String> comments;
 
-	private Supplier<RawGitHubFetcher> fetcherSupplier;
+	private Supplier<GitHubFetcherV3> fetcherSupplier;
 
 	public Ex1Grader() {
 		comments = new EnumMap<>(Ex1Criterion.class);
@@ -106,7 +106,7 @@ public class Ex1Grader {
 		deadline = Optional.empty();
 		fetcherSupplier = () -> {
 			try {
-				return RawGitHubFetcher.using(Utils.getToken());
+				return GitHubFetcherV3.using(Utils.getToken());
 			} catch (IOException e) {
 				throw new IllegalStateException(e);
 			}
@@ -513,7 +513,7 @@ public class Ex1Grader {
 
 	public Instant getLastEvent() {
 		final Instant createdAt;
-		try (RawGitHubFetcher fetcher = fetcherSupplier.get()) {
+		try (GitHubFetcherV3 fetcher = fetcherSupplier.get()) {
 			final ImmutableList<Event> events = fetcher.getEvents(coordinates);
 			final Event last = events.get(events.size() - 1);
 			LOGGER.debug("Last: {}.", last);
@@ -522,7 +522,7 @@ public class Ex1Grader {
 		return createdAt;
 	}
 
-	void setRawGitHubFetcherSupplier(Supplier<RawGitHubFetcher> supplier) {
+	void setRawGitHubFetcherSupplier(Supplier<GitHubFetcherV3> supplier) {
 		fetcherSupplier = supplier;
 	}
 
@@ -563,7 +563,7 @@ public class Ex1Grader {
 
 	public Instant getLastPushDate() {
 		final Instant createdAt;
-		try (RawGitHubFetcher fetcher = fetcherSupplier.get()) {
+		try (GitHubFetcherV3 fetcher = fetcherSupplier.get()) {
 			final ImmutableList<Event> pushEvents = fetcher.getPushEvents(coordinates);
 			final Event last = pushEvents.get(pushEvents.size() - 1);
 			createdAt = last.getCreatedAt();

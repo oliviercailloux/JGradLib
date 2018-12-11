@@ -37,18 +37,18 @@ import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Streams;
 
-import io.github.oliviercailloux.git_hub.RepositoryCoordinates;
-import io.github.oliviercailloux.git_hub.graph_ql.Repository;
-import io.github.oliviercailloux.git_hub.low.CommitGitHubDescription;
-import io.github.oliviercailloux.git_hub.low.SearchResult;
+import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
+import io.github.oliviercailloux.git.git_hub.model.graph_ql.IssueWithHistory;
+import io.github.oliviercailloux.git.git_hub.model.graph_ql.Repository;
+import io.github.oliviercailloux.git.git_hub.model.graph_ql.RepositoryWithIssuesWithHistory;
+import io.github.oliviercailloux.git.git_hub.model.v3.CommitGitHubDescription;
+import io.github.oliviercailloux.git.git_hub.model.v3.SearchResult;
+import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherQL;
+import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherV3;
 import io.github.oliviercailloux.st_projects.model.Functionality;
-import io.github.oliviercailloux.st_projects.model.IssueWithHistory;
 import io.github.oliviercailloux.st_projects.model.Project;
-import io.github.oliviercailloux.st_projects.model.RepositoryWithIssuesWithHistory;
+import io.github.oliviercailloux.st_projects.services.ProjectsMonitor;
 import io.github.oliviercailloux.st_projects.services.git.Client;
-import io.github.oliviercailloux.st_projects.services.git_hub.GitHubFetcher;
-import io.github.oliviercailloux.st_projects.services.git_hub.ProjectsMonitor;
-import io.github.oliviercailloux.st_projects.services.git_hub.RawGitHubFetcher;
 import io.github.oliviercailloux.st_projects.services.read.IllegalFormat;
 import io.github.oliviercailloux.st_projects.services.read.UsernamesReader;
 import io.github.oliviercailloux.st_projects.services.spreadsheet.SpreadsheetException;
@@ -100,8 +100,8 @@ public class App implements AutoCloseable {
 	public void reportL3Works(Writer output) throws IOException {
 		final Pattern packageRegex = Pattern.compile("^[ \\h]*package .*", Pattern.DOTALL | Pattern.MULTILINE);
 		final Pattern javadocRegex = Pattern.compile("^[ \\v\\h]*/\\*\\*.*", Pattern.DOTALL | Pattern.MULTILINE);
-		try (RawGitHubFetcher rawFetcher = RawGitHubFetcher.using(Utils.getToken());
-				GitHubFetcher fetcher = GitHubFetcher.using(Utils.getToken())) {
+		try (GitHubFetcherV3 rawFetcher = GitHubFetcherV3.using(Utils.getToken());
+				GitHubFetcherQL fetcher = GitHubFetcherQL.using(Utils.getToken())) {
 
 			final Map<Integer, String> idsToUsernames;
 			try (InputStream inputStream = Files.newInputStream(Paths.get("usernames.json"))) {
@@ -191,7 +191,7 @@ public class App implements AutoCloseable {
 	private void cache(Iterable<Project> projects) throws IOException {
 		Iterable<Project> nonCachedProjects = Streams.stream(projects)
 				.filter(Predicates.not(cachedProjects.keySet()::contains))::iterator;
-		try (GitHubFetcher finder = GitHubFetcher.using(Utils.getToken())) {
+		try (GitHubFetcherQL finder = GitHubFetcherQL.using(Utils.getToken())) {
 			for (Project project : nonCachedProjects) {
 				final List<RepositoryWithIssuesWithHistory> found = projectsMonitor.getRepositories(project);
 				LOGGER.info("Searching for {}, found {}.", project, found);

@@ -23,13 +23,13 @@ import com.google.common.collect.ImmutableList.Builder;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 
-import io.github.oliviercailloux.git_hub.RepositoryCoordinates;
-import io.github.oliviercailloux.git_hub.graph_ql.User;
+import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
+import io.github.oliviercailloux.git.git_hub.model.graph_ql.RepositoryWithIssuesWithHistory;
+import io.github.oliviercailloux.git.git_hub.model.graph_ql.User;
+import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherQL;
 import io.github.oliviercailloux.st_projects.model.Functionality;
 import io.github.oliviercailloux.st_projects.model.ModelMocker;
 import io.github.oliviercailloux.st_projects.model.Project;
-import io.github.oliviercailloux.st_projects.model.RepositoryWithIssuesWithHistory;
-import io.github.oliviercailloux.st_projects.services.git_hub.GitHubFetcher;
 import io.github.oliviercailloux.st_projects.utils.Utils;
 
 public class TestWrite {
@@ -152,7 +152,7 @@ public class TestWrite {
 		final Project project = Project.from("testrel", functionalitiesBuilder.build());
 		final RepositoryCoordinates coords = RepositoryCoordinates.from("oliviercailloux", "testrel");
 		final RepositoryWithIssuesWithHistory ghProject;
-		try (GitHubFetcher factory = GitHubFetcher.using(Utils.getToken())) {
+		try (GitHubFetcherQL factory = GitHubFetcherQL.using(Utils.getToken())) {
 			ghProject = factory.getRepository(coords).get();
 		}
 		final byte[] written;

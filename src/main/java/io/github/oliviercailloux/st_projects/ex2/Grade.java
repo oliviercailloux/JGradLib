@@ -35,7 +35,6 @@ public class Grade {
 			@JsonbProperty("gradeValues") Set<SingleGrade> grades) {
 		final Collector<SingleGrade, ?, ImmutableMap<GradeCriterion, SingleGrade>> toI = ImmutableMap
 				.toImmutableMap((g) -> g.getCriterion(), (g) -> g);
-		grades.stream().forEach((g) -> System.out.println(g));
 		final ImmutableMap<GradeCriterion, SingleGrade> im = grades.stream().collect(toI);
 		return new Grade(student, im);
 	}

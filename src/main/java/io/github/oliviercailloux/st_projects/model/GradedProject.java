@@ -9,7 +9,9 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableSortedSet;
 
-import io.github.oliviercailloux.git_hub.graph_ql.Repository;
+import io.github.oliviercailloux.git.git_hub.model.graph_ql.IssueWithHistory;
+import io.github.oliviercailloux.git.git_hub.model.graph_ql.Repository;
+import io.github.oliviercailloux.git.git_hub.model.graph_ql.RepositoryWithIssuesWithHistory;
 
 public class GradedProject {
 	@SuppressWarnings("unused")

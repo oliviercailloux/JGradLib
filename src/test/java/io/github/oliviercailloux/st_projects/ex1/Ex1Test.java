@@ -16,12 +16,12 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
 
-import io.github.oliviercailloux.git_hub.RepositoryCoordinates;
-import io.github.oliviercailloux.git_hub.low.Event;
+import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
+import io.github.oliviercailloux.git.git_hub.model.v3.Event;
+import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherV3;
 import io.github.oliviercailloux.st_projects.model.StudentOnGitHub;
 import io.github.oliviercailloux.st_projects.model.StudentOnMyCourse;
 import io.github.oliviercailloux.st_projects.services.git.Client;
-import io.github.oliviercailloux.st_projects.services.git_hub.RawGitHubFetcher;
 
 public class Ex1Test {
 	@Test
@@ -35,7 +35,7 @@ public class Ex1Test {
 		Mockito.when(coordinates.getSshURLString()).thenReturn(path);
 		final Ex1Grader grader = new Ex1Grader();
 		@SuppressWarnings("resource")
-		final RawGitHubFetcher fetcher = Mockito.mock(RawGitHubFetcher.class);
+		final GitHubFetcherV3 fetcher = Mockito.mock(GitHubFetcherV3.class);
 		grader.setRawGitHubFetcherSupplier(() -> fetcher);
 		final Event lastEvent = Mockito.mock(Event.class);
 		Mockito.when(lastEvent.getCreatedAt()).thenReturn(Instant.now());

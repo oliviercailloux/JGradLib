@@ -6,6 +6,7 @@ import org.asciidoctor.Asciidoctor;
 import org.junit.jupiter.api.Test;
 
 import io.github.oliviercailloux.st_projects.model.Project;
+import io.github.oliviercailloux.st_projects.services.ProjectsMonitor;
 import io.github.oliviercailloux.st_projects.utils.Utils;
 
 public class TestProjectsMonitor {

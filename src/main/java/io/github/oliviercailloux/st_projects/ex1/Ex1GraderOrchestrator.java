@@ -28,12 +28,12 @@ import com.google.common.collect.Streams;
 import com.univocity.parsers.csv.CsvWriter;
 import com.univocity.parsers.csv.CsvWriterSettings;
 
-import io.github.oliviercailloux.git_hub.RepositoryCoordinates;
+import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
+import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherV3;
 import io.github.oliviercailloux.mycourse.MyCourseCsvWriter;
 import io.github.oliviercailloux.st_projects.model.StudentOnGitHub;
 import io.github.oliviercailloux.st_projects.model.StudentOnGitHubKnown;
 import io.github.oliviercailloux.st_projects.model.StudentOnMyCourse;
-import io.github.oliviercailloux.st_projects.services.git_hub.RawGitHubFetcher;
 import io.github.oliviercailloux.st_projects.services.read.UsernamesReader;
 import io.github.oliviercailloux.st_projects.utils.Utils;
 
@@ -54,7 +54,7 @@ public class Ex1GraderOrchestrator {
 		}
 
 		final ImmutableList<RepositoryCoordinates> repositories;
-		try (RawGitHubFetcher fetcher = RawGitHubFetcher.using(Utils.getToken())) {
+		try (GitHubFetcherV3 fetcher = GitHubFetcherV3.using(Utils.getToken())) {
 			repositories = fetcher.getRepositories("oliviercailloux-org");
 		}
 		LOGGER.debug("Repos: {}.", repositories);
