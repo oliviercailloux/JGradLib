@@ -18,7 +18,7 @@ import org.slf4j.LoggerFactory;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 
-import io.github.oliviercailloux.st_projects.utils.Utils;
+import io.github.oliviercailloux.git.git_hub.utils.Utils;
 
 /**
  * Immutable.

@@ -10,7 +10,7 @@ import javax.json.JsonObject;
 import org.eclipse.jgit.lib.ObjectId;
 
 import io.github.oliviercailloux.git.git_hub.services.GitHubJsonParser;
-import io.github.oliviercailloux.st_projects.utils.Utils;
+import io.github.oliviercailloux.git.git_hub.utils.Utils;
 
 /**
  *

@@ -24,7 +24,7 @@ import io.github.oliviercailloux.git.git_hub.model.graph_ql.RepositoryWithIssues
 import io.github.oliviercailloux.git.git_hub.model.v3.SearchResult;
 import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherQL;
 import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherV3;
-import io.github.oliviercailloux.st_projects.utils.Utils;
+import io.github.oliviercailloux.git.git_hub.utils.Utils;
 
 public class TestFetch {
 

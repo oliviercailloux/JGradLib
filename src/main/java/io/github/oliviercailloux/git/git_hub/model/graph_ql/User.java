@@ -10,7 +10,7 @@ import javax.json.JsonObject;
 
 import com.google.common.base.MoreObjects;
 
-import io.github.oliviercailloux.st_projects.utils.Utils;
+import io.github.oliviercailloux.git.git_hub.utils.Utils;
 
 public class User {
 	public static User from(JsonObject json) {

@@ -1,4 +1,4 @@
-package io.github.oliviercailloux.st_projects.utils;
+package io.github.oliviercailloux.git.git_hub.utils;
 
 import static com.google.common.base.Preconditions.checkArgument;
 

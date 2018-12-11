@@ -8,7 +8,7 @@ import java.nio.file.Paths;
 
 import javax.json.JsonObject;
 
-import io.github.oliviercailloux.st_projects.utils.Utils;
+import io.github.oliviercailloux.git.git_hub.utils.Utils;
 
 /**
  *

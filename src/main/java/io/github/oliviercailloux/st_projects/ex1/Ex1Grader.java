@@ -67,10 +67,10 @@ import com.google.common.graph.Traverser;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.git.git_hub.model.v3.Event;
 import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherV3;
+import io.github.oliviercailloux.git.git_hub.utils.Utils;
 import io.github.oliviercailloux.st_projects.model.StudentOnGitHub;
 import io.github.oliviercailloux.st_projects.services.git.Client;
 import io.github.oliviercailloux.st_projects.services.git.GitHistory;
-import io.github.oliviercailloux.st_projects.utils.Utils;
 
 public class Ex1Grader {
 	@SuppressWarnings("unused")

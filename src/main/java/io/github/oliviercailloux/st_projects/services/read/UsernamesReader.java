@@ -16,9 +16,9 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableSet;
 
+import io.github.oliviercailloux.git.git_hub.utils.Utils;
 import io.github.oliviercailloux.st_projects.model.StudentOnGitHub;
 import io.github.oliviercailloux.st_projects.model.StudentOnMyCourse;
-import io.github.oliviercailloux.st_projects.utils.Utils;
 
 public class UsernamesReader {
 

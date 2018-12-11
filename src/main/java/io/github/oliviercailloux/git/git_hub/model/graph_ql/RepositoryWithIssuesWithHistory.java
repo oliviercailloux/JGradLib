@@ -23,10 +23,11 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSetMultimap;
 import com.google.common.collect.ImmutableSetMultimap.Builder;
-import com.google.common.collect.ImmutableSortedSet;
 
-import io.github.oliviercailloux.st_projects.utils.JsonUtils;
-import io.github.oliviercailloux.st_projects.utils.Utils;
+import io.github.oliviercailloux.git.git_hub.utils.JsonUtils;
+import io.github.oliviercailloux.git.git_hub.utils.Utils;
+
+import com.google.common.collect.ImmutableSortedSet;
 
 public class RepositoryWithIssuesWithHistory {
 	@SuppressWarnings("unused")

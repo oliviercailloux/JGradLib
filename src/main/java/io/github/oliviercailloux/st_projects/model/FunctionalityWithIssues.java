@@ -15,7 +15,7 @@ import org.odftoolkit.simple.text.Paragraph;
 import org.odftoolkit.simple.text.ParagraphContainer;
 
 import io.github.oliviercailloux.git.git_hub.model.graph_ql.IssueWithHistory;
-import io.github.oliviercailloux.st_projects.utils.Utils;
+import io.github.oliviercailloux.git.git_hub.utils.Utils;
 
 public class FunctionalityWithIssues {
 	public static FunctionalityWithIssues from(Functionality functionality, Set<IssueWithHistory> issues) {
