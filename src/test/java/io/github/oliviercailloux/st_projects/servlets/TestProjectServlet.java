@@ -12,7 +12,6 @@ import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.git.git_hub.model.graph_ql.RepositoryWithIssuesWithHistory;
 import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherQL;
 import io.github.oliviercailloux.git.git_hub.utils.JsonUtils;
-import io.github.oliviercailloux.git.git_hub.utils.Utils;
 import io.github.oliviercailloux.st_projects.model.Project;
 
 public class TestProjectServlet {
@@ -23,10 +22,12 @@ public class TestProjectServlet {
 	public void testMix() throws Exception {
 		final Project myProject = Project.from("java-course");
 		final RepositoryWithIssuesWithHistory repository;
-		try (GitHubFetcherQL fetcher = GitHubFetcherQL.using(Utils.getToken())) {
+		try (GitHubFetcherQL fetcher = GitHubFetcherQL
+				.using(io.github.oliviercailloux.git.git_hub.model.GitHubToken.getRealInstance())) {
 			repository = fetcher.getRepository(RepositoryCoordinates.from("oliviercailloux", "java-course")).get();
 		}
-		final ProjectServlet srv = ProjectServlet.using(Asciidoctor.Factory.create(), Utils.getToken());
+		final ProjectServlet srv = ProjectServlet.using(Asciidoctor.Factory.create(),
+				io.github.oliviercailloux.git.git_hub.model.GitHubToken.getRealInstance());
 		final JsonObject iss = srv.toJsonSummary(myProject, repository.getIssues().get(0));
 		LOGGER.debug("Summ: {}.", iss);
 		final JsonObject re = srv.toJsonSummary(myProject, repository);

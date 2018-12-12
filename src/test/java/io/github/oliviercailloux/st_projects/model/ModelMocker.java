@@ -1,7 +1,7 @@
 package io.github.oliviercailloux.st_projects.model;
 
 import java.math.BigDecimal;
-import java.net.URL;
+import java.net.URI;
 
 import org.mockito.Mockito;
 
@@ -19,7 +19,7 @@ import io.github.oliviercailloux.git.git_hub.utils.Utils;
 public class ModelMocker {
 
 	public static void addIssue(RepositoryWithIssuesWithHistory project, String title) {
-		final IssueWithHistory issue = ModelMocker.newGitHubIssue(title, Utils.EXAMPLE_URL);
+		final IssueWithHistory issue = ModelMocker.newGitHubIssue(title, Utils.EXAMPLE_URI);
 		Mockito.when(project.getIssuesOriginallyNamed(title)).thenReturn(ImmutableSortedSet.of(issue));
 	}
 
@@ -33,40 +33,40 @@ public class ModelMocker {
 	}
 
 	public static User newContributor(String name) {
-		return newContributor(name, Utils.EXAMPLE_URL);
+		return newContributor(name, Utils.EXAMPLE_URI);
 	}
 
-	public static User newContributor(String login, URL url) {
+	public static User newContributor(String login, URI url) {
 		final User c1 = Mockito.mock(User.class);
 		Mockito.when(c1.getLogin()).thenReturn(login);
-		Mockito.when(c1.getHtmlURL()).thenReturn(url);
+		Mockito.when(c1.getHtmlURI()).thenReturn(url);
 		return c1;
 	}
 
-	public static IssueWithHistory newGitHubIssue(String name, URL url) {
+	public static IssueWithHistory newGitHubIssue(String name, URI uri) {
 		final IssueWithHistory issue = Mockito.mock(IssueWithHistory.class);
 		Mockito.when(issue.getOriginalName()).thenReturn(name);
-		final IssueBare issueBare = newIssueBare(url);
+		final IssueBare issueBare = newIssueBare(uri);
 		Mockito.when(issue.getBare()).thenReturn(issueBare);
 		return issue;
 	}
 
 	public static RepositoryWithIssuesWithHistory newGitHubProject(String ownerName) {
 		final User owner = newContributor(ownerName);
-		return newGitHubProject(owner, Utils.EXAMPLE_URL);
+		return newGitHubProject(owner, Utils.EXAMPLE_URI);
 	}
 
-	public static RepositoryWithIssuesWithHistory newGitHubProject(User owner, URL url) {
+	public static RepositoryWithIssuesWithHistory newGitHubProject(User owner, URI uri) {
 		final RepositoryWithIssuesWithHistory ghp1 = Mockito.mock(RepositoryWithIssuesWithHistory.class);
-		final Repository mockedRepo = newRepository(url);
+		final Repository mockedRepo = newRepository(uri);
 		Mockito.when(ghp1.getBare()).thenReturn(mockedRepo);
 		Mockito.when(ghp1.getOwner()).thenReturn(owner);
 		return ghp1;
 	}
 
-	public static IssueBare newIssueBare(URL url) {
+	public static IssueBare newIssueBare(URI uri) {
 		final IssueBare mocked = Mockito.mock(IssueBare.class);
-		Mockito.when(mocked.getHtmlURL()).thenReturn(url);
+		Mockito.when(mocked.getHtmlURI()).thenReturn(uri);
 		return mocked;
 	}
 
@@ -76,9 +76,9 @@ public class ModelMocker {
 		return project;
 	}
 
-	public static Repository newRepository(URL url) {
+	public static Repository newRepository(URI uri) {
 		final Repository mocked = Mockito.mock(Repository.class);
-		Mockito.when(mocked.getURL()).thenReturn(url);
+		Mockito.when(mocked.getURI()).thenReturn(uri);
 		return mocked;
 	}
 

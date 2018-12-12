@@ -3,7 +3,7 @@ package io.github.oliviercailloux.st_projects.services.spreadsheet;
 import static com.google.common.base.Preconditions.checkArgument;
 
 import java.io.OutputStream;
-import java.net.URL;
+import java.net.URI;
 import java.text.NumberFormat;
 import java.time.Instant;
 import java.time.ZoneOffset;
@@ -31,7 +31,6 @@ import io.github.oliviercailloux.git.git_hub.model.graph_ql.IssueWithHistory;
 import io.github.oliviercailloux.git.git_hub.model.graph_ql.Repository;
 import io.github.oliviercailloux.git.git_hub.model.graph_ql.RepositoryWithIssuesWithHistory;
 import io.github.oliviercailloux.git.git_hub.model.graph_ql.User;
-import io.github.oliviercailloux.git.git_hub.utils.Utils;
 import io.github.oliviercailloux.st_projects.model.Functionality;
 import io.github.oliviercailloux.st_projects.model.GradedProject;
 import io.github.oliviercailloux.st_projects.model.Project;
@@ -104,7 +103,7 @@ public class SpreadsheetWriter {
 			curRow = 0;
 			if (wide) {
 				for (Project project : projects) {
-					writeProject(project, Utils.getOptionally(ghProjects, project));
+					writeProject(project, Optional.ofNullable(ghProjects.get(project)));
 					sheet.getColumnByIndex(curCol + 2).setWidth(10);
 					curRow = 0;
 					curCol += 9;
@@ -115,7 +114,7 @@ public class SpreadsheetWriter {
 			} else {
 				for (Project project : projects) {
 					final int startRow = curRow;
-					writeProject(project, Utils.getOptionally(ghProjects, project));
+					writeProject(project, Optional.ofNullable(ghProjects.get(project)));
 					final int lastRow = sheet.getRowCount() - 1;
 					for (curRow = startRow + 2; curRow <= lastRow; ++curRow) {
 						sheet.getRowByIndex(curRow).setHeight(10, false);
@@ -217,10 +216,10 @@ public class SpreadsheetWriter {
 		}
 		for (IssueWithHistory issue : issues) {
 			++curRow;
-			final URL issueUrl = issue.getBare().getHtmlURL();
+			final URI issueUri = issue.getBare().getHtmlURI();
 			final Cell issueCell = sheet.getCellByPosition(curCol, curRow);
-			LOGGER.debug("Writing {} at row {}.", issue.getBare().getHtmlURL(), curRow);
-			issueCell.addParagraph("").appendHyperlink(issue.getOriginalName(), Utils.toURI(issueUrl));
+			LOGGER.debug("Writing {} at row {}.", issueUri, curRow);
+			issueCell.addParagraph("").appendHyperlink(issue.getOriginalName(), issueUri);
 
 			final Set<User> assignees = issue.getFirstSnapshotDone().map((s) -> s.getAssignees())
 					.orElse(ImmutableSet.of());
@@ -233,12 +232,12 @@ public class SpreadsheetWriter {
 				final Iterator<User> assigneesIt = assignees.iterator();
 				{
 					final User assignee = assigneesIt.next();
-					p.appendHyperlink(assignee.getLogin(), Utils.toURI(assignee.getHtmlURL()));
+					p.appendHyperlink(assignee.getLogin(), assignee.getHtmlURI());
 				}
 				while (assigneesIt.hasNext()) {
 					final User assignee = assigneesIt.next();
 					p.appendTextContent(", ", false);
-					p.appendHyperlink(assignee.getLogin(), Utils.toURI(assignee.getHtmlURL()));
+					p.appendHyperlink(assignee.getLogin(), assignee.getHtmlURI());
 				}
 
 				curCol -= 3;
@@ -290,13 +289,13 @@ public class SpreadsheetWriter {
 		{
 			final Cell cellTitle = sheet.getCellByPosition(curCol, curRow);
 			final Paragraph paragraph = cellTitle.addParagraph("");
-			paragraph.appendHyperlink(project.getName(), Utils.toURI(project.getProject().getURL()));
+			paragraph.appendHyperlink(project.getName(), project.getProject().getURI());
 		}
 		final Optional<Repository> bare = project.getBareRepository();
 		if (bare.isPresent()) {
 			final Cell cellRepo = sheet.getCellByPosition(curCol + 1, curRow);
 			final Paragraph paragraph = cellRepo.addParagraph("");
-			paragraph.appendHyperlink("repo", Utils.toURI(bare.get().getURL()));
+			paragraph.appendHyperlink("repo", bare.get().getURI());
 		}
 	}
 }

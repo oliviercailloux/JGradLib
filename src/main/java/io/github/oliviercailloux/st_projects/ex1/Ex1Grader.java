@@ -64,10 +64,10 @@ import com.google.common.collect.MoreCollectors;
 import com.google.common.collect.Streams;
 import com.google.common.graph.Traverser;
 
+import io.github.oliviercailloux.git.git_hub.model.GitHubToken;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.git.git_hub.model.v3.Event;
 import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherV3;
-import io.github.oliviercailloux.git.git_hub.utils.Utils;
 import io.github.oliviercailloux.st_projects.model.StudentOnGitHub;
 import io.github.oliviercailloux.st_projects.services.git.Client;
 import io.github.oliviercailloux.st_projects.services.git.GitHistory;
@@ -106,7 +106,7 @@ public class Ex1Grader {
 		deadline = Optional.empty();
 		fetcherSupplier = () -> {
 			try {
-				return GitHubFetcherV3.using(Utils.getToken());
+				return GitHubFetcherV3.using(GitHubToken.getRealInstance());
 			} catch (IOException e) {
 				throw new IllegalStateException(e);
 			}

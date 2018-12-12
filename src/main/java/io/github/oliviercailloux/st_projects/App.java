@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.Writer;
+import java.net.URI;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -37,6 +38,7 @@ import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Streams;
 
+import io.github.oliviercailloux.git.git_hub.model.GitHubToken;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.git.git_hub.model.graph_ql.IssueWithHistory;
 import io.github.oliviercailloux.git.git_hub.model.graph_ql.Repository;
@@ -100,8 +102,8 @@ public class App implements AutoCloseable {
 	public void reportL3Works(Writer output) throws IOException {
 		final Pattern packageRegex = Pattern.compile("^[ \\h]*package .*", Pattern.DOTALL | Pattern.MULTILINE);
 		final Pattern javadocRegex = Pattern.compile("^[ \\v\\h]*/\\*\\*.*", Pattern.DOTALL | Pattern.MULTILINE);
-		try (GitHubFetcherV3 rawFetcher = GitHubFetcherV3.using(Utils.getToken());
-				GitHubFetcherQL fetcher = GitHubFetcherQL.using(Utils.getToken())) {
+		try (GitHubFetcherV3 rawFetcher = GitHubFetcherV3.using(GitHubToken.getRealInstance());
+				GitHubFetcherQL fetcher = GitHubFetcherQL.using(GitHubToken.getRealInstance())) {
 
 			final Map<Integer, String> idsToUsernames;
 			try (InputStream inputStream = Files.newInputStream(Paths.get("usernames.json"))) {
@@ -126,8 +128,8 @@ public class App implements AutoCloseable {
 					output.write("Project not found.\n");
 					continue;
 				}
-				final URL repoUrl = prjOpt.get().getBare().getURL();
-				output.write(repoUrl + "\n");
+				final URI repoUri = prjOpt.get().getBare().getURI();
+				output.write(repoUri + "\n");
 				final Stream<Path> paths = rawFetcher.searchForCode(coord, "class", "java").stream()
 						.map(SearchResult::getPath);
 				final Iterable<Path> pathsIt = paths::iterator;
@@ -144,7 +146,8 @@ public class App implements AutoCloseable {
 					final String matchingName = committerNames.stream().anyMatch((s) -> s.equals(username)) ? ""
 							: " WRONG-COMMITTER '" + committerNames.stream().collect(Collectors.joining(", ")) + "'";
 					final Path filePartialPath = Paths.get("blob", "master", path.toString());
-					final URL fileAbsPath = new URL(repoUrl, filePartialPath.toString());
+					final URI fileAbsPath = repoUri.resolve(filePartialPath.toUri());
+//					final URL fileAbsPath = new URL(repoUri, filePartialPath.toString());
 					final String late = (receivedTimeOpt.isPresent() && receivedTimeOpt.get().isAfter(deadline))
 							? "LATE "
 							: "";
@@ -191,7 +194,7 @@ public class App implements AutoCloseable {
 	private void cache(Iterable<Project> projects) throws IOException {
 		Iterable<Project> nonCachedProjects = Streams.stream(projects)
 				.filter(Predicates.not(cachedProjects.keySet()::contains))::iterator;
-		try (GitHubFetcherQL finder = GitHubFetcherQL.using(Utils.getToken())) {
+		try (GitHubFetcherQL finder = GitHubFetcherQL.using(GitHubToken.getRealInstance())) {
 			for (Project project : nonCachedProjects) {
 				final List<RepositoryWithIssuesWithHistory> found = projectsMonitor.getRepositories(project);
 				LOGGER.info("Searching for {}, found {}.", project, found);
@@ -231,6 +234,6 @@ public class App implements AutoCloseable {
 		LOGGER.info("Loading.");
 		final Asciidoctor asciidoctor = Asciidoctor.Factory.create();
 		LOGGER.info("Loaded.");
-		projectsMonitor = ProjectsMonitor.using(asciidoctor, Utils.getToken());
+		projectsMonitor = ProjectsMonitor.using(asciidoctor, GitHubToken.getRealInstance());
 	}
 }

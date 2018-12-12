@@ -5,7 +5,6 @@ import static java.util.Objects.requireNonNull;
 
 import java.io.StringReader;
 import java.net.URI;
-import java.net.URL;
 import java.time.Instant;
 
 import javax.json.Json;
@@ -77,8 +76,8 @@ public class Repository {
 		return json.getString("sshUrl");
 	}
 
-	public URL getURL() {
-		return Utils.newURL(json.getString("url") + "/");
+	public URI getURI() {
+		return URI.create(json.getString("url"));
 	}
 
 	public JsonObject toJsonSummary() {

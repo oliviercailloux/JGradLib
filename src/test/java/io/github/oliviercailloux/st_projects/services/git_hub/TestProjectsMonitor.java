@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import org.asciidoctor.Asciidoctor;
 import org.junit.jupiter.api.Test;
 
+import io.github.oliviercailloux.git.git_hub.model.GitHubToken;
 import io.github.oliviercailloux.git.git_hub.utils.Utils;
 import io.github.oliviercailloux.st_projects.model.Project;
 import io.github.oliviercailloux.st_projects.services.ProjectsMonitor;
@@ -12,7 +13,8 @@ import io.github.oliviercailloux.st_projects.services.ProjectsMonitor;
 public class TestProjectsMonitor {
 	@Test
 	public void testMonitor() throws Exception {
-		try (ProjectsMonitor monitor = ProjectsMonitor.using(Asciidoctor.Factory.create(), Utils.getToken())) {
+		try (ProjectsMonitor monitor = ProjectsMonitor.using(Asciidoctor.Factory.create(),
+				GitHubToken.getRealInstance())) {
 			monitor.updateProjectsAsync();
 			monitor.await();
 			assertEquals(7, monitor.getSEProjects().size());
@@ -22,7 +24,7 @@ public class TestProjectsMonitor {
 			final Project project = monitor.getProject("J-Voting").get();
 			assertEquals("J-Voting", project.getName());
 			assertEquals(Utils.newURL("https://github.com/oliviercailloux/projets/blob/master/SE/J-Voting.adoc"),
-					project.getURL());
+					project.getURI());
 			assertEquals(1, monitor.getRepositories(project).size());
 		}
 	}

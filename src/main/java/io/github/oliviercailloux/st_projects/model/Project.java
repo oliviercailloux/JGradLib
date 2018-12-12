@@ -3,7 +3,7 @@ package io.github.oliviercailloux.st_projects.model;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
-import java.net.URL;
+import java.net.URI;
 import java.time.Instant;
 import java.util.List;
 
@@ -36,7 +36,7 @@ public class Project {
 	 * memory (e.g. for a test).
 	 */
 	public static Project from(String name) {
-		return new Project(name, Utils.EXAMPLE_URL, ImmutableList.of(), Instant.now(), Instant.now());
+		return new Project(name, Utils.EXAMPLE_URI, ImmutableList.of(), Instant.now(), Instant.now());
 	}
 
 	/**
@@ -44,11 +44,11 @@ public class Project {
 	 * memory (e.g. for a test).
 	 */
 	public static Project from(String name, List<Functionality> functionalities) {
-		return new Project(name, Utils.EXAMPLE_URL, functionalities, Instant.now(), Instant.now());
+		return new Project(name, Utils.EXAMPLE_URI, functionalities, Instant.now(), Instant.now());
 	}
 
 	public static Project from(String name, List<Functionality> functionalities, Instant lastModification) {
-		return new Project(name, Utils.EXAMPLE_URL, functionalities, lastModification, Instant.now());
+		return new Project(name, Utils.EXAMPLE_URI, functionalities, lastModification, Instant.now());
 	}
 
 	public static Project from(String name, List<Functionality> functionalities, Instant lastModification,
@@ -57,12 +57,12 @@ public class Project {
 		 * TODO remove all the constructors that have no URLs, which really should not
 		 * exist, I suppose.
 		 */
-		return new Project(name, Utils.EXAMPLE_URL, functionalities, lastModification, queried);
+		return new Project(name, Utils.EXAMPLE_URI, functionalities, lastModification, queried);
 	}
 
-	public static Project from(String name, URL url, List<Functionality> functionalities, Instant lastModification,
+	public static Project from(String name, URI uri, List<Functionality> functionalities, Instant lastModification,
 			Instant queried) {
-		return new Project(name, url, functionalities, lastModification, queried);
+		return new Project(name, uri, functionalities, lastModification, queried);
 	}
 
 	/**
@@ -79,14 +79,12 @@ public class Project {
 
 	private final Instant queried;
 
-	private URL url;
+	private URI uri;
 
-	private Project(String name, URL url, Iterable<Functionality> functionalities, Instant lastModification,
+	private Project(String name, URI uri, Iterable<Functionality> functionalities, Instant lastModification,
 			Instant queried) {
 		this.name = requireNonNull(name);
-		this.url = requireNonNull(url);
-		/** Just to check for conformance. */
-		Utils.toURI(url);
+		this.uri = requireNonNull(uri);
 		checkArgument(!name.isEmpty());
 		this.functionalities = ImmutableList.copyOf(requireNonNull(functionalities));
 		this.queried = requireNonNull(queried);
@@ -130,10 +128,10 @@ public class Project {
 	}
 
 	/**
-	 * @return {@link Utils#EXAMPLE_URL} if the url is not set.
+	 * @return {@link Utils#EXAMPLE_URI} if the uri is not set.
 	 */
-	public URL getURL() {
-		return url;
+	public URI getURI() {
+		return uri;
 	}
 
 	@Override

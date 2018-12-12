@@ -2,8 +2,8 @@ package io.github.oliviercailloux.git.git_hub.model.graph_ql;
 
 import static java.util.Objects.requireNonNull;
 
-import java.net.MalformedURLException;
-import java.net.URL;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.file.Path;
 import java.util.AbstractMap;
 import java.util.AbstractMap.SimpleEntry;
@@ -18,8 +18,6 @@ import org.slf4j.LoggerFactory;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
 import com.google.common.collect.ImmutableMap;
-
-import io.github.oliviercailloux.git.git_hub.utils.Utils;
 
 public class RepositoryWithFiles {
 	@SuppressWarnings("unused")
@@ -61,11 +59,11 @@ public class RepositoryWithFiles {
 	}
 
 	public Optional<String> getContent(Path file) {
-		return Utils.getOptionally(contentFromFileNames, file);
+		return Optional.ofNullable(contentFromFileNames.get(file));
 	}
 
 	public Optional<String> getContent(String fileName) {
-		return Utils.getOptionally(contentFromFileNames, path.resolve(fileName));
+		return getContent(path.resolve(fileName));
 	}
 
 	public ImmutableMap<Path, String> getContentFromFileNames() {
@@ -80,14 +78,16 @@ public class RepositoryWithFiles {
 		return path;
 	}
 
-	public URL getURL(Path completePath) {
+	public URI getURI(Path completePath) {
 		/**
-		 * TODO obtain an url, but https://developer.github.com/v4/object/treeentry/
-		 * does not give it.
+		 * TODO obtain a uri, but https://developer.github.com/v4/object/treeentry/ does
+		 * not give it. Test this method.
 		 */
 		try {
-			return new URL(repository.getURL(), "blob/master/" + Utils.getEncoded(completePath));
-		} catch (MalformedURLException e) {
+			return new URI(repository.getURI().getScheme(), repository.getURI().getHost(),
+					"blob/master/" + completePath.toString(), null);
+//			return new URL(repository.getURI(), "blob/master/" + Utils.getEncoded(completePath));
+		} catch (URISyntaxException e) {
 			throw new IllegalArgumentException(e);
 		}
 	}

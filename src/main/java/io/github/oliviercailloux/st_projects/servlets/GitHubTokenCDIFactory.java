@@ -6,14 +6,12 @@ import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.context.Dependent;
 import javax.enterprise.inject.Produces;
 
-import io.github.oliviercailloux.git.git_hub.utils.Utils;
-
 @ApplicationScoped
 public class GitHubTokenCDIFactory {
 	@Produces
 	@Dependent
 	@GitHubToken
-	public String getInstance() throws IOException {
-		return Utils.getToken();
+	public io.github.oliviercailloux.git.git_hub.model.GitHubToken getInstance() throws IOException {
+		return io.github.oliviercailloux.git.git_hub.model.GitHubToken.getRealInstance();
 	}
 }

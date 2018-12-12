@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList.Builder;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 
+import io.github.oliviercailloux.git.git_hub.model.GitHubToken;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.git.git_hub.model.graph_ql.RepositoryWithIssuesWithHistory;
 import io.github.oliviercailloux.git.git_hub.model.graph_ql.User;
@@ -68,7 +69,7 @@ public class TestWrite {
 	public void testWriteOneGHProject() throws Exception {
 		final Project p1 = ModelMocker.newProject("p1", 3);
 		final User c1 = ModelMocker.newContributor("c1");
-		final RepositoryWithIssuesWithHistory ghp1 = ModelMocker.newGitHubProject(c1, Utils.EXAMPLE_URL);
+		final RepositoryWithIssuesWithHistory ghp1 = ModelMocker.newGitHubProject(c1, Utils.EXAMPLE_URI);
 		ModelMocker.addIssue(ghp1, "p1-f1");
 		ModelMocker.addIssue(ghp1, "p1-f3");
 		final byte[] written;
@@ -115,12 +116,12 @@ public class TestWrite {
 	public void testWriteTwoGHProjectsDeep() throws Exception {
 		final Project p1 = ModelMocker.newProject("p1", 3);
 		final User c1 = ModelMocker.newContributor("c1");
-		final RepositoryWithIssuesWithHistory ghp1 = ModelMocker.newGitHubProject(c1, Utils.EXAMPLE_URL);
+		final RepositoryWithIssuesWithHistory ghp1 = ModelMocker.newGitHubProject(c1, Utils.EXAMPLE_URI);
 		ModelMocker.addIssue(ghp1, "p1-f1");
 		ModelMocker.addIssue(ghp1, "p1-f3");
 		final Project p2 = ModelMocker.newProject("p2", 4);
 		final User c2 = ModelMocker.newContributor("c2");
-		final RepositoryWithIssuesWithHistory ghp2 = ModelMocker.newGitHubProject(c2, Utils.EXAMPLE_URL);
+		final RepositoryWithIssuesWithHistory ghp2 = ModelMocker.newGitHubProject(c2, Utils.EXAMPLE_URI);
 		ModelMocker.addIssue(ghp2, "p2-f1");
 		ModelMocker.addIssue(ghp2, "p2-f2");
 
@@ -152,7 +153,7 @@ public class TestWrite {
 		final Project project = Project.from("testrel", functionalitiesBuilder.build());
 		final RepositoryCoordinates coords = RepositoryCoordinates.from("oliviercailloux", "testrel");
 		final RepositoryWithIssuesWithHistory ghProject;
-		try (GitHubFetcherQL factory = GitHubFetcherQL.using(Utils.getToken())) {
+		try (GitHubFetcherQL factory = GitHubFetcherQL.using(GitHubToken.getRealInstance())) {
 			ghProject = factory.getRepository(coords).get();
 		}
 		final byte[] written;

@@ -20,6 +20,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.UnmodifiableIterator;
 
+import io.github.oliviercailloux.git.git_hub.model.GitHubToken;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.git.git_hub.model.graph_ql.IssueWithHistory;
 import io.github.oliviercailloux.git.git_hub.model.graph_ql.RepositoryWithIssuesWithHistory;
@@ -34,7 +35,7 @@ public class TestGitHubProject {
 
 	@Test
 	public void testGetRepo() throws Exception {
-		try (GitHubFetcherQL fetcher = GitHubFetcherQL.using(Utils.getToken())) {
+		try (GitHubFetcherQL fetcher = GitHubFetcherQL.using(GitHubToken.getRealInstance())) {
 			final RepositoryWithIssuesWithHistory repo = fetcher
 					.getRepository(RepositoryCoordinates.from("MAMERY-DOUMBIA", "Dauphine-Pole-Info")).get();
 			LOGGER.debug("Issues with history: {}.", repo.getIssues());
@@ -46,7 +47,7 @@ public class TestGitHubProject {
 	public void testGithubIssues() throws Exception {
 		final Project myProject = Project.from("Dauphine-Open-Data");
 		final List<RepositoryWithIssuesWithHistory> found;
-		try (GitHubFetcherQL fetcher = GitHubFetcherQL.using(Utils.getToken())) {
+		try (GitHubFetcherQL fetcher = GitHubFetcherQL.using(GitHubToken.getRealInstance())) {
 			found = fetcher.find(myProject.getGitHubName(), Instant.EPOCH);
 		}
 		assertTrue(found.size() >= 1);
@@ -62,7 +63,7 @@ public class TestGitHubProject {
 	@Test
 	public void testHomonymIssues() throws Exception {
 		final RepositoryWithIssuesWithHistory repo;
-		try (GitHubFetcherQL fetcher = GitHubFetcherQL.using(Utils.getToken())) {
+		try (GitHubFetcherQL fetcher = GitHubFetcherQL.using(GitHubToken.getRealInstance())) {
 			repo = fetcher.getRepository(RepositoryCoordinates.from("oliviercailloux", "testrel")).get();
 		}
 		final ImmutableSortedSet<IssueWithHistory> issues = repo.getIssuesCorrespondingTo("AFct");
@@ -79,10 +80,10 @@ public class TestGitHubProject {
 
 	@Test
 	public void testProject() throws Exception {
-		try (GitHubFetcherQL factory = GitHubFetcherQL.using(Utils.getToken())) {
+		try (GitHubFetcherQL factory = GitHubFetcherQL.using(GitHubToken.getRealInstance())) {
 			final RepositoryCoordinates coords = RepositoryCoordinates.from("oliviercailloux", "testrel");
 			final RepositoryWithIssuesWithHistory project = factory.getRepository(coords).get();
-			assertEquals(Utils.newURL("https://github.com/oliviercailloux/testrel/"), project.getBare().getURL());
+			assertEquals(Utils.newURL("https://github.com/oliviercailloux/testrel/"), project.getBare().getURI());
 			assertEquals(LocalDateTime.of(2016, 04, 15, 10, 33, 27).toInstant(ZoneOffset.UTC),
 					project.getBare().getCreatedAt());
 			assertEquals(10, project.getIssues().size());

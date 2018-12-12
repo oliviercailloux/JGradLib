@@ -15,7 +15,6 @@ import org.odftoolkit.simple.text.Paragraph;
 import org.odftoolkit.simple.text.ParagraphContainer;
 
 import io.github.oliviercailloux.git.git_hub.model.graph_ql.IssueWithHistory;
-import io.github.oliviercailloux.git.git_hub.utils.Utils;
 
 public class FunctionalityWithIssues {
 	public static FunctionalityWithIssues from(Functionality functionality, Set<IssueWithHistory> issues) {
@@ -38,15 +37,15 @@ public class FunctionalityWithIssues {
 			if (it.hasNext()) {
 				final IssueWithHistory issue = it.next();
 				checkArgument(issue.getOriginalName().equals(functionality.getName()));
-				p.appendHyperlink(issue.getOriginalName(), Utils.toURI(issue.getBare().getHtmlURL()));
+				p.appendHyperlink(issue.getOriginalName(), issue.getBare().getHtmlURI());
 			} else {
 				p.appendTextContent(functionality.getName(), false);
 			}
 		});
 		final Stream<IssueWithHistory> s = StreamSupport
 				.stream(Spliterators.spliteratorUnknownSize(it, Spliterator.ORDERED), false);
-		final Stream<Consumer<ParagraphContainer>> s2 = s.map((i) -> ((c) -> c.addParagraph("")
-				.appendHyperlink(i.getOriginalName(), Utils.toURI(i.getBare().getHtmlURL()))));
+		final Stream<Consumer<ParagraphContainer>> s2 = s
+				.map((i) -> ((c) -> c.addParagraph("").appendHyperlink(i.getOriginalName(), i.getBare().getHtmlURI())));
 		return Stream.concat(Stream.of(cons), s2);
 	}
 }

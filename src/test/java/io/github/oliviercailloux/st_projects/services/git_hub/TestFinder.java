@@ -17,9 +17,9 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
 
+import io.github.oliviercailloux.git.git_hub.model.GitHubToken;
 import io.github.oliviercailloux.git.git_hub.model.graph_ql.RepositoryWithIssuesWithHistory;
 import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherQL;
-import io.github.oliviercailloux.git.git_hub.utils.Utils;
 import io.github.oliviercailloux.st_projects.model.Project;
 
 public class TestFinder {
@@ -31,7 +31,7 @@ public class TestFinder {
 	public void testFindMyRepo() throws IOException {
 		final Project myProject = Project.from("XMCDA-2.2.1-JAXB");
 		final List<RepositoryWithIssuesWithHistory> repositories;
-		try (GitHubFetcherQL fetcher = GitHubFetcherQL.using(Utils.getToken())) {
+		try (GitHubFetcherQL fetcher = GitHubFetcherQL.using(GitHubToken.getRealInstance())) {
 			repositories = fetcher.find(myProject.getGitHubName(), Instant.parse("2015-12-01T00:00:00Z"));
 		}
 		assertFalse(repositories.isEmpty());
@@ -44,7 +44,7 @@ public class TestFinder {
 	@Test
 	public void testFindTooMany() throws IOException {
 		final Project myProject = Project.from("Biblio");
-		try (GitHubFetcherQL fetcher = GitHubFetcherQL.using(Utils.getToken())) {
+		try (GitHubFetcherQL fetcher = GitHubFetcherQL.using(GitHubToken.getRealInstance())) {
 			assertThrows(UnsupportedOperationException.class,
 					() -> fetcher.find(myProject.getGitHubName(), Instant.parse("2017-09-01T00:00:00Z")));
 		}
@@ -54,7 +54,7 @@ public class TestFinder {
 	public void testHasPom() throws IOException {
 		final Project myProject = Project.from("XMCDA-2.2.1-JAXB");
 		final List<RepositoryWithIssuesWithHistory> found;
-		try (GitHubFetcherQL fetcher = GitHubFetcherQL.using(Utils.getToken())) {
+		try (GitHubFetcherQL fetcher = GitHubFetcherQL.using(GitHubToken.getRealInstance())) {
 			found = fetcher.find(myProject.getGitHubName(), Instant.parse("2015-12-01T00:00:00Z"));
 		}
 		assertTrue(found.size() >= 1);
@@ -69,7 +69,7 @@ public class TestFinder {
 	@Test
 	public void testNoFindTooLate() throws IOException {
 		final Project myProject = Project.from("java-course");
-		try (GitHubFetcherQL finder = GitHubFetcherQL.using(Utils.getToken())) {
+		try (GitHubFetcherQL finder = GitHubFetcherQL.using(GitHubToken.getRealInstance())) {
 			final List<RepositoryWithIssuesWithHistory> found = finder.find(myProject.getGitHubName(),
 					Instant.parse("2049-10-04T00:00:00Z"));
 			assertTrue(found.isEmpty());

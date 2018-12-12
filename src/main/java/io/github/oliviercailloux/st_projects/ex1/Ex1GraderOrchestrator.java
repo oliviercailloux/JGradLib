@@ -28,9 +28,9 @@ import com.google.common.collect.Streams;
 import com.univocity.parsers.csv.CsvWriter;
 import com.univocity.parsers.csv.CsvWriterSettings;
 
+import io.github.oliviercailloux.git.git_hub.model.GitHubToken;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherV3;
-import io.github.oliviercailloux.git.git_hub.utils.Utils;
 import io.github.oliviercailloux.mycourse.MyCourseCsvWriter;
 import io.github.oliviercailloux.st_projects.model.StudentOnGitHub;
 import io.github.oliviercailloux.st_projects.model.StudentOnGitHubKnown;
@@ -54,7 +54,7 @@ public class Ex1GraderOrchestrator {
 		}
 
 		final ImmutableList<RepositoryCoordinates> repositories;
-		try (GitHubFetcherV3 fetcher = GitHubFetcherV3.using(Utils.getToken())) {
+		try (GitHubFetcherV3 fetcher = GitHubFetcherV3.using(GitHubToken.getRealInstance())) {
 			repositories = fetcher.getRepositories("oliviercailloux-org");
 		}
 		LOGGER.debug("Repos: {}.", repositories);
@@ -94,10 +94,10 @@ public class Ex1GraderOrchestrator {
 
 		final Map<StudentOnMyCourse, Double> myCourseToGrades = grades.keySet().stream()
 				.filter((s) -> s.hasStudentOnMyCourse())
-				.collect(Utils.toLinkedMap((s) -> s.getStudentOnMyCourse().get(), grades::get));
+				.collect(ImmutableMap.toImmutableMap((s) -> s.getStudentOnMyCourse().get(), grades::get));
 		final Map<StudentOnMyCourse, String> myCourseToFeedbacks = feedbacks.keySet().stream()
 				.filter((s) -> s.hasStudentOnMyCourse())
-				.collect(Utils.toLinkedMap((s) -> s.getStudentOnMyCourse().get(), feedbacks::get));
+				.collect(ImmutableMap.toImmutableMap((s) -> s.getStudentOnMyCourse().get(), feedbacks::get));
 
 		new MyCourseCsvWriter().writeCsv("Devoir git-and-curl corrigé", 110559, myCourseToGrades, myCourseToFeedbacks);
 		writeCsv(graders);

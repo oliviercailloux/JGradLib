@@ -1,4 +1,4 @@
-package io.github.oliviercailloux.st_projects.model;
+package io.github.oliviercailloux.git.gith_hub;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -18,6 +18,7 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 
+import io.github.oliviercailloux.git.git_hub.model.GitHubToken;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.git.git_hub.model.graph_ql.IssueSnapshot;
 import io.github.oliviercailloux.git.git_hub.model.graph_ql.IssueWithHistory;
@@ -34,7 +35,7 @@ public class TestGitHubIssue {
 	@Test
 	public void testAssignees() throws Exception {
 		final RepositoryCoordinates coord = RepositoryCoordinates.from("badga", "Collaborative-exams");
-		try (GitHubFetcherQL factory = GitHubFetcherQL.using(Utils.getToken())) {
+		try (GitHubFetcherQL factory = GitHubFetcherQL.using(GitHubToken.getRealInstance())) {
 			final RepositoryWithIssuesWithHistory repo = factory.getRepository(coord).get();
 			final IssueWithHistory issue = repo.getIssuesNamed("Servlets").iterator().next();
 			assertEquals("Servlets", issue.getOriginalName());
@@ -50,7 +51,7 @@ public class TestGitHubIssue {
 
 	@Test
 	public void testDupl() throws Exception {
-		try (GitHubFetcherQL factory = GitHubFetcherQL.using(Utils.getToken())) {
+		try (GitHubFetcherQL factory = GitHubFetcherQL.using(GitHubToken.getRealInstance())) {
 			final RepositoryCoordinates coords = RepositoryCoordinates.from("benzait27", "Dauphine-Open-Data");
 			final RepositoryWithIssuesWithHistory ghProject = factory.getRepository(coords).get();
 			final IssueWithHistory issue = ghProject.getIssuesOriginallyNamed("Course").iterator().next();
@@ -61,12 +62,12 @@ public class TestGitHubIssue {
 	@Test
 	public void testHist() throws Exception {
 		final RepositoryCoordinates coord = RepositoryCoordinates.from("oliviercailloux", "testrel");
-		try (GitHubFetcherQL factory = GitHubFetcherQL.using(Utils.getToken())) {
+		try (GitHubFetcherQL factory = GitHubFetcherQL.using(GitHubToken.getRealInstance())) {
 			final RepositoryWithIssuesWithHistory repo = factory.getRepository(coord).get();
 			final IssueWithHistory issue = repo.getIssuesNamed("test1").iterator().next();
 			LOGGER.info("Issue: {}.", issue);
 			assertEquals(Utils.newURL("https://github.com/oliviercailloux/testrel/issues/2"),
-					issue.getBare().getHtmlURL());
+					issue.getBare().getHtmlURI());
 			assertEquals("test1", issue.getOriginalName());
 			assertEquals(2, issue.getBare().getNumber());
 
@@ -83,12 +84,12 @@ public class TestGitHubIssue {
 	@Test
 	public void testOpen() throws Exception {
 		final RepositoryCoordinates coord = RepositoryCoordinates.from("oliviercailloux", "testrel");
-		try (GitHubFetcherQL factory = GitHubFetcherQL.using(Utils.getToken())) {
+		try (GitHubFetcherQL factory = GitHubFetcherQL.using(GitHubToken.getRealInstance())) {
 			final RepositoryWithIssuesWithHistory repo = factory.getRepository(coord).get();
 			final IssueWithHistory issue = repo.getIssuesNamed("test open").iterator().next();
 			LOGGER.info("Issue: {}.", issue);
 			assertEquals(Utils.newURL("https://github.com/oliviercailloux/testrel/issues/3"),
-					issue.getBare().getHtmlURL());
+					issue.getBare().getHtmlURI());
 			assertEquals("test open", issue.getOriginalName());
 			assertEquals(3, issue.getBare().getNumber());
 			final List<IssueSnapshot> snapshots = issue.getSnapshots();

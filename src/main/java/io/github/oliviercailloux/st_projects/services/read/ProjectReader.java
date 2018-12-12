@@ -9,7 +9,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.net.URL;
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.time.Instant;
@@ -60,21 +60,20 @@ public class ProjectReader {
 		try (InputStreamReader source = new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8)) {
 			final Instant queried = Instant.now();
 			final Instant lastModified = Instant.ofEpochMilli(file.lastModified());
-			project = asProject(CharStreams.toString(requireNonNull(source)), file.toURI().toURL(), lastModified,
-					queried);
+			project = asProject(CharStreams.toString(requireNonNull(source)), file.toURI(), lastModified, queried);
 		}
 		return project;
 	}
 
-	public Project asProject(String source, URL url, Instant lastModification, Instant queried) throws IllegalFormat {
+	public Project asProject(String source, URI uri, Instant lastModification, Instant queried) throws IllegalFormat {
 		requireNonNull(source);
-		requireNonNull(url);
+		requireNonNull(uri);
 		requireNonNull(lastModification);
 		checkState(functionalitiesReader != null);
 		functionalitiesReader.read(source);
 		final List<Functionality> functionalities = functionalitiesReader.getFunctionalities();
 		final String title = functionalitiesReader.getDoc().getAttribute("doctitle").toString();
-		final Project project = Project.from(title, url, functionalities, lastModification, queried);
+		final Project project = Project.from(title, uri, functionalities, lastModification, queried);
 		return project;
 	}
 

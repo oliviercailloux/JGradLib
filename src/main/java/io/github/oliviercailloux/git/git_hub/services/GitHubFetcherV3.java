@@ -32,7 +32,6 @@ import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
 import javax.ws.rs.client.Invocation.Builder;
 import javax.ws.rs.client.WebTarget;
-import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.Link;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
@@ -47,6 +46,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.MoreCollectors;
 
+import io.github.oliviercailloux.git.git_hub.model.GitHubToken;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.git.git_hub.model.v3.CommitGitHubDescription;
 import io.github.oliviercailloux.git.git_hub.model.v3.Event;
@@ -54,7 +54,6 @@ import io.github.oliviercailloux.git.git_hub.model.v3.EventType;
 import io.github.oliviercailloux.git.git_hub.model.v3.SearchResult;
 import io.github.oliviercailloux.git.git_hub.model.v3.SearchResults;
 import io.github.oliviercailloux.git.git_hub.utils.JsonUtils;
-import io.github.oliviercailloux.git.git_hub.utils.Utils;
 
 public class GitHubFetcherV3 implements AutoCloseable {
 	public static final Set<String> FORBIDDEN_IN_SEARCH = ImmutableSet.of(".", ",", ":", ";", "/", "\\", "`", "'", "\"",
@@ -93,7 +92,7 @@ public class GitHubFetcherV3 implements AutoCloseable {
 	 */
 	private static final String SEARCH_CODE_URI = "https://api.github.com/search/code";
 
-	public static GitHubFetcherV3 using(String token) {
+	public static GitHubFetcherV3 using(GitHubToken token) {
 		return new GitHubFetcherV3(token);
 	}
 
@@ -109,14 +108,14 @@ public class GitHubFetcherV3 implements AutoCloseable {
 	/**
 	 * Not <code>null</code>.
 	 */
-	private String token;
+	private GitHubToken token;
 
 	/**
 	 * https://developer.github.com/v3/repos/#list-organization-repositories
 	 */
 	private static final String LIST_ORG_REPOS = "https://api.github.com/orgs/{org}/repos";
 
-	private GitHubFetcherV3(String token) {
+	private GitHubFetcherV3(GitHubToken token) {
 		rateLimit = "";
 		rateReset = Instant.EPOCH;
 		client = ClientBuilder.newClient();
@@ -129,7 +128,7 @@ public class GitHubFetcherV3 implements AutoCloseable {
 	}
 
 	public JsonObject fetchEventDetails(URL eventApiURL) throws IOException {
-		final WebTarget target = client.target(Utils.toURI(eventApiURL));
+		final WebTarget target = client.target(URI.create(eventApiURL.toString()));
 		final Builder request = target.request(GIT_HUB_MEDIA_TYPE);
 		final String jsonEventDetailsStr;
 		try (Response response = request.get()) {
@@ -208,8 +207,9 @@ public class GitHubFetcherV3 implements AutoCloseable {
 
 	public Optional<Instant> getLastModification(RepositoryCoordinates repositoryCoordinates, Path path) {
 		final List<CommitGitHubDescription> descriptions = getCommitsGitHubDescriptions(repositoryCoordinates, path);
-		return Utils.getIf(!descriptions.isEmpty(), () -> GitHubJsonParser.asInstant(
-				descriptions.get(0).getJson().getJsonObject("commit").getJsonObject("author").getString("date")));
+		return !descriptions.isEmpty() ? Optional.of(GitHubJsonParser.asInstant(
+				descriptions.get(0).getJson().getJsonObject("commit").getJsonObject("author").getString("date")))
+				: Optional.empty();
 	}
 
 	/**
@@ -289,7 +289,7 @@ public class GitHubFetcherV3 implements AutoCloseable {
 		return searchFor(searchKeywords);
 	}
 
-	public void setToken(String token) {
+	public void setToken(GitHubToken token) {
 		this.token = requireNonNull(token);
 	}
 
@@ -321,9 +321,7 @@ public class GitHubFetcherV3 implements AutoCloseable {
 		final List<T> contents = new ArrayList<>();
 		while (currentTarget != null) {
 			final Builder request = currentTarget.request(type);
-			if (token.length() >= 1) {
-				request.header(HttpHeaders.AUTHORIZATION, String.format("token %s", token));
-			}
+			token.addToRequest(request);
 
 			final WebTarget nextTarget;
 			try (Response response = request.get()) {
@@ -413,7 +411,8 @@ public class GitHubFetcherV3 implements AutoCloseable {
 
 	public Optional<ObjectId> getCreationSha(RepositoryCoordinates repositoryCoordinates, Path path) {
 		final List<CommitGitHubDescription> descriptions = getCommitsGitHubDescriptions(repositoryCoordinates, path);
-		return Utils.getIf(!descriptions.isEmpty(), () -> descriptions.get(descriptions.size() - 1).getSha());
+		return !descriptions.isEmpty() ? Optional.of(descriptions.get(descriptions.size() - 1).getSha())
+				: Optional.empty();
 	}
 
 	public ImmutableList<Event> getPushEvents(RepositoryCoordinates repositoryCoordinates) {

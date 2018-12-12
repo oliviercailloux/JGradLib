@@ -14,9 +14,9 @@ import javax.json.JsonValue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
-import io.github.oliviercailloux.git.git_hub.utils.Utils;
 import io.github.oliviercailloux.st_projects.model.StudentOnGitHub;
 import io.github.oliviercailloux.st_projects.model.StudentOnMyCourse;
 
@@ -61,22 +61,22 @@ public class UsernamesReader {
 	}
 
 	private Map<Integer, String> readIdsToMyCourseUsernames() {
-		idsToMyCourseUsernames = json.stream().sequential().map(JsonValue::asJsonObject)
-				.collect(Utils.toLinkedMap((o) -> o.getInt("studentId"), (o) -> o.getString("myCourseUsername")));
+		idsToMyCourseUsernames = json.stream().sequential().map(JsonValue::asJsonObject).collect(
+				ImmutableMap.toImmutableMap((o) -> o.getInt("studentId"), (o) -> o.getString("myCourseUsername")));
 		LOGGER.info("Got: {}.", idsToMyCourseUsernames);
 		return idsToMyCourseUsernames;
 	}
 
 	private Map<Integer, String> readIdsToStudentFirstNames() {
 		idsToFirstNames = json.stream().sequential().map(JsonValue::asJsonObject)
-				.collect(Utils.toLinkedMap((o) -> o.getInt("studentId"), (o) -> o.getString("firstName")));
+				.collect(ImmutableMap.toImmutableMap((o) -> o.getInt("studentId"), (o) -> o.getString("firstName")));
 		LOGGER.info("Got: {}.", idsToFirstNames);
 		return idsToFirstNames;
 	}
 
 	private Map<Integer, String> readIdsToStudentLastNames() {
 		idsToLastNames = json.stream().sequential().map(JsonValue::asJsonObject)
-				.collect(Utils.toLinkedMap((o) -> o.getInt("studentId"), (o) -> o.getString("lastName")));
+				.collect(ImmutableMap.toImmutableMap((o) -> o.getInt("studentId"), (o) -> o.getString("lastName")));
 		LOGGER.info("Got: {}.", idsToLastNames);
 		return idsToLastNames;
 	}
@@ -91,8 +91,8 @@ public class UsernamesReader {
 
 	private Map<String, Integer> readGitHubUsernamesToIds() {
 		gitHubUsernamesToIds = json.stream().sequential().map(JsonValue::asJsonObject)
-				.filter((o) -> !o.isNull("gitHubUsername"))
-				.collect(Utils.toLinkedMap((o) -> o.getString("gitHubUsername"), (o) -> o.getInt("studentId")));
+				.filter((o) -> !o.isNull("gitHubUsername")).collect(ImmutableMap
+						.toImmutableMap((o) -> o.getString("gitHubUsername"), (o) -> o.getInt("studentId")));
 		LOGGER.info("Got: {}.", gitHubUsernamesToIds);
 		return gitHubUsernamesToIds;
 	}
@@ -118,8 +118,8 @@ public class UsernamesReader {
 
 	public Map<Integer, String> getIdsToGitHubUsernames() {
 		final Map<Integer, String> idsToUsernames = json.stream().sequential().map(JsonValue::asJsonObject)
-				.filter((o) -> !o.isNull("gitHubUsername"))
-				.collect(Utils.toLinkedMap((o) -> o.getInt("studentId"), (o) -> o.getString("gitHubUsername")));
+				.filter((o) -> !o.isNull("gitHubUsername")).collect(ImmutableMap
+						.toImmutableMap((o) -> o.getInt("studentId"), (o) -> o.getString("gitHubUsername")));
 		LOGGER.info("Got: {}.", idsToUsernames);
 		return idsToUsernames;
 	}

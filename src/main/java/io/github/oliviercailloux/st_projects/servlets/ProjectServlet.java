@@ -29,6 +29,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Predicates;
 
+import io.github.oliviercailloux.git.git_hub.model.GitHubRealToken;
 import io.github.oliviercailloux.git.git_hub.model.graph_ql.IssueWithHistory;
 import io.github.oliviercailloux.git.git_hub.model.graph_ql.RepositoryWithIssuesWithHistory;
 import io.github.oliviercailloux.git.git_hub.utils.JsonUtils;
@@ -43,7 +44,7 @@ public class ProjectServlet {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(ProjectServlet.class);
 
-	static public ProjectServlet using(Asciidoctor asciidoctor, String token) {
+	static public ProjectServlet using(Asciidoctor asciidoctor, GitHubRealToken token) {
 		final ProjectServlet srv = new ProjectServlet();
 		srv.setMonitor(ProjectsMonitor.using(asciidoctor, token));
 		return srv;
@@ -98,7 +99,7 @@ public class ProjectServlet {
 	public JsonObject toJsonSummary(Project project, IssueWithHistory issue) {
 		final JsonObjectBuilder o = factory.createObjectBuilder();
 		o.add("originalName", issue.getOriginalName());
-		o.add("url", issue.getBare().getHtmlURL().toString());
+		o.add("url", issue.getBare().getHtmlURI().toString());
 		final boolean corrToFct = project.getFunctionalities().stream().map(Functionality::getName)
 				.anyMatch(Predicates.equalTo(issue.getOriginalName()));
 		o.add("functionalityDone", issue.getFirstSnapshotDone().isPresent() && corrToFct);

@@ -4,7 +4,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
-import java.net.URL;
+import java.net.URI;
 import java.time.Instant;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -19,7 +19,6 @@ import com.google.common.collect.Streams;
 
 import io.github.oliviercailloux.git.git_hub.model.IssueCoordinates;
 import io.github.oliviercailloux.git.git_hub.services.GitHubJsonParser;
-import io.github.oliviercailloux.git.git_hub.utils.Utils;
 
 public class IssueBare {
 	public static IssueBare from(JsonObject json) {
@@ -53,8 +52,8 @@ public class IssueBare {
 				.collect(Collectors.toList());
 	}
 
-	public URL getHtmlURL() {
-		return Utils.newURL(json.getString("url"));
+	public URI getHtmlURI() {
+		return URI.create(json.getString("url"));
 	}
 
 	public JsonObject getJson() {
@@ -65,8 +64,8 @@ public class IssueBare {
 		return json.getInt("number");
 	}
 
-	public URL getRepositoryURL() {
-		return Utils.newURL(json.getJsonObject("repository").getString("homepageUrl"));
+	public URI getRepositoryURI() {
+		return URI.create(json.getJsonObject("repository").getString("homepageUrl"));
 	}
 
 	public String getTitle() {
@@ -76,7 +75,7 @@ public class IssueBare {
 	@Override
 	public String toString() {
 		final ToStringHelper helper = MoreObjects.toStringHelper(this);
-		helper.addValue(getHtmlURL());
+		helper.addValue(getHtmlURI());
 		return helper.toString();
 	}
 }

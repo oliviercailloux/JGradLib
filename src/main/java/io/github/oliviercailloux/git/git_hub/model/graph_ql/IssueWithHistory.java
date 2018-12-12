@@ -35,10 +35,8 @@ public class IssueWithHistory implements Comparable<IssueWithHistory> {
 	private static final Logger LOGGER = LoggerFactory.getLogger(IssueWithHistory.class);
 
 	/**
-	 * @param issue
-	 *            describes the current state of this issue.
-	 * @param snaps
-	 *            at least one.
+	 * @param issue describes the current state of this issue.
+	 * @param snaps at least one.
 	 */
 	public static IssueWithHistory from(IssueBare issue, List<IssueSnapshot> snaps) {
 		return new IssueWithHistory(issue, snaps);
@@ -151,7 +149,7 @@ public class IssueWithHistory implements Comparable<IssueWithHistory> {
 		} else {
 			helper.add("Name", getOriginalName());
 		}
-		helper.addValue(simple.getHtmlURL());
+		helper.addValue(simple.getHtmlURI());
 		helper.add("Snapshot nb", snaps.size());
 		return helper.toString();
 	}

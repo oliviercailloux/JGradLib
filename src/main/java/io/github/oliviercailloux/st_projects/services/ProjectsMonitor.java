@@ -4,7 +4,7 @@ import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import java.math.BigDecimal;
-import java.net.URL;
+import java.net.URI;
 import java.nio.file.Paths;
 import java.time.Instant;
 import java.util.Collection;
@@ -47,6 +47,7 @@ import com.google.common.collect.Sets.SetView;
 import com.google.common.collect.Streams;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
+import io.github.oliviercailloux.git.git_hub.model.GitHubRealToken;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.git.git_hub.model.graph_ql.RepositoryWithFiles;
 import io.github.oliviercailloux.git.git_hub.model.graph_ql.RepositoryWithIssuesWithHistory;
@@ -67,7 +68,7 @@ public class ProjectsMonitor implements AutoCloseable {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(ProjectsMonitor.class);
 
-	static public ProjectsMonitor using(Asciidoctor asciidoctor, String token) {
+	static public ProjectsMonitor using(Asciidoctor asciidoctor, GitHubRealToken token) {
 		return new ProjectsMonitor(asciidoctor, token);
 	}
 
@@ -110,8 +111,9 @@ public class ProjectsMonitor implements AutoCloseable {
 	}
 
 	@Inject
-	private ProjectsMonitor(Asciidoctor asciidoctor, @GitHubToken String token) {
-		LOGGER.info("Received {} and {} through container injection.", asciidoctor, token.substring(0, 3));
+	private ProjectsMonitor(Asciidoctor asciidoctor,
+			@GitHubToken io.github.oliviercailloux.git.git_hub.model.GitHubRealToken token) {
+		LOGGER.info("Received {} and {} through container injection.", asciidoctor, token.getToken().substring(0, 3));
 		rawFetcher = GitHubFetcherV3.using(token);
 		fetcher = GitHubFetcherQL.using(token);
 		baseCoordinates = RepositoryCoordinates.from("oliviercailloux", "projets");
@@ -228,8 +230,8 @@ public class ProjectsMonitor implements AutoCloseable {
 			if (!lastModification.isPresent()) {
 				throw new IllegalStateException("Last modification time not found.");
 			}
-			final URL url = repo.getURL(file);
-			final Project project = projectReader.asProject(entry.getValue(), url, lastModification.get(), queried);
+			final URI uri = repo.getURI(file);
+			final Project project = projectReader.asProject(entry.getValue(), uri, lastModification.get(), queried);
 			final boolean added = current.add(project.getName());
 			checkState(added, "Two projects with same name.");
 			mapToWrite.put(project.getName(), project);

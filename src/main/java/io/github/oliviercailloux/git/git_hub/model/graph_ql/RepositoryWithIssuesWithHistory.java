@@ -23,11 +23,10 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSetMultimap;
 import com.google.common.collect.ImmutableSetMultimap.Builder;
-
-import io.github.oliviercailloux.git.git_hub.utils.JsonUtils;
-import io.github.oliviercailloux.git.git_hub.utils.Utils;
-
 import com.google.common.collect.ImmutableSortedSet;
+
+import io.github.oliviercailloux.git.git_hub.services.GitHubJsonParser;
+import io.github.oliviercailloux.git.git_hub.utils.JsonUtils;
 
 public class RepositoryWithIssuesWithHistory {
 	@SuppressWarnings("unused")
@@ -62,8 +61,8 @@ public class RepositoryWithIssuesWithHistory {
 		 * issues. In such case, it is still useful to create an object of this class
 		 * for debug output and inspection of the results.
 		 */
-		issuesComplete = Utils.isConnectionComplete(issuesConnection);
-		issues = Utils.getContent(issuesConnection, true).map(IssueBare::from).map(this::getIssue)
+		issuesComplete = GitHubJsonParser.isConnectionComplete(issuesConnection);
+		issues = GitHubJsonParser.getContent(issuesConnection, true).map(IssueBare::from).map(this::getIssue)
 				.collect(ImmutableList.toImmutableList());
 		{
 			final Builder<String, IssueWithHistory> builderByOriginalName = ImmutableSetMultimap

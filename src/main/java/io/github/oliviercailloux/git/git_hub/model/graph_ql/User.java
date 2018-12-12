@@ -3,14 +3,12 @@ package io.github.oliviercailloux.git.git_hub.model.graph_ql;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
-import java.net.URL;
+import java.net.URI;
 import java.util.Objects;
 
 import javax.json.JsonObject;
 
 import com.google.common.base.MoreObjects;
-
-import io.github.oliviercailloux.git.git_hub.utils.Utils;
 
 public class User {
 	public static User from(JsonObject json) {
@@ -37,8 +35,8 @@ public class User {
 		return Objects.equals(getLogin(), c2.getLogin());
 	}
 
-	public URL getHtmlURL() {
-		return Utils.newURL(json.getString("url"));
+	public URI getHtmlURI() {
+		return URI.create(json.getString("url"));
 	}
 
 	public JsonObject getJson() {

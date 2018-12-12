@@ -38,10 +38,10 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
+import io.github.oliviercailloux.git.git_hub.model.GitHubToken;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.git.git_hub.model.v3.Event;
 import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherV3;
-import io.github.oliviercailloux.git.git_hub.utils.Utils;
 import io.github.oliviercailloux.st_projects.model.StudentOnGitHub;
 import io.github.oliviercailloux.st_projects.services.git.Client;
 import io.github.oliviercailloux.st_projects.services.git.GitHistory;
@@ -61,7 +61,7 @@ public class Ex2Grader {
 		ignoreAfter = Instant.MAX;
 		fetcherSupplier = () -> {
 			try {
-				return GitHubFetcherV3.using(Utils.getToken());
+				return GitHubFetcherV3.using(GitHubToken.getRealInstance());
 			} catch (IOException e) {
 				throw new IllegalStateException(e);
 			}

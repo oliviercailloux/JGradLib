@@ -1,6 +1,5 @@
 package io.github.oliviercailloux.git.git_hub.services;
 
-import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.nio.charset.StandardCharsets;
@@ -21,7 +20,6 @@ import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
 import javax.ws.rs.client.Entity;
 import javax.ws.rs.client.Invocation.Builder;
-import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.Response;
 
 import org.slf4j.Logger;
@@ -33,6 +31,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Streams;
 import com.google.common.io.Resources;
 
+import io.github.oliviercailloux.git.git_hub.model.GitHubRealToken;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.git.git_hub.model.graph_ql.RepositoryWithFiles;
 import io.github.oliviercailloux.git.git_hub.model.graph_ql.RepositoryWithIssuesWithHistory;
@@ -47,7 +46,7 @@ public class GitHubFetcherQL implements AutoCloseable {
 	private static final Function<String, String> RESOURCE_READER = Errors.rethrow()
 			.wrapFunction((n) -> Resources.toString(GitHubFetcherQL.class.getResource(n), StandardCharsets.UTF_8));
 
-	public static GitHubFetcherQL using(String token) {
+	public static GitHubFetcherQL using(GitHubRealToken token) {
 		return new GitHubFetcherQL(token);
 	}
 
@@ -62,11 +61,11 @@ public class GitHubFetcherQL implements AutoCloseable {
 
 	private Instant rateReset;
 
-	private final String token;
+	private final GitHubRealToken token;
 
-	private GitHubFetcherQL(String token) {
+	private GitHubFetcherQL(GitHubRealToken token) {
+		/** Authorization token required for Graph QL GitHub API. */
 		this.token = requireNonNull(token);
-		checkArgument(token.length() >= 1, "Authorization token required for Graph QL GitHub API.");
 		rateLimit = "";
 		rateReset = null;
 		client = ClientBuilder.newClient();
@@ -163,9 +162,7 @@ public class GitHubFetcherQL implements AutoCloseable {
 		}
 
 		final Builder request = client.target(GRAPHQL_ENDPOINT).request();
-		if (token.length() >= 1) {
-			request.header(HttpHeaders.AUTHORIZATION, String.format("token %s", token));
-		}
+		token.addToRequest(request);
 
 		final JsonObject ret;
 		try (Response response = request.post(Entity.json(queryJson))) {

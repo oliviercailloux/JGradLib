@@ -11,7 +11,6 @@ import com.google.common.base.MoreObjects;
 
 import io.github.oliviercailloux.git.git_hub.services.GitHubJsonParser;
 import io.github.oliviercailloux.git.git_hub.utils.JsonUtils;
-import io.github.oliviercailloux.git.git_hub.utils.Utils;
 
 /**
  * <p>
@@ -49,8 +48,8 @@ public class Event {
 	}
 
 	public Optional<PushPayload> getPushPayload() {
-		return Utils.getIf(getType().equals(EventType.PUSH_EVENT),
-				() -> PushPayload.from(json.getJsonObject("payload")));
+		return getType().equals(EventType.PUSH_EVENT) ? Optional.of(PushPayload.from(json.getJsonObject("payload")))
+				: Optional.empty();
 	}
 
 	public EventType getType() {
