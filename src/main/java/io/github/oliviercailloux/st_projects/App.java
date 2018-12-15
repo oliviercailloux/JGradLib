@@ -6,7 +6,6 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.Writer;
 import java.net.URI;
-import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -47,7 +46,6 @@ import io.github.oliviercailloux.git.git_hub.model.v3.CommitGitHubDescription;
 import io.github.oliviercailloux.git.git_hub.model.v3.SearchResult;
 import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherQL;
 import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherV3;
-import io.github.oliviercailloux.git.git_hub.utils.Utils;
 import io.github.oliviercailloux.st_projects.model.Functionality;
 import io.github.oliviercailloux.st_projects.model.Project;
 import io.github.oliviercailloux.st_projects.services.ProjectsMonitor;
@@ -120,8 +118,8 @@ public class App implements AutoCloseable {
 				final String username = idsSorted.get(id);
 				final RepositoryCoordinates coord = RepositoryCoordinates.from(username, repo);
 				output.write("= Id: " + id + " (" + coord.getOwner() + ")\n");
-				final URL base = Utils.newURL("https://github.com/");
-				final URL userPath = new URL(base, coord.getOwner());
+				final URI base = URI.create("https://github.com/");
+				final URI userPath = base.resolve(coord.getOwner());
 				final Optional<RepositoryWithIssuesWithHistory> prjOpt = fetcher.getRepository(coord);
 				if (!prjOpt.isPresent()) {
 					output.write(userPath + "\n");

@@ -19,7 +19,6 @@ import com.google.common.base.MoreObjects;
 
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.git.git_hub.services.GitHubJsonParser;
-import io.github.oliviercailloux.git.git_hub.utils.Utils;
 
 @JsonbPropertyOrder({ "name", "ownerLogin", "htmlURL", "sshURL", "createdAt" })
 public class Repository {
@@ -67,12 +66,8 @@ public class Repository {
 		return User.from(json.getJsonObject("owner"));
 	}
 
-	public URI getSshURL() {
-		return Utils.newURI("ssh:" + getSshURLString());
-	}
-
 	@JsonbTransient
-	public String getSshURLString() {
+	public String getSshURIString() {
 		return json.getString("sshUrl");
 	}
 

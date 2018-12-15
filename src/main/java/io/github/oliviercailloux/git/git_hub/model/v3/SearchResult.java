@@ -2,13 +2,11 @@ package io.github.oliviercailloux.git.git_hub.model.v3;
 
 import static java.util.Objects.requireNonNull;
 
-import java.net.URL;
+import java.net.URI;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
 import javax.json.JsonObject;
-
-import io.github.oliviercailloux.git.git_hub.utils.Utils;
 
 /**
  *
@@ -31,12 +29,12 @@ public class SearchResult {
 		this.json = requireNonNull(json);
 	}
 
-	public URL getApiURL() {
-		return Utils.newURL(json.getString("url"));
+	public URI getApiURI() {
+		return URI.create(json.getString("url"));
 	}
 
-	public URL getHtmlURL() {
-		return Utils.newURL(json.getString("html_url"));
+	public URI getHtmlURI() {
+		return URI.create(json.getString("html_url"));
 	}
 
 	public String getName() {

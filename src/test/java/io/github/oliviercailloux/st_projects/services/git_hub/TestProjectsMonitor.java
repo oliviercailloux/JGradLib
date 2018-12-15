@@ -2,11 +2,12 @@ package io.github.oliviercailloux.st_projects.services.git_hub;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import java.net.URI;
+
 import org.asciidoctor.Asciidoctor;
 import org.junit.jupiter.api.Test;
 
 import io.github.oliviercailloux.git.git_hub.model.GitHubToken;
-import io.github.oliviercailloux.git.git_hub.utils.Utils;
 import io.github.oliviercailloux.st_projects.model.Project;
 import io.github.oliviercailloux.st_projects.services.ProjectsMonitor;
 
@@ -23,7 +24,7 @@ public class TestProjectsMonitor {
 			monitor.await();
 			final Project project = monitor.getProject("J-Voting").get();
 			assertEquals("J-Voting", project.getName());
-			assertEquals(Utils.newURL("https://github.com/oliviercailloux/projets/blob/master/SE/J-Voting.adoc"),
+			assertEquals(URI.create("https://github.com/oliviercailloux/projets/blob/master/SE/J-Voting.adoc"),
 					project.getURI());
 			assertEquals(1, monitor.getRepositories(project).size());
 		}

@@ -3,6 +3,7 @@ package io.github.oliviercailloux.git.gith_hub;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.net.URI;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
@@ -25,7 +26,6 @@ import io.github.oliviercailloux.git.git_hub.model.graph_ql.IssueWithHistory;
 import io.github.oliviercailloux.git.git_hub.model.graph_ql.RepositoryWithIssuesWithHistory;
 import io.github.oliviercailloux.git.git_hub.model.graph_ql.User;
 import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherQL;
-import io.github.oliviercailloux.git.git_hub.utils.Utils;
 
 public class TestGitHubIssue {
 
@@ -66,7 +66,7 @@ public class TestGitHubIssue {
 			final RepositoryWithIssuesWithHistory repo = factory.getRepository(coord).get();
 			final IssueWithHistory issue = repo.getIssuesNamed("test1").iterator().next();
 			LOGGER.info("Issue: {}.", issue);
-			assertEquals(Utils.newURL("https://github.com/oliviercailloux/testrel/issues/2"),
+			assertEquals(URI.create("https://github.com/oliviercailloux/testrel/issues/2"),
 					issue.getBare().getHtmlURI());
 			assertEquals("test1", issue.getOriginalName());
 			assertEquals(2, issue.getBare().getNumber());
@@ -88,7 +88,7 @@ public class TestGitHubIssue {
 			final RepositoryWithIssuesWithHistory repo = factory.getRepository(coord).get();
 			final IssueWithHistory issue = repo.getIssuesNamed("test open").iterator().next();
 			LOGGER.info("Issue: {}.", issue);
-			assertEquals(Utils.newURL("https://github.com/oliviercailloux/testrel/issues/3"),
+			assertEquals(URI.create("https://github.com/oliviercailloux/testrel/issues/3"),
 					issue.getBare().getHtmlURI());
 			assertEquals("test open", issue.getOriginalName());
 			assertEquals(3, issue.getBare().getNumber());

@@ -85,7 +85,7 @@ public class RepositoryWithFiles {
 		 */
 		try {
 			return new URI(repository.getURI().getScheme(), repository.getURI().getHost(),
-					"blob/master/" + completePath.toString(), null);
+					repository.getURI().getPath() + "/blob/master/" + completePath.toString(), null);
 //			return new URL(repository.getURI(), "blob/master/" + Utils.getEncoded(completePath));
 		} catch (URISyntaxException e) {
 			throw new IllegalArgumentException(e);

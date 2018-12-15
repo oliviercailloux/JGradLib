@@ -29,9 +29,10 @@ public class TestProjectServlet {
 		final ProjectServlet srv = ProjectServlet.using(Asciidoctor.Factory.create(),
 				io.github.oliviercailloux.git.git_hub.model.GitHubToken.getRealInstance());
 		final JsonObject iss = srv.toJsonSummary(myProject, repository.getIssues().get(0));
-		LOGGER.debug("Summ: {}.", iss);
+		LOGGER.info("Summ: {}.", iss);
+		/** FIXME crash here. */
 		final JsonObject re = srv.toJsonSummary(myProject, repository);
-		LOGGER.debug("Summ: {}.", re);
+		LOGGER.info("Summ: {}.", re);
 		srv.update();
 		srv.getProjectsMonitor().await();
 		final JsonArray repos = srv.getRepositories("XM-GUI");

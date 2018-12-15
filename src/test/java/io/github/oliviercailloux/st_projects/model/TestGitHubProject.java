@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.net.URI;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
@@ -26,7 +27,6 @@ import io.github.oliviercailloux.git.git_hub.model.graph_ql.IssueWithHistory;
 import io.github.oliviercailloux.git.git_hub.model.graph_ql.RepositoryWithIssuesWithHistory;
 import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherQL;
 import io.github.oliviercailloux.git.git_hub.utils.JsonUtils;
-import io.github.oliviercailloux.git.git_hub.utils.Utils;
 
 public class TestGitHubProject {
 
@@ -83,7 +83,7 @@ public class TestGitHubProject {
 		try (GitHubFetcherQL factory = GitHubFetcherQL.using(GitHubToken.getRealInstance())) {
 			final RepositoryCoordinates coords = RepositoryCoordinates.from("oliviercailloux", "testrel");
 			final RepositoryWithIssuesWithHistory project = factory.getRepository(coords).get();
-			assertEquals(Utils.newURL("https://github.com/oliviercailloux/testrel/"), project.getBare().getURI());
+			assertEquals(URI.create("https://github.com/oliviercailloux/testrel"), project.getBare().getURI());
 			assertEquals(LocalDateTime.of(2016, 04, 15, 10, 33, 27).toInstant(ZoneOffset.UTC),
 					project.getBare().getCreatedAt());
 			assertEquals(10, project.getIssues().size());
@@ -107,7 +107,7 @@ public class TestGitHubProject {
 			throw new IllegalStateException(e);
 		}
 		LOGGER.debug("Serialized json: {}.", json);
-		assertEquals("{\"name\":\"pn\",\"gitHubName\":\"pn\",\"URL\":\"http://example.com\","
+		assertEquals("{\"name\":\"pn\",\"gitHubName\":\"pn\",\"URI\":\"http://example.com\","
 				+ "\"functionalities\":[{\"name\":\"pn-f1\",\"description\":\"pn-d1\",\"difficulty\":1}],"
 				+ "\"lastModification\":\"2018-01-01T00:00:00Z\",\"queried\":\"2018-01-01T00:00:00Z\"}", json);
 	}

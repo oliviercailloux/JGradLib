@@ -26,7 +26,7 @@ import io.github.oliviercailloux.git.git_hub.utils.Utils;
  * @author Olivier Cailloux
  *
  */
-@JsonbPropertyOrder({ "name", "gitHubName", "URL", "functionalities", "lastModification", "queried" })
+@JsonbPropertyOrder({ "name", "gitHubName", "URI", "functionalities", "lastModification", "queried" })
 public class Project {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(Project.class);

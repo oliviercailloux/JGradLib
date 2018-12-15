@@ -2,7 +2,7 @@ package io.github.oliviercailloux.git.git_hub.model.v3;
 
 import static java.util.Objects.requireNonNull;
 
-import java.net.URL;
+import java.net.URI;
 import java.time.Instant;
 
 import javax.json.JsonObject;
@@ -10,7 +10,6 @@ import javax.json.JsonObject;
 import org.eclipse.jgit.lib.ObjectId;
 
 import io.github.oliviercailloux.git.git_hub.services.GitHubJsonParser;
-import io.github.oliviercailloux.git.git_hub.utils.Utils;
 
 /**
  *
@@ -31,8 +30,8 @@ public class CommitGitHubDescription {
 		this.json = requireNonNull(json);
 	}
 
-	public URL getApiURL() {
-		return Utils.newURL(json.getString("url"));
+	public URI getApiURI() {
+		return URI.create(json.getString("url"));
 	}
 
 	public Instant getCommitterCommitDate() {
@@ -51,8 +50,8 @@ public class CommitGitHubDescription {
 		return json.getJsonObject("commit");
 	}
 
-	public URL getHtmlURL() {
-		return Utils.newURL(json.getString("html_url"));
+	public URI getHtmlURI() {
+		return URI.create(json.getString("html_url"));
 	}
 
 	public JsonObject getJson() {

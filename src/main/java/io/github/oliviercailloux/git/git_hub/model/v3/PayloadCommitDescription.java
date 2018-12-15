@@ -2,13 +2,11 @@ package io.github.oliviercailloux.git.git_hub.model.v3;
 
 import static java.util.Objects.requireNonNull;
 
-import java.net.URL;
+import java.net.URI;
 
 import javax.json.JsonObject;
 
 import org.eclipse.jgit.lib.ObjectId;
-
-import io.github.oliviercailloux.git.git_hub.utils.Utils;
 
 /**
  *
@@ -29,8 +27,8 @@ public class PayloadCommitDescription {
 		this.json = requireNonNull(json);
 	}
 
-	public URL getApiURL() {
-		return Utils.newURL(json.getString("url"));
+	public URI getApiURI() {
+		return URI.create(json.getString("url"));
 	}
 
 	public JsonObject getJson() {

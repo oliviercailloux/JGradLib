@@ -108,9 +108,13 @@ public class ProjectServlet {
 
 	public JsonObject toJsonSummary(Project project, RepositoryWithIssuesWithHistory repository) {
 		final JsonObjectBuilder o = factory.createObjectBuilder();
+		LOGGER.info("Generating repo.");
 		o.add("repository", repository.getBare().toJsonSummary());
+		LOGGER.info("Generated repo.");
 		final Stream<JsonObject> stream = repository.getIssues().stream().map((i) -> toJsonSummary(project, i));
+		LOGGER.info("Generated stream.");
 		final JsonArray array = JsonUtils.asArray(stream, factory);
+		LOGGER.info("Generated array.");
 		o.add("issues", array);
 		return o.build();
 	}
