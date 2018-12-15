@@ -76,6 +76,7 @@ public class Repository {
 	}
 
 	public JsonObject toJsonSummary() {
+		// FIXME crashes!
 		final String data;
 		try (Jsonb jsonb = JsonbBuilder.create()) {
 			data = jsonb.toJson(this);

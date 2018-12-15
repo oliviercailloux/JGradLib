@@ -410,12 +410,9 @@ public class Ex2Grader {
 	}
 
 	public List<Event> getEvents() {
-		// FIXME: two push events at the same second break the map.
 		checkState(client.hasCachedContent());
 		try (GitHubFetcherV3 fetcher = fetcherSupplier.get()) {
 			allEvents = fetcher.getEvents(client.getCoordinates());
-//			eventsS = allEvents.stream().filter((e) -> e.getPushPayload().isPresent()).collect(
-//					ImmutableSortedMap.toImmutableSortedMap(Comparator.naturalOrder(), Event::getCreatedAt, (e) -> e));
 		}
 		checkState(allEvents.size() >= 1);
 		final Stream<Instant> eventsCreation = allEvents.stream().map(Event::getCreatedAt);

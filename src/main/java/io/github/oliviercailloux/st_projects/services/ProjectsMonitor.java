@@ -243,6 +243,7 @@ public class ProjectsMonitor implements AutoCloseable {
 	}
 
 	private Future<?> submit(Throwing.Runnable task, String debugString) {
+		// FIXME this should be a callable, I suppose.
 		return executor.submit(Errors.createHandling((t) -> LOGGER.info(debugString, t)).wrap(task));
 	}
 

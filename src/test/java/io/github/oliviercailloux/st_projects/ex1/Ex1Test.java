@@ -60,7 +60,7 @@ public class Ex1Test {
 		Mockito.when(coordinates.getRepositoryName()).thenReturn("sol-ex-1");
 		Mockito.when(coordinates.getSshURLString()).thenReturn(path);
 		final Client client = Client.about(coordinates);
-		client.update();
+		client.retrieve();
 		final String blob = client.fetchBlob("master", "bold.txt");
 		LOGGER.info("Blob: {}.", blob);
 		assertTrue(blob.startsWith("alternative approach"));

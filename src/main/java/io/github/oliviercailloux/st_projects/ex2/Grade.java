@@ -11,7 +11,9 @@ import java.util.stream.Stream;
 import javax.json.bind.annotation.JsonbCreator;
 import javax.json.bind.annotation.JsonbProperty;
 import javax.json.bind.annotation.JsonbPropertyOrder;
-import javax.json.bind.annotation.JsonbTransient;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableMap;
@@ -19,9 +21,10 @@ import com.google.common.collect.ImmutableSet;
 
 import io.github.oliviercailloux.st_projects.model.StudentOnGitHub;
 
-@JsonbPropertyOrder({ "student", "gradeValues" })
+@JsonbPropertyOrder({ "student" })
 public class Grade {
 	private Grade(StudentOnGitHub student, ImmutableMap<GradeCriterion, SingleGrade> grades) {
+		LOGGER.info("Internally building with {}, {}.", student, grades);
 		this.student = requireNonNull(student);
 		this.grades = requireNonNull(grades);
 	}
@@ -31,14 +34,21 @@ public class Grade {
 	}
 
 	@JsonbCreator
-	public static Grade of(@JsonbProperty("student") StudentOnGitHub student,
-			@JsonbProperty("gradeValues") Set<SingleGrade> grades) {
+	public static Grade of(@JsonbProperty("student") StudentOnGitHub student) {
+		return new Grade(student, ImmutableMap.of());
+	}
+
+	public static Grade of(StudentOnGitHub student, Set<SingleGrade> gradeValues) {
+		LOGGER.info("Building with {}, {}.", student, gradeValues.iterator().next().getClass());
 		final Collector<SingleGrade, ?, ImmutableMap<GradeCriterion, SingleGrade>> toI = ImmutableMap
 				.toImmutableMap((g) -> g.getCriterion(), (g) -> g);
-		final ImmutableMap<GradeCriterion, SingleGrade> im = grades.stream().collect(toI);
+		gradeValues.stream().forEach(System.out::println);
+		final ImmutableMap<GradeCriterion, SingleGrade> im = gradeValues.stream().collect(toI);
 		return new Grade(student, im);
 	}
 
+	@SuppressWarnings("unused")
+	private static final Logger LOGGER = LoggerFactory.getLogger(Grade.class);
 	private StudentOnGitHub student;
 	/**
 	 * points ≤ maxPoints of the corresponding criterion.
@@ -68,7 +78,6 @@ public class Grade {
 		return student;
 	}
 
-	@JsonbTransient
 	public ImmutableMap<GradeCriterion, SingleGrade> getGrades() {
 		return grades;
 	}

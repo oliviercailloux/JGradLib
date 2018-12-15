@@ -213,7 +213,6 @@ public class GraderOrchestrator {
 				writer.writeValuesToRow();
 			}
 			writer.close();
-			// FIXME servlet-Cocol wrong commit!
 		}
 	}
 

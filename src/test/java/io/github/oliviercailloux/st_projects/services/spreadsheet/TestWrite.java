@@ -84,7 +84,7 @@ public class TestWrite {
 			assertEquals(1, doc.getTableList().size());
 			final Table sheet = Iterables.getOnlyElement(doc.getTableList());
 			assertTrue(sheet.getRowCount() >= 3);
-			assertEquals(4, sheet.getColumnCount());
+			assertEquals(10, sheet.getColumnCount());
 		}
 		save(written);
 	}
@@ -103,12 +103,13 @@ public class TestWrite {
 			writer.write(ImmutableList.of(p1), ImmutableMap.of());
 			written = out.toByteArray();
 		}
+		save(written);
 		final ByteArrayInputStream input = new ByteArrayInputStream(written);
 		try (SpreadsheetDocument doc = SpreadsheetDocument.loadDocument(input)) {
 			assertEquals(1, doc.getTableList().size());
 			final Table sheet = Iterables.getOnlyElement(doc.getTableList());
 			assertTrue(sheet.getRowCount() >= 3);
-			assertEquals(4, sheet.getColumnCount());
+			assertEquals(10, sheet.getColumnCount());
 		}
 	}
 
@@ -139,7 +140,7 @@ public class TestWrite {
 			assertEquals(1, doc.getTableList().size());
 			final Table sheet = Iterables.getOnlyElement(doc.getTableList());
 			assertTrue(sheet.getRowCount() >= 7);
-			assertEquals(4, sheet.getColumnCount());
+			assertEquals(10, sheet.getColumnCount());
 		}
 	}
 
@@ -168,7 +169,7 @@ public class TestWrite {
 			assertEquals(1, doc.getTableList().size());
 			final Table sheet = Iterables.getOnlyElement(doc.getTableList());
 			assertEquals(7, sheet.getRowCount());
-			assertEquals(9, sheet.getColumnCount());
+			assertEquals(10, sheet.getColumnCount());
 		}
 		save(written);
 	}
