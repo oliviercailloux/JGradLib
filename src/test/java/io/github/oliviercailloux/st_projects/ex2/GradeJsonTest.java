@@ -20,7 +20,6 @@ import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSet.Builder;
 import com.google.common.io.Resources;
@@ -85,8 +84,7 @@ class GradeJsonTest {
 	public void gradeWriteJson() {
 		final SingleGrade grade1 = SingleGrade.max(ENC);
 		final SingleGrade grade2 = SingleGrade.zero(ANNOT);
-		final Grade grade = Grade.of(getStudentOnGitHubKnown().asStudentOnGitHub(),
-				ImmutableMap.of(ENC, grade1, ANNOT, grade2));
+		final Grade grade = Grade.of(getStudentOnGitHubKnown().asStudentOnGitHub(), ImmutableSet.of(grade1, grade2));
 		final String json;
 		try (Jsonb jsonb = JsonbBuilder.create(new JsonbConfig().withAdapters(new GHAsJson()).withFormatting(true))) {
 			// TODO does not chain adapters, it seems
@@ -118,16 +116,13 @@ class GradeJsonTest {
 	public void gradeReadJson() throws Exception {
 		final SingleGrade grade1 = SingleGrade.max(ENC);
 		final SingleGrade grade2 = SingleGrade.zero(ANNOT);
-		final Grade expected = Grade.of(getStudentOnGitHubKnown().asStudentOnGitHub(),
-				ImmutableMap.of(ENC, grade1, ANNOT, grade2));
+		final Grade expected = Grade.of(getStudentOnGitHubKnown().asStudentOnGitHub(), ImmutableSet.of(grade1, grade2));
 		final String json = Resources.toString(this.getClass().getResource("Grade.json"), StandardCharsets.UTF_8);
 		final Grade read;
 		try (Jsonb jsonb = JsonbBuilder
 				.create(new JsonbConfig().withAdapters(new AsEx2Criterion(), new GHAsJson()).withFormatting(true))) {
 			read = jsonb.fromJson(json, Grade.class);
 			LOGGER.info("Deserialized: {}.", read);
-		} catch (Exception e) {
-			throw new IllegalStateException(e);
 		}
 		assertEquals(expected, read);
 	}
@@ -136,8 +131,7 @@ class GradeJsonTest {
 	public void gradeReadJsonManually() throws Exception {
 		final SingleGrade grade1 = SingleGrade.max(ENC);
 		final SingleGrade grade2 = SingleGrade.zero(ANNOT);
-		final Grade expected = Grade.of(getStudentOnGitHubKnown().asStudentOnGitHub(),
-				ImmutableMap.of(ENC, grade1, ANNOT, grade2));
+		final Grade expected = Grade.of(getStudentOnGitHubKnown().asStudentOnGitHub(), ImmutableSet.of(grade1, grade2));
 		final String jsonStr = Resources.toString(this.getClass().getResource("Grade.json"), StandardCharsets.UTF_8);
 
 		final GHAsJson ghAsJson = new GHAsJson();

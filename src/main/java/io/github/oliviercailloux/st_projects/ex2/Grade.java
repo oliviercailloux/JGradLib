@@ -16,6 +16,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.MoreObjects;
+import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
@@ -23,27 +24,20 @@ import io.github.oliviercailloux.st_projects.model.StudentOnGitHub;
 
 @JsonbPropertyOrder({ "student" })
 public class Grade {
-	private Grade(StudentOnGitHub student, ImmutableMap<GradeCriterion, SingleGrade> grades) {
+	private Grade(StudentOnGitHub student, ImmutableBiMap<GradeCriterion, SingleGrade> grades) {
 		LOGGER.info("Internally building with {}, {}.", student, grades);
 		this.student = requireNonNull(student);
 		this.grades = requireNonNull(grades);
 	}
 
-	public static Grade of(StudentOnGitHub student, ImmutableMap<GradeCriterion, SingleGrade> grades) {
-		return new Grade(student, grades);
-	}
-
 	@JsonbCreator
-	public static Grade of(@JsonbProperty("student") StudentOnGitHub student) {
-		return new Grade(student, ImmutableMap.of());
-	}
-
-	public static Grade of(StudentOnGitHub student, Set<SingleGrade> gradeValues) {
+	public static Grade of(@JsonbProperty("student") StudentOnGitHub student,
+			@JsonbProperty("gradeValues") Set<SingleGrade> gradeValues) {
 		LOGGER.info("Building with {}, {}.", student, gradeValues.iterator().next().getClass());
-		final Collector<SingleGrade, ?, ImmutableMap<GradeCriterion, SingleGrade>> toI = ImmutableMap
-				.toImmutableMap((g) -> g.getCriterion(), (g) -> g);
+		final Collector<SingleGrade, ?, ImmutableBiMap<GradeCriterion, SingleGrade>> toI = ImmutableBiMap
+				.toImmutableBiMap((g) -> g.getCriterion(), (g) -> g);
 		gradeValues.stream().forEach(System.out::println);
-		final ImmutableMap<GradeCriterion, SingleGrade> im = gradeValues.stream().collect(toI);
+		final ImmutableBiMap<GradeCriterion, SingleGrade> im = gradeValues.stream().collect(toI);
 		return new Grade(student, im);
 	}
 
@@ -53,7 +47,7 @@ public class Grade {
 	/**
 	 * points ≤ maxPoints of the corresponding criterion.
 	 */
-	private final ImmutableMap<GradeCriterion, SingleGrade> grades;
+	private final ImmutableBiMap<GradeCriterion, SingleGrade> grades;
 
 	@Override
 	public boolean equals(Object o2) {
@@ -82,8 +76,12 @@ public class Grade {
 		return grades;
 	}
 
-	public ImmutableSet<SingleGrade> getGradeValues() {
-		return ImmutableSet.copyOf(grades.values());
+	public Set<SingleGrade> getGradeValues() {
+		return grades.values();
+	}
+
+	public ImmutableSet<SingleGrade> getGradeValuesImmutable() {
+		return grades.values();
 	}
 
 	public String getAsMyCourseString() {

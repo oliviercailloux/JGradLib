@@ -35,7 +35,6 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.Comparators;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
 import io.github.oliviercailloux.git.git_hub.model.GitHubToken;
@@ -48,7 +47,7 @@ import io.github.oliviercailloux.st_projects.services.git.GitHistory;
 
 public class Ex2Grader {
 	private StudentOnGitHub student;
-	private ImmutableMap.Builder<GradeCriterion, SingleGrade> gradesBuilder;
+	private ImmutableSet.Builder<SingleGrade> gradesBuilder;
 	private Instant ignoreAfter;
 	private Supplier<GitHubFetcherV3> fetcherSupplier;
 	private Client client;
@@ -323,7 +322,7 @@ public class Ex2Grader {
 
 	private void putGrade(SingleGrade grade) {
 		requireNonNull(grade);
-		gradesBuilder.put(grade.getCriterion(), grade);
+		gradesBuilder.add(grade);
 	}
 
 	public void setIgnoreAfter(Instant ignoreAfter) {
@@ -401,7 +400,7 @@ public class Ex2Grader {
 
 	public Grade grade(RepositoryCoordinates coordinates, @SuppressWarnings("hiding") StudentOnGitHub student)
 			throws GitAPIException, IOException {
-		gradesBuilder = ImmutableMap.builder();
+		gradesBuilder = ImmutableSet.builder();
 		this.student = requireNonNull(student);
 		init(coordinates);
 		grade();
