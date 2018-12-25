@@ -9,6 +9,9 @@ import javax.json.bind.annotation.JsonbCreator;
 import javax.json.bind.annotation.JsonbProperty;
 import javax.json.bind.annotation.JsonbPropertyOrder;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.common.base.MoreObjects;
 
 @JsonbPropertyOrder({ "criterion", "points", "comment" })
@@ -54,8 +57,13 @@ public class SingleGrade {
 	@JsonbCreator
 	public static SingleGrade of(@JsonbProperty("criterion") GradeCriterion criterion,
 			@JsonbProperty("points") double points, @JsonbProperty("comment") String comment) {
-		return new SingleGrade(criterion, points, comment);
+		final SingleGrade g = new SingleGrade(criterion, points, comment);
+		LOGGER.info("Building auto grade: {}.", g);
+		return g;
 	}
+
+	@SuppressWarnings("unused")
+	private static final Logger LOGGER = LoggerFactory.getLogger(SingleGrade.class);
 
 	/**
 	 * May be negative (penalty). points ≤ maxPoints of the corresponding criterion.
