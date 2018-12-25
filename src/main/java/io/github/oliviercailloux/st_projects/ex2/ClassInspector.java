@@ -1,6 +1,5 @@
 package io.github.oliviercailloux.st_projects.ex2;
 
-import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
@@ -9,15 +8,8 @@ import java.net.URLClassLoader;
 import java.nio.file.Paths;
 import java.util.Collection;
 
-import org.apache.maven.shared.invoker.DefaultInvocationRequest;
-import org.apache.maven.shared.invoker.DefaultInvoker;
-import org.apache.maven.shared.invoker.InvocationRequest;
-import org.apache.maven.shared.invoker.InvocationResult;
-import org.apache.maven.shared.invoker.Invoker;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.collect.ImmutableList;
 
 import io.github.classgraph.ClassGraph;
 import io.github.classgraph.ClassInfo;
@@ -31,6 +23,7 @@ public class ClassInspector {
 		grader.access();
 	}
 
+	@SuppressWarnings("rawtypes")
 	private void access()
 			throws ClassNotFoundException, NoSuchMethodException, SecurityException, InstantiationException,
 			IllegalAccessException, IllegalArgumentException, InvocationTargetException, IOException {
@@ -47,10 +40,12 @@ public class ClassInspector {
 					LOGGER.info("Name: {}.", info.getName());
 				}
 			}
-			Class<?> classToLoad = Class.forName("org.decision_deck.utils.relation.graph.Preorder", true, child);
+			Class<? extends Collection> classToLoad = Class
+					.forName("org.decision_deck.utils.relation.graph.Preorder", true, child)
+					.asSubclass(Collection.class);
 			LOGGER.info("Class: {}.", classToLoad.getCanonicalName());
-			final Constructor<?> constructor = classToLoad.getConstructor();
-			final Collection<?> created = (Collection<?>) constructor.newInstance();
+			final Constructor<? extends Collection> constructor = classToLoad.getConstructor();
+			final Collection<?> created = constructor.newInstance();
 //		Method method = classToLoad.getDeclaredMethod("create");
 //		Object created = method.invoke(null);
 			LOGGER.info("Created: {} ({}).", created, created.hashCode());
