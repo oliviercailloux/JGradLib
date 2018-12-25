@@ -4,11 +4,13 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.nio.file.Paths;
 import java.time.Instant;
 import java.util.EnumSet;
 import java.util.Optional;
 
 import org.eclipse.jgit.lib.AnyObjectId;
+import org.eclipse.jgit.lib.ObjectId;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
@@ -16,12 +18,12 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
 
+import io.github.oliviercailloux.git.Client;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.git.git_hub.model.v3.Event;
 import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherV3;
 import io.github.oliviercailloux.st_projects.model.StudentOnGitHub;
 import io.github.oliviercailloux.st_projects.model.StudentOnMyCourse;
-import io.github.oliviercailloux.st_projects.services.git.Client;
 
 public class Ex1Test {
 	@Test
@@ -60,11 +62,13 @@ public class Ex1Test {
 		Mockito.when(coordinates.getRepositoryName()).thenReturn("sol-ex-1");
 		Mockito.when(coordinates.getSshURLString()).thenReturn(path);
 		final Client client = Client.about(coordinates);
-		client.retrieve();
-		final String blob = client.fetchBlob("master", "bold.txt");
+		client.tryRetrieve();
+		client.checkout("origin/dev");
+		final ObjectId master = client.resolve("master");
+		final String blob = client.fetchBlob(master, Paths.get("bold.txt"));
 		LOGGER.info("Blob: {}.", blob);
 		assertTrue(blob.startsWith("alternative approach"));
-		final Optional<AnyObjectId> dir = client.getBlobId("master", "src");
+		final Optional<AnyObjectId> dir = client.getBlobId(master, Paths.get("src"));
 		assertFalse(dir.isPresent());
 	}
 

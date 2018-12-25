@@ -64,13 +64,13 @@ import com.google.common.collect.MoreCollectors;
 import com.google.common.collect.Streams;
 import com.google.common.graph.Traverser;
 
+import io.github.oliviercailloux.git.Client;
+import io.github.oliviercailloux.git.GitHistory;
 import io.github.oliviercailloux.git.git_hub.model.GitHubToken;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.git.git_hub.model.v3.Event;
 import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherV3;
 import io.github.oliviercailloux.st_projects.model.StudentOnGitHub;
-import io.github.oliviercailloux.st_projects.services.git.Client;
-import io.github.oliviercailloux.st_projects.services.git.GitHistory;
 
 public class Ex1Grader {
 	@SuppressWarnings("unused")
@@ -146,7 +146,7 @@ public class Ex1Grader {
 			pass.add(ON_TIME);
 		}
 
-		final Set<RevCommit> firstCommits = historyMaster.getFirsts();
+		final Set<RevCommit> firstCommits = historyMaster.getRoots();
 		LOGGER.debug("First commits: {}.", firstCommits);
 		if (firstCommits.size() > 1) {
 			penalties.put(Ex1Criterion.SINGLE_ROOT_COMMIT, 3d);
@@ -203,7 +203,7 @@ public class Ex1Grader {
 		// first commit contains start.txt: 1
 		// first commit contains a blob “hello2” in start.txt: 1
 
-		final ImmutableList<Ref> branches = client.listBranches();
+		final ImmutableList<Ref> branches = client.getAllBranches();
 		final Optional<Ref> devOpt = branches.stream().filter((r) -> r.getName().equals("refs/remotes/origin/dev"))
 				.collect(MoreCollectors.toOptional());
 		if (devOpt.isPresent()) {
@@ -435,7 +435,7 @@ public class Ex1Grader {
 
 		client = Client.about(coordinates);
 		{
-			final boolean exists = client.retrieve();
+			final boolean exists = client.tryRetrieve();
 			if (!exists) {
 				comments.put(REPO_EXISTS, "Repository not found");
 				return false;
@@ -452,7 +452,7 @@ public class Ex1Grader {
 		}
 
 		client.checkout("origin/master");
-		historyMaster = client.listCommits(false);
+		historyMaster = client.getHistory(false);
 		return true;
 	}
 

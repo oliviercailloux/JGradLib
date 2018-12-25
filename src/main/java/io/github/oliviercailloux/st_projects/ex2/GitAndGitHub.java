@@ -24,11 +24,11 @@ import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.PeekingIterator;
 
+import io.github.oliviercailloux.git.Client;
 import io.github.oliviercailloux.git.git_hub.model.v3.Event;
 import io.github.oliviercailloux.git.git_hub.model.v3.EventType;
 import io.github.oliviercailloux.git.git_hub.model.v3.PayloadCommitDescription;
 import io.github.oliviercailloux.git.git_hub.model.v3.PushPayload;
-import io.github.oliviercailloux.st_projects.services.git.Client;
 
 public class GitAndGitHub {
 	public GitAndGitHub() {
@@ -36,7 +36,7 @@ public class GitAndGitHub {
 	}
 
 	public Map<ObjectId, Instant> check(Client client, List<Event> events) {
-		checkArgument(client.hasCachedContent());
+		checkArgument(client.hasContentCached());
 		LOGGER.debug("Checking given {}.", events);
 		final Stream<Instant> eventsCreation = events.stream().map(Event::getCreatedAt);
 		checkArgument(Comparators.isInOrder(eventsCreation::iterator, Comparator.<Instant>naturalOrder().reversed()));
@@ -63,7 +63,7 @@ public class GitAndGitHub {
 			}
 		}
 		LOGGER.info("Received at: {}.", receivedAt);
-		commits = client.getHistory().getGraph().nodes();
+		commits = client.getAllHistoryCached().getGraph().nodes();
 		/** Let’s check that all top are seen, all bottom ones are unseen. */
 		final Iterator<RevCommit> iterator = commits.iterator();
 		while (iterator.hasNext()) {

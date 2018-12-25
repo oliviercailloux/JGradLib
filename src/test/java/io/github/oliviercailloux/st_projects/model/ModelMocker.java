@@ -14,7 +14,7 @@ import io.github.oliviercailloux.git.git_hub.model.graph_ql.IssueWithHistory;
 import io.github.oliviercailloux.git.git_hub.model.graph_ql.Repository;
 import io.github.oliviercailloux.git.git_hub.model.graph_ql.RepositoryWithIssuesWithHistory;
 import io.github.oliviercailloux.git.git_hub.model.graph_ql.User;
-import io.github.oliviercailloux.git.git_hub.utils.Utils;
+import io.github.oliviercailloux.git.utils.Utils;
 
 public class ModelMocker {
 

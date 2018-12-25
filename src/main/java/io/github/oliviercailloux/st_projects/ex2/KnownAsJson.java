@@ -10,7 +10,7 @@ import javax.json.bind.adapter.JsonbAdapter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.github.oliviercailloux.git.git_hub.utils.JsonUtils;
+import io.github.oliviercailloux.git.utils.JsonUtils;
 import io.github.oliviercailloux.st_projects.model.StudentOnGitHubKnown;
 import io.github.oliviercailloux.st_projects.model.StudentOnMyCourse;
 

@@ -37,13 +37,13 @@ import com.google.common.collect.Comparators;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
+import io.github.oliviercailloux.git.Client;
+import io.github.oliviercailloux.git.GitHistory;
 import io.github.oliviercailloux.git.git_hub.model.GitHubToken;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.git.git_hub.model.v3.Event;
 import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherV3;
 import io.github.oliviercailloux.st_projects.model.StudentOnGitHub;
-import io.github.oliviercailloux.st_projects.services.git.Client;
-import io.github.oliviercailloux.st_projects.services.git.GitHistory;
 
 public class Ex2Grader {
 	private StudentOnGitHub student;
@@ -148,7 +148,7 @@ public class Ex2Grader {
 		}
 		{
 			final Set<Path> sources;
-			if (!client.hasCachedContent()) {
+			if (!client.hasContentCached()) {
 				sources = ImmutableSet.of();
 			} else {
 				final String mavenStart = "src/main/java";
@@ -273,10 +273,11 @@ public class Ex2Grader {
 //			putGrade(SingleGrade.of(Ex2Criterion.IGNORE, points, ""));
 //		}
 		{
-			final Optional<AnyObjectId> classpathId = client.getBlobId("master", ".classpath");
-			final Optional<AnyObjectId> settingsId = client.getBlobId("master", ".settings/");
-			final Optional<AnyObjectId> projectId = client.getBlobId("master", ".project");
-			final Optional<AnyObjectId> targetId = client.getBlobId("master", "target/");
+			final ObjectId master = client.resolve("master");
+			final Optional<AnyObjectId> classpathId = client.getBlobId(master, Paths.get(".classpath"));
+			final Optional<AnyObjectId> settingsId = client.getBlobId(master, Paths.get(".settings/"));
+			final Optional<AnyObjectId> projectId = client.getBlobId(master, Paths.get(".project"));
+			final Optional<AnyObjectId> targetId = client.getBlobId(master, Paths.get("target/"));
 			LOGGER.debug("Found settings? {}.", settingsId);
 			final double points = ImmutableList.of(classpathId, settingsId, projectId, targetId).stream().collect(
 					Collectors.summingDouble((o) -> !o.isPresent() ? Ex2Criterion.ONLY_ORIG.getMaxPoints() / 4 : 0));
@@ -287,7 +288,7 @@ public class Ex2Grader {
 	}
 
 	private String read(Path relativePath) throws IOException {
-		if (!client.hasCachedContent()) {
+		if (!client.hasContentCached()) {
 			return "";
 		}
 		String content;
@@ -337,7 +338,7 @@ public class Ex2Grader {
 			throws GitAPIException, IOException, CheckoutConflictException {
 		client = Client.about(coordinates);
 		{
-			final boolean exists = client.retrieve();
+			final boolean exists = client.tryRetrieve();
 			if (!exists) {
 				putGrade(SingleGrade.zero(Ex2Criterion.REPO_EXISTS, "Repository not found"));
 			} else if (!client.hasContent()) {
@@ -346,10 +347,10 @@ public class Ex2Grader {
 				putGrade(SingleGrade.max(Ex2Criterion.REPO_EXISTS));
 			}
 		}
-		if (client.hasCachedContent()) {
+		if (client.hasContentCached()) {
 			client.checkout("master");
 			getEvents();
-			final GitHistory history = client.listCommits(false);
+			final GitHistory history = client.getHistory(false);
 			final Map<ObjectId, Instant> receivedAt = new GitAndGitHub().check(client, allEvents);
 			/** Now we want to discard all commits that have a commit too late as parent. */
 			final Set<RevCommit> commits = history.getGraph().nodes();
@@ -365,11 +366,11 @@ public class Ex2Grader {
 			submitted = receivedAt.get(lastCommitOnTime);
 		}
 
-		return client.hasCachedContent();
+		return client.hasContentCached();
 	}
 
 	private void onTime() {
-		if (!client.hasCachedContent()) {
+		if (!client.hasContentCached()) {
 			putGrade(SingleGrade.of(Ex2Criterion.ON_TIME, 0d, ""));
 			return;
 		}
@@ -409,7 +410,7 @@ public class Ex2Grader {
 	}
 
 	public List<Event> getEvents() {
-		checkState(client.hasCachedContent());
+		checkState(client.hasContentCached());
 		try (GitHubFetcherV3 fetcher = fetcherSupplier.get()) {
 			allEvents = fetcher.getEvents(client.getCoordinates());
 		}

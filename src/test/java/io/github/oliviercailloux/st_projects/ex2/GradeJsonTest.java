@@ -34,12 +34,13 @@ class GradeJsonTest {
 
 	@Test
 	public void singleWriteJson() throws Exception {
-		final String expected = "\n"
-				+ Resources.toString(this.getClass().getResource("Single grade.json"), StandardCharsets.UTF_8);
+		final String expectedFormatted = Resources.toString(this.getClass().getResource("Single grade.json"),
+				StandardCharsets.UTF_8);
+		final String expected = expectedFormatted.replace("\n", "").replace(" ", "");
 
 		final SingleGrade grade = SingleGrade.max(ENC);
 		final String written;
-		try (Jsonb jsonb = JsonbBuilder.create(new JsonbConfig().withFormatting(true))) {
+		try (Jsonb jsonb = JsonbBuilder.create()) {
 			written = jsonb.toJson(grade);
 			LOGGER.info("Serialized pretty json: {}.", written);
 		} catch (Exception e) {
@@ -50,13 +51,13 @@ class GradeJsonTest {
 
 	@Test
 	public void studentGitHubWriteJson() throws Exception {
-		final String expected = "\n"
-				+ Resources.toString(this.getClass().getResource("Student GitHub.json"), StandardCharsets.UTF_8);
+		final String expectedFormatted = Resources.toString(this.getClass().getResource("Student GitHub.json"),
+				StandardCharsets.UTF_8);
+		final String expected = expectedFormatted.replace("\n", "").replace(" ", "");
 
 		final StudentOnGitHubKnown studentGH = getStudentOnGitHubKnown();
 		final String written;
-		try (Jsonb jsonb = JsonbBuilder
-				.create(new JsonbConfig().withAdapters(new KnownAsJson()).withFormatting(true))) {
+		try (Jsonb jsonb = JsonbBuilder.create(new JsonbConfig().withAdapters(new KnownAsJson()))) {
 			written = jsonb.toJson(studentGH);
 			LOGGER.info("Serialized pretty json: {}.", written);
 		} catch (Exception e) {
@@ -98,12 +99,13 @@ class GradeJsonTest {
 
 	@Test
 	public void studentMyCourseWriteJson() throws Exception {
-		final String expected = "\n"
-				+ Resources.toString(this.getClass().getResource("Student MyCourse.json"), StandardCharsets.UTF_8);
+		final String expectedFormatted = Resources.toString(this.getClass().getResource("Student MyCourse.json"),
+				StandardCharsets.UTF_8);
+		final String expected = expectedFormatted.replace("\n", "").replace(" ", "");
 
 		final StudentOnMyCourse student = StudentOnMyCourse.with(1, "f", "l", "u");
 		final String written;
-		try (Jsonb jsonb = JsonbBuilder.create(new JsonbConfig().withFormatting(true))) {
+		try (Jsonb jsonb = JsonbBuilder.create()) {
 			written = jsonb.toJson(student);
 			LOGGER.info("Serialized pretty json: {}.", written);
 		} catch (Exception e) {

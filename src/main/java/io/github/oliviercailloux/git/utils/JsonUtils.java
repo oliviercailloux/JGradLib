@@ -1,4 +1,4 @@
-package io.github.oliviercailloux.git.git_hub.utils;
+package io.github.oliviercailloux.git.utils;
 
 import java.io.StringReader;
 import java.io.StringWriter;

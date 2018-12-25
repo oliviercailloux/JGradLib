@@ -10,7 +10,7 @@ import org.slf4j.LoggerFactory;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.git.git_hub.model.graph_ql.RepositoryWithIssuesWithHistory;
 import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherQL;
-import io.github.oliviercailloux.git.git_hub.utils.JsonUtils;
+import io.github.oliviercailloux.git.utils.JsonUtils;
 import io.github.oliviercailloux.st_projects.model.Project;
 
 public class TestProjectServlet {

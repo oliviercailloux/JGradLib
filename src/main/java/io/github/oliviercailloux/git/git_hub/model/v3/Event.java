@@ -10,7 +10,7 @@ import javax.json.JsonObject;
 import com.google.common.base.MoreObjects;
 
 import io.github.oliviercailloux.git.git_hub.services.GitHubJsonParser;
-import io.github.oliviercailloux.git.git_hub.utils.JsonUtils;
+import io.github.oliviercailloux.git.utils.JsonUtils;
 
 /**
  * <p>

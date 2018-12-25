@@ -35,7 +35,7 @@ import io.github.oliviercailloux.git.git_hub.model.GitHubRealToken;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.git.git_hub.model.graph_ql.RepositoryWithFiles;
 import io.github.oliviercailloux.git.git_hub.model.graph_ql.RepositoryWithIssuesWithHistory;
-import io.github.oliviercailloux.git.git_hub.utils.JsonUtils;
+import io.github.oliviercailloux.git.utils.JsonUtils;
 
 public class GitHubFetcherQL implements AutoCloseable {
 	public static final String GRAPHQL_ENDPOINT = "https://api.github.com/graphql";

@@ -1,4 +1,4 @@
-package io.github.oliviercailloux.st_projects.services.git;
+package io.github.oliviercailloux.git;
 
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -29,7 +29,7 @@ public class GitHistory {
 		this.graph = ImmutableGraph.copyOf(mutableGraph);
 	}
 
-	public Set<RevCommit> getFirsts() {
+	public Set<RevCommit> getRoots() {
 		/**
 		 * We could start from any given node and simply follow the parent relation, but
 		 * that finds only one root. Git allows for multiple roots.

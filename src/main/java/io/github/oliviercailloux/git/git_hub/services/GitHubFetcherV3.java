@@ -53,7 +53,7 @@ import io.github.oliviercailloux.git.git_hub.model.v3.Event;
 import io.github.oliviercailloux.git.git_hub.model.v3.EventType;
 import io.github.oliviercailloux.git.git_hub.model.v3.SearchResult;
 import io.github.oliviercailloux.git.git_hub.model.v3.SearchResults;
-import io.github.oliviercailloux.git.git_hub.utils.JsonUtils;
+import io.github.oliviercailloux.git.utils.JsonUtils;
 
 public class GitHubFetcherV3 implements AutoCloseable {
 	public static final Set<String> FORBIDDEN_IN_SEARCH = ImmutableSet.of(".", ",", ":", ";", "/", "\\", "`", "'", "\"",

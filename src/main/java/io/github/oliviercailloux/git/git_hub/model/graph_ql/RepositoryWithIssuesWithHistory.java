@@ -26,7 +26,7 @@ import com.google.common.collect.ImmutableSetMultimap.Builder;
 import com.google.common.collect.ImmutableSortedSet;
 
 import io.github.oliviercailloux.git.git_hub.services.GitHubJsonParser;
-import io.github.oliviercailloux.git.git_hub.utils.JsonUtils;
+import io.github.oliviercailloux.git.utils.JsonUtils;
 
 public class RepositoryWithIssuesWithHistory {
 	@SuppressWarnings("unused")

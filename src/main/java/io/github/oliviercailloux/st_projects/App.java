@@ -37,6 +37,7 @@ import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Streams;
 
+import io.github.oliviercailloux.git.Client;
 import io.github.oliviercailloux.git.git_hub.model.GitHubToken;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.git.git_hub.model.graph_ql.IssueWithHistory;
@@ -49,7 +50,6 @@ import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherV3;
 import io.github.oliviercailloux.st_projects.model.Functionality;
 import io.github.oliviercailloux.st_projects.model.Project;
 import io.github.oliviercailloux.st_projects.services.ProjectsMonitor;
-import io.github.oliviercailloux.st_projects.services.git.Client;
 import io.github.oliviercailloux.st_projects.services.read.IllegalFormat;
 import io.github.oliviercailloux.st_projects.services.read.UsernamesReader;
 import io.github.oliviercailloux.st_projects.services.spreadsheet.SpreadsheetException;
@@ -171,7 +171,7 @@ public class App implements AutoCloseable {
 					Paths.get("../../En cours"));
 			LOGGER.info("Retrieving {}.", repository);
 			try {
-				client.retrieve();
+				client.tryRetrieve();
 			} catch (CheckoutConflictException e) {
 				LOGGER.error(String.format("Retrieving %s.", repository), e);
 			}

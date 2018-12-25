@@ -1,5 +1,6 @@
-package io.github.oliviercailloux.st_projects.services.git;
+package io.github.oliviercailloux.git;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
@@ -10,9 +11,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Instant;
+import java.time.ZonedDateTime;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
+import java.util.TimeZone;
 
 import org.eclipse.jgit.api.CloneCommand;
 import org.eclipse.jgit.api.Git;
@@ -30,7 +33,6 @@ import org.eclipse.jgit.errors.MissingObjectException;
 import org.eclipse.jgit.internal.storage.file.FileRepository;
 import org.eclipse.jgit.lib.AnyObjectId;
 import org.eclipse.jgit.lib.ObjectId;
-import org.eclipse.jgit.lib.ObjectLoader;
 import org.eclipse.jgit.lib.ObjectReader;
 import org.eclipse.jgit.lib.PersonIdent;
 import org.eclipse.jgit.lib.Ref;
@@ -38,7 +40,6 @@ import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.revwalk.RevTree;
 import org.eclipse.jgit.revwalk.RevWalk;
-import org.eclipse.jgit.treewalk.CanonicalTreeParser;
 import org.eclipse.jgit.treewalk.TreeWalk;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,6 +47,7 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.ImmutableList;
 
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
+import io.github.oliviercailloux.git.utils.Utils;
 
 public class Client {
 	public static Client aboutAndUsing(RepositoryCoordinates coordinates, Path path) {
@@ -55,22 +57,32 @@ public class Client {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(Client.class);
 
-	private Path outputBaseDir;
+	private final Path outputBaseDir;
 
-	private RepositoryCoordinates coordinates;
+	private final RepositoryCoordinates coordinates;
 
-	private GitHistory history;
+	private GitHistory allHistory;
 
-	private Boolean exists, hasContent;
+	/**
+	 * The repository can be cloned or fetched.
+	 */
+	private Boolean exists;
+	/**
+	 * The repository database is not empty and the repository contains at least one
+	 * branch. exists == null ⇒ hasContent == null. exists == false ⇒ hasContent ==
+	 * false.
+	 */
+	private Boolean hasContent;
 
 	private Client(RepositoryCoordinates coordinates, Path outputBaseDir) {
 		this.coordinates = requireNonNull(coordinates);
 		this.outputBaseDir = requireNonNull(outputBaseDir);
-		history = null;
+		allHistory = null;
 		exists = null;
 		hasContent = null;
 	}
 
+	@Deprecated
 	public void checkout(String name) throws IOException, GitAPIException {
 		try (Git git = open()) {
 			git.checkout().setName(name).call();
@@ -81,40 +93,46 @@ public class Client {
 		return new FileRepository(getProjectDirectory().resolve(".git").toFile());
 	}
 
-	public boolean cloneRepositoryIfExists() throws GitAPIException {
+	public boolean tryClone() throws GitAPIException {
 		try {
 			cloneRepository();
+			assert exists == true;
 		} catch (InvalidRemoteException e) {
 			LOGGER.info("Cloning.", e);
-			return false;
+			exists = false;
+			hasContent = false;
 		}
-		return true;
+		return exists;
 	}
 
 	public boolean hasContent() throws IOException, GitAPIException {
 		checkState(exists != null);
-		if (!exists) {
-			return false;
+		assert Utils.implies(exists == null, hasContent == null);
+		assert Utils.implies(Boolean.FALSE.equals(exists), Boolean.FALSE.equals(hasContent));
+		if (hasContent != null) {
+			return hasContent;
 		}
+
 		try (Git git = open()) {
-			hasContent = git.getRepository().getObjectDatabase().exists() && listBranches().size() >= 1;
+			hasContent = git.getRepository().getObjectDatabase().exists() && getAllBranches().size() >= 1;
 			return hasContent;
 		}
 	}
 
-	public boolean hasCachedContent() {
+	public boolean hasContentCached() {
+		checkState(hasContent != null);
 		return hasContent;
 	}
 
-	public boolean retrieve() throws GitAPIException, IOException, IllegalStateException, CheckoutConflictException {
+	public boolean tryRetrieve() throws GitAPIException, IOException, IllegalStateException, CheckoutConflictException {
 		final String name = coordinates.getRepositoryName();
 		final Path outputProjectDir = outputBaseDir.resolve(name);
 		if (Files.exists(outputProjectDir)) {
 			update();
-			exists = true;
 		} else {
-			exists = cloneRepositoryIfExists();
+			tryClone();
 		}
+		assert exists != null;
 		return exists;
 	}
 
@@ -122,6 +140,7 @@ public class Client {
 		try (Git git = open()) {
 			LOGGER.info("Updating {}.", coordinates);
 			git.fetch().call();
+			exists = true;
 
 //			final Ref masterRef = repo.getRepository().exactRef("refs/heads/master");
 //			assert masterRef != null : repo.branchList().call();
@@ -129,7 +148,7 @@ public class Client {
 //			assert masterCommit != null : masterRef.getObjectId();
 //			final CheckoutCommand checkoutCmd = repo.checkout();
 //			checkoutCmd.setStartPoint(masterCommit).call();
-			if (listBranches().isEmpty()) {
+			if (getAllBranches().isEmpty()) {
 				return;
 			}
 			git.checkout().setName("refs/remotes/origin/master").call();
@@ -150,53 +169,20 @@ public class Client {
 		return outputBaseDir.resolve(name);
 	}
 
-	public ImmutableList<Ref> listBranches() throws IOException, GitAPIException {
+	public ImmutableList<Ref> getAllBranches() throws IOException, GitAPIException {
 		try (Git git = open()) {
 			final List<Ref> br = git.branchList().setListMode(ListMode.ALL).call();
 			return ImmutableList.copyOf(br);
 		}
 	}
 
-	public void checkout(RevCommit commit) throws IOException, GitAPIException {
+	public void checkout(AnyObjectId commitId) throws IOException, GitAPIException {
 		try (Git git = open()) {
-			git.checkout().setName(commit.name()).call();
+			git.checkout().setName(commitId.getName()).call();
 		}
 	}
 
-	private void read() throws IOException {
-//		try (new FileRepository repository = CookbookHelper.openJGitCookbookRepository()) {
-		try (Git git = open()) {
-			final Repository repository = git.getRepository();
-			// the Ref holds an ObjectId for any type of object (tree, commit, blob, tree)
-			Ref head = repository.exactRef("refs/heads/master");
-			System.out.println("Ref of refs/heads/master: " + head);
-
-			System.out.println("\nPrint contents of head of master branch, i.e. the latest commit information");
-			ObjectLoader loader = repository.open(head.getObjectId());
-			loader.copyTo(System.out);
-
-			System.out.println(
-					"\nPrint contents of tree of head of master branch, i.e. the latest binary tree information");
-
-			// a commit points to a tree
-			try (RevWalk walk = new RevWalk(repository)) {
-				RevCommit commit = walk.parseCommit(head.getObjectId());
-				RevTree tree = walk.parseTree(commit.getTree().getId());
-				System.out.println("Found Tree: " + tree);
-				loader = repository.open(tree.getId());
-				loader.copyTo(System.out);
-
-				walk.dispose();
-				CanonicalTreeParser treeParser = new CanonicalTreeParser();
-				try (ObjectReader reader = repository.newObjectReader()) {
-					treeParser.reset(reader, tree.getId());
-				}
-
-			}
-		}
-	}
-
-	public String fetchBlob(String revSpec, String path)
+	public String fetchBlob(AnyObjectId revSpec, Path path)
 			throws MissingObjectException, IncorrectObjectTypeException, IOException {
 		final Optional<AnyObjectId> foundId;
 		try (Repository repository = openRepository()) {
@@ -213,7 +199,7 @@ public class Client {
 		}
 	}
 
-	private Optional<AnyObjectId> getBlobId(Repository repository, String revSpec, String path)
+	private Optional<AnyObjectId> getBlobId(Repository repository, AnyObjectId revSpec, Path path)
 			throws AmbiguousObjectException, IncorrectObjectTypeException, IOException, MissingObjectException,
 			CorruptObjectException {
 		final Optional<AnyObjectId> foundId;
@@ -221,15 +207,14 @@ public class Client {
 		{
 			final RevCommit commit;
 			{
-				final ObjectId id1 = repository.resolve(revSpec);
 				try (RevWalk walk = new RevWalk(repository)) {
-					commit = walk.parseCommit(id1);
+					commit = walk.parseCommit(revSpec);
 				}
 			}
 			tree = commit.getTree();
 		}
 
-		try (TreeWalk treewalk = TreeWalk.forPath(repository, path, tree)) {
+		try (TreeWalk treewalk = TreeWalk.forPath(repository, path.toString(), tree)) {
 			if (treewalk != null) {
 				foundId = Optional.of(treewalk.getObjectId(0));
 			} else {
@@ -239,7 +224,14 @@ public class Client {
 		return foundId;
 	}
 
-	public Optional<AnyObjectId> getBlobId(String revSpec, String path) throws AmbiguousObjectException,
+	public Optional<ObjectId> tryResolve(String revSpec) throws IOException {
+		try (Repository repository = openRepository()) {
+			final ObjectId resolved = repository.resolve(revSpec);
+			return Optional.ofNullable(resolved);
+		}
+	}
+
+	public Optional<AnyObjectId> getBlobId(AnyObjectId revSpec, Path path) throws AmbiguousObjectException,
 			IncorrectObjectTypeException, IOException, MissingObjectException, CorruptObjectException {
 		try (Repository repository = openRepository()) {
 			return getBlobId(repository, revSpec, path);
@@ -263,9 +255,13 @@ public class Client {
 		cloneCmd.setDirectory(dest);
 		LOGGER.info("Cloning from {} to {}.", uri, dest);
 		cloneCmd.call().close();
+		exists = true;
 	}
 
-	public GitHistory listCommits(boolean all) throws IOException, GitAPIException {
+	@Deprecated
+	public GitHistory getHistory(boolean all) throws IOException, GitAPIException {
+		/** Should become private. */
+		final GitHistory history;
 		try (Git git = open()) {
 			LOGGER.info("Work dir: {}.", git.getRepository().getWorkTree());
 			final LogCommand log = git.log();
@@ -274,13 +270,20 @@ public class Client {
 			}
 			final Iterable<RevCommit> commits = log.call();
 			history = GitHistory.from(commits);
-			return history;
 		}
+		if (all) {
+			allHistory = history;
+		}
+		return history;
 	}
 
-	public GitHistory getHistory() {
-		checkState(history != null);
-		return history;
+	public GitHistory getWholeHistory() throws IOException, GitAPIException {
+		return getHistory(true);
+	}
+
+	public GitHistory getAllHistoryCached() {
+		checkState(allHistory != null);
+		return allHistory;
 	}
 
 	public static Client about(RepositoryCoordinates coordinates) {
@@ -288,7 +291,7 @@ public class Client {
 		return new Client(coordinates, Paths.get(tmpDir));
 	}
 
-	public boolean exists() {
+	public boolean existsCached() {
 		checkState(exists != null);
 		return exists;
 	}
@@ -301,10 +304,32 @@ public class Client {
 		return Git.open(getProjectDirectory().toFile());
 	}
 
-	public Instant getCreationTime(RevCommit commit) {
-		PersonIdent authorIdent = commit.getAuthorIdent();
-		Date authorDate = authorIdent.getWhen();
-//		TimeZone authorTimeZone = authorIdent.getTimeZone();
-		return authorDate.toInstant();
+	public ZonedDateTime getCreationTime(RevCommit commit) {
+		final ZonedDateTime authorCreationTime = getCreationTime(commit.getAuthorIdent());
+		final ZonedDateTime committerCreationTime = getCreationTime(commit.getCommitterIdent());
+		checkArgument(authorCreationTime.equals(committerCreationTime));
+		return authorCreationTime;
+	}
+
+	public ZonedDateTime getCreationTime(PersonIdent ident) {
+		Date creationInstant = ident.getWhen();
+		TimeZone creationZone = ident.getTimeZone();
+		final ZonedDateTime creationTime = ZonedDateTime.ofInstant(creationInstant.toInstant(),
+				creationZone.toZoneId());
+		return creationTime;
+	}
+
+	public ObjectId resolve(String revSpec) throws IOException {
+		try (Repository repository = openRepository()) {
+			final ObjectId resolved = repository.resolve(revSpec);
+			checkArgument(resolved != null);
+			return resolved;
+		}
+	}
+
+	public Instant getCreationTimeSimple(RevCommit commit) {
+		PersonIdent ident = commit.getAuthorIdent();
+		final ZonedDateTime creationTime = getCreationTime(ident);
+		return creationTime.toInstant();
 	}
 }
