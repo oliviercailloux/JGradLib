@@ -21,7 +21,8 @@ import com.google.common.collect.Sets;
 import com.univocity.parsers.csv.CsvWriter;
 import com.univocity.parsers.csv.CsvWriterSettings;
 
-import io.github.oliviercailloux.st_projects.ex2.Grade;
+import io.github.oliviercailloux.st_projects.model.GradeCriterion;
+import io.github.oliviercailloux.st_projects.model.StudentGrade;
 import io.github.oliviercailloux.st_projects.model.StudentOnMyCourse;
 
 public class MyCourseCsvWriter {
@@ -74,7 +75,8 @@ public class MyCourseCsvWriter {
 		writer.addValue(FEEDBACK_FORMAT_COLUMN, "SMART_TEXT");
 	}
 
-	public void writeCsv(String gradeName, int gradeId, ImmutableSet<Grade> grades) throws IOException {
+	public <T extends GradeCriterion> void writeCsv(String gradeName, int gradeId, ImmutableSet<StudentGrade<T>> grades)
+			throws IOException {
 		final Path out = Paths.get("out.csv");
 		final String gradeC = gradeName + " |" + gradeId;
 		final NumberFormat formatter = NumberFormat.getNumberInstance(Locale.FRENCH);
@@ -84,7 +86,7 @@ public class MyCourseCsvWriter {
 			writer = new CsvWriter(fileWriter, new CsvWriterSettings());
 			writer.writeHeaders(NAME_COLUMN, USERNAME_COLUMN, gradeC, NOTES_COLUMN, NOTES_FORMAT_COLUMN,
 					FEEDBACK_COLUMN, FEEDBACK_FORMAT_COLUMN);
-			for (Grade grade : grades) {
+			for (StudentGrade<T> grade : grades) {
 				final StudentOnMyCourse student = grade.getStudent().asStudentOnGitHubKnown().asStudentOnMyCourse();
 				LOGGER.info("Writing {}.", student);
 				writer.addValue(NAME_COLUMN, student.getLastName());

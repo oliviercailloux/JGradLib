@@ -3,6 +3,8 @@ package io.github.oliviercailloux.st_projects.ex2;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
+import io.github.oliviercailloux.st_projects.model.GradeCriterion;
+
 public enum Ex2Criterion implements GradeCriterion {
 	REPO_EXISTS("Repository exists", 0.5d), ON_TIME("Delivered on time", 0),
 	GROUP_ID("Group id follows Maven best practices", 0.5d), ICAL("Ical dependency", 1d),

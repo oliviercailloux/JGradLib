@@ -13,17 +13,17 @@ import io.github.oliviercailloux.git.git_hub.model.graph_ql.IssueWithHistory;
 import io.github.oliviercailloux.git.git_hub.model.graph_ql.Repository;
 import io.github.oliviercailloux.git.git_hub.model.graph_ql.RepositoryWithIssuesWithHistory;
 
-public class GradedProject {
+public class ProjectWithRepoOpt {
 	@SuppressWarnings("unused")
-	private static final Logger LOGGER = LoggerFactory.getLogger(GradedProject.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(ProjectWithRepoOpt.class);
 
-	public static GradedProject from(Project project) {
-		final GradedProject gradedProject = new GradedProject(project, Optional.empty());
+	public static ProjectWithRepoOpt from(Project project) {
+		final ProjectWithRepoOpt gradedProject = new ProjectWithRepoOpt(project, Optional.empty());
 		return gradedProject;
 	}
 
-	public static GradedProject from(Project project, RepositoryWithIssuesWithHistory repository) {
-		final GradedProject gradedProject = new GradedProject(project, Optional.of(repository));
+	public static ProjectWithRepoOpt from(Project project, RepositoryWithIssuesWithHistory repository) {
+		final ProjectWithRepoOpt gradedProject = new ProjectWithRepoOpt(project, Optional.of(repository));
 		return gradedProject;
 	}
 
@@ -31,7 +31,7 @@ public class GradedProject {
 
 	private Optional<RepositoryWithIssuesWithHistory> repositoryOpt;
 
-	private GradedProject(Project project, Optional<RepositoryWithIssuesWithHistory> repository) {
+	private ProjectWithRepoOpt(Project project, Optional<RepositoryWithIssuesWithHistory> repository) {
 		this.project = requireNonNull(project);
 		this.repositoryOpt = requireNonNull(repository);
 	}

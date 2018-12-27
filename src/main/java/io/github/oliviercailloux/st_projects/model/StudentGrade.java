@@ -1,4 +1,4 @@
-package io.github.oliviercailloux.st_projects.ex2;
+package io.github.oliviercailloux.st_projects.model;
 
 import static java.util.Objects.requireNonNull;
 
@@ -20,41 +20,39 @@ import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
-import io.github.oliviercailloux.st_projects.model.StudentOnGitHub;
-
 @JsonbPropertyOrder({ "student" })
-public class Grade {
-	private Grade(StudentOnGitHub student, ImmutableBiMap<GradeCriterion, SingleGrade> grades) {
+public class StudentGrade<T extends GradeCriterion> {
+	private StudentGrade(StudentOnGitHub student, ImmutableBiMap<T, CriterionGrade<T>> grades) {
 		LOGGER.info("Internally building with {}, {}.", student, grades);
 		this.student = requireNonNull(student);
 		this.grades = requireNonNull(grades);
 	}
 
 	@JsonbCreator
-	public static Grade of(@JsonbProperty("student") StudentOnGitHub student,
-			@JsonbProperty("gradeValues") Set<SingleGrade> gradeValues) {
+	public static <T extends GradeCriterion> StudentGrade<T> of(@JsonbProperty("student") StudentOnGitHub student,
+			@JsonbProperty("gradeValues") Set<CriterionGrade<T>> gradeValues) {
 		LOGGER.info("Building with {}, {}.", student, gradeValues.iterator().next().getClass());
-		final Collector<SingleGrade, ?, ImmutableBiMap<GradeCriterion, SingleGrade>> toI = ImmutableBiMap
+		final Collector<CriterionGrade<T>, ?, ImmutableBiMap<T, CriterionGrade<T>>> toI = ImmutableBiMap
 				.toImmutableBiMap((g) -> g.getCriterion(), (g) -> g);
 		gradeValues.stream().forEach(System.out::println);
-		final ImmutableBiMap<GradeCriterion, SingleGrade> im = gradeValues.stream().collect(toI);
-		return new Grade(student, im);
+		final ImmutableBiMap<T, CriterionGrade<T>> im = gradeValues.stream().collect(toI);
+		return new StudentGrade<>(student, im);
 	}
 
 	@SuppressWarnings("unused")
-	private static final Logger LOGGER = LoggerFactory.getLogger(Grade.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(StudentGrade.class);
 	private StudentOnGitHub student;
 	/**
 	 * points ≤ maxPoints of the corresponding criterion.
 	 */
-	private final ImmutableBiMap<GradeCriterion, SingleGrade> grades;
+	private final ImmutableBiMap<T, CriterionGrade<T>> grades;
 
 	@Override
 	public boolean equals(Object o2) {
-		if (!(o2 instanceof Grade)) {
+		if (!(o2 instanceof StudentGrade)) {
 			return false;
 		}
-		final Grade g2 = (Grade) o2;
+		final StudentGrade<?> g2 = (StudentGrade<?>) o2;
 		return student.equals(g2.student) && grades.equals(g2.grades);
 	}
 
@@ -72,15 +70,15 @@ public class Grade {
 		return student;
 	}
 
-	public ImmutableMap<GradeCriterion, SingleGrade> getGrades() {
+	public ImmutableMap<T, CriterionGrade<T>> getGrades() {
 		return grades;
 	}
 
-	public Set<SingleGrade> getGradeValues() {
+	public Set<CriterionGrade<T>> getGradeValues() {
 		return grades.values();
 	}
 
-	public ImmutableSet<SingleGrade> getGradeValuesImmutable() {
+	public ImmutableSet<CriterionGrade<T>> getGradeValuesImmutable() {
 		return grades.values();
 	}
 
@@ -92,14 +90,14 @@ public class Grade {
 	}
 
 	public double getGrade() {
-		return grades.values().stream().collect(Collectors.summingDouble(SingleGrade::getPoints));
+		return grades.values().stream().collect(Collectors.summingDouble(CriterionGrade::getPoints));
 	}
 
 	public double getMaxGrade() {
 		return grades.values().stream().collect(Collectors.summingDouble((g) -> g.getCriterion().getMaxPoints()));
 	}
 
-	private String getEvaluation(SingleGrade grade) {
+	private String getEvaluation(CriterionGrade<T> grade) {
 		final GradeCriterion criterion = grade.getCriterion();
 
 		final StringBuilder builder = new StringBuilder();

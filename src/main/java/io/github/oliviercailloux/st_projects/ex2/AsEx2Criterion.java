@@ -2,6 +2,8 @@ package io.github.oliviercailloux.st_projects.ex2;
 
 import javax.json.bind.adapter.JsonbAdapter;
 
+import io.github.oliviercailloux.st_projects.model.GradeCriterion;
+
 public class AsEx2Criterion implements JsonbAdapter<GradeCriterion, String> {
 
 	@Override

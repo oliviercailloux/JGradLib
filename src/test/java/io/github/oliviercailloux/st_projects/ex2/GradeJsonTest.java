@@ -24,6 +24,8 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSet.Builder;
 import com.google.common.io.Resources;
 
+import io.github.oliviercailloux.st_projects.model.CriterionGrade;
+import io.github.oliviercailloux.st_projects.model.StudentGrade;
 import io.github.oliviercailloux.st_projects.model.StudentOnGitHub;
 import io.github.oliviercailloux.st_projects.model.StudentOnGitHubKnown;
 import io.github.oliviercailloux.st_projects.model.StudentOnMyCourse;
@@ -38,7 +40,7 @@ class GradeJsonTest {
 				StandardCharsets.UTF_8);
 		final String expected = expectedFormatted.replace("\n", "").replace(" ", "");
 
-		final SingleGrade grade = SingleGrade.max(ENC);
+		final CriterionGrade<Ex2Criterion> grade = CriterionGrade.max(ENC);
 		final String written;
 		try (Jsonb jsonb = JsonbBuilder.create()) {
 			written = jsonb.toJson(grade);
@@ -83,9 +85,10 @@ class GradeJsonTest {
 
 	@Test
 	public void gradeWriteJson() {
-		final SingleGrade grade1 = SingleGrade.max(ENC);
-		final SingleGrade grade2 = SingleGrade.zero(ANNOT);
-		final Grade grade = Grade.of(getStudentOnGitHubKnown().asStudentOnGitHub(), ImmutableSet.of(grade1, grade2));
+		final CriterionGrade<Ex2Criterion> grade1 = CriterionGrade.max(ENC);
+		final CriterionGrade<Ex2Criterion> grade2 = CriterionGrade.zero(ANNOT);
+		final StudentGrade<Ex2Criterion> grade = StudentGrade.of(getStudentOnGitHubKnown().asStudentOnGitHub(),
+				ImmutableSet.of(grade1, grade2));
 		final String json;
 		try (Jsonb jsonb = JsonbBuilder.create(new JsonbConfig().withAdapters(new GHAsJson()).withFormatting(true))) {
 			// TODO does not chain adapters, it seems
@@ -116,14 +119,15 @@ class GradeJsonTest {
 
 	@Test
 	public void gradeReadJson() throws Exception {
-		final SingleGrade grade1 = SingleGrade.max(ENC);
-		final SingleGrade grade2 = SingleGrade.zero(ANNOT);
-		final Grade expected = Grade.of(getStudentOnGitHubKnown().asStudentOnGitHub(), ImmutableSet.of(grade1, grade2));
+		final CriterionGrade<Ex2Criterion> grade1 = CriterionGrade.max(ENC);
+		final CriterionGrade<Ex2Criterion> grade2 = CriterionGrade.zero(ANNOT);
+		final StudentGrade<Ex2Criterion> expected = StudentGrade.of(getStudentOnGitHubKnown().asStudentOnGitHub(),
+				ImmutableSet.of(grade1, grade2));
 		final String json = Resources.toString(this.getClass().getResource("Grade.json"), StandardCharsets.UTF_8);
-		final Grade read;
+		final StudentGrade<Ex2Criterion> read;
 		try (Jsonb jsonb = JsonbBuilder
 				.create(new JsonbConfig().withAdapters(new AsEx2Criterion(), new GHAsJson()).withFormatting(true))) {
-			read = jsonb.fromJson(json, Grade.class);
+			read = jsonb.fromJson(json, StudentGrade.class);
 			LOGGER.info("Deserialized: {}.", read);
 		}
 		assertEquals(expected, read);
@@ -131,9 +135,10 @@ class GradeJsonTest {
 
 	@Test
 	public void gradeReadJsonManually() throws Exception {
-		final SingleGrade grade1 = SingleGrade.max(ENC);
-		final SingleGrade grade2 = SingleGrade.zero(ANNOT);
-		final Grade expected = Grade.of(getStudentOnGitHubKnown().asStudentOnGitHub(), ImmutableSet.of(grade1, grade2));
+		final CriterionGrade<Ex2Criterion> grade1 = CriterionGrade.max(ENC);
+		final CriterionGrade<Ex2Criterion> grade2 = CriterionGrade.zero(ANNOT);
+		final StudentGrade<Ex2Criterion> expected = StudentGrade.of(getStudentOnGitHubKnown().asStudentOnGitHub(),
+				ImmutableSet.of(grade1, grade2));
 		final String jsonStr = Resources.toString(this.getClass().getResource("Grade.json"), StandardCharsets.UTF_8);
 
 		final GHAsJson ghAsJson = new GHAsJson();
@@ -144,18 +149,18 @@ class GradeJsonTest {
 		final JsonObject st = json.getJsonObject("student");
 		final StudentOnGitHub student = ghAsJson.adaptFromJson(st);
 		final JsonArray grades = json.getJsonArray("gradeValues");
-		final Builder<SingleGrade> gradesBuilder = ImmutableSet.builder();
+		final Builder<CriterionGrade<Ex2Criterion>> gradesBuilder = ImmutableSet.builder();
 		for (JsonValue grade : grades) {
 			try (Jsonb jsonb = JsonbBuilder
 					.create(new JsonbConfig().withAdapters(new AsEx2Criterion()).withFormatting(true))) {
-				final SingleGrade thisGrade = jsonb.fromJson(grade.toString(), SingleGrade.class);
+				final CriterionGrade<Ex2Criterion> thisGrade = jsonb.fromJson(grade.toString(), CriterionGrade.class);
 				gradesBuilder.add(thisGrade);
 				LOGGER.info("Deserialized: {}.", thisGrade);
 			} catch (Exception e) {
 				throw new IllegalStateException(e);
 			}
 		}
-		final Grade grade = Grade.of(student, gradesBuilder.build());
+		final StudentGrade<Ex2Criterion> grade = StudentGrade.of(student, gradesBuilder.build());
 		assertEquals(expected, grade);
 	}
 
@@ -184,13 +189,13 @@ class GradeJsonTest {
 
 	@Test
 	public void singleReadJson() throws Exception {
-		final SingleGrade expected = SingleGrade.max(ENC);
+		final CriterionGrade<Ex2Criterion> expected = CriterionGrade.max(ENC);
 		final String json = Resources.toString(this.getClass().getResource("Single grade.json"),
 				StandardCharsets.UTF_8);
-		final SingleGrade read;
+		final CriterionGrade<Ex2Criterion> read;
 		try (Jsonb jsonb = JsonbBuilder
 				.create(new JsonbConfig().withAdapters(new AsEx2Criterion()).withFormatting(true))) {
-			read = jsonb.fromJson(json, SingleGrade.class);
+			read = jsonb.fromJson(json, CriterionGrade.class);
 			LOGGER.info("Deserialized: {}.", read);
 		} catch (Exception e) {
 			throw new IllegalStateException(e);

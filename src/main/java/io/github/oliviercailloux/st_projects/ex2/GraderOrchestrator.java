@@ -44,6 +44,9 @@ import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherV3;
 import io.github.oliviercailloux.git.utils.JsonUtils;
 import io.github.oliviercailloux.mycourse.MyCourseCsvWriter;
+import io.github.oliviercailloux.st_projects.model.CriterionGrade;
+import io.github.oliviercailloux.st_projects.model.GradeCriterion;
+import io.github.oliviercailloux.st_projects.model.StudentGrade;
 import io.github.oliviercailloux.st_projects.model.StudentOnGitHub;
 import io.github.oliviercailloux.st_projects.model.StudentOnGitHubKnown;
 import io.github.oliviercailloux.st_projects.services.read.UsernamesReader;
@@ -67,7 +70,7 @@ public class GraderOrchestrator {
 		readUsernames();
 
 		readRepositories();
-//		setSingleRepo("edoreld");
+		setSingleRepo("thejoker2323");
 
 		final Instant deadline = ZonedDateTime.parse("2018-12-05T23:59:59+01:00").toInstant();
 		final Instant cap = ZonedDateTime.parse("2018-12-06T07:00:00+01:00").toInstant();
@@ -75,11 +78,11 @@ public class GraderOrchestrator {
 		grader.setDeadline(deadline);
 		grader.setIgnoreAfter(cap);
 
-		final ImmutableSet.Builder<Grade> gradesBuilder = ImmutableSet.builder();
+		final ImmutableSet.Builder<StudentGrade<Ex2Criterion>> gradesBuilder = ImmutableSet.builder();
 		for (Entry<StudentOnGitHubKnown, RepositoryCoordinates> entry : getRepositoriesByStudentKnown().entrySet()) {
 			final StudentOnGitHubKnown student = entry.getKey();
 			final RepositoryCoordinates repo = entry.getValue();
-			final Grade grade = grader.grade(repo, student.asStudentOnGitHub());
+			final StudentGrade<Ex2Criterion> grade = grader.grade(repo, student.asStudentOnGitHub());
 			gradesBuilder.add(grade);
 			LOGGER.debug("Student {}, grades {}.", student, grade.getGrades().values());
 			LOGGER.info("Evaluation: {}", grade.getAsMyCourseString());
@@ -87,7 +90,7 @@ public class GraderOrchestrator {
 		grades = gradesBuilder.build();
 
 		writeCsv();
-		writeJson();
+//		writeJson();
 	}
 
 	private void jsonToMyCourse() throws IOException {
@@ -96,7 +99,7 @@ public class GraderOrchestrator {
 	}
 
 	private void writeJson() throws IOException {
-		final ImmutableSet<Grade> gradesExt = grades.stream().map((g) -> extend(g))
+		final ImmutableSet<StudentGrade<Ex2Criterion>> gradesExt = grades.stream().map((g) -> extend(g))
 				.collect(ImmutableSet.toImmutableSet());
 		final String str = JsonUtils.serializeWithJsonB(gradesExt);
 		try (BufferedWriter fileWriter = Files.newBufferedWriter(Paths.get("out.json"), StandardCharsets.UTF_8)) {
@@ -112,41 +115,42 @@ public class GraderOrchestrator {
 		try (JsonReader jr = Json.createReader(new StringReader(jsonStr))) {
 			json = jr.readArray();
 		}
-		final Builder<Grade> builder = ImmutableSet.builder();
+		final Builder<StudentGrade<Ex2Criterion>> builder = ImmutableSet.builder();
 		for (JsonValue jsonValue : json) {
-			final Grade grade = readGrade(jsonValue.asJsonObject());
+			final StudentGrade<Ex2Criterion> grade = readGrade(jsonValue.asJsonObject());
 			LOGGER.info("Grade read: {}.", grade);
 			builder.add(grade);
 		}
 		grades = builder.build();
 	}
 
-	private Grade readGrade(JsonObject json) {
+	private StudentGrade<Ex2Criterion> readGrade(JsonObject json) {
 		final GHAsJson ghAsJson = new GHAsJson();
 		final JsonObject st = json.getJsonObject("student");
 		final StudentOnGitHub student = ghAsJson.adaptFromJson(st);
 		final JsonArray gradesJson = json.getJsonArray("gradeValues");
-		final Builder<SingleGrade> gradesBuilder = ImmutableSet.builder();
+		final Builder<CriterionGrade<Ex2Criterion>> gradesBuilder = ImmutableSet.builder();
 		for (JsonValue grade : gradesJson) {
 			try (Jsonb jsonb = JsonbBuilder
 					.create(new JsonbConfig().withAdapters(new AsEx2Criterion()).withFormatting(true))) {
-				final SingleGrade thisGrade = jsonb.fromJson(grade.toString(), SingleGrade.class);
+				final CriterionGrade<Ex2Criterion> thisGrade = jsonb.fromJson(grade.toString(), CriterionGrade.class);
 				gradesBuilder.add(thisGrade);
 				LOGGER.info("Deserialized: {}.", thisGrade);
 			} catch (Exception e) {
 				throw new IllegalStateException(e);
 			}
 		}
-		final Grade grade = Grade.of(student, gradesBuilder.build());
+		final StudentGrade<Ex2Criterion> grade = StudentGrade.of(student, gradesBuilder.build());
 		return grade;
 	}
 
-	private Grade extend(Grade g) {
-		final Stream<SingleGrade> toAdd = Stream.of(SingleGrade.zero(Ex2Criterion.GET_SIMPLE, "Todo"),
-				SingleGrade.zero(Ex2Criterion.DEFAULT_PARAM, "Todo"));
-		final ImmutableSet<SingleGrade> ext = Stream.concat(g.getGradeValues().stream(), toAdd)
+	private StudentGrade<Ex2Criterion> extend(StudentGrade<Ex2Criterion> g) {
+		final Stream<CriterionGrade<Ex2Criterion>> toAdd = Stream.of(
+				CriterionGrade.zero(Ex2Criterion.GET_SIMPLE, "Todo"),
+				CriterionGrade.zero(Ex2Criterion.DEFAULT_PARAM, "Todo"));
+		final ImmutableSet<CriterionGrade<Ex2Criterion>> ext = Stream.concat(g.getGradeValues().stream(), toAdd)
 				.collect(ImmutableSet.toImmutableSet());
-		return Grade.of(g.getStudent(), ext);
+		return StudentGrade.of(g.getStudent(), ext);
 	}
 
 	public void setSingleRepo(String studentGitHubUsername) {
@@ -198,13 +202,13 @@ public class GraderOrchestrator {
 					.collect(ImmutableSet.toImmutableSet());
 			writer.writeHeaders(Streams.concat(Stream.of("Name", "GitHub username"),
 					allKeys.stream().map(Object::toString), Stream.of("Grade")).collect(Collectors.toList()));
-			for (Grade grade : grades) {
+			for (StudentGrade<Ex2Criterion> grade : grades) {
 				final StudentOnGitHub student = grade.getStudent();
 				LOGGER.info("Writing {}.", student);
 				writer.addValue("Name", student.getLastName().orElse("unknown"));
 				writer.addValue("GitHub username", student.getGitHubUsername());
 
-				for (GradeCriterion criterion : grade.getGrades().keySet()) {
+				for (Ex2Criterion criterion : grade.getGrades().keySet()) {
 					final double mark = grade.getGrades().get(criterion).getPoints();
 					writer.addValue(criterion.toString(), formatter.format(mark));
 				}
@@ -225,7 +229,7 @@ public class GraderOrchestrator {
 
 	private static final String PREFIX = "servlet";
 
-	private ImmutableSet<Grade> grades;
+	private ImmutableSet<StudentGrade<Ex2Criterion>> grades;
 
 	public UsernamesReader getUsernames() {
 		return usernames;

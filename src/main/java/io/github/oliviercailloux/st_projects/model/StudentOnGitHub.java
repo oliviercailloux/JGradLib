@@ -81,4 +81,9 @@ public class StudentOnGitHub {
 		return MoreObjects.toStringHelper(this).add("GitHub username", gitHubUsername)
 				.add("onMyCourse", studentOnMyCourseOpt).toString();
 	}
+
+	public StudentOnMyCourse asStudentOnMyCourse() {
+		checkState(studentOnMyCourseOpt.isPresent());
+		return studentOnMyCourseOpt.get();
+	}
 }

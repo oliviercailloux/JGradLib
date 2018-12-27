@@ -32,7 +32,7 @@ import io.github.oliviercailloux.git.git_hub.model.graph_ql.Repository;
 import io.github.oliviercailloux.git.git_hub.model.graph_ql.RepositoryWithIssuesWithHistory;
 import io.github.oliviercailloux.git.git_hub.model.graph_ql.User;
 import io.github.oliviercailloux.st_projects.model.Functionality;
-import io.github.oliviercailloux.st_projects.model.GradedProject;
+import io.github.oliviercailloux.st_projects.model.ProjectWithRepoOpt;
 import io.github.oliviercailloux.st_projects.model.Project;
 
 public class SpreadsheetWriter {
@@ -182,7 +182,7 @@ public class SpreadsheetWriter {
 		curCol -= 10;
 	}
 
-	private void writeFct(Functionality fct, boolean firstFct, GradedProject project) {
+	private void writeFct(Functionality fct, boolean firstFct, ProjectWithRepoOpt project) {
 		final String fctName = fct.getName();
 		final ImmutableSortedSet<IssueWithHistory> issues = project.getIssuesCorrespondingTo(fct);
 		if (issues.isEmpty()) {
@@ -263,8 +263,8 @@ public class SpreadsheetWriter {
 	}
 
 	private void writeProject(Project project, Optional<RepositoryWithIssuesWithHistory> ghProject) {
-		final GradedProject gradedProject = ghProject.isPresent() ? GradedProject.from(project, ghProject.get())
-				: GradedProject.from(project);
+		final ProjectWithRepoOpt gradedProject = ghProject.isPresent() ? ProjectWithRepoOpt.from(project, ghProject.get())
+				: ProjectWithRepoOpt.from(project);
 		writeProjectTitle(gradedProject);
 
 		++curRow;
@@ -285,7 +285,7 @@ public class SpreadsheetWriter {
 		}
 	}
 
-	private void writeProjectTitle(GradedProject project) {
+	private void writeProjectTitle(ProjectWithRepoOpt project) {
 		{
 			final Cell cellTitle = sheet.getCellByPosition(curCol, curRow);
 			final Paragraph paragraph = cellTitle.addParagraph("");

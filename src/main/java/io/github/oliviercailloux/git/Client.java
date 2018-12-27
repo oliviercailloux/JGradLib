@@ -15,6 +15,7 @@ import java.time.ZonedDateTime;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.TimeZone;
 
 import org.eclipse.jgit.api.CloneCommand;
@@ -45,6 +46,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Table;
+import com.google.common.collect.TreeBasedTable;
 
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.git.utils.Utils;
@@ -74,12 +77,18 @@ public class Client {
 	 */
 	private Boolean hasContent;
 
+	private final Table<ObjectId, Path, String> blobCache;
+
+	private ObjectId defaultRevSpec;
+
 	private Client(RepositoryCoordinates coordinates, Path outputBaseDir) {
 		this.coordinates = requireNonNull(coordinates);
 		this.outputBaseDir = requireNonNull(outputBaseDir);
 		allHistory = null;
 		exists = null;
 		hasContent = null;
+		blobCache = TreeBasedTable.create();
+		defaultRevSpec = null;
 	}
 
 	@Deprecated
@@ -184,6 +193,10 @@ public class Client {
 
 	public String fetchBlob(AnyObjectId revSpec, Path path)
 			throws MissingObjectException, IncorrectObjectTypeException, IOException {
+		if (blobCache.contains(revSpec, path)) {
+			return blobCache.get(revSpec, path);
+		}
+
 		final Optional<AnyObjectId> foundId;
 		try (Repository repository = openRepository()) {
 			foundId = getBlobId(repository, revSpec, path);
@@ -195,8 +208,20 @@ public class Client {
 			} else {
 				read = "";
 			}
+			blobCache.put(revSpec.copy(), path, read);
 			return read;
 		}
+	}
+
+	public String fetchBlobOrEmpty(Path path) throws MissingObjectException, IncorrectObjectTypeException, IOException {
+		if (defaultRevSpec == null) {
+			return "";
+		}
+		return fetchBlob(defaultRevSpec, path);
+	}
+
+	public void setDefaultRevSpec(AnyObjectId revSpec) {
+		defaultRevSpec = revSpec.copy();
 	}
 
 	private Optional<AnyObjectId> getBlobId(Repository repository, AnyObjectId revSpec, Path path)
@@ -205,12 +230,7 @@ public class Client {
 		final Optional<AnyObjectId> foundId;
 		final RevTree tree;
 		{
-			final RevCommit commit;
-			{
-				try (RevWalk walk = new RevWalk(repository)) {
-					commit = walk.parseCommit(revSpec);
-				}
-			}
+			final RevCommit commit = getCommit(repository, revSpec);
 			tree = commit.getTree();
 		}
 
@@ -222,6 +242,15 @@ public class Client {
 			}
 		}
 		return foundId;
+	}
+
+	private RevCommit getCommit(Repository repository, AnyObjectId revSpec)
+			throws MissingObjectException, IncorrectObjectTypeException, IOException {
+		final RevCommit commit;
+		try (RevWalk walk = new RevWalk(repository)) {
+			commit = walk.parseCommit(revSpec);
+		}
+		return commit;
 	}
 
 	public Optional<ObjectId> tryResolve(String revSpec) throws IOException {
@@ -261,6 +290,10 @@ public class Client {
 	@Deprecated
 	public GitHistory getHistory(boolean all) throws IOException, GitAPIException {
 		/** Should become private. */
+		if (all && allHistory != null) {
+			return allHistory;
+		}
+
 		final GitHistory history;
 		try (Git git = open()) {
 			LOGGER.info("Work dir: {}.", git.getRepository().getWorkTree());
@@ -331,5 +364,19 @@ public class Client {
 		PersonIdent ident = commit.getAuthorIdent();
 		final ZonedDateTime creationTime = getCreationTime(ident);
 		return creationTime.toInstant();
+	}
+
+	public Set<RevCommit> getAllCommits() throws IOException, GitAPIException {
+		return getWholeHistory().getGraph().nodes();
+	}
+
+	public RevCommit getCommit(AnyObjectId revSpec) throws IOException {
+		try (Repository repository = openRepository()) {
+			return getCommit(repository, revSpec);
+		}
+	}
+
+	public Optional<ObjectId> getDefaultRevSpec() {
+		return Optional.ofNullable(defaultRevSpec);
 	}
 }

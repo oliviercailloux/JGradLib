@@ -1,6 +1,5 @@
 package io.github.oliviercailloux.st_projects.ex2;
 
-import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
@@ -8,14 +7,9 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.time.Duration;
 import java.time.Instant;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
 import java.util.Arrays;
-import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Predicate;
@@ -23,63 +17,70 @@ import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
-import org.eclipse.jgit.api.errors.CheckoutConflictException;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.lib.AnyObjectId;
 import org.eclipse.jgit.lib.ObjectId;
-import org.eclipse.jgit.revwalk.RevCommit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.collect.Comparators;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
 import io.github.oliviercailloux.git.Client;
-import io.github.oliviercailloux.git.GitHistory;
-import io.github.oliviercailloux.git.git_hub.model.GitHubToken;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
-import io.github.oliviercailloux.git.git_hub.model.v3.Event;
-import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherV3;
+import io.github.oliviercailloux.st_projects.model.CriterionGrade;
+import io.github.oliviercailloux.st_projects.model.GradeCriterion;
+import io.github.oliviercailloux.st_projects.model.StudentGrade;
 import io.github.oliviercailloux.st_projects.model.StudentOnGitHub;
+import io.github.oliviercailloux.st_projects.services.grading.ContextInitializer;
+import io.github.oliviercailloux.st_projects.services.grading.CriterionGrader;
+import io.github.oliviercailloux.st_projects.services.grading.SimpleGrader;
+import io.github.oliviercailloux.st_projects.services.grading.TimeGrader;
 
 public class Ex2Grader {
 	private StudentOnGitHub student;
-	private ImmutableSet.Builder<SingleGrade> gradesBuilder;
-	private Instant ignoreAfter;
-	private Supplier<GitHubFetcherV3> fetcherSupplier;
-	private Client client;
+	private ImmutableSet.Builder<CriterionGrade<Ex2Criterion>> gradesBuilder;
 
 	public Ex2Grader() {
 		gradesBuilder = null;
 		student = null;
-		client = null;
 		deadline = Instant.MAX;
-		ignoreAfter = Instant.MAX;
-		fetcherSupplier = () -> {
-			try {
-				return GitHubFetcherV3.using(GitHubToken.getRealInstance());
-			} catch (IOException e) {
-				throw new IllegalStateException(e);
-			}
-		};
 		pomContent = null;
 		mavenManager = new MavenManager();
-		allEvents = null;
-		submitted = null;
+		context = null;
 	}
 
 	private void grade() throws IOException {
-		final String any = "(.|\\v)*";
 		final String groupId;
 		final List<String> groupIdElements;
 		pomContent = read(Paths.get("pom.xml"));
 		final String servletContent;
 
-		onTime();
+		final TimeGrader<Ex2Criterion> grader = TimeGrader.given(Ex2Criterion.ON_TIME, context, deadline, MAX_GRADE);
+		putGrade(grader.grade());
 
+		final CriterionGrader<GradeCriterion> repoGrader = SimpleGrader.using(context, (c) -> {
+			final Client client = c.getClient();
+
+			{
+				final CriterionGrade<Ex2Criterion> grade;
+				if (!client.existsCached()) {
+					grade = CriterionGrade.zero(Ex2Criterion.REPO_EXISTS, "Repository not found");
+				} else if (!client.hasContentCached()) {
+					grade = CriterionGrade.zero(Ex2Criterion.REPO_EXISTS, "Repository found but is empty");
+				} else if (!c.getMainCommit().isPresent()) {
+					grade = CriterionGrade.zero(Ex2Criterion.REPO_EXISTS,
+							"Repository found with content but no suitable commit found");
+				} else {
+					grade = CriterionGrade.max(Ex2Criterion.REPO_EXISTS);
+				}
+				return grade;
+			}
+		});
+		putGrade(repoGrader.grade());
+
+		final Client client = context.getClient();
 		{
 			final Matcher matcher = Pattern.compile("<groupId>(io\\.github\\..*)</groupId>").matcher(pomContent);
 			final boolean found = matcher.find();
@@ -95,20 +96,20 @@ public class Ex2Grader {
 		}
 		{
 			final boolean found = Pattern
-					.compile("<dependencies>" + any + "<dependency>" + any + "<groupId>org\\.mnode\\.ical4j</groupId>"
-							+ any + "<artifactId>ical4j</artifactId>" + any + "<version>3\\.0\\.2</version>")
+					.compile("<dependencies>" + ANY + "<dependency>" + ANY + "<groupId>org\\.mnode\\.ical4j</groupId>"
+							+ ANY + "<artifactId>ical4j</artifactId>" + ANY + "<version>3\\.0\\.2</version>")
 					.matcher(pomContent).find();
 			binaryCriterion(Ex2Criterion.ICAL, () -> found);
 		}
 		{
-			final boolean found = Pattern.compile("<properties>" + any
-					+ "<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>" + any + "</properties>")
+			final boolean found = Pattern.compile("<properties>" + ANY
+					+ "<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>" + ANY + "</properties>")
 					.matcher(pomContent).find();
 			binaryCriterion(Ex2Criterion.UTF, () -> found);
 		}
 		{
 			final boolean found = Pattern.compile(
-					"<properties>" + any + "<maven.compiler.source>.*</maven.compiler.source>" + any + "</properties>")
+					"<properties>" + ANY + "<maven.compiler.source>.*</maven.compiler.source>" + ANY + "</properties>")
 					.matcher(pomContent).find();
 			binaryCriterion(Ex2Criterion.SOURCE, () -> found);
 		}
@@ -122,7 +123,7 @@ public class Ex2Grader {
 		}
 		{
 			if (groupIdElements == null) {
-				putGrade(SingleGrade.zero(Ex2Criterion.PREFIX, "Unknown group id"));
+				putGrade(CriterionGrade.zero(Ex2Criterion.PREFIX, "Unknown group id"));
 			} else {
 				Path currentSegment = Paths.get("src/main/java");
 				boolean allMatch = true;
@@ -138,8 +139,8 @@ public class Ex2Grader {
 					}
 					currentSegment = nextSegment;
 				}
-				final boolean allMatch2 = allMatch;
-				binaryCriterion(Ex2Criterion.PREFIX, () -> allMatch2);
+				final boolean allMatchFinal = allMatch;
+				binaryCriterion(Ex2Criterion.PREFIX, () -> allMatchFinal);
 			}
 		}
 		{
@@ -190,9 +191,9 @@ public class Ex2Grader {
 			final boolean foundAuto = Pattern.compile("Auto-generated").matcher(servletContent).find();
 			final boolean foundSee = Pattern.compile("@see HttpServlet#doGet").matcher(servletContent).find();
 			if (foundAuto || foundSee) {
-				putGrade(SingleGrade.of(Ex2Criterion.AUTO, -1d, ""));
+				putGrade(CriterionGrade.of(Ex2Criterion.AUTO, -1d, ""));
 			} else {
-				putGrade(SingleGrade.of(Ex2Criterion.AUTO, 0, ""));
+				putGrade(CriterionGrade.of(Ex2Criterion.AUTO, 0, ""));
 			}
 		}
 		{
@@ -217,24 +218,24 @@ public class Ex2Grader {
 		}
 		{
 			final boolean finalFound = Pattern
-					.compile("<build>" + any + "<finalName>additioner</finalName>" + any + "</build>")
+					.compile("<build>" + ANY + "<finalName>additioner</finalName>" + ANY + "</build>")
 					.matcher(pomContent).find();
 			final boolean cRootFound = Pattern.compile("<context-root>additioner</context-root>")
 					.matcher(read(Paths.get("src/main/webapp/WEB-INF/jboss-web.xml"))).find();
 			final boolean cRootIncorrectFound = Pattern.compile("<context-root>/additioner</context-root>")
 					.matcher(read(Paths.get("src/main/webapp/WEB-INF/jboss-web.xml"))).find();
-			GradeCriterion criterion = Ex2Criterion.FINAL_NAME;
+			Ex2Criterion criterion = Ex2Criterion.FINAL_NAME;
 
-			final SingleGrade thisGrade;
+			final CriterionGrade<Ex2Criterion> thisGrade;
 			if (finalFound) {
-				thisGrade = SingleGrade.max(criterion);
+				thisGrade = CriterionGrade.max(criterion);
 			} else if (cRootFound) {
-				thisGrade = SingleGrade.of(criterion, criterion.getMaxPoints() / 2d, "Non-portable solution");
+				thisGrade = CriterionGrade.of(criterion, criterion.getMaxPoints() / 2d, "Non-portable solution");
 			} else if (cRootIncorrectFound) {
-				thisGrade = SingleGrade.of(criterion, criterion.getMaxPoints() / 4d,
+				thisGrade = CriterionGrade.of(criterion, criterion.getMaxPoints() / 4d,
 						"Non-portable solution and incorrect format");
 			} else {
-				thisGrade = SingleGrade.zero(criterion);
+				thisGrade = CriterionGrade.zero(criterion);
 			}
 			putGrade(thisGrade);
 		}
@@ -245,15 +246,15 @@ public class Ex2Grader {
 					.find();
 			final boolean sendError400 = Pattern.compile("sendError\\(.*400.*,.*\\)").matcher(servletContent).find();
 			final boolean setStatus400 = Pattern.compile("setStatus\\(.*400.*\\)").matcher(servletContent).find();
-			GradeCriterion criterion = Ex2Criterion.ERROR_STATUS;
-			final SingleGrade thisGrade;
+			Ex2Criterion criterion = Ex2Criterion.ERROR_STATUS;
+			final CriterionGrade<Ex2Criterion> thisGrade;
 			if (sendError || setStatus) {
-				thisGrade = SingleGrade.max(criterion);
+				thisGrade = CriterionGrade.max(criterion);
 			} else if (sendError400 || setStatus400) {
-				thisGrade = SingleGrade.of(criterion, criterion.getMaxPoints() / 2d,
+				thisGrade = CriterionGrade.of(criterion, criterion.getMaxPoints() / 2d,
 						"Error sent with literal constant instead of symbolic constant.");
 			} else {
-				thisGrade = SingleGrade.of(criterion, 0d, "");
+				thisGrade = CriterionGrade.of(criterion, 0d, "");
 			}
 			putGrade(thisGrade);
 		}
@@ -281,17 +282,19 @@ public class Ex2Grader {
 			LOGGER.debug("Found settings? {}.", settingsId);
 			final double points = ImmutableList.of(classpathId, settingsId, projectId, targetId).stream().collect(
 					Collectors.summingDouble((o) -> !o.isPresent() ? Ex2Criterion.ONLY_ORIG.getMaxPoints() / 4 : 0));
-			putGrade(SingleGrade.of(Ex2Criterion.ONLY_ORIG, points, ""));
+			putGrade(CriterionGrade.of(Ex2Criterion.ONLY_ORIG, points, ""));
 		}
 
 		// TODO check that eclipse and .class files are not in the repo
 	}
 
 	private String read(Path relativePath) throws IOException {
+		final Client client = context.getClient();
+
 		if (!client.hasContentCached()) {
 			return "";
 		}
-		String content;
+		final String content;
 		final Path fullPath = client.getProjectDirectory().resolve(relativePath);
 		if (!Files.exists(fullPath)) {
 			content = "";
@@ -303,25 +306,25 @@ public class Ex2Grader {
 		return content;
 	}
 
-	private void binaryCriterion(GradeCriterion criterion, Supplier<Boolean> tester) {
+	private void binaryCriterion(Ex2Criterion criterion, Supplier<Boolean> tester) {
 		binaryCriterion(criterion, tester, 0d);
 	}
 
-	private void binaryCriterion(GradeCriterion criterion, Supplier<Boolean> tester, double failPoints) {
+	private void binaryCriterion(Ex2Criterion criterion, Supplier<Boolean> tester, double failPoints) {
 		binaryCriterion(criterion, tester.get(), failPoints, "");
 	}
 
-	private void binaryCriterion(GradeCriterion criterion, boolean result, double failPoints, String commentIfFail) {
-		final SingleGrade thisGrade;
+	private void binaryCriterion(Ex2Criterion criterion, boolean result, double failPoints, String commentIfFail) {
+		final CriterionGrade<Ex2Criterion> thisGrade;
 		if (result) {
-			thisGrade = SingleGrade.max(criterion);
+			thisGrade = CriterionGrade.max(criterion);
 		} else {
-			thisGrade = SingleGrade.of(criterion, failPoints, commentIfFail);
+			thisGrade = CriterionGrade.of(criterion, failPoints, commentIfFail);
 		}
 		putGrade(thisGrade);
 	}
 
-	private void putGrade(SingleGrade grade) {
+	private void putGrade(CriterionGrade<Ex2Criterion> grade) {
 		requireNonNull(grade);
 		gradesBuilder.add(grade);
 	}
@@ -330,94 +333,31 @@ public class Ex2Grader {
 		this.ignoreAfter = requireNonNull(ignoreAfter);
 	}
 
-	void setRawGitHubFetcherSupplier(Supplier<GitHubFetcherV3> supplier) {
-		fetcherSupplier = supplier;
-	}
-
-	private boolean init(RepositoryCoordinates coordinates)
-			throws GitAPIException, IOException, CheckoutConflictException {
-		client = Client.about(coordinates);
-		{
-			final boolean exists = client.tryRetrieve();
-			if (!exists) {
-				putGrade(SingleGrade.zero(Ex2Criterion.REPO_EXISTS, "Repository not found"));
-			} else if (!client.hasContent()) {
-				putGrade(SingleGrade.zero(Ex2Criterion.REPO_EXISTS, "Repository found but is empty"));
-			} else {
-				putGrade(SingleGrade.max(Ex2Criterion.REPO_EXISTS));
-			}
-		}
-		if (client.hasContentCached()) {
-			client.checkout("master");
-			getEvents();
-			final GitHistory history = client.getHistory(false);
-			final Map<ObjectId, Instant> receivedAt = new GitAndGitHub().check(client, allEvents);
-			/** Now we want to discard all commits that have a commit too late as parent. */
-			final Set<RevCommit> commits = history.getGraph().nodes();
-			final ImmutableList<RevCommit> commitsOnTime = commits.stream()
-					.filter((c) -> !receivedAt.get(c.getId()).isAfter(ignoreAfter))
-					.collect(ImmutableList.toImmutableList());
-			LOGGER.info("Commits: {}; on time: {}.", commits, commitsOnTime);
-			checkState(Comparators.isInOrder(commitsOnTime,
-					Comparator.<RevCommit, Instant>comparing((c) -> receivedAt.get(c.getId())).reversed()));
-			final RevCommit lastCommitOnTime = commitsOnTime.get(0);
-
-			client.checkout(lastCommitOnTime);
-			submitted = receivedAt.get(lastCommitOnTime);
-		}
-
-		return client.hasContentCached();
-	}
-
-	private void onTime() {
-		if (!client.hasContentCached()) {
-			putGrade(SingleGrade.of(Ex2Criterion.ON_TIME, 0d, ""));
-			return;
-		}
-
-		final Duration tardiness = Duration.between(deadline, submitted).minusMinutes(2);
-
-		LOGGER.debug("Last: {}, deadline: {}, tardiness: {}.", submitted, deadline, tardiness);
-		if (!tardiness.isNegative()) {
-			LOGGER.warn("Last event after deadline: {}.", submitted);
-			final long hoursLate = tardiness.toHours() + 1;
-			putGrade(SingleGrade.of(Ex2Criterion.ON_TIME, -3d / 20d * MAX_GRADE * hoursLate,
-					"Last event after deadline: " + ZonedDateTime.ofInstant(submitted, ZoneId.of("Europe/Paris")) + ", "
-							+ hoursLate + " hours late."));
-		} else {
-			putGrade(SingleGrade.of(Ex2Criterion.ON_TIME, 0d, ""));
-		}
-	}
-
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(Ex2Grader.class);
 	private String pomContent;
 	private final MavenManager mavenManager;
 	private Instant deadline;
+	private Instant ignoreAfter;
 	private static final double MAX_GRADE = 20d;
 
-	private ImmutableList<Event> allEvents;
-	private Instant submitted;
+	private static final String ANY = "(.|\\v)*";
+	private ContextInitializer context;
 
-	public Grade grade(RepositoryCoordinates coordinates, @SuppressWarnings("hiding") StudentOnGitHub student)
-			throws GitAPIException, IOException {
-		gradesBuilder = ImmutableSet.builder();
+	public StudentGrade<Ex2Criterion> grade(RepositoryCoordinates coordinates,
+			@SuppressWarnings("hiding") StudentOnGitHub student) throws GitAPIException, IOException {
+		setContextInitializer(ContextInitializer.ignoreAfter(ignoreAfter));
 		this.student = requireNonNull(student);
-		init(coordinates);
+
+		gradesBuilder = ImmutableSet.builder();
+		context.init(coordinates);
 		grade();
 //		return Grade.of(student, new HashSet<>(gradesBuilder.build().values()));
-		return Grade.of(student, gradesBuilder.build());
+		return StudentGrade.of(student, gradesBuilder.build());
 	}
 
-	public List<Event> getEvents() {
-		checkState(client.hasContentCached());
-		try (GitHubFetcherV3 fetcher = fetcherSupplier.get()) {
-			allEvents = fetcher.getEvents(client.getCoordinates());
-		}
-		checkState(allEvents.size() >= 1);
-		final Stream<Instant> eventsCreation = allEvents.stream().map(Event::getCreatedAt);
-		checkState(Comparators.isInOrder(eventsCreation::iterator, Comparator.<Instant>naturalOrder().reversed()));
-		return allEvents;
+	public void setContextInitializer(final ContextInitializer contextInitializer) {
+		context = contextInitializer;
 	}
 
 	public void setDeadline(Instant deadline) {

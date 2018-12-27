@@ -1,4 +1,4 @@
-package io.github.oliviercailloux.st_projects.ex2;
+package io.github.oliviercailloux.st_projects.model;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
@@ -15,10 +15,10 @@ import org.slf4j.LoggerFactory;
 import com.google.common.base.MoreObjects;
 
 @JsonbPropertyOrder({ "criterion", "points", "comment" })
-public class SingleGrade {
-	private GradeCriterion criterion;
+public class CriterionGrade<T extends GradeCriterion> {
+	private T criterion;
 
-	public GradeCriterion getCriterion() {
+	public T getCriterion() {
 		return criterion;
 	}
 
@@ -28,10 +28,10 @@ public class SingleGrade {
 
 	@Override
 	public boolean equals(Object o2) {
-		if (!(o2 instanceof SingleGrade)) {
+		if (!(o2 instanceof CriterionGrade)) {
 			return false;
 		}
-		final SingleGrade s2 = (SingleGrade) o2;
+		final CriterionGrade<?> s2 = (CriterionGrade<?>) o2;
 		return criterion.equals(s2.criterion) && points == s2.points && comment.equals(s2.comment);
 	}
 
@@ -50,39 +50,39 @@ public class SingleGrade {
 		return comment;
 	}
 
-	public static SingleGrade zero(GradeCriterion criterion) {
-		return new SingleGrade(criterion, 0d, "");
+	public static <T extends GradeCriterion> CriterionGrade<T> zero(T criterion) {
+		return new CriterionGrade<>(criterion, 0d, "");
 	}
 
 	@JsonbCreator
-	public static SingleGrade of(@JsonbProperty("criterion") GradeCriterion criterion,
+	public static <T extends GradeCriterion> CriterionGrade<T> of(@JsonbProperty("criterion") T criterion,
 			@JsonbProperty("points") double points, @JsonbProperty("comment") String comment) {
-		final SingleGrade g = new SingleGrade(criterion, points, comment);
-		LOGGER.info("Building auto grade: {}.", g);
+		final CriterionGrade<T> g = new CriterionGrade<>(criterion, points, comment);
 		return g;
 	}
 
 	@SuppressWarnings("unused")
-	private static final Logger LOGGER = LoggerFactory.getLogger(SingleGrade.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(CriterionGrade.class);
 
 	/**
-	 * May be negative (penalty). points ≤ maxPoints of the corresponding criterion.
+	 * May be negative (penalty); may be greater than maxPoints of the corresponding
+	 * criterion (bonus).
 	 */
 	private double points;
 	private String comment;
 
-	private SingleGrade(GradeCriterion criterion, double points, String comment) {
+	private CriterionGrade(T criterion, double points, String comment) {
 		this.criterion = requireNonNull(criterion);
 		checkArgument(Double.isFinite(points));
 		this.points = points;
 		this.comment = requireNonNull(comment);
 	}
 
-	public static SingleGrade zero(GradeCriterion criterion, String comment) {
-		return new SingleGrade(criterion, 0d, comment);
+	public static <T extends GradeCriterion> CriterionGrade<T> zero(T criterion, String comment) {
+		return new CriterionGrade<>(criterion, 0d, comment);
 	}
 
-	public static SingleGrade max(GradeCriterion criterion) {
-		return new SingleGrade(criterion, criterion.getMaxPoints(), "");
+	public static <T extends GradeCriterion> CriterionGrade<T> max(T criterion) {
+		return new CriterionGrade<>(criterion, criterion.getMaxPoints(), "");
 	}
 }
