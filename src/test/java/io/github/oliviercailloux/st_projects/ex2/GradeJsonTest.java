@@ -40,7 +40,7 @@ class GradeJsonTest {
 				StandardCharsets.UTF_8);
 		final String expected = expectedFormatted.replace("\n", "").replace(" ", "");
 
-		final CriterionGrade<Ex2Criterion> grade = CriterionGrade.max(ENC);
+		final CriterionGrade grade = CriterionGrade.max(ENC);
 		final String written;
 		try (Jsonb jsonb = JsonbBuilder.create()) {
 			written = jsonb.toJson(grade);
@@ -85,9 +85,9 @@ class GradeJsonTest {
 
 	@Test
 	public void gradeWriteJson() {
-		final CriterionGrade<Ex2Criterion> grade1 = CriterionGrade.max(ENC);
-		final CriterionGrade<Ex2Criterion> grade2 = CriterionGrade.zero(ANNOT);
-		final StudentGrade<Ex2Criterion> grade = StudentGrade.of(getStudentOnGitHubKnown().asStudentOnGitHub(),
+		final CriterionGrade grade1 = CriterionGrade.max(ENC);
+		final CriterionGrade grade2 = CriterionGrade.zero(ANNOT);
+		final StudentGrade grade = StudentGrade.of(getStudentOnGitHubKnown().asStudentOnGitHub(),
 				ImmutableSet.of(grade1, grade2));
 		final String json;
 		try (Jsonb jsonb = JsonbBuilder.create(new JsonbConfig().withAdapters(new GHAsJson()).withFormatting(true))) {
@@ -119,12 +119,12 @@ class GradeJsonTest {
 
 	@Test
 	public void gradeReadJson() throws Exception {
-		final CriterionGrade<Ex2Criterion> grade1 = CriterionGrade.max(ENC);
-		final CriterionGrade<Ex2Criterion> grade2 = CriterionGrade.zero(ANNOT);
-		final StudentGrade<Ex2Criterion> expected = StudentGrade.of(getStudentOnGitHubKnown().asStudentOnGitHub(),
+		final CriterionGrade grade1 = CriterionGrade.max(ENC);
+		final CriterionGrade grade2 = CriterionGrade.zero(ANNOT);
+		final StudentGrade expected = StudentGrade.of(getStudentOnGitHubKnown().asStudentOnGitHub(),
 				ImmutableSet.of(grade1, grade2));
 		final String json = Resources.toString(this.getClass().getResource("Grade.json"), StandardCharsets.UTF_8);
-		final StudentGrade<Ex2Criterion> read;
+		final StudentGrade read;
 		try (Jsonb jsonb = JsonbBuilder
 				.create(new JsonbConfig().withAdapters(new AsEx2Criterion(), new GHAsJson()).withFormatting(true))) {
 			read = jsonb.fromJson(json, StudentGrade.class);
@@ -135,9 +135,9 @@ class GradeJsonTest {
 
 	@Test
 	public void gradeReadJsonManually() throws Exception {
-		final CriterionGrade<Ex2Criterion> grade1 = CriterionGrade.max(ENC);
-		final CriterionGrade<Ex2Criterion> grade2 = CriterionGrade.zero(ANNOT);
-		final StudentGrade<Ex2Criterion> expected = StudentGrade.of(getStudentOnGitHubKnown().asStudentOnGitHub(),
+		final CriterionGrade grade1 = CriterionGrade.max(ENC);
+		final CriterionGrade grade2 = CriterionGrade.zero(ANNOT);
+		final StudentGrade expected = StudentGrade.of(getStudentOnGitHubKnown().asStudentOnGitHub(),
 				ImmutableSet.of(grade1, grade2));
 		final String jsonStr = Resources.toString(this.getClass().getResource("Grade.json"), StandardCharsets.UTF_8);
 
@@ -149,18 +149,18 @@ class GradeJsonTest {
 		final JsonObject st = json.getJsonObject("student");
 		final StudentOnGitHub student = ghAsJson.adaptFromJson(st);
 		final JsonArray grades = json.getJsonArray("gradeValues");
-		final Builder<CriterionGrade<Ex2Criterion>> gradesBuilder = ImmutableSet.builder();
+		final Builder<CriterionGrade> gradesBuilder = ImmutableSet.builder();
 		for (JsonValue grade : grades) {
 			try (Jsonb jsonb = JsonbBuilder
 					.create(new JsonbConfig().withAdapters(new AsEx2Criterion()).withFormatting(true))) {
-				final CriterionGrade<Ex2Criterion> thisGrade = jsonb.fromJson(grade.toString(), CriterionGrade.class);
+				final CriterionGrade thisGrade = jsonb.fromJson(grade.toString(), CriterionGrade.class);
 				gradesBuilder.add(thisGrade);
 				LOGGER.info("Deserialized: {}.", thisGrade);
 			} catch (Exception e) {
 				throw new IllegalStateException(e);
 			}
 		}
-		final StudentGrade<Ex2Criterion> grade = StudentGrade.of(student, gradesBuilder.build());
+		final StudentGrade grade = StudentGrade.of(student, gradesBuilder.build());
 		assertEquals(expected, grade);
 	}
 
@@ -189,10 +189,10 @@ class GradeJsonTest {
 
 	@Test
 	public void singleReadJson() throws Exception {
-		final CriterionGrade<Ex2Criterion> expected = CriterionGrade.max(ENC);
+		final CriterionGrade expected = CriterionGrade.max(ENC);
 		final String json = Resources.toString(this.getClass().getResource("Single grade.json"),
 				StandardCharsets.UTF_8);
-		final CriterionGrade<Ex2Criterion> read;
+		final CriterionGrade read;
 		try (Jsonb jsonb = JsonbBuilder
 				.create(new JsonbConfig().withAdapters(new AsEx2Criterion()).withFormatting(true))) {
 			read = jsonb.fromJson(json, CriterionGrade.class);

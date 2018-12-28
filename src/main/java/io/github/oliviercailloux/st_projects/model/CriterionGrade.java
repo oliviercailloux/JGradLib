@@ -15,10 +15,10 @@ import org.slf4j.LoggerFactory;
 import com.google.common.base.MoreObjects;
 
 @JsonbPropertyOrder({ "criterion", "points", "comment" })
-public class CriterionGrade<T extends GradeCriterion> {
-	private T criterion;
+public class CriterionGrade {
+	private Criterion criterion;
 
-	public T getCriterion() {
+	public Criterion getCriterion() {
 		return criterion;
 	}
 
@@ -31,7 +31,7 @@ public class CriterionGrade<T extends GradeCriterion> {
 		if (!(o2 instanceof CriterionGrade)) {
 			return false;
 		}
-		final CriterionGrade<?> s2 = (CriterionGrade<?>) o2;
+		final CriterionGrade s2 = (CriterionGrade) o2;
 		return criterion.equals(s2.criterion) && points == s2.points && comment.equals(s2.comment);
 	}
 
@@ -50,15 +50,19 @@ public class CriterionGrade<T extends GradeCriterion> {
 		return comment;
 	}
 
-	public static <T extends GradeCriterion> CriterionGrade<T> zero(T criterion) {
-		return new CriterionGrade<>(criterion, 0d, "");
+	public static CriterionGrade zero(Criterion criterion) {
+		return new CriterionGrade(criterion, 0d, "");
 	}
 
 	@JsonbCreator
-	public static <T extends GradeCriterion> CriterionGrade<T> of(@JsonbProperty("criterion") T criterion,
+	public static CriterionGrade of(@JsonbProperty("criterion") Criterion criterion,
 			@JsonbProperty("points") double points, @JsonbProperty("comment") String comment) {
-		final CriterionGrade<T> g = new CriterionGrade<>(criterion, points, comment);
+		final CriterionGrade g = new CriterionGrade(criterion, points, comment);
 		return g;
+	}
+
+	public static CriterionGrade binary(Criterion criterion, boolean conditionForPoints) {
+		return new CriterionGrade(criterion, conditionForPoints ? criterion.getMaxPoints() : 0d, "");
 	}
 
 	@SuppressWarnings("unused")
@@ -71,18 +75,18 @@ public class CriterionGrade<T extends GradeCriterion> {
 	private double points;
 	private String comment;
 
-	private CriterionGrade(T criterion, double points, String comment) {
+	private CriterionGrade(Criterion criterion, double points, String comment) {
 		this.criterion = requireNonNull(criterion);
 		checkArgument(Double.isFinite(points));
 		this.points = points;
 		this.comment = requireNonNull(comment);
 	}
 
-	public static <T extends GradeCriterion> CriterionGrade<T> zero(T criterion, String comment) {
-		return new CriterionGrade<>(criterion, 0d, comment);
+	public static CriterionGrade zero(Criterion criterion, String comment) {
+		return new CriterionGrade(criterion, 0d, comment);
 	}
 
-	public static <T extends GradeCriterion> CriterionGrade<T> max(T criterion) {
-		return new CriterionGrade<>(criterion, criterion.getMaxPoints(), "");
+	public static CriterionGrade max(Criterion criterion) {
+		return new CriterionGrade(criterion, criterion.getMaxPoints(), "");
 	}
 }

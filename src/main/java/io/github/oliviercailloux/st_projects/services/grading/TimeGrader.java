@@ -13,20 +13,20 @@ import org.slf4j.LoggerFactory;
 
 import io.github.oliviercailloux.git.Client;
 import io.github.oliviercailloux.st_projects.model.CriterionGrade;
-import io.github.oliviercailloux.st_projects.model.GradeCriterion;
+import io.github.oliviercailloux.st_projects.model.Criterion;
 
-public class TimeGrader<T extends GradeCriterion> {
+public class TimeGrader {
 	private final ContextInitializer context;
 	private Instant deadline;
 	private double maxGrade;
-	private T criterion;
+	private Criterion criterion;
 
-	public static <T extends GradeCriterion> TimeGrader<T> given(T criterion, ContextInitializer init, Instant deadline,
+	public static TimeGrader given(Criterion criterion, ContextInitializer init, Instant deadline,
 			double maxGrade) {
-		return new TimeGrader<>(criterion, init, deadline, maxGrade);
+		return new TimeGrader(criterion, init, deadline, maxGrade);
 	}
 
-	private TimeGrader(T criterion, ContextInitializer init, Instant deadline, double maxGrade) {
+	private TimeGrader(Criterion criterion, ContextInitializer init, Instant deadline, double maxGrade) {
 		this.criterion = requireNonNull(criterion);
 		this.context = requireNonNull(init);
 		this.deadline = requireNonNull(deadline);
@@ -34,7 +34,7 @@ public class TimeGrader<T extends GradeCriterion> {
 		checkArgument(Double.isFinite(maxGrade));
 	}
 
-	public CriterionGrade<T> grade() {
+	public CriterionGrade grade() {
 		final Client client = context.getClient();
 
 		if (!client.hasContentCached() || !client.getDefaultRevSpec().isPresent()) {
@@ -46,7 +46,7 @@ public class TimeGrader<T extends GradeCriterion> {
 		final Duration tardiness = Duration.between(deadline, submitted).minusMinutes(2);
 
 		LOGGER.debug("Last: {}, deadline: {}, tardiness: {}.", submitted, deadline, tardiness);
-		final CriterionGrade<T> grade;
+		final CriterionGrade grade;
 		if (!tardiness.isNegative()) {
 			LOGGER.warn("Last event after deadline: {}.", submitted);
 			final long hoursLate = tardiness.toHours() + 1;

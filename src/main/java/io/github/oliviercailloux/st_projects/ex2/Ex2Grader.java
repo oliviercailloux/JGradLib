@@ -8,185 +8,139 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Instant;
-import java.util.Arrays;
-import java.util.List;
 import java.util.Optional;
-import java.util.Set;
-import java.util.function.Predicate;
 import java.util.function.Supplier;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.lib.AnyObjectId;
 import org.eclipse.jgit.lib.ObjectId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.graph.GraphBuilder;
+import com.google.common.graph.MutableGraph;
 
 import io.github.oliviercailloux.git.Client;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.st_projects.model.CriterionGrade;
-import io.github.oliviercailloux.st_projects.model.GradeCriterion;
 import io.github.oliviercailloux.st_projects.model.StudentGrade;
 import io.github.oliviercailloux.st_projects.model.StudentOnGitHub;
+import io.github.oliviercailloux.st_projects.services.grading.BoxSupplier;
 import io.github.oliviercailloux.st_projects.services.grading.ContextInitializer;
 import io.github.oliviercailloux.st_projects.services.grading.CriterionGrader;
-import io.github.oliviercailloux.st_projects.services.grading.SimpleGrader;
+import io.github.oliviercailloux.st_projects.services.grading.GitGrader;
+import io.github.oliviercailloux.st_projects.services.grading.GitToMultipleSourcer;
+import io.github.oliviercailloux.st_projects.services.grading.GitToSourcer;
+import io.github.oliviercailloux.st_projects.services.grading.Graders;
+import io.github.oliviercailloux.st_projects.services.grading.GradingException;
+import io.github.oliviercailloux.st_projects.services.grading.PomContexter;
 import io.github.oliviercailloux.st_projects.services.grading.TimeGrader;
 
 public class Ex2Grader {
 	private StudentOnGitHub student;
-	private ImmutableSet.Builder<CriterionGrade<Ex2Criterion>> gradesBuilder;
+	private ImmutableSet.Builder<CriterionGrade> gradesBuilder;
 
 	public Ex2Grader() {
 		gradesBuilder = null;
 		student = null;
 		deadline = Instant.MAX;
-		pomContent = null;
-		mavenManager = new MavenManager();
 		context = null;
+		coordinatesSupplier = new BoxSupplier();
 	}
 
-	private void grade() throws IOException {
-		final String groupId;
-		final List<String> groupIdElements;
-		pomContent = read(Paths.get("pom.xml"));
-		final String servletContent;
+	private void grade(RepositoryCoordinates coordinates) throws IOException, GradingException {
+		MutableGraph<Object> g = GraphBuilder.directed().build();
+		g.addNode(context);
+		final TimeGrader timeGrader = TimeGrader.given(Ex2Criterion.ON_TIME, context, deadline, MAX_GRADE);
+		g.putEdge(context, timeGrader);
+		final CriterionGrader repoGrader = GitGrader.repoGrader(Ex2Criterion.REPO_EXISTS, context);
+		g.putEdge(context, repoGrader);
+		final GitToSourcer pomSupplier = new GitToSourcer(context, Paths.get("pom.xml"));
+		g.putEdge(context, pomSupplier);
+		final PomContexter pomContext = new PomContexter(pomSupplier);
+		g.putEdge(pomSupplier, pomContext);
+		final CriterionGrader pomGrader = Graders.groupIdGrader(Ex2Criterion.GROUP_ID, pomContext);
+		g.putEdge(pomContext, pomGrader);
+		final CriterionGrader icalGrader;
+		{
+			final Pattern pattern = Pattern
+					.compile("<dependencies>" + ANY + "<dependency>" + ANY + "<groupId>org\\.mnode\\.ical4j</groupId>"
+							+ ANY + "<artifactId>ical4j</artifactId>" + ANY + "<version>3\\.0\\.2</version>");
+			icalGrader = Graders.predicateGrader(Ex2Criterion.ICAL, pomSupplier, Graders.containsOnce(pattern));
+		}
+		g.putEdge(pomSupplier, icalGrader);
+		final CriterionGrader utfGrader;
+		{
+			final Pattern pattern = Pattern.compile("<properties>" + ANY
+					+ "<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>" + ANY + "</properties>");
+			utfGrader = Graders.predicateGrader(Ex2Criterion.UTF, pomSupplier, Graders.containsOnce(pattern));
+		}
+		g.putEdge(pomSupplier, utfGrader);
+		final CriterionGrader sourceGrader;
+		{
+			final Pattern pattern = Pattern.compile(
+					"<properties>" + ANY + "<maven.compiler.source>.*</maven.compiler.source>" + ANY + "</properties>");
+			sourceGrader = Graders.predicateGrader(Ex2Criterion.SOURCE, pomSupplier, Graders.containsOnce(pattern));
+		}
+		g.putEdge(pomSupplier, sourceGrader);
+		final CriterionGrader urlGrader;
+		{
+			final Pattern pattern = Pattern.compile("<url>.*\\.apache\\.org.*</url>");
+			urlGrader = Graders.predicateGrader(Ex2Criterion.NO_MISLEADING_URL, pomSupplier,
+					Predicates.contains(pattern).negate(), 0d, -1d);
+		}
+		g.putEdge(pomSupplier, urlGrader);
+		final CriterionGrader warGrader;
+		{
+			final Pattern pattern = Pattern.compile("<packaging>war</packaging>");
+			warGrader = Graders.predicateGrader(Ex2Criterion.WAR, pomSupplier, Graders.containsOnce(pattern));
+		}
+		g.putEdge(pomSupplier, warGrader);
+		final CriterionGrader prefixGrader = Graders.packageGroupIdGrader(Ex2Criterion.PREFIX, context, pomContext);
+		g.putEdge(context, prefixGrader);
+		g.putEdge(pomContext, prefixGrader);
+		final CriterionGrader mavenCompileGrader = Graders.mavenCompileGrader(Ex2Criterion.COMPILE, context);
+		final GitToMultipleSourcer servletSourcer = new GitToMultipleSourcer(context, Paths.get("src/main/java"),
+				(p) -> p.getFileName().equals(Paths.get("AdditionerServlet.java")));
+		final CriterionGrader doGetGrader = Graders.predicateGraderWithComment(Ex2Criterion.DO_GET, servletSourcer,
+				Graders.containsOnce(Pattern.compile("void\\s*doGet\\s*\\(\\s*(final)?\\s*HttpServletRequest .*\\)")));
+		final CriterionGrader encGrader = Graders.predicateGrader(Ex2Criterion.SRC_ENC, servletSourcer,
+				Predicates.contains(Pattern.compile("Exécution impossible")));
 
-		final TimeGrader<Ex2Criterion> grader = TimeGrader.given(Ex2Criterion.ON_TIME, context, deadline, MAX_GRADE);
-		putGrade(grader.grade());
+		coordinatesSupplier.set(coordinates);
 
-		final CriterionGrader<GradeCriterion> repoGrader = SimpleGrader.using(context, (c) -> {
-			final Client client = c.getClient();
-
-			{
-				final CriterionGrade<Ex2Criterion> grade;
-				if (!client.existsCached()) {
-					grade = CriterionGrade.zero(Ex2Criterion.REPO_EXISTS, "Repository not found");
-				} else if (!client.hasContentCached()) {
-					grade = CriterionGrade.zero(Ex2Criterion.REPO_EXISTS, "Repository found but is empty");
-				} else if (!c.getMainCommit().isPresent()) {
-					grade = CriterionGrade.zero(Ex2Criterion.REPO_EXISTS,
-							"Repository found with content but no suitable commit found");
-				} else {
-					grade = CriterionGrade.max(Ex2Criterion.REPO_EXISTS);
-				}
-				return grade;
-			}
-		});
+		context.clear();
+		context.init();
+		putGrade(timeGrader.grade());
 		putGrade(repoGrader.grade());
 
+		pomSupplier.clear();
+		pomSupplier.init();
+		pomContext.clear();
+		pomContext.init();
+
+		putGrade(pomGrader.grade());
+		putGrade(icalGrader.grade());
+		putGrade(utfGrader.grade());
+		putGrade(sourceGrader.grade());
+		putGrade(urlGrader.grade());
+		putGrade(warGrader.grade());
+		putGrade(prefixGrader.grade());
+		putGrade(mavenCompileGrader.grade());
+
+		servletSourcer.clear();
+		servletSourcer.init();
+
+		putGrade(doGetGrader.grade());
+		putGrade(encGrader.grade());
+
 		final Client client = context.getClient();
-		{
-			final Matcher matcher = Pattern.compile("<groupId>(io\\.github\\..*)</groupId>").matcher(pomContent);
-			final boolean found = matcher.find();
-			if (found) {
-				groupId = matcher.group(1);
-				groupIdElements = Arrays.asList(groupId.split("\\."));
-				assert groupIdElements.size() >= 1 : groupId;
-			} else {
-				groupId = null;
-				groupIdElements = null;
-			}
-			binaryCriterion(Ex2Criterion.GROUP_ID, () -> found);
-		}
-		{
-			final boolean found = Pattern
-					.compile("<dependencies>" + ANY + "<dependency>" + ANY + "<groupId>org\\.mnode\\.ical4j</groupId>"
-							+ ANY + "<artifactId>ical4j</artifactId>" + ANY + "<version>3\\.0\\.2</version>")
-					.matcher(pomContent).find();
-			binaryCriterion(Ex2Criterion.ICAL, () -> found);
-		}
-		{
-			final boolean found = Pattern.compile("<properties>" + ANY
-					+ "<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>" + ANY + "</properties>")
-					.matcher(pomContent).find();
-			binaryCriterion(Ex2Criterion.UTF, () -> found);
-		}
-		{
-			final boolean found = Pattern.compile(
-					"<properties>" + ANY + "<maven.compiler.source>.*</maven.compiler.source>" + ANY + "</properties>")
-					.matcher(pomContent).find();
-			binaryCriterion(Ex2Criterion.SOURCE, () -> found);
-		}
-		{
-			final boolean found = Pattern.compile("<url>.*\\.apache\\.org.*</url>").matcher(pomContent).find();
-			binaryCriterion(Ex2Criterion.NO_MISLEADING_URL, () -> !found, -1d);
-		}
-		{
-			final boolean found = Pattern.compile("<packaging>war</packaging>").matcher(pomContent).find();
-			binaryCriterion(Ex2Criterion.WAR, () -> found);
-		}
-		{
-			if (groupIdElements == null) {
-				putGrade(CriterionGrade.zero(Ex2Criterion.PREFIX, "Unknown group id"));
-			} else {
-				Path currentSegment = Paths.get("src/main/java");
-				boolean allMatch = true;
-				for (String element : groupIdElements) {
-					LOGGER.debug("Checking for element {}.", element);
-					final Path current = client.getProjectDirectory().resolve(currentSegment);
-					final Path nextSegment = currentSegment.resolve(element);
-					final Path next = client.getProjectDirectory().resolve(nextSegment);
-					final boolean onlyRightName = Files.list(current).allMatch(Predicate.isEqual(next));
-					if (!onlyRightName) {
-						allMatch = false;
-						break;
-					}
-					currentSegment = nextSegment;
-				}
-				final boolean allMatchFinal = allMatch;
-				binaryCriterion(Ex2Criterion.PREFIX, () -> allMatchFinal);
-			}
-		}
-		{
-			final boolean compile = mavenManager.compile(client.getProjectDirectory().resolve("pom.xml"));
-			binaryCriterion(Ex2Criterion.COMPILE, () -> compile);
-		}
-		{
-			final Set<Path> sources;
-			if (!client.hasContentCached()) {
-				sources = ImmutableSet.of();
-			} else {
-				final String mavenStart = "src/main/java";
-				final Path start = client.getProjectDirectory().resolve(mavenStart);
-				if (!Files.isDirectory(start)) {
-					LOGGER.info("No directory " + mavenStart + ".");
-					sources = ImmutableSet.of();
-				} else {
-					sources = Files.walk(start)
-							.filter((p) -> p.getFileName().equals(Paths.get("AdditionerServlet.java")))
-							.collect(Collectors.toSet());
-					LOGGER.debug("Sources: {}.", sources);
-				}
-			}
-			final boolean found;
-			final String comment;
-			if (sources.size() == 1) {
-				final Path servlet = sources.iterator().next();
-				servletContent = read(servlet);
-				found = Pattern.compile("void\\s*doGet\\s*\\(\\s*(final)?\\s*HttpServletRequest .*\\)")
-						.matcher(servletContent).find();
-				comment = "";
-			} else {
-				servletContent = "";
-				found = false;
-				if (sources.isEmpty()) {
-					comment = "AdditionerServlet not found.";
-				} else {
-					comment = "Found " + sources.size() + " AdditionerServlet: " + sources + ".";
-				}
-			}
-			binaryCriterion(Ex2Criterion.DO_GET, found, 0, comment);
-		}
-		{
-			final boolean found = Pattern.compile("Exécution impossible").matcher(servletContent).find();
-			binaryCriterion(Ex2Criterion.SRC_ENC, () -> found);
-		}
+		final String servletContent = servletSourcer.getContent();
+
 		{
 			final boolean foundAuto = Pattern.compile("Auto-generated").matcher(servletContent).find();
 			final boolean foundSee = Pattern.compile("@see HttpServlet#doGet").matcher(servletContent).find();
@@ -216,7 +170,9 @@ public class Ex2Grader {
 			final boolean found = Pattern.compile("@WebServlet.*\\(.*/add\".*\\)").matcher(servletContent).find();
 			binaryCriterion(Ex2Criterion.ANNOT, () -> found);
 		}
+
 		{
+			final String pomContent = pomSupplier.getContent();
 			final boolean finalFound = Pattern
 					.compile("<build>" + ANY + "<finalName>additioner</finalName>" + ANY + "</build>")
 					.matcher(pomContent).find();
@@ -226,7 +182,7 @@ public class Ex2Grader {
 					.matcher(read(Paths.get("src/main/webapp/WEB-INF/jboss-web.xml"))).find();
 			Ex2Criterion criterion = Ex2Criterion.FINAL_NAME;
 
-			final CriterionGrade<Ex2Criterion> thisGrade;
+			final CriterionGrade thisGrade;
 			if (finalFound) {
 				thisGrade = CriterionGrade.max(criterion);
 			} else if (cRootFound) {
@@ -247,7 +203,7 @@ public class Ex2Grader {
 			final boolean sendError400 = Pattern.compile("sendError\\(.*400.*,.*\\)").matcher(servletContent).find();
 			final boolean setStatus400 = Pattern.compile("setStatus\\(.*400.*\\)").matcher(servletContent).find();
 			Ex2Criterion criterion = Ex2Criterion.ERROR_STATUS;
-			final CriterionGrade<Ex2Criterion> thisGrade;
+			final CriterionGrade thisGrade;
 			if (sendError || setStatus) {
 				thisGrade = CriterionGrade.max(criterion);
 			} else if (sendError400 || setStatus400) {
@@ -315,7 +271,7 @@ public class Ex2Grader {
 	}
 
 	private void binaryCriterion(Ex2Criterion criterion, boolean result, double failPoints, String commentIfFail) {
-		final CriterionGrade<Ex2Criterion> thisGrade;
+		final CriterionGrade thisGrade;
 		if (result) {
 			thisGrade = CriterionGrade.max(criterion);
 		} else {
@@ -324,7 +280,7 @@ public class Ex2Grader {
 		putGrade(thisGrade);
 	}
 
-	private void putGrade(CriterionGrade<Ex2Criterion> grade) {
+	private void putGrade(CriterionGrade grade) {
 		requireNonNull(grade);
 		gradesBuilder.add(grade);
 	}
@@ -335,24 +291,21 @@ public class Ex2Grader {
 
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(Ex2Grader.class);
-	private String pomContent;
-	private final MavenManager mavenManager;
 	private Instant deadline;
 	private Instant ignoreAfter;
 	private static final double MAX_GRADE = 20d;
 
 	private static final String ANY = "(.|\\v)*";
 	private ContextInitializer context;
+	private final BoxSupplier coordinatesSupplier;
 
-	public StudentGrade<Ex2Criterion> grade(RepositoryCoordinates coordinates,
-			@SuppressWarnings("hiding") StudentOnGitHub student) throws GitAPIException, IOException {
-		setContextInitializer(ContextInitializer.ignoreAfter(ignoreAfter));
+	public StudentGrade grade(RepositoryCoordinates coordinates, @SuppressWarnings("hiding") StudentOnGitHub student)
+			throws GradingException, IOException {
+		setContextInitializer(ContextInitializer.ignoreAfter(coordinatesSupplier, ignoreAfter));
 		this.student = requireNonNull(student);
 
 		gradesBuilder = ImmutableSet.builder();
-		context.init(coordinates);
-		grade();
-//		return Grade.of(student, new HashSet<>(gradesBuilder.build().values()));
+		grade(coordinates);
 		return StudentGrade.of(student, gradesBuilder.build());
 	}
 

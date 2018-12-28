@@ -21,22 +21,22 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
 @JsonbPropertyOrder({ "student" })
-public class StudentGrade<T extends GradeCriterion> {
-	private StudentGrade(StudentOnGitHub student, ImmutableBiMap<T, CriterionGrade<T>> grades) {
+public class StudentGrade {
+	private StudentGrade(StudentOnGitHub student, ImmutableBiMap<Criterion, CriterionGrade> grades) {
 		LOGGER.info("Internally building with {}, {}.", student, grades);
 		this.student = requireNonNull(student);
 		this.grades = requireNonNull(grades);
 	}
 
 	@JsonbCreator
-	public static <T extends GradeCriterion> StudentGrade<T> of(@JsonbProperty("student") StudentOnGitHub student,
-			@JsonbProperty("gradeValues") Set<CriterionGrade<T>> gradeValues) {
+	public static StudentGrade of(@JsonbProperty("student") StudentOnGitHub student,
+			@JsonbProperty("gradeValues") Set<CriterionGrade> gradeValues) {
 		LOGGER.info("Building with {}, {}.", student, gradeValues.iterator().next().getClass());
-		final Collector<CriterionGrade<T>, ?, ImmutableBiMap<T, CriterionGrade<T>>> toI = ImmutableBiMap
+		final Collector<CriterionGrade, ?, ImmutableBiMap<Criterion, CriterionGrade>> toI = ImmutableBiMap
 				.toImmutableBiMap((g) -> g.getCriterion(), (g) -> g);
 		gradeValues.stream().forEach(System.out::println);
-		final ImmutableBiMap<T, CriterionGrade<T>> im = gradeValues.stream().collect(toI);
-		return new StudentGrade<>(student, im);
+		final ImmutableBiMap<Criterion, CriterionGrade> im = gradeValues.stream().collect(toI);
+		return new StudentGrade(student, im);
 	}
 
 	@SuppressWarnings("unused")
@@ -45,14 +45,14 @@ public class StudentGrade<T extends GradeCriterion> {
 	/**
 	 * points ≤ maxPoints of the corresponding criterion.
 	 */
-	private final ImmutableBiMap<T, CriterionGrade<T>> grades;
+	private final ImmutableBiMap<Criterion, CriterionGrade> grades;
 
 	@Override
 	public boolean equals(Object o2) {
 		if (!(o2 instanceof StudentGrade)) {
 			return false;
 		}
-		final StudentGrade<?> g2 = (StudentGrade<?>) o2;
+		final StudentGrade g2 = (StudentGrade) o2;
 		return student.equals(g2.student) && grades.equals(g2.grades);
 	}
 
@@ -70,15 +70,15 @@ public class StudentGrade<T extends GradeCriterion> {
 		return student;
 	}
 
-	public ImmutableMap<T, CriterionGrade<T>> getGrades() {
+	public ImmutableMap<Criterion, CriterionGrade> getGrades() {
 		return grades;
 	}
 
-	public Set<CriterionGrade<T>> getGradeValues() {
+	public Set<CriterionGrade> getGradeValues() {
 		return grades.values();
 	}
 
-	public ImmutableSet<CriterionGrade<T>> getGradeValuesImmutable() {
+	public ImmutableSet<CriterionGrade> getGradeValuesImmutable() {
 		return grades.values();
 	}
 
@@ -97,8 +97,8 @@ public class StudentGrade<T extends GradeCriterion> {
 		return grades.values().stream().collect(Collectors.summingDouble((g) -> g.getCriterion().getMaxPoints()));
 	}
 
-	private String getEvaluation(CriterionGrade<T> grade) {
-		final GradeCriterion criterion = grade.getCriterion();
+	private String getEvaluation(CriterionGrade grade) {
+		final Criterion criterion = grade.getCriterion();
 
 		final StringBuilder builder = new StringBuilder();
 		builder.append(criterion.toString());

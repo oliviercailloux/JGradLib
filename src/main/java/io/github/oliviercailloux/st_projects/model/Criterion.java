@@ -1,6 +1,6 @@
 package io.github.oliviercailloux.st_projects.model;
 
-public interface GradeCriterion {
+public interface Criterion {
 
 	public String getRequirement();
 

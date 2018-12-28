@@ -197,6 +197,7 @@ public class Client {
 			return blobCache.get(revSpec, path);
 		}
 
+		LOGGER.debug("Blob cache miss, fetching {}.", path);
 		final Optional<AnyObjectId> foundId;
 		try (Repository repository = openRepository()) {
 			foundId = getBlobId(repository, revSpec, path);
@@ -208,12 +209,14 @@ public class Client {
 			} else {
 				read = "";
 			}
+//			LOGGER.info("Found id: {}, read: {}.", foundId, read);
 			blobCache.put(revSpec.copy(), path, read);
 			return read;
 		}
 	}
 
 	public String fetchBlobOrEmpty(Path path) throws MissingObjectException, IncorrectObjectTypeException, IOException {
+		LOGGER.info("Fetching from {} using default {}.", path, defaultRevSpec);
 		if (defaultRevSpec == null) {
 			return "";
 		}
@@ -234,7 +237,9 @@ public class Client {
 			tree = commit.getTree();
 		}
 
-		try (TreeWalk treewalk = TreeWalk.forPath(repository, path.toString(), tree)) {
+		final Path rel = path.isAbsolute() ? getProjectDirectory().relativize(path) : path;
+		LOGGER.debug("Trying to relativize {} against {}: {}.", getProjectDirectory(), path, rel);
+		try (TreeWalk treewalk = TreeWalk.forPath(repository, rel.toString(), tree)) {
 			if (treewalk != null) {
 				foundId = Optional.of(treewalk.getObjectId(0));
 			} else {
