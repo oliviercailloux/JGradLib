@@ -16,11 +16,11 @@ import org.eclipse.jgit.revwalk.RevCommit;
 import io.github.oliviercailloux.git.Client;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.st_projects.ex2.GitAndGitHub;
-import io.github.oliviercailloux.st_projects.model.GitContext;
-import io.github.oliviercailloux.st_projects.model.GradingContext;
+import io.github.oliviercailloux.st_projects.model.GitFullContext;
 import io.github.oliviercailloux.st_projects.model.GradingContextWithTimeline;
+import io.github.oliviercailloux.st_projects.model.GradingContexter;
 
-public class ContextInitializer implements GitContext, GradingContext {
+public class ContextInitializer implements GitFullContext, GradingContexter {
 
 	public static ContextInitializer ignoreAfter(Supplier<RepositoryCoordinates> coordinatesSupplier,
 			Instant ignoreAfter) {
@@ -81,6 +81,7 @@ public class ContextInitializer implements GitContext, GradingContext {
 		return client;
 	}
 
+	@Override
 	public Instant getIgnoredAfter() {
 		return ignoreAfter;
 	}
@@ -90,6 +91,7 @@ public class ContextInitializer implements GitContext, GradingContext {
 		return lastCommitNotIgnored;
 	}
 
+	@Override
 	public Instant getSubmittedTime() {
 		checkState(lastCommitNotIgnored.isPresent());
 		return context.getCommitsReceptionTime().get(lastCommitNotIgnored.get());

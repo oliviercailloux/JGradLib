@@ -4,10 +4,9 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -15,10 +14,13 @@ import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.eclipse.jgit.lib.AnyObjectId;
+import org.eclipse.jgit.revwalk.RevCommit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.diffplug.common.base.Predicates;
+import com.google.common.collect.ImmutableList;
 
 import io.github.oliviercailloux.git.Client;
 import io.github.oliviercailloux.st_projects.ex2.MavenManager;
@@ -26,55 +28,25 @@ import io.github.oliviercailloux.st_projects.model.ContentSupplier;
 import io.github.oliviercailloux.st_projects.model.Criterion;
 import io.github.oliviercailloux.st_projects.model.CriterionGrade;
 import io.github.oliviercailloux.st_projects.model.GitContext;
+import io.github.oliviercailloux.st_projects.model.PomContext;
+import io.github.oliviercailloux.st_projects.utils.GradingUtils;
 
 public class Graders {
-	public static CriterionGrader groupIdGrader(Criterion criterion, PomContexter context) {
-		return () -> CriterionGrade.binary(criterion, context.isGroupIdValid());
+	public static CriterionGrader groupIdGrader(Criterion criterion, PomContext context) {
+		return new GroupIdGrader(criterion, context);
 	}
 
-	public static CriterionGrader packageGroupIdGrader(Criterion criterion, GitContext context,
-			PomContexter pomContext) {
-		return () -> gradePackageGroupId(criterion, context, pomContext);
+	public static CriterionGrader packageGroupIdGrader(Criterion criterion, GitContext context, PomContext pomContext) {
+		return new PackageGroupIdGrader(criterion, context, pomContext);
 	}
 
 	public static CriterionGrader mavenCompileGrader(Criterion criterion, GitContext context) {
-		final MavenManager mavenManager = new MavenManager();
 		return () -> CriterionGrade.binary(criterion,
-				mavenManager.compile(context.getClient().getProjectDirectory().resolve("pom.xml")));
+				new MavenManager().compile(context.getClient().getProjectDirectory().resolve("pom.xml")));
 	}
 
-	private static CriterionGrade gradePackageGroupId(Criterion criterion, GitContext context, PomContexter pomContext)
-			throws GradingException {
-		final Client client = context.getClient();
-		{
-			final List<String> groupIdElements = pomContext.getGroupIdElements();
-
-			if (groupIdElements.isEmpty()) {
-				return CriterionGrade.zero(criterion, "Unknown group id");
-			}
-
-			Path currentSegment = Paths.get("src/main/java");
-			boolean allMatch = true;
-			for (String element : groupIdElements) {
-				LOGGER.debug("Checking for element {}.", element);
-				final Path current = client.getProjectDirectory().resolve(currentSegment);
-				final Path nextSegment = currentSegment.resolve(element);
-				final Path next = client.getProjectDirectory().resolve(nextSegment);
-				boolean onlyRightName;
-				try {
-					onlyRightName = Files.list(current).allMatch(Predicate.isEqual(next));
-				} catch (IOException e) {
-					throw new GradingException(e);
-				}
-				if (!onlyRightName) {
-					allMatch = false;
-					break;
-				}
-				currentSegment = nextSegment;
-			}
-			final boolean allMatchFinal = allMatch;
-			return CriterionGrade.binary(criterion, allMatchFinal);
-		}
+	public static CriterionGrader gradeOnlyOrig(Criterion criterion, GitContext context) {
+		return () -> gradeOrig(criterion, context);
 	}
 
 	@SuppressWarnings("unused")
@@ -150,5 +122,29 @@ public class Graders {
 		return predicateGrader(criterion, contentSupplier, contains);
 		// return () -> CriterionGrade.binary(criterion,
 		// pattern.matcher(contentSupplier.get()).find());
+	}
+
+	private static CriterionGrade gradeOrig(Criterion criterion, GitContext context) {
+		final Optional<RevCommit> mainCommitOpt = context.getMainCommit();
+		if (!mainCommitOpt.isPresent()) {
+			return CriterionGrade.min(criterion);
+		}
+
+		final Client client = context.getClient();
+		final RevCommit mainCommit = mainCommitOpt.get();
+		try {
+			Optional<AnyObjectId> classpathId;
+			classpathId = client.getBlobId(mainCommit, Paths.get(".classpath"));
+			final Optional<AnyObjectId> settingsId = client.getBlobId(mainCommit, Paths.get(".settings/"));
+			final Optional<AnyObjectId> projectId = client.getBlobId(mainCommit, Paths.get(".project"));
+			final Optional<AnyObjectId> targetId = client.getBlobId(mainCommit, Paths.get("target/"));
+			LOGGER.debug("Found settings? {}.", settingsId);
+			final ImmutableList<Boolean> succeeded = ImmutableList.of(classpathId, settingsId, projectId, targetId)
+					.stream().map((o) -> !o.isPresent()).collect(ImmutableList.toImmutableList());
+			final CriterionGrade grade = GradingUtils.getGradeFromSuccesses(criterion, succeeded);
+			return grade;
+		} catch (IOException e) {
+			throw new GradingException(e);
+		}
 	}
 }

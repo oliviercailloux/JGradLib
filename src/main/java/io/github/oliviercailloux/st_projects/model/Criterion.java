@@ -6,4 +6,8 @@ public interface Criterion {
 
 	public double getMaxPoints();
 
+	public default double getMinPoints() {
+		return 0d;
+	}
+
 }

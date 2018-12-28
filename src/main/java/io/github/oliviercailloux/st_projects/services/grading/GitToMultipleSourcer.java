@@ -17,8 +17,9 @@ import com.google.common.collect.ImmutableSet;
 import io.github.oliviercailloux.git.Client;
 import io.github.oliviercailloux.st_projects.model.ContentSupplier;
 import io.github.oliviercailloux.st_projects.model.GitContext;
+import io.github.oliviercailloux.st_projects.model.GradingContexter;
 
-public class GitToMultipleSourcer implements ContentSupplier {
+public class GitToMultipleSourcer implements GradingContexter, ContentSupplier {
 
 	private final GitContext context;
 	private String content;
@@ -42,12 +43,14 @@ public class GitToMultipleSourcer implements ContentSupplier {
 		return content;
 	}
 
+	@Override
 	public void clear() {
 		content = null;
 		comment = null;
 		sources = null;
 	}
 
+	@Override
 	public void init() throws GradingException {
 		final Client client = context.getClient();
 		final Set<Path> sourcesFetched;

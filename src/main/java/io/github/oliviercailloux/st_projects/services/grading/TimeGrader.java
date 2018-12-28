@@ -12,28 +12,29 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.github.oliviercailloux.git.Client;
-import io.github.oliviercailloux.st_projects.model.CriterionGrade;
 import io.github.oliviercailloux.st_projects.model.Criterion;
+import io.github.oliviercailloux.st_projects.model.CriterionGrade;
+import io.github.oliviercailloux.st_projects.model.GitFullContext;
 
-public class TimeGrader {
-	private final ContextInitializer context;
+public class TimeGrader implements CriterionGrader {
+	private final GitFullContext context;
 	private Instant deadline;
 	private double maxGrade;
 	private Criterion criterion;
 
-	public static TimeGrader given(Criterion criterion, ContextInitializer init, Instant deadline,
-			double maxGrade) {
+	public static TimeGrader given(Criterion criterion, GitFullContext init, Instant deadline, double maxGrade) {
 		return new TimeGrader(criterion, init, deadline, maxGrade);
 	}
 
-	private TimeGrader(Criterion criterion, ContextInitializer init, Instant deadline, double maxGrade) {
+	private TimeGrader(Criterion criterion, GitFullContext context, Instant deadline, double maxGrade) {
 		this.criterion = requireNonNull(criterion);
-		this.context = requireNonNull(init);
+		this.context = requireNonNull(context);
 		this.deadline = requireNonNull(deadline);
 		this.maxGrade = maxGrade;
 		checkArgument(Double.isFinite(maxGrade));
 	}
 
+	@Override
 	public CriterionGrade grade() {
 		final Client client = context.getClient();
 

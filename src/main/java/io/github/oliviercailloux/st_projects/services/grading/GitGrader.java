@@ -36,11 +36,11 @@ public class GitGrader implements CriterionGrader {
 
 		final CriterionGrade grade;
 		if (!client.existsCached()) {
-			grade = CriterionGrade.zero(criterion, "Repository not found");
+			grade = CriterionGrade.min(criterion, "Repository not found");
 		} else if (!client.hasContentCached()) {
-			grade = CriterionGrade.zero(criterion, "Repository found but is empty");
+			grade = CriterionGrade.min(criterion, "Repository found but is empty");
 		} else if (!context.getMainCommit().isPresent()) {
-			grade = CriterionGrade.zero(criterion, "Repository found with content but no suitable commit found");
+			grade = CriterionGrade.min(criterion, "Repository found with content but no suitable commit found");
 		} else {
 			grade = CriterionGrade.max(criterion);
 		}

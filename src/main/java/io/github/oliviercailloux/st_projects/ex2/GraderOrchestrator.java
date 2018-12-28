@@ -9,11 +9,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.text.NumberFormat;
-import java.time.Instant;
-import java.time.ZonedDateTime;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Map.Entry;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -53,61 +51,25 @@ import io.github.oliviercailloux.st_projects.services.read.UsernamesReader;
 
 public class GraderOrchestrator {
 
-	public GraderOrchestrator() {
+	public GraderOrchestrator(String prefix) {
+		this.prefix = prefix;
 		usernames = new UsernamesReader();
 		repositoriesByStudent = null;
-		grades = null;
 	}
 
-	public static void main(String[] args) throws Exception {
-		final GraderOrchestrator orch = new GraderOrchestrator();
-		orch.proceed();
-//		orch.jsonToMyCourse();
-//		orch.writeCsv();
-	}
-
-	public void proceed() throws Exception {
-		readUsernames();
-
-		readRepositories();
-//		setSingleRepo("Cocolollipop");
-
-		final Instant deadline = ZonedDateTime.parse("2018-12-05T23:59:59+01:00").toInstant();
-		final Instant cap = ZonedDateTime.parse("2018-12-06T07:00:00+01:00").toInstant();
-		final Ex2Grader grader = new Ex2Grader();
-		grader.setDeadline(deadline);
-		grader.setIgnoreAfter(cap);
-
-		final ImmutableSet.Builder<StudentGrade> gradesBuilder = ImmutableSet.builder();
-		for (Entry<StudentOnGitHubKnown, RepositoryCoordinates> entry : getRepositoriesByStudentKnown().entrySet()) {
-			final StudentOnGitHubKnown student = entry.getKey();
-			final RepositoryCoordinates repo = entry.getValue();
-			final StudentGrade grade = grader.grade(repo, student.asStudentOnGitHub());
-			gradesBuilder.add(grade);
-			LOGGER.debug("Student {}, grades {}.", student, grade.getGrades().values());
-			LOGGER.info("Evaluation: {}", grade.getAsMyCourseString());
-		}
-		grades = gradesBuilder.build();
-
-		writeCsv();
-//		writeJson();
-	}
-
-	private void jsonToMyCourse() throws IOException {
+	private void jsonToMyCourse(Set<StudentGrade> grades) throws IOException {
 		readJson();
 		new MyCourseCsvWriter().writeCsv("Devoir servlet", 110565, grades);
 	}
 
-	private void writeJson() throws IOException {
-		final ImmutableSet<StudentGrade> gradesExt = grades.stream().map((g) -> extend(g))
-				.collect(ImmutableSet.toImmutableSet());
-		final String str = JsonUtils.serializeWithJsonB(gradesExt);
+	private void writeJson(Set<StudentGrade> grades) throws IOException {
+		final String str = JsonUtils.serializeWithJsonB(grades);
 		try (BufferedWriter fileWriter = Files.newBufferedWriter(Paths.get("out.json"), StandardCharsets.UTF_8)) {
 			fileWriter.write(str);
 		}
 	}
 
-	private void readJson() throws IOException {
+	private ImmutableSet<StudentGrade> readJson() throws IOException {
 		final String filename = "manual - 12-08-23h.json";
 //		final String filename = "out.json";
 		final String jsonStr = new String(Files.readAllBytes(Paths.get(filename)), StandardCharsets.UTF_8);
@@ -121,7 +83,7 @@ public class GraderOrchestrator {
 			LOGGER.info("Grade read: {}.", grade);
 			builder.add(grade);
 		}
-		grades = builder.build();
+		return builder.build();
 	}
 
 	private StudentGrade readGrade(JsonObject json) {
@@ -144,17 +106,9 @@ public class GraderOrchestrator {
 		return grade;
 	}
 
-	private StudentGrade extend(StudentGrade g) {
-		final Stream<CriterionGrade> toAdd = Stream.of(CriterionGrade.zero(Ex2Criterion.GET_SIMPLE, "Todo"),
-				CriterionGrade.zero(Ex2Criterion.DEFAULT_PARAM, "Todo"));
-		final ImmutableSet<CriterionGrade> ext = Stream.concat(g.getGradeValues().stream(), toAdd)
-				.collect(ImmutableSet.toImmutableSet());
-		return StudentGrade.of(g.getStudent(), ext);
-	}
-
 	public void setSingleRepo(String studentGitHubUsername) {
 		final RepositoryCoordinates aRepo = RepositoryCoordinates.from("oliviercailloux-org",
-				PREFIX + "-" + studentGitHubUsername);
+				prefix + "-" + studentGitHubUsername);
 		repositoriesByStudent = ImmutableMap.of(usernames.getStudentOnGitHub(studentGitHubUsername), aRepo);
 	}
 
@@ -163,7 +117,7 @@ public class GraderOrchestrator {
 		try (GitHubFetcherV3 fetcher = GitHubFetcherV3.using(GitHubToken.getRealInstance())) {
 			repositories = fetcher.getRepositories("oliviercailloux-org", false);
 		}
-		final Pattern pattern = Pattern.compile(PREFIX + "-(.*)");
+		final Pattern pattern = Pattern.compile(prefix + "-(.*)");
 		ImmutableMap.Builder<StudentOnGitHub, RepositoryCoordinates> repoBuilder = ImmutableMap.builder();
 		for (RepositoryCoordinates repo : repositories) {
 			final Matcher matcher = pattern.matcher(repo.getRepositoryName());
@@ -192,7 +146,7 @@ public class GraderOrchestrator {
 		}
 	}
 
-	public void writeCsv() throws IOException {
+	public void writeCsv(Set<StudentGrade> grades) throws IOException {
 		final Path out = Paths.get("allgrades.csv");
 		final NumberFormat formatter = NumberFormat.getNumberInstance(Locale.FRENCH);
 		try (BufferedWriter fileWriter = Files.newBufferedWriter(out, StandardCharsets.UTF_8)) {
@@ -226,9 +180,7 @@ public class GraderOrchestrator {
 
 	private ImmutableMap<StudentOnGitHub, RepositoryCoordinates> repositoriesByStudent;
 
-	private static final String PREFIX = "servlet";
-
-	private ImmutableSet<StudentGrade> grades;
+	private final String prefix;
 
 	public UsernamesReader getUsernames() {
 		return usernames;

@@ -8,8 +8,9 @@ import java.nio.file.Path;
 import io.github.oliviercailloux.git.Client;
 import io.github.oliviercailloux.st_projects.model.ContentSupplier;
 import io.github.oliviercailloux.st_projects.model.GitContext;
+import io.github.oliviercailloux.st_projects.model.GradingContexter;
 
-public class GitToSourcer implements ContentSupplier {
+public class GitToSourcer implements GradingContexter, ContentSupplier {
 
 	private final GitContext context;
 	private String content;
@@ -27,10 +28,12 @@ public class GitToSourcer implements ContentSupplier {
 		return content;
 	}
 
+	@Override
 	public void clear() {
 		content = null;
 	}
 
+	@Override
 	public void init() throws GradingException {
 		final Client client = context.getClient();
 		try {

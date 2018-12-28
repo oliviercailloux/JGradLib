@@ -50,8 +50,8 @@ public class CriterionGrade {
 		return comment;
 	}
 
-	public static CriterionGrade zero(Criterion criterion) {
-		return new CriterionGrade(criterion, 0d, "");
+	public static CriterionGrade min(Criterion criterion) {
+		return new CriterionGrade(criterion, criterion.getMinPoints(), "");
 	}
 
 	@JsonbCreator
@@ -62,7 +62,8 @@ public class CriterionGrade {
 	}
 
 	public static CriterionGrade binary(Criterion criterion, boolean conditionForPoints) {
-		return new CriterionGrade(criterion, conditionForPoints ? criterion.getMaxPoints() : 0d, "");
+		return new CriterionGrade(criterion, conditionForPoints ? criterion.getMaxPoints() : criterion.getMinPoints(),
+				"");
 	}
 
 	@SuppressWarnings("unused")
@@ -82,8 +83,8 @@ public class CriterionGrade {
 		this.comment = requireNonNull(comment);
 	}
 
-	public static CriterionGrade zero(Criterion criterion, String comment) {
-		return new CriterionGrade(criterion, 0d, comment);
+	public static CriterionGrade min(Criterion criterion, String comment) {
+		return new CriterionGrade(criterion, criterion.getMinPoints(), comment);
 	}
 
 	public static CriterionGrade max(Criterion criterion) {

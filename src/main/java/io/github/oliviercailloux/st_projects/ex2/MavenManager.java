@@ -6,6 +6,7 @@ import java.io.File;
 import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
+import java.util.Properties;
 
 import org.apache.maven.shared.invoker.DefaultInvocationRequest;
 import org.apache.maven.shared.invoker.DefaultInvoker;
@@ -21,12 +22,25 @@ import com.google.common.collect.ImmutableList;
 
 public class MavenManager {
 	public boolean compile(Path pom) {
+		return compile(pom, true);
+	}
+
+	public boolean compileWithoutTests(Path pom) {
+		return compile(pom, false);
+	}
+
+	private boolean compile(Path pom, boolean enableTests) {
 		InvocationRequest request = new DefaultInvocationRequest();
 		request.setInputStream(new ByteArrayInputStream(new byte[] {}));
 		final ByteArrayOutputStream baos = new ByteArrayOutputStream();
 		request.setOutputHandler(new PrintStreamHandler(new PrintStream(baos), true));
 		request.setPomFile(pom.toFile());
 		request.setGoals(ImmutableList.of("compile"));
+		if (!enableTests) {
+			final Properties properties = new Properties();
+			properties.setProperty("skipTests", "true");
+			request.setProperties(properties);
+		}
 		Invoker invoker = new DefaultInvoker();
 		invoker.setLocalRepositoryDirectory(new File("/home/olivier/.m2/repository"));
 		invoker.setMavenHome(new File("/usr/share/maven"));

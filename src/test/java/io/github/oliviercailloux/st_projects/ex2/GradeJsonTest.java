@@ -86,7 +86,7 @@ class GradeJsonTest {
 	@Test
 	public void gradeWriteJson() {
 		final CriterionGrade grade1 = CriterionGrade.max(ENC);
-		final CriterionGrade grade2 = CriterionGrade.zero(ANNOT);
+		final CriterionGrade grade2 = CriterionGrade.min(ANNOT);
 		final StudentGrade grade = StudentGrade.of(getStudentOnGitHubKnown().asStudentOnGitHub(),
 				ImmutableSet.of(grade1, grade2));
 		final String json;
@@ -120,7 +120,7 @@ class GradeJsonTest {
 	@Test
 	public void gradeReadJson() throws Exception {
 		final CriterionGrade grade1 = CriterionGrade.max(ENC);
-		final CriterionGrade grade2 = CriterionGrade.zero(ANNOT);
+		final CriterionGrade grade2 = CriterionGrade.min(ANNOT);
 		final StudentGrade expected = StudentGrade.of(getStudentOnGitHubKnown().asStudentOnGitHub(),
 				ImmutableSet.of(grade1, grade2));
 		final String json = Resources.toString(this.getClass().getResource("Grade.json"), StandardCharsets.UTF_8);
@@ -136,7 +136,7 @@ class GradeJsonTest {
 	@Test
 	public void gradeReadJsonManually() throws Exception {
 		final CriterionGrade grade1 = CriterionGrade.max(ENC);
-		final CriterionGrade grade2 = CriterionGrade.zero(ANNOT);
+		final CriterionGrade grade2 = CriterionGrade.min(ANNOT);
 		final StudentGrade expected = StudentGrade.of(getStudentOnGitHubKnown().asStudentOnGitHub(),
 				ImmutableSet.of(grade1, grade2));
 		final String jsonStr = Resources.toString(this.getClass().getResource("Grade.json"), StandardCharsets.UTF_8);

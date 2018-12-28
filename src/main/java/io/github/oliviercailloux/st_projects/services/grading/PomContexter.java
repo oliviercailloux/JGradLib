@@ -10,9 +10,10 @@ import java.util.regex.Pattern;
 import com.google.common.collect.ImmutableList;
 
 import io.github.oliviercailloux.st_projects.model.ContentSupplier;
-import io.github.oliviercailloux.st_projects.model.GradingContext;
+import io.github.oliviercailloux.st_projects.model.GradingContexter;
+import io.github.oliviercailloux.st_projects.model.PomContext;
 
-public class PomContexter implements GradingContext {
+public class PomContexter implements GradingContexter, PomContext {
 	private final ContentSupplier supplier;
 	private String groupId;
 	/**
@@ -49,17 +50,21 @@ public class PomContexter implements GradingContext {
 		}
 	}
 
+	@Override
 	public boolean isGroupIdValid() {
 		final ImmutableList<String> validStart = ImmutableList.of("io", "github");
 		return groupIdElements != null && groupIdElements.size() >= 3
 				&& groupIdElements.subList(0, 2).equals(validStart);
 	}
 
+	@Override
 	public String getGroupId() {
 		return groupId;
 	}
 
+	@Override
 	public List<String> getGroupIdElements() {
+		assert groupIdElements != null;
 		return groupIdElements;
 	}
 

@@ -23,11 +23,16 @@ public enum Ex2Criterion implements Criterion {
 
 	private String requirement;
 	private double maxPoints;
+	private double minPoints;
 
 	private Ex2Criterion(String requirement, double maxPoints) {
+		this(requirement, maxPoints, 0d);
+	}
+
+	private Ex2Criterion(String requirement, double maxPoints, double minPoints) {
 		this.requirement = requireNonNull(requirement);
 		checkArgument(Double.isFinite(maxPoints));
-		checkArgument(maxPoints >= 0);
+		checkArgument(maxPoints > minPoints);
 		this.maxPoints = maxPoints;
 	}
 
@@ -39,5 +44,10 @@ public enum Ex2Criterion implements Criterion {
 	@Override
 	public double getMaxPoints() {
 		return maxPoints;
+	}
+
+	@Override
+	public double getMinPoints() {
+		return minPoints;
 	}
 }

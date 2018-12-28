@@ -12,11 +12,11 @@ import java.nio.file.Paths;
 import java.text.NumberFormat;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import com.univocity.parsers.csv.CsvWriter;
 import com.univocity.parsers.csv.CsvWriterSettings;
@@ -74,7 +74,7 @@ public class MyCourseCsvWriter {
 		writer.addValue(FEEDBACK_FORMAT_COLUMN, "SMART_TEXT");
 	}
 
-	public void writeCsv(String gradeName, int gradeId, ImmutableSet<StudentGrade> grades) throws IOException {
+	public void writeCsv(String gradeName, int gradeId, Set<StudentGrade> grades) throws IOException {
 		final Path out = Paths.get("out.csv");
 		final String gradeC = gradeName + " |" + gradeId;
 		final NumberFormat formatter = NumberFormat.getNumberInstance(Locale.FRENCH);
