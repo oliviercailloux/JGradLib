@@ -2,6 +2,7 @@ package io.github.oliviercailloux.st_projects.services.grading;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
+import java.util.Comparator;
 import java.util.Map.Entry;
 import java.util.Queue;
 import java.util.Set;
@@ -14,6 +15,7 @@ import org.slf4j.LoggerFactory;
 import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.graph.Graph;
 import com.google.common.graph.ImmutableGraph;
 import com.google.common.graph.Traverser;
@@ -36,25 +38,26 @@ public class GradingExecutor {
 	public GradingExecutor() {
 		coordinatesSupplier = new BoxSupplier();
 		prerequisites = null;
-		sorted = null;
+		sortedTasks = null;
 		contexters = null;
+		criteriaComparator = null;
 	}
 
 	private ImmutableSet<CriterionGrade> grade(RepositoryCoordinates coordinates) throws GradingException {
 		final ImmutableSet.Builder<CriterionGrade> gradesBuilder = ImmutableSet.builder();
 
-		for (Object worker : sorted) {
+		for (Object worker : sortedTasks) {
 			if (worker instanceof BoxSupplier) {
 				assert worker.equals(coordinatesSupplier);
-				LOGGER.info("Initializing initial supplier.");
+				LOGGER.debug("Initializing initial supplier.");
 				coordinatesSupplier.set(coordinates);
 			} else if (worker instanceof GradingContexter) {
 				final GradingContexter contexter = (GradingContexter) worker;
-				LOGGER.info("Initializing contexter {}.", contexter);
+				LOGGER.debug("Initializing contexter {}.", contexter);
 				contexter.init();
 			} else if (worker instanceof CriterionGrader) {
 				final CriterionGrader grader = (CriterionGrader) worker;
-				LOGGER.info("Grading from {}.", grader);
+				LOGGER.debug("Grading from {}.", grader);
 				CriterionGrade grade = grader.grade();
 				gradesBuilder.add(grade);
 			} else {
@@ -63,7 +66,7 @@ public class GradingExecutor {
 		}
 
 		for (GradingContexter contexter : contexters) {
-			LOGGER.info("Clearing contexter {}.", contexter);
+			LOGGER.debug("Clearing contexter {}.", contexter);
 			contexter.clear();
 		}
 
@@ -73,11 +76,17 @@ public class GradingExecutor {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(GradingExecutor.class);
 	private ImmutableGraph<Object> prerequisites;
-	private Queue<Object> sorted;
+	private Queue<Object> sortedTasks;
 	private ImmutableSet<GradingContexter> contexters;
+	private Comparator<CriterionGrade> criteriaComparator;
 
 	public StudentGrade grade(StudentOnGitHub student, RepositoryCoordinates coordinates) throws GradingException {
-		return StudentGrade.of(student, grade(coordinates));
+		final ImmutableSet<CriterionGrade> grades = grade(coordinates);
+		if (criteriaComparator == null) {
+			return StudentGrade.of(student, grades);
+		}
+		final ImmutableSortedSet<CriterionGrade> sortedGrades = ImmutableSortedSet.copyOf(criteriaComparator, grades);
+		return StudentGrade.of(student, sortedGrades);
 	}
 
 	public void setGraph(Graph<Object> prerequisites) {
@@ -97,8 +106,8 @@ public class GradingExecutor {
 		checkArgument(invalid.isEmpty(), invalid);
 
 		this.prerequisites = ImmutableGraph.copyOf(prerequisites);
-		sorted = Utils.topologicalSort(prerequisites, roots);
-		contexters = sorted.stream().filter(Predicates.instanceOf(GradingContexter.class))
+		sortedTasks = Utils.topologicalSort(prerequisites, roots);
+		contexters = sortedTasks.stream().filter(Predicates.instanceOf(GradingContexter.class))
 				.map((o) -> (GradingContexter) o).collect(ImmutableSet.toImmutableSet());
 	}
 
@@ -117,5 +126,13 @@ public class GradingExecutor {
 			LOGGER.info("Evaluation: {}", grade.getAsMyCourseString());
 		}
 		return gradesBuilder.build();
+	}
+
+	public Comparator<CriterionGrade> getCriteriaComparator() {
+		return criteriaComparator;
+	}
+
+	public void setCriteriaComparator(Comparator<CriterionGrade> criteriaComparator) {
+		this.criteriaComparator = criteriaComparator;
 	}
 }

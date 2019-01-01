@@ -7,6 +7,9 @@ import java.util.regex.MatchResult;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.common.collect.ImmutableList;
 
 import io.github.oliviercailloux.st_projects.model.ContentSupplier;
@@ -34,7 +37,11 @@ public class PomContexter implements GradingContexter, PomContext {
 
 	@Override
 	public void init() throws GradingException {
-		final Matcher matcher = Pattern.compile("<groupId>(([^\\.]\\.?)+)</groupId>").matcher(supplier.getContent());
+		final String content = supplier.getContent();
+		final Matcher matcher = Pattern.compile(
+				"<project[^>]*>" + "[^<]*" + "(?:<[^>]*>[^<]*</[^>]*>[^<]*)*" + "<groupId>(([^\\.<]\\.?)+)</groupId>")
+				.matcher(content);
+		LOGGER.debug("Matching for group id against {}.", content);
 		final boolean found = matcher.find();
 		final MatchResult result = matcher.toMatchResult();
 		final boolean foundTwice = matcher.find();
@@ -42,13 +49,18 @@ public class PomContexter implements GradingContexter, PomContext {
 			groupId = result.group(1);
 			assert groupId.length() >= 1;
 			groupIdElements = ImmutableList.copyOf(groupId.split("\\."));
+			LOGGER.debug("Found group id {}; elements are {}.", groupId, groupIdElements);
 			assert groupIdElements.size() >= 1 : groupId;
 			assert !groupIdElements.contains("");
 		} else {
+			LOGGER.debug("Found once: {}, result: {}, twice: {}.", found, result, foundTwice);
 			groupId = "";
 			groupIdElements = ImmutableList.of();
 		}
 	}
+
+	@SuppressWarnings("unused")
+	private static final Logger LOGGER = LoggerFactory.getLogger(PomContexter.class);
 
 	@Override
 	public boolean isGroupIdValid() {

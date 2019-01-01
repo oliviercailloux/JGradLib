@@ -48,9 +48,25 @@ public class GitAndGitHub {
 	}
 
 	public Map<ObjectId, Instant> check(Client client) {
+		/**
+		 * Approach should be changed. A Create Event with ref "null", ref_type
+		 * "repository" happens when the repository gets created, that’s the first
+		 * event. It is immediately followed (same second) by a member event which adds
+		 * the owner of the repository. Then followed (can be much later) by a create
+		 * event, ref "master", ref_type "branch", which happens when the branch master
+		 * is created. Then followed by a push event (which I have seen to happen seven
+		 * minutes later), which references as "before" the first commit in branch
+		 * master. I suppose that the creation of branch master corresponds to the first
+		 * user push, and the first push event corresponds to the second one. In
+		 * summary, the important stuff here is: create event, with its ref_type and
+		 * ref; member event, with the name of the person added (in "payload": "action"
+		 * = "added" and "member"/"login"); and push event, with before and commits (in
+		 * payload). The create event of the master branch may hide several commits, not
+		 * just the one that can be retrieved using the next "before".
+		 */
 		checkArgument(client.hasContentCached());
 		/** Check does not throw. */
-		checkArgument(client.getAllHistoryCached() != null);
+		client.getAllHistoryCached();
 
 		final List<Event> events = getEvents(client);
 
@@ -75,13 +91,27 @@ public class GitAndGitHub {
 				final ObjectId beforeId = pushPayload.getBefore().get();
 				final Optional<Event> nextEvent = peekingIterator.hasNext() ? Optional.of(peekingIterator.peek())
 						: Optional.empty();
-				final Optional<Instant> nextEventCreatedAt = nextEvent.map(Event::getCreatedAt);
-				receivedAt.put(beforeId, nextEventCreatedAt.get());
+				final Optional<EventType> nextEventType = nextEvent.map(Event::getType);
+				if (nextEventType.isPresent() && (nextEventType.get().equals(EventType.PUSH_EVENT)
+						|| nextEventType.get().equals(EventType.CREATE_EVENT))) {
+					final Optional<Instant> nextEventCreatedAt = nextEvent.map(Event::getCreatedAt);
+					receivedAt.put(beforeId, nextEventCreatedAt.get());
+				}
 			}
 		}
 		LOGGER.info("Received at: {}.", receivedAt);
 		commits = client.getAllHistoryCached().getGraph().nodes();
-		/** Let’s check that all top are seen, all bottom ones are unseen. */
+		final ImmutableSet<RevCommit> commitsUnknown = commits.stream()
+				.filter((c) -> !receivedAt.containsKey(c.getId())).collect(ImmutableSet.toImmutableSet());
+		LOGGER.info("Unknown (after first pass): {}.", commitsUnknown);
+
+		/**
+		 * Let’s check that all top are seen, all bottom ones are unseen. This test
+		 * should be changed, we should follow the graph relation instead of the
+		 * iteration order. Following the parent relation, starting from the seen ones,
+		 * we should reach only seen ones. Equivalently: no unseen has a seen child.
+		 */
+
 		final Iterator<RevCommit> iterator = commits.iterator();
 		while (iterator.hasNext()) {
 			final RevCommit commit = iterator.next();
@@ -94,10 +124,6 @@ public class GitAndGitHub {
 			final RevCommit commit = iterator.next();
 			checkState(!receivedAt.containsKey(commit.getId()));
 		}
-
-		final ImmutableSet<RevCommit> commitsUnknown = commits.stream()
-				.filter((c) -> !receivedAt.containsKey(c.getId())).collect(ImmutableSet.toImmutableSet());
-		LOGGER.info("Unknown (after first pass): {}.", commitsUnknown);
 
 		/**
 		 * The following will work only if the repo is young enough, otherwise GitHub
@@ -129,7 +155,8 @@ public class GitAndGitHub {
 
 	private <K, V> void checkOrPut(Map<K, V> map, K key, V value) {
 		if (map.containsKey(key)) {
-			checkState(map.get(key).equals(value));
+			checkState(map.get(key).equals(value), "Map contains key " + key + ", current value " + map.get(key)
+					+ " differs from new one " + value + ".");
 		} else {
 			map.put(key, value);
 		}

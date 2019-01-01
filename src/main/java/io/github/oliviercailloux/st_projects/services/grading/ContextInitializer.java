@@ -4,6 +4,8 @@ import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.Instant;
 import java.util.Map;
 import java.util.Optional;
@@ -22,13 +24,15 @@ import io.github.oliviercailloux.st_projects.model.GradingContexter;
 
 public class ContextInitializer implements GitFullContext, GradingContexter {
 
-	public static ContextInitializer ignoreAfter(Supplier<RepositoryCoordinates> coordinatesSupplier,
-			Instant ignoreAfter) {
-		return new ContextInitializer(coordinatesSupplier, ignoreAfter);
+	public static ContextInitializer withPathAndIgnore(Supplier<RepositoryCoordinates> coordinatesSupplier,
+			Path projectsBaseDir, Instant ignoreAfter) {
+		return new ContextInitializer(coordinatesSupplier, projectsBaseDir, ignoreAfter);
 	}
 
-	public static ContextInitializer noIgnore(Supplier<RepositoryCoordinates> coordinatesSupplier) {
-		return new ContextInitializer(coordinatesSupplier, Instant.MAX);
+	public static ContextInitializer withIgnore(Supplier<RepositoryCoordinates> coordinatesSupplier,
+			Instant ignoreAfter) {
+		final String tmpDir = System.getProperty("java.io.tmpdir");
+		return new ContextInitializer(coordinatesSupplier, Paths.get(tmpDir), ignoreAfter);
 	}
 
 	private Client client;
@@ -36,10 +40,13 @@ public class ContextInitializer implements GitFullContext, GradingContexter {
 	private GradingContextWithTimeline context;
 	private Optional<RevCommit> lastCommitNotIgnored;
 	private Supplier<RepositoryCoordinates> coordinatesSupplier;
+	private Path projectsBaseDir;
 
-	private ContextInitializer(Supplier<RepositoryCoordinates> coordinatesSupplier, Instant ignoredAfter) {
+	private ContextInitializer(Supplier<RepositoryCoordinates> coordinatesSupplier, Path projectsBaseDir,
+			Instant ignoredAfter) {
 		this.ignoreAfter = requireNonNull(ignoredAfter);
 		this.coordinatesSupplier = requireNonNull(coordinatesSupplier);
+		this.projectsBaseDir = requireNonNull(projectsBaseDir);
 		clear();
 	}
 
@@ -53,7 +60,7 @@ public class ContextInitializer implements GitFullContext, GradingContexter {
 	@Override
 	public void init() throws GradingException {
 		try {
-			client = Client.about(coordinatesSupplier.get());
+			client = Client.aboutAndUsing(coordinatesSupplier.get(), projectsBaseDir);
 			{
 				client.tryRetrieve();
 				client.hasContent();
@@ -71,13 +78,14 @@ public class ContextInitializer implements GitFullContext, GradingContexter {
 				client.checkout(lastCommitNotIgnored.get());
 				client.setDefaultRevSpec(lastCommitNotIgnored.get());
 			}
-		} catch (IllegalStateException | GitAPIException | IOException e) {
+		} catch (GitAPIException | IOException e) {
 			throw new GradingException(e);
 		}
 	}
 
 	@Override
 	public Client getClient() {
+		assert client != null;
 		return client;
 	}
 
@@ -95,6 +103,11 @@ public class ContextInitializer implements GitFullContext, GradingContexter {
 	public Instant getSubmittedTime() {
 		checkState(lastCommitNotIgnored.isPresent());
 		return context.getCommitsReceptionTime().get(lastCommitNotIgnored.get());
+	}
+
+	public static ContextInitializer with(Supplier<RepositoryCoordinates> coordinatesSupplier) {
+		final String tmpDir = System.getProperty("java.io.tmpdir");
+		return new ContextInitializer(coordinatesSupplier, Paths.get(tmpDir), Instant.MAX);
 	}
 
 }

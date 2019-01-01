@@ -7,6 +7,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.Predicate;
 
 import org.slf4j.Logger;
@@ -25,10 +26,13 @@ public class PackageGroupIdGrader implements CriterionGrader {
 	private Criterion criterion;
 	private GitContext context;
 	private PomContext pomContext;
+	private PomSupplier pomSupplier;
 
-	public PackageGroupIdGrader(Criterion criterion, GitContext context, PomContext pomContext) {
+	public PackageGroupIdGrader(Criterion criterion, GitContext context, PomSupplier pomSupplier,
+			PomContext pomContext) {
 		this.criterion = requireNonNull(criterion);
 		this.context = requireNonNull(context);
+		this.pomSupplier = requireNonNull(pomSupplier);
 		this.pomContext = requireNonNull(pomContext);
 	}
 
@@ -39,9 +43,14 @@ public class PackageGroupIdGrader implements CriterionGrader {
 		if (groupIdElements.isEmpty()) {
 			return CriterionGrade.min(criterion, "Unknown group id");
 		}
+		final Optional<Path> relRootOpt = pomSupplier.getProjectRelativeRoot();
+		if (!relRootOpt.isPresent()) {
+			return CriterionGrade.min(criterion, "No unique pom found.");
+		}
 
-		boolean allMatchMain = allMatch(Paths.get("src/main/java"));
-		boolean allMatchTest = allMatch(Paths.get("src/test/java"));
+		final Path relativeRoot = relRootOpt.get();
+		boolean allMatchMain = allMatch(relativeRoot.resolve(Paths.get("src/main/java")));
+		boolean allMatchTest = allMatch(relativeRoot.resolve(Paths.get("src/test/java")));
 		final ImmutableList<Boolean> successes = ImmutableList.of(allMatchMain, allMatchTest);
 		return GradingUtils.getGradeFromSuccesses(criterion, successes);
 	}
@@ -54,9 +63,10 @@ public class PackageGroupIdGrader implements CriterionGrader {
 		boolean allMatch = true;
 		Path currentSegment = start;
 		for (String element : groupIdElements) {
-			LOGGER.debug("Checking for element {}.", element);
+			LOGGER.debug("Checking for group id element {}.", element);
+			final String packagePart = element.replaceAll("-", "_");
 			final Path current = client.getProjectDirectory().resolve(currentSegment);
-			final Path nextSegment = currentSegment.resolve(element);
+			final Path nextSegment = currentSegment.resolve(packagePart);
 			final Path next = client.getProjectDirectory().resolve(nextSegment);
 			boolean onlyRightName;
 			try {

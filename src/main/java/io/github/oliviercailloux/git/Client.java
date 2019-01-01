@@ -193,6 +193,7 @@ public class Client {
 
 	public String fetchBlob(AnyObjectId revSpec, Path path)
 			throws MissingObjectException, IncorrectObjectTypeException, IOException {
+		checkArgument(!path.toString().equals(""));
 		if (blobCache.contains(revSpec, path)) {
 			return blobCache.get(revSpec, path);
 		}
@@ -216,7 +217,8 @@ public class Client {
 	}
 
 	public String fetchBlobOrEmpty(Path path) throws MissingObjectException, IncorrectObjectTypeException, IOException {
-		LOGGER.info("Fetching from {} using default {}.", path, defaultRevSpec);
+		checkArgument(!path.toString().equals(""));
+		LOGGER.debug("Fetching from {} using default {}.", path, defaultRevSpec);
 		if (defaultRevSpec == null) {
 			return "";
 		}
@@ -230,6 +232,7 @@ public class Client {
 	private Optional<AnyObjectId> getBlobId(Repository repository, AnyObjectId revSpec, Path path)
 			throws AmbiguousObjectException, IncorrectObjectTypeException, IOException, MissingObjectException,
 			CorruptObjectException {
+		checkArgument(!path.toString().equals(""));
 		final Optional<AnyObjectId> foundId;
 		final RevTree tree;
 		{

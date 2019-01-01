@@ -7,16 +7,17 @@ import java.time.Instant;
 import java.util.Comparator;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.collect.Comparators;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Streams;
+import com.google.common.graph.Graphs;
 import com.google.common.graph.ImmutableGraph;
 import com.google.common.graph.Traverser;
 
@@ -52,9 +53,29 @@ public class GradingContextWithTimeline {
 				.filter((c) -> !commitsReceptionTime.get(c.getId()).isAfter(ignoreAfter))
 				.collect(ImmutableList.toImmutableList());
 		LOGGER.info("Commits: {}; on time: {}.", ImmutableList.copyOf(children), commitsOnTime);
-		checkState(Comparators.isInOrder(commitsOnTime,
-				Comparator.<RevCommit, Instant>comparing((c) -> commitsReceptionTime.get(c.getId())).reversed()));
-		return commitsOnTime.stream().findFirst();
+		final Comparator<RevCommit> comparingReceptionTime = Comparator
+				.comparing((c) -> commitsReceptionTime.get(c.getId()));
+		final Optional<RevCommit> amongLatest = commitsOnTime.stream().findFirst();
+		checkState(commitsOnTime.stream().allMatch((c) -> comparingReceptionTime.compare(amongLatest.get(), c) >= 0));
+		/**
+		 * In case two commits have been received at the same moment and are both the
+		 * latest ones not ignored.
+		 */
+		final ImmutableList<RevCommit> allLatest = commitsOnTime.stream()
+				.filter((c) -> comparingReceptionTime.compare(amongLatest.get(), c) == 0)
+				.collect(ImmutableList.toImmutableList());
+		if (allLatest.size() >= 2) {
+			final RevCommit shouldBeParent = amongLatest.get();
+			final Set<RevCommit> allItsChildren = Graphs.reachableNodes(graph, shouldBeParent);
+			checkState(allLatest.get(0).equals(shouldBeParent));
+			checkState(allItsChildren.containsAll(allLatest.subList(1, allLatest.size())));
+		}
+		/**
+		 * Perhaps it could be that the two latest commits are not in parent-children
+		 * relationship, both being child of a parent that is ignored. This is quite
+		 * unlikely, I’ll think about it if it happens.
+		 */
+		return amongLatest;
 	}
 
 	@SuppressWarnings("unused")

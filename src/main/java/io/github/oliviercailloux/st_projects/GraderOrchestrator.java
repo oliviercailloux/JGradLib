@@ -1,4 +1,4 @@
-package io.github.oliviercailloux.st_projects.ex2;
+package io.github.oliviercailloux.st_projects;
 
 import java.io.BufferedWriter;
 import java.io.IOException;
@@ -42,6 +42,8 @@ import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherV3;
 import io.github.oliviercailloux.git.utils.JsonUtils;
 import io.github.oliviercailloux.mycourse.MyCourseCsvWriter;
+import io.github.oliviercailloux.st_projects.ex2.AsEx2Criterion;
+import io.github.oliviercailloux.st_projects.ex2.GHAsJson;
 import io.github.oliviercailloux.st_projects.model.Criterion;
 import io.github.oliviercailloux.st_projects.model.CriterionGrade;
 import io.github.oliviercailloux.st_projects.model.StudentGrade;
@@ -169,6 +171,18 @@ public class GraderOrchestrator {
 				writer.addValue("Grade", formatter.format(grade.getGrade()));
 				writer.writeValuesToRow();
 			}
+
+			writer.addValue("Name", "Range");
+			writer.addValue("GitHub username", "Range");
+			for (Criterion criterion : allKeys) {
+				writer.addValue(criterion.toString(),
+						"[" + criterion.getMinPoints() + ", " + criterion.getMaxPoints() + "]");
+			}
+			final double minGrade = allKeys.stream().collect(Collectors.summingDouble(Criterion::getMinPoints));
+			final double maxGrade = allKeys.stream().collect(Collectors.summingDouble(Criterion::getMaxPoints));
+			writer.addValue("Grade", "[" + minGrade + "," + maxGrade + "]");
+			writer.writeValuesToRow();
+
 			writer.close();
 		}
 	}

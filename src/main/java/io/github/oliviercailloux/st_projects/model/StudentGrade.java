@@ -23,7 +23,6 @@ import com.google.common.collect.ImmutableSet;
 @JsonbPropertyOrder({ "student" })
 public class StudentGrade {
 	private StudentGrade(StudentOnGitHub student, ImmutableBiMap<Criterion, CriterionGrade> grades) {
-		LOGGER.info("Internally building with {}, {}.", student, grades);
 		this.student = requireNonNull(student);
 		this.grades = requireNonNull(grades);
 	}
@@ -31,7 +30,7 @@ public class StudentGrade {
 	@JsonbCreator
 	public static StudentGrade of(@JsonbProperty("student") StudentOnGitHub student,
 			@JsonbProperty("gradeValues") Set<CriterionGrade> gradeValues) {
-		LOGGER.info("Building with {}, {}.", student, gradeValues.iterator().next().getClass());
+		LOGGER.debug("Building with {}, {}.", student, gradeValues.iterator().next().getClass());
 		final Collector<CriterionGrade, ?, ImmutableBiMap<Criterion, CriterionGrade>> toI = ImmutableBiMap
 				.toImmutableBiMap((g) -> g.getCriterion(), (g) -> g);
 		gradeValues.stream().forEach(System.out::println);
@@ -120,7 +119,6 @@ public class StudentGrade {
 			builder.append("</td><td>");
 			builder.append(grade.getComment());
 		}
-		builder.append(".");
 
 		return builder.toString();
 	}
