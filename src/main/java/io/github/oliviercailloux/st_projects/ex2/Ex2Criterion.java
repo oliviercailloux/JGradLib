@@ -6,7 +6,7 @@ import static java.util.Objects.requireNonNull;
 import io.github.oliviercailloux.st_projects.model.Criterion;
 
 public enum Ex2Criterion implements Criterion {
-	REPO_EXISTS("Repository exists", 0.5d), ON_TIME("Delivered on time", 0),
+	REPO_EXISTS("Repository exists", 0.5d), ON_TIME("Delivered on time", 0d, -10d),
 	GROUP_ID("Group id follows Maven best practices", 0.5d), ICAL("Ical dependency", 1d),
 	UTF("Encoding property", 0.5d), SOURCE("Maven compiler source property", 0.5d),
 	NO_MISLEADING_URL("No misleading url pointer", 0d, -1d), WAR("war packaging", 0.5d),
@@ -33,7 +33,7 @@ public enum Ex2Criterion implements Criterion {
 	private Ex2Criterion(String requirement, double maxPoints, double minPoints) {
 		this.requirement = requireNonNull(requirement);
 		checkArgument(Double.isFinite(maxPoints));
-		checkArgument(maxPoints > minPoints);
+		checkArgument(maxPoints > minPoints, String.format("Max: %f, min: %f.", maxPoints, minPoints));
 		this.maxPoints = maxPoints;
 	}
 

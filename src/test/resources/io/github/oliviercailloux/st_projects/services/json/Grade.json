@@ -1,0 +1,27 @@
+{
+    "student": {
+        "gitHubUsername": "g",
+        "studentId": 1,
+        "myCourseUsername": "u",
+        "firstName": "f",
+        "lastName": "l"
+    },
+    "marks": [
+        {
+            "criterion": {
+                "class": "io.github.oliviercailloux.st_projects.ex2.Ex2Criterion",
+                "name": "ENC"
+            },
+            "points": 1.0,
+            "comment": ""
+        },
+        {
+            "criterion": {
+                "class": "io.github.oliviercailloux.st_projects.ex2.Ex2Criterion",
+                "name": "ANNOT"
+            },
+            "points": 0.0,
+            "comment": ""
+        }
+    ]
+}

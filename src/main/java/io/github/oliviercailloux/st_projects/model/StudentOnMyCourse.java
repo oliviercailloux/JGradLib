@@ -5,6 +5,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.Objects;
 
+import javax.json.JsonObject;
 import javax.json.bind.annotation.JsonbCreator;
 import javax.json.bind.annotation.JsonbProperty;
 import javax.json.bind.annotation.JsonbPropertyOrder;
@@ -13,6 +14,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.MoreObjects;
+
+import io.github.oliviercailloux.git.utils.JsonUtils;
+import io.github.oliviercailloux.json.PrintableJsonObject;
 
 @JsonbPropertyOrder({ "studentId", "myCourseUsername", "firstName", "lastName" })
 public class StudentOnMyCourse {
@@ -23,17 +27,25 @@ public class StudentOnMyCourse {
 		return new StudentOnMyCourse(id, firstName, lastName, username);
 	}
 
+	public static StudentOnMyCourse fromJson(JsonObject data) {
+		return JsonUtils.deserializeWithJsonB(data.toString(), StudentOnMyCourse.class);
+	}
+
 	private int studentId;
 	private String firstName;
 	private String lastName;
 	private String username;
 
-	public StudentOnMyCourse(int id, String firstName, String lastName, String username) {
+	private StudentOnMyCourse(int id, String firstName, String lastName, String username) {
 		checkArgument(id > 0);
 		studentId = id;
 		this.firstName = requireNonNull(firstName);
 		this.lastName = requireNonNull(lastName);
 		this.username = requireNonNull(username);
+	}
+
+	public PrintableJsonObject asJson() {
+		return JsonUtils.serializeWithJsonB(this);
 	}
 
 	@Override

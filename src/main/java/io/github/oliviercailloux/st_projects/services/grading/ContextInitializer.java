@@ -24,6 +24,11 @@ import io.github.oliviercailloux.st_projects.model.GradingContexter;
 
 public class ContextInitializer implements GitFullContext, GradingContexter {
 
+	public static ContextInitializer with(Supplier<RepositoryCoordinates> coordinatesSupplier) {
+		final String tmpDir = System.getProperty("java.io.tmpdir");
+		return new ContextInitializer(coordinatesSupplier, Paths.get(tmpDir), Instant.MAX);
+	}
+
 	public static ContextInitializer withPathAndIgnore(Supplier<RepositoryCoordinates> coordinatesSupplier,
 			Path projectsBaseDir, Instant ignoreAfter) {
 		return new ContextInitializer(coordinatesSupplier, projectsBaseDir, ignoreAfter);
@@ -103,11 +108,6 @@ public class ContextInitializer implements GitFullContext, GradingContexter {
 	public Instant getSubmittedTime() {
 		checkState(lastCommitNotIgnored.isPresent());
 		return context.getCommitsReceptionTime().get(lastCommitNotIgnored.get());
-	}
-
-	public static ContextInitializer with(Supplier<RepositoryCoordinates> coordinatesSupplier) {
-		final String tmpDir = System.getProperty("java.io.tmpdir");
-		return new ContextInitializer(coordinatesSupplier, Paths.get(tmpDir), Instant.MAX);
 	}
 
 }

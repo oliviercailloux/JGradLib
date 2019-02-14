@@ -27,35 +27,35 @@ import io.github.oliviercailloux.git.Client;
 import io.github.oliviercailloux.st_projects.ex2.MavenManager;
 import io.github.oliviercailloux.st_projects.model.ContentSupplier;
 import io.github.oliviercailloux.st_projects.model.Criterion;
-import io.github.oliviercailloux.st_projects.model.CriterionGrade;
+import io.github.oliviercailloux.st_projects.model.Mark;
 import io.github.oliviercailloux.st_projects.model.GitContext;
 import io.github.oliviercailloux.st_projects.model.MultiContentSupplier;
 import io.github.oliviercailloux.st_projects.model.PomContext;
 import io.github.oliviercailloux.st_projects.utils.GradingUtils;
 
-public class Graders {
-	public static CriterionGrader groupIdGrader(Criterion criterion, PomContext context) {
-		return new GroupIdGrader(criterion, context);
+public class Markers {
+	public static CriterionMarker groupIdMarker(Criterion criterion, PomContext context) {
+		return new GroupIdMarker(criterion, context);
 	}
 
-	public static CriterionGrader packageGroupIdGrader(Criterion criterion, GitContext context, PomSupplier pomSupplier,
+	public static CriterionMarker packageGroupIdMarker(Criterion criterion, GitContext context, PomSupplier pomSupplier,
 			PomContext pomContext) {
-		return new PackageGroupIdGrader(criterion, context, pomSupplier, pomContext);
+		return new PackageGroupIdMarker(criterion, context, pomSupplier, pomContext);
 	}
 
-	public static CriterionGrader gradeOnlyOrig(Criterion criterion, GitContext context) {
-		return () -> gradeOrig(criterion, context);
+	public static CriterionMarker gradeOnlyOrig(Criterion criterion, GitContext context) {
+		return () -> markOrig(criterion, context);
 	}
 
 	@SuppressWarnings("unused")
-	private static final Logger LOGGER = LoggerFactory.getLogger(Graders.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(Markers.class);
 
-	public static CriterionGrader predicateGraderWithComment(Criterion criterion,
+	public static CriterionMarker predicateMarkerWithComment(Criterion criterion,
 			GitToMultipleSourcer multipleSourcesSupplier, Predicate<CharSequence> predicate) {
-		return () -> gradeFromMultipleSources(criterion, multipleSourcesSupplier, predicate);
+		return () -> markFromMultipleSources(criterion, multipleSourcesSupplier, predicate);
 	}
 
-	private static CriterionGrade gradeFromMultipleSources(Criterion criterion,
+	private static Mark markFromMultipleSources(Criterion criterion,
 			MultiContentSupplier mutlipleSourcesSupplier, Predicate<CharSequence> predicate) {
 		final Set<Path> sources = mutlipleSourcesSupplier.getContents().keySet();
 		final boolean okay;
@@ -73,17 +73,17 @@ public class Graders {
 			comment = "Found " + sources.size() + " sources: " + sources + ".";
 		}
 		LOGGER.debug("Sources: {}; okay: {}; comment: {}.", sources, okay, comment);
-		return CriterionGrade.of(criterion, okay ? criterion.getMaxPoints() : 0d, comment);
+		return Mark.of(criterion, okay ? criterion.getMaxPoints() : 0d, comment);
 	}
 
-	public static Function<Boolean, CriterionGrade> fromBool(Criterion criterion, double pointsSucceeds,
+	public static Function<Boolean, Mark> fromBool(Criterion criterion, double pointsSucceeds,
 			double pointsFail) {
 		requireNonNull(criterion);
 		checkArgument(Double.isFinite(pointsSucceeds));
 		checkArgument(Double.isFinite(pointsFail));
 		checkArgument(pointsSucceeds >= pointsFail);
 
-		final Function<Boolean, CriterionGrade> f = (b) -> CriterionGrade.of(criterion, b ? pointsSucceeds : pointsFail,
+		final Function<Boolean, Mark> f = (b) -> Mark.of(criterion, b ? pointsSucceeds : pointsFail,
 				"");
 		return f;
 	}
@@ -98,28 +98,28 @@ public class Graders {
 		};
 	}
 
-	public static <T> CriterionGrader predicateGrader(Criterion criterion, Supplier<? extends T> supplier,
+	public static <T> CriterionMarker predicateMarker(Criterion criterion, Supplier<? extends T> supplier,
 			Predicate<? super T> conditionForPoints) {
 		return new GraderUsingSupplierAndPredicate<>(criterion, supplier, conditionForPoints);
 	}
 
-	public static CriterionGrader predicateGraderAny(Criterion criterion, MultiContentSupplier supplier,
+	public static CriterionMarker predicateMarkerAny(Criterion criterion, MultiContentSupplier supplier,
 			Predicate<? super String> conditionForPoints) {
 		final Predicate<? super Map<Path, String>> p = (m) -> m.values().stream().anyMatch(conditionForPoints);
 		return new GraderUsingSupplierAndPredicate<>(criterion, () -> supplier.getContents(), p);
 	}
 
-	public static CriterionGrader patternGrader(Criterion criterion, ContentSupplier contentSupplier, Pattern pattern) {
+	public static CriterionMarker patternMarker(Criterion criterion, ContentSupplier contentSupplier, Pattern pattern) {
 		final Predicate<CharSequence> contains = Predicates.contains(pattern);
-		return predicateGrader(criterion, contentSupplier, contains);
+		return predicateMarker(criterion, contentSupplier, contains);
 		// return () -> CriterionGrade.binary(criterion,
 		// pattern.matcher(contentSupplier.get()).find());
 	}
 
-	private static CriterionGrade gradeOrig(Criterion criterion, GitContext context) {
+	private static Mark markOrig(Criterion criterion, GitContext context) {
 		final Optional<RevCommit> mainCommitOpt = context.getMainCommit();
 		if (!mainCommitOpt.isPresent()) {
-			return CriterionGrade.min(criterion);
+			return Mark.min(criterion);
 		}
 
 		final Client client = context.getClient();
@@ -133,31 +133,31 @@ public class Graders {
 			LOGGER.debug("Found settings? {}.", settingsId);
 			final ImmutableList<Boolean> succeeded = ImmutableList.of(classpathId, settingsId, projectId, targetId)
 					.stream().map((o) -> !o.isPresent()).collect(ImmutableList.toImmutableList());
-			final CriterionGrade grade = GradingUtils.getGradeFromSuccesses(criterion, succeeded);
+			final Mark grade = GradingUtils.getGradeFromSuccesses(criterion, succeeded);
 			return grade;
 		} catch (IOException e) {
 			throw new GradingException(e);
 		}
 	}
 
-	public static CriterionGrader predicateGrader(Criterion criterion, ContentSupplier supplier,
+	public static CriterionMarker predicateMarker(Criterion criterion, ContentSupplier supplier,
 			Predicate<? super String> conditionForPoints) {
 		return new GraderUsingSupplierAndPredicate<>(criterion, () -> supplier.getContent(), conditionForPoints);
 	}
 
-	public static CriterionGrader notEmpty(Criterion criterion, MultiContentSupplier multiSupplier) {
-		return () -> !multiSupplier.getContents().isEmpty() ? CriterionGrade.of(criterion, criterion.getMaxPoints(),
-				"Found: " + multiSupplier.getContents().keySet() + ".") : CriterionGrade.min(criterion);
+	public static CriterionMarker notEmpty(Criterion criterion, MultiContentSupplier multiSupplier) {
+		return () -> !multiSupplier.getContents().isEmpty() ? Mark.of(criterion, criterion.getMaxPoints(),
+				"Found: " + multiSupplier.getContents().keySet() + ".") : Mark.min(criterion);
 	}
 
-	public static CriterionGrader notEmpty(Criterion criterion, ContentSupplier contentSupplier) {
-		return () -> CriterionGrade.binary(criterion, !contentSupplier.getContent().isEmpty());
+	public static CriterionMarker notEmpty(Criterion criterion, ContentSupplier contentSupplier) {
+		return () -> Mark.binary(criterion, !contentSupplier.getContent().isEmpty());
 	}
 
-	public static CriterionGrader mavenTestGrader(Criterion criterion, ContextInitializer contextInitializer,
+	public static CriterionMarker mavenTestMarker(Criterion criterion, ContextInitializer contextInitializer,
 			GitToTestSourcer testSourcer, PomSupplier pomSupplier) {
 		final MavenManager mavenManager = new MavenManager();
-		return () -> CriterionGrade.binary(criterion,
+		return () -> Mark.binary(criterion,
 				testSourcer.getContents().keySet().stream().anyMatch(testSourcer::isSurefireTestFile)
 						&& pomSupplier.getProjectRelativeRoot().isPresent()
 						&& mavenManager.test(contextInitializer.getClient().getProjectDirectory()
@@ -169,18 +169,18 @@ public class Graders {
 		return p1.and((p) -> p.startsWith(pomSupplier.getProjectRelativeRoot().get().resolve(start)));
 	}
 
-	public static CriterionGrader mavenCompileGrader(Criterion criterion, ContextInitializer contextInitializer,
+	public static CriterionMarker mavenCompileMarker(Criterion criterion, ContextInitializer contextInitializer,
 			PomSupplier pomSupplier) {
 		final MavenManager mavenManager = new MavenManager();
 		return () -> {
 			final Optional<Path> projectRelativeRootOpt = pomSupplier.getProjectRelativeRoot();
-			return CriterionGrade.binary(criterion,
+			return Mark.binary(criterion,
 					projectRelativeRootOpt.isPresent() && mavenManager.compile(contextInitializer.getClient()
 							.getProjectDirectory().resolve(projectRelativeRootOpt.get().resolve("pom.xml"))));
 		};
 	}
 
-	public static CriterionGrader predicateGrader(Criterion criterion, MultiContentSupplier supplier,
+	public static CriterionMarker predicateMarker(Criterion criterion, MultiContentSupplier supplier,
 			Predicate<? super String> conditionForPoints) {
 		final Predicate<? super Map<Path, String>> p = (m) -> m.values().stream().allMatch(conditionForPoints);
 		return new GraderUsingSupplierAndPredicate<>(criterion, () -> supplier.getContents(), p);

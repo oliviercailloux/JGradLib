@@ -11,30 +11,28 @@ import java.util.stream.Stream;
 import javax.json.bind.annotation.JsonbCreator;
 import javax.json.bind.annotation.JsonbProperty;
 import javax.json.bind.annotation.JsonbPropertyOrder;
+import javax.json.bind.annotation.JsonbTransient;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableBiMap;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 
-@JsonbPropertyOrder({ "student" })
+@JsonbPropertyOrder({ "student", "marks" })
 public class StudentGrade {
-	private StudentGrade(StudentOnGitHub student, ImmutableBiMap<Criterion, CriterionGrade> grades) {
+	private StudentGrade(StudentOnGitHub student, ImmutableBiMap<Criterion, Mark> marks) {
 		this.student = requireNonNull(student);
-		this.grades = requireNonNull(grades);
+		this.marks = requireNonNull(marks);
 	}
 
 	@JsonbCreator
 	public static StudentGrade of(@JsonbProperty("student") StudentOnGitHub student,
-			@JsonbProperty("gradeValues") Set<CriterionGrade> gradeValues) {
-		LOGGER.debug("Building with {}, {}.", student, gradeValues.iterator().next().getClass());
-		final Collector<CriterionGrade, ?, ImmutableBiMap<Criterion, CriterionGrade>> toI = ImmutableBiMap
+			@JsonbProperty("marks") Set<Mark> marks) {
+		LOGGER.debug("Building with {}, {}.", student, marks.iterator().next().getClass());
+		final Collector<Mark, ?, ImmutableBiMap<Criterion, Mark>> toI = ImmutableBiMap
 				.toImmutableBiMap((g) -> g.getCriterion(), (g) -> g);
-		gradeValues.stream().forEach(System.out::println);
-		final ImmutableBiMap<Criterion, CriterionGrade> im = gradeValues.stream().collect(toI);
+		final ImmutableBiMap<Criterion, Mark> im = marks.stream().collect(toI);
 		return new StudentGrade(student, im);
 	}
 
@@ -44,7 +42,8 @@ public class StudentGrade {
 	/**
 	 * points ≤ maxPoints of the corresponding criterion.
 	 */
-	private final ImmutableBiMap<Criterion, CriterionGrade> grades;
+	@JsonbTransient
+	private final ImmutableBiMap<Criterion, Mark> marks;
 
 	@Override
 	public boolean equals(Object o2) {
@@ -52,51 +51,51 @@ public class StudentGrade {
 			return false;
 		}
 		final StudentGrade g2 = (StudentGrade) o2;
-		return student.equals(g2.student) && grades.equals(g2.grades);
+		return student.equals(g2.student) && marks.equals(g2.marks);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(student, grades);
+		return Objects.hash(student, marks);
 	}
 
 	@Override
 	public String toString() {
-		return MoreObjects.toStringHelper(this).add("student", student).add("grades", grades).toString();
+		return MoreObjects.toStringHelper(this).add("student", student).add("grades", marks).toString();
 	}
 
 	public StudentOnGitHub getStudent() {
 		return student;
 	}
 
-	public ImmutableMap<Criterion, CriterionGrade> getGrades() {
-		return grades;
+	@JsonbTransient
+	public ImmutableBiMap<Criterion, Mark> getMarks() {
+		return marks;
 	}
 
-	public Set<CriterionGrade> getGradeValues() {
-		return grades.values();
+	Set<Mark> getGradeValues() {
+		return marks.values();
 	}
 
-	public ImmutableSet<CriterionGrade> getGradeValuesImmutable() {
-		return grades.values();
-	}
-
+	@JsonbTransient
 	public String getAsMyCourseString() {
-		final Stream<String> evaluations = grades.values().stream().map(this::getEvaluation);
+		final Stream<String> evaluations = marks.values().stream().map(this::getEvaluation);
 		final String joined = evaluations.collect(Collectors.joining("</td></tr><tr><td>"));
 		return "<p><table><tbody><tr><td>" + joined + "</td></tr></tbody></table></p><p>" + "Grade: " + getGrade() + "/"
 				+ getMaxGrade() + ".</p>";
 	}
 
+	@JsonbTransient
 	public double getGrade() {
-		return grades.values().stream().collect(Collectors.summingDouble(CriterionGrade::getPoints));
+		return marks.values().stream().collect(Collectors.summingDouble(Mark::getPoints));
 	}
 
+	@JsonbTransient
 	public double getMaxGrade() {
-		return grades.values().stream().collect(Collectors.summingDouble((g) -> g.getCriterion().getMaxPoints()));
+		return marks.values().stream().collect(Collectors.summingDouble((g) -> g.getCriterion().getMaxPoints()));
 	}
 
-	private String getEvaluation(CriterionGrade grade) {
+	private String getEvaluation(Mark grade) {
 		final Criterion criterion = grade.getCriterion();
 
 		final StringBuilder builder = new StringBuilder();

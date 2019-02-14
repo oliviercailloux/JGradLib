@@ -13,20 +13,20 @@ import org.slf4j.LoggerFactory;
 
 import io.github.oliviercailloux.git.Client;
 import io.github.oliviercailloux.st_projects.model.Criterion;
-import io.github.oliviercailloux.st_projects.model.CriterionGrade;
+import io.github.oliviercailloux.st_projects.model.Mark;
 import io.github.oliviercailloux.st_projects.model.GitFullContext;
 
-public class TimeGrader implements CriterionGrader {
+public class TimeMarker implements CriterionMarker {
 	private final GitFullContext context;
 	private Instant deadline;
 	private double maxGrade;
 	private Criterion criterion;
 
-	public static TimeGrader given(Criterion criterion, GitFullContext init, Instant deadline, double maxGrade) {
-		return new TimeGrader(criterion, init, deadline, maxGrade);
+	public static TimeMarker given(Criterion criterion, GitFullContext init, Instant deadline, double maxGrade) {
+		return new TimeMarker(criterion, init, deadline, maxGrade);
 	}
 
-	private TimeGrader(Criterion criterion, GitFullContext context, Instant deadline, double maxGrade) {
+	private TimeMarker(Criterion criterion, GitFullContext context, Instant deadline, double maxGrade) {
 		this.criterion = requireNonNull(criterion);
 		this.context = requireNonNull(context);
 		this.deadline = requireNonNull(deadline);
@@ -35,11 +35,11 @@ public class TimeGrader implements CriterionGrader {
 	}
 
 	@Override
-	public CriterionGrade grade() {
+	public Mark mark() {
 		final Client client = context.getClient();
 
 		if (!client.hasContentCached() || !client.getDefaultRevSpec().isPresent()) {
-			return CriterionGrade.of(criterion, 0d, "");
+			return Mark.of(criterion, 0d, "");
 		}
 
 		final Instant submitted = context.getSubmittedTime();
@@ -47,19 +47,19 @@ public class TimeGrader implements CriterionGrader {
 		final Duration tardiness = Duration.between(deadline, submitted).minusMinutes(2);
 
 		LOGGER.debug("Last: {}, deadline: {}, tardiness: {}.", submitted, deadline, tardiness);
-		final CriterionGrade grade;
+		final Mark grade;
 		if (!tardiness.isNegative()) {
 			LOGGER.warn("Last event after deadline: {}.", submitted);
 			final long hoursLate = tardiness.toHours() + 1;
-			grade = CriterionGrade.of(criterion, -3d / 20d * maxGrade * hoursLate,
+			grade = Mark.of(criterion, -3d / 20d * maxGrade * hoursLate,
 					"Last event after deadline: " + ZonedDateTime.ofInstant(submitted, ZoneId.of("Europe/Paris")) + ", "
 							+ hoursLate + " hours late.");
 		} else {
-			grade = CriterionGrade.of(criterion, 0d, "");
+			grade = Mark.of(criterion, 0d, "");
 		}
 		return grade;
 	}
 
 	@SuppressWarnings("unused")
-	private static final Logger LOGGER = LoggerFactory.getLogger(TimeGrader.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(TimeMarker.class);
 }

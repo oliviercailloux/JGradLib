@@ -22,19 +22,19 @@ import com.google.common.graph.MutableGraph;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.st_projects.GraderOrchestrator;
 import io.github.oliviercailloux.st_projects.model.ContentSupplier;
-import io.github.oliviercailloux.st_projects.model.CriterionGrade;
+import io.github.oliviercailloux.st_projects.model.Mark;
 import io.github.oliviercailloux.st_projects.model.MultiContentSupplier;
 import io.github.oliviercailloux.st_projects.model.StudentGrade;
-import io.github.oliviercailloux.st_projects.model.StudentOnGitHubKnown;
+import io.github.oliviercailloux.st_projects.model.StudentOnGitHub;
 import io.github.oliviercailloux.st_projects.services.grading.ContextInitializer;
-import io.github.oliviercailloux.st_projects.services.grading.CriterionGrader;
-import io.github.oliviercailloux.st_projects.services.grading.GitGrader;
+import io.github.oliviercailloux.st_projects.services.grading.CriterionMarker;
+import io.github.oliviercailloux.st_projects.services.grading.GitMarker;
 import io.github.oliviercailloux.st_projects.services.grading.GitToMultipleSourcer;
 import io.github.oliviercailloux.st_projects.services.grading.GitToSourcer;
-import io.github.oliviercailloux.st_projects.services.grading.Graders;
 import io.github.oliviercailloux.st_projects.services.grading.GradingExecutor;
+import io.github.oliviercailloux.st_projects.services.grading.Markers;
 import io.github.oliviercailloux.st_projects.services.grading.PomContexter;
-import io.github.oliviercailloux.st_projects.services.grading.TimeGrader;
+import io.github.oliviercailloux.st_projects.services.grading.TimeMarker;
 
 public class Ex2GradingBuilder {
 	private ContextInitializer contextInitializer;
@@ -57,85 +57,85 @@ public class Ex2GradingBuilder {
 		MutableGraph<Object> g = GraphBuilder.directed().build();
 		g.addNode(initialSupplier);
 		g.putEdge(initialSupplier, contextInitializer);
-		final TimeGrader timeGrader = TimeGrader.given(Ex2Criterion.ON_TIME, contextInitializer, deadline, MAX_GRADE);
+		final TimeMarker timeGrader = TimeMarker.given(Ex2Criterion.ON_TIME, contextInitializer, deadline, MAX_GRADE);
 		g.putEdge(contextInitializer, timeGrader);
-		final CriterionGrader repoGrader = GitGrader.repoGrader(Ex2Criterion.REPO_EXISTS, contextInitializer);
+		final CriterionMarker repoGrader = GitMarker.repoMarker(Ex2Criterion.REPO_EXISTS, contextInitializer);
 		g.putEdge(contextInitializer, repoGrader);
 		final GitToSourcer pomSupplier = new GitToSourcer(contextInitializer, Paths.get("pom.xml"));
 		g.putEdge(contextInitializer, pomSupplier);
 		final PomContexter pomContexter = new PomContexter(pomSupplier);
 		g.putEdge(pomSupplier, pomContexter);
-		final CriterionGrader pomGrader = Graders.groupIdGrader(Ex2Criterion.GROUP_ID, pomContexter);
+		final CriterionMarker pomGrader = Markers.groupIdMarker(Ex2Criterion.GROUP_ID, pomContexter);
 		g.putEdge(pomContexter, pomGrader);
 		g.putEdge(pomSupplier,
-				Graders.predicateGrader(Ex2Criterion.ICAL, pomSupplier,
-						Graders.containsOnce(Pattern.compile("<dependencies>" + ANY + "<dependency>" + ANY
+				Markers.predicateMarker(Ex2Criterion.ICAL, pomSupplier,
+						Markers.containsOnce(Pattern.compile("<dependencies>" + ANY + "<dependency>" + ANY
 								+ "<groupId>org\\.mnode\\.ical4j</groupId>" + ANY + "<artifactId>ical4j</artifactId>"
 								+ ANY + "<version>3\\.0\\.2</version>"))));
 		g.putEdge(pomSupplier,
-				Graders.predicateGrader(Ex2Criterion.UTF, pomSupplier,
-						Graders.containsOnce(Pattern.compile("<properties>" + ANY
+				Markers.predicateMarker(Ex2Criterion.UTF, pomSupplier,
+						Markers.containsOnce(Pattern.compile("<properties>" + ANY
 								+ "<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>" + ANY
 								+ "</properties>"))));
 		g.putEdge(pomSupplier,
-				Graders.predicateGrader(Ex2Criterion.SOURCE, pomSupplier,
-						Graders.containsOnce(Pattern.compile("<properties>" + ANY
+				Markers.predicateMarker(Ex2Criterion.SOURCE, pomSupplier,
+						Markers.containsOnce(Pattern.compile("<properties>" + ANY
 								+ "<maven.compiler.source>.*</maven.compiler.source>" + ANY + "</properties>"))));
-		g.putEdge(pomSupplier, Graders.predicateGrader(Ex2Criterion.NO_MISLEADING_URL, pomSupplier,
+		g.putEdge(pomSupplier, Markers.predicateMarker(Ex2Criterion.NO_MISLEADING_URL, pomSupplier,
 				Predicates.contains(Pattern.compile("<url>.*\\.apache\\.org.*</url>")).negate()));
-		g.putEdge(pomSupplier, Graders.predicateGrader(Ex2Criterion.WAR, pomSupplier,
-				Graders.containsOnce(Pattern.compile("<packaging>war</packaging>"))));
+		g.putEdge(pomSupplier, Markers.predicateMarker(Ex2Criterion.WAR, pomSupplier,
+				Markers.containsOnce(Pattern.compile("<packaging>war</packaging>"))));
 //		final CriterionGrader packageGroupIdGrader = Graders.packageGroupIdGrader(Ex2Criterion.PREFIX,
 //				contextInitializer, pomContexter);
 //		g.putEdge(contextInitializer, packageGroupIdGrader);
 //		g.putEdge(pomContexter, packageGroupIdGrader);
-		g.putEdge(contextInitializer, (CriterionGrader) (() -> CriterionGrade.binary(Ex2Criterion.COMPILE,
+		g.putEdge(contextInitializer, (CriterionMarker) (() -> Mark.binary(Ex2Criterion.COMPILE,
 				new MavenManager().compile(contextInitializer.getClient().getProjectDirectory().resolve("pom.xml")))));
 		final GitToMultipleSourcer servletSourcer = GitToMultipleSourcer.satisfyingPath(contextInitializer,
 				(p) -> p.startsWith("src/main/java") && p.getFileName().equals(Paths.get("AdditionerServlet.java")));
 		g.putEdge(contextInitializer, servletSourcer);
-		final CriterionGrader doGetGrader = Graders.predicateGraderWithComment(Ex2Criterion.DO_GET, servletSourcer,
-				Graders.containsOnce(Pattern.compile("void\\s*doGet\\s*\\(\\s*(final)?\\s*HttpServletRequest .*\\)")));
+		final CriterionMarker doGetGrader = Markers.predicateMarkerWithComment(Ex2Criterion.DO_GET, servletSourcer,
+				Markers.containsOnce(Pattern.compile("void\\s*doGet\\s*\\(\\s*(final)?\\s*HttpServletRequest .*\\)")));
 		g.putEdge(servletSourcer, doGetGrader);
-		final CriterionGrader encGrader = Graders.predicateGrader(Ex2Criterion.SRC_ENC, servletSourcer,
+		final CriterionMarker encGrader = Markers.predicateMarker(Ex2Criterion.SRC_ENC, servletSourcer,
 				Predicates.contains(Pattern.compile("Exécution impossible")));
 		g.putEdge(servletSourcer, encGrader);
 		g.putEdge(servletSourcer,
-				Graders.predicateGrader(Ex2Criterion.AUTO, servletSourcer,
+				Markers.predicateMarker(Ex2Criterion.AUTO, servletSourcer,
 						Predicates.contains(Pattern.compile("Auto-generated")).negate()
 								.and(Predicates.contains(Pattern.compile("@see HttpServlet#doGet")).negate())));
-		g.putEdge(servletSourcer, Graders.predicateGrader(Ex2Criterion.EXC, servletSourcer,
+		g.putEdge(servletSourcer, Markers.predicateMarker(Ex2Criterion.EXC, servletSourcer,
 				Predicates.contains(Pattern.compile("printStackTrace")).negate()));
-		g.putEdge(servletSourcer, Graders.predicateGrader(Ex2Criterion.ENC, servletSourcer,
+		g.putEdge(servletSourcer, Markers.predicateMarker(Ex2Criterion.ENC, servletSourcer,
 				Predicates.contains(Pattern.compile("setCharacterEncoding"))));
-		g.putEdge(servletSourcer, Graders.predicateGrader(Ex2Criterion.LOC, servletSourcer,
+		g.putEdge(servletSourcer, Markers.predicateMarker(Ex2Criterion.LOC, servletSourcer,
 				Predicates.contains(Pattern.compile("setLocale.+FRENCH"))));
-		g.putEdge(servletSourcer, Graders.predicateGrader(Ex2Criterion.MTYPE, servletSourcer,
+		g.putEdge(servletSourcer, Markers.predicateMarker(Ex2Criterion.MTYPE, servletSourcer,
 				Predicates.contains(Pattern.compile("setContentType.+PLAIN"))));
-		g.putEdge(servletSourcer, Graders.predicateGrader(Ex2Criterion.ANNOT, servletSourcer,
+		g.putEdge(servletSourcer, Markers.predicateMarker(Ex2Criterion.ANNOT, servletSourcer,
 				Predicates.contains(Pattern.compile("@WebServlet.*\\(.*/add\".*\\)"))));
 		final GitToSourcer jbossSupplier = new GitToSourcer(contextInitializer,
 				Paths.get("src/main/webapp/WEB-INF/jboss-web.xml"));
 		g.putEdge(contextInitializer, jbossSupplier);
-		final CriterionGrader contextRootGrader = () -> gradeContextRoot(pomSupplier, jbossSupplier);
+		final CriterionMarker contextRootGrader = () -> gradeContextRoot(pomSupplier, jbossSupplier);
 		g.putEdge(pomSupplier, contextRootGrader);
 		g.putEdge(jbossSupplier, contextRootGrader);
-		final CriterionGrader errorStatusGrader = () -> gradeErrorStatus(servletSourcer);
+		final CriterionMarker errorStatusGrader = () -> gradeErrorStatus(servletSourcer);
 		g.putEdge(servletSourcer, errorStatusGrader);
-		g.putEdge(servletSourcer, Graders.predicateGrader(Ex2Criterion.PARAM, servletSourcer,
+		g.putEdge(servletSourcer, Markers.predicateMarker(Ex2Criterion.PARAM, servletSourcer,
 				Predicates.contains(Pattern.compile("\\.getParameter\\s*\\(.*\\)"))));
-		g.putEdge(contextInitializer, Graders.gradeOnlyOrig(Ex2Criterion.ONLY_ORIG, contextInitializer));
-		final CriterionGrader staticGrader1 = () -> CriterionGrade.min(Ex2Criterion.GET_SIMPLE, "Todo");
+		g.putEdge(contextInitializer, Markers.gradeOnlyOrig(Ex2Criterion.ONLY_ORIG, contextInitializer));
+		final CriterionMarker staticGrader1 = () -> Mark.min(Ex2Criterion.GET_SIMPLE, "Todo");
 		g.addNode(staticGrader1);
-		final CriterionGrader staticGrader2 = () -> CriterionGrade.min(Ex2Criterion.DEFAULT_PARAM, "Todo");
+		final CriterionMarker staticGrader2 = () -> Mark.min(Ex2Criterion.DEFAULT_PARAM, "Todo");
 		g.addNode(staticGrader2);
 
 		executor.setGraph(g);
 		return executor;
 	}
 
-	private CriterionGrade gradeContextRoot(ContentSupplier pomSupplier, ContentSupplier jbossSupplier) {
-		final CriterionGrade thisGrade;
+	private Mark gradeContextRoot(ContentSupplier pomSupplier, ContentSupplier jbossSupplier) {
+		final Mark thisGrade;
 		final String pomContent = pomSupplier.getContent();
 		final String jbossDescriptor = jbossSupplier.getContent();
 		final boolean finalFound = Pattern
@@ -148,23 +148,22 @@ public class Ex2GradingBuilder {
 		Ex2Criterion criterion = Ex2Criterion.FINAL_NAME;
 
 		if (finalFound) {
-			thisGrade = CriterionGrade.max(criterion);
+			thisGrade = Mark.max(criterion);
 		} else if (cRootFound) {
-			thisGrade = CriterionGrade.of(criterion, criterion.getMaxPoints() / 2d, "Non-portable solution");
+			thisGrade = Mark.of(criterion, criterion.getMaxPoints() / 2d, "Non-portable solution");
 		} else if (cRootIncorrectFound) {
-			thisGrade = CriterionGrade.of(criterion, criterion.getMaxPoints() / 4d,
-					"Non-portable solution and incorrect format");
+			thisGrade = Mark.of(criterion, criterion.getMaxPoints() / 4d, "Non-portable solution and incorrect format");
 		} else {
-			thisGrade = CriterionGrade.min(criterion);
+			thisGrade = Mark.min(criterion);
 		}
 		return thisGrade;
 	}
 
-	private CriterionGrade gradeErrorStatus(MultiContentSupplier servletSourcer) {
+	private Mark gradeErrorStatus(MultiContentSupplier servletSourcer) {
 		final ImmutableCollection<String> contents = servletSourcer.getContents().values();
 		Ex2Criterion criterion = Ex2Criterion.ERROR_STATUS;
 		if (contents.size() != 1) {
-			return CriterionGrade.min(criterion);
+			return Mark.min(criterion);
 		}
 
 		final String servletContent = contents.iterator().next();
@@ -173,14 +172,14 @@ public class Ex2GradingBuilder {
 		final boolean setStatus = Pattern.compile("setStatus\\(.*SC_BAD_REQUEST.*\\)").matcher(servletContent).find();
 		final boolean sendError400 = Pattern.compile("sendError\\(.*400.*,.*\\)").matcher(servletContent).find();
 		final boolean setStatus400 = Pattern.compile("setStatus\\(.*400.*\\)").matcher(servletContent).find();
-		final CriterionGrade thisGrade;
+		final Mark thisGrade;
 		if (sendError || setStatus) {
-			thisGrade = CriterionGrade.max(criterion);
+			thisGrade = Mark.max(criterion);
 		} else if (sendError400 || setStatus400) {
-			thisGrade = CriterionGrade.of(criterion, criterion.getMaxPoints() / 2d,
+			thisGrade = Mark.of(criterion, criterion.getMaxPoints() / 2d,
 					"Error sent with literal constant instead of symbolic constant.");
 		} else {
-			thisGrade = CriterionGrade.min(criterion);
+			thisGrade = Mark.min(criterion);
 		}
 		return thisGrade;
 	}
@@ -209,8 +208,7 @@ public class Ex2GradingBuilder {
 
 		final GradingExecutor executor = build();
 
-		final ImmutableMap<StudentOnGitHubKnown, RepositoryCoordinates> repositories = orch
-				.getRepositoriesByStudentKnown();
+		final ImmutableMap<StudentOnGitHub, RepositoryCoordinates> repositories = orch.getRepositoriesByStudent();
 		final ImmutableSet<StudentGrade> grades = executor.gradeAll(repositories);
 
 		orch.writeCsv(grades);

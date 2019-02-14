@@ -14,6 +14,7 @@ import javax.json.JsonArray;
 import javax.json.JsonBuilderFactory;
 import javax.json.JsonObject;
 import javax.json.JsonObjectBuilder;
+import javax.json.stream.JsonCollectors;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
@@ -32,7 +33,6 @@ import com.google.common.base.Predicates;
 import io.github.oliviercailloux.git.git_hub.model.GitHubRealToken;
 import io.github.oliviercailloux.git.git_hub.model.graph_ql.IssueWithHistory;
 import io.github.oliviercailloux.git.git_hub.model.graph_ql.RepositoryWithIssuesWithHistory;
-import io.github.oliviercailloux.git.utils.JsonUtils;
 import io.github.oliviercailloux.st_projects.model.Functionality;
 import io.github.oliviercailloux.st_projects.model.Project;
 import io.github.oliviercailloux.st_projects.services.ProjectsMonitor;
@@ -85,7 +85,7 @@ public class ProjectServlet {
 		final Project project = getProjectRaw(projectName);
 		final List<RepositoryWithIssuesWithHistory> repositories = monitor.getRepositories(project);
 		final Stream<JsonObject> jsons = repositories.stream().map((r) -> toJsonSummary(project, r));
-		return JsonUtils.asArray(jsons, factory);
+		return jsons.collect(JsonCollectors.toJsonArray());
 	}
 
 	@Path("list-se")
@@ -113,7 +113,7 @@ public class ProjectServlet {
 		LOGGER.info("Generated repo.");
 		final Stream<JsonObject> stream = repository.getIssues().stream().map((i) -> toJsonSummary(project, i));
 		LOGGER.info("Generated stream.");
-		final JsonArray array = JsonUtils.asArray(stream, factory);
+		final JsonArray array = stream.collect(JsonCollectors.toJsonArray());
 		LOGGER.info("Generated array.");
 		o.add("issues", array);
 		return o.build();

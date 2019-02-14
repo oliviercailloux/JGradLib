@@ -11,9 +11,9 @@ import org.slf4j.LoggerFactory;
 import com.google.common.base.MoreObjects;
 
 import io.github.oliviercailloux.st_projects.model.Criterion;
-import io.github.oliviercailloux.st_projects.model.CriterionGrade;
+import io.github.oliviercailloux.st_projects.model.Mark;
 
-public class GraderUsingSupplierAndPredicate<T> implements CriterionGrader {
+public class GraderUsingSupplierAndPredicate<T> implements CriterionMarker {
 	private Supplier<? extends T> supplier;
 	private Predicate<? super T> conditionForPoints;
 	private Criterion criterion;
@@ -26,10 +26,10 @@ public class GraderUsingSupplierAndPredicate<T> implements CriterionGrader {
 	}
 
 	@Override
-	public CriterionGrade grade() {
+	public Mark mark() {
 		final T content = supplier.get();
 		final boolean result = conditionForPoints.test(content);
-		return CriterionGrade.binary(criterion, result);
+		return Mark.binary(criterion, result);
 	}
 
 	@SuppressWarnings("unused")

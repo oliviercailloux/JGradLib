@@ -5,22 +5,22 @@ import static java.util.Objects.requireNonNull;
 import com.google.common.base.MoreObjects;
 
 import io.github.oliviercailloux.st_projects.model.Criterion;
-import io.github.oliviercailloux.st_projects.model.CriterionGrade;
+import io.github.oliviercailloux.st_projects.model.Mark;
 import io.github.oliviercailloux.st_projects.model.PomContext;
 
-class GroupIdGrader implements CriterionGrader {
+class GroupIdMarker implements CriterionMarker {
 
 	private Criterion criterion;
 	private PomContext context;
 
-	public GroupIdGrader(Criterion criterion, PomContext context) {
+	public GroupIdMarker(Criterion criterion, PomContext context) {
 		this.criterion = requireNonNull(criterion);
 		this.context = requireNonNull(context);
 	}
 
 	@Override
-	public CriterionGrade grade() {
-		return CriterionGrade.binary(criterion, context.isGroupIdValid());
+	public Mark mark() {
+		return Mark.binary(criterion, context.isGroupIdValid());
 	}
 
 	@Override

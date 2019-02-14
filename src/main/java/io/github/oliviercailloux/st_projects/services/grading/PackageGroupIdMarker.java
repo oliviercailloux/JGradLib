@@ -17,18 +17,18 @@ import com.google.common.collect.ImmutableList;
 
 import io.github.oliviercailloux.git.Client;
 import io.github.oliviercailloux.st_projects.model.Criterion;
-import io.github.oliviercailloux.st_projects.model.CriterionGrade;
+import io.github.oliviercailloux.st_projects.model.Mark;
 import io.github.oliviercailloux.st_projects.model.GitContext;
 import io.github.oliviercailloux.st_projects.model.PomContext;
 import io.github.oliviercailloux.st_projects.utils.GradingUtils;
 
-public class PackageGroupIdGrader implements CriterionGrader {
+public class PackageGroupIdMarker implements CriterionMarker {
 	private Criterion criterion;
 	private GitContext context;
 	private PomContext pomContext;
 	private PomSupplier pomSupplier;
 
-	public PackageGroupIdGrader(Criterion criterion, GitContext context, PomSupplier pomSupplier,
+	public PackageGroupIdMarker(Criterion criterion, GitContext context, PomSupplier pomSupplier,
 			PomContext pomContext) {
 		this.criterion = requireNonNull(criterion);
 		this.context = requireNonNull(context);
@@ -37,15 +37,15 @@ public class PackageGroupIdGrader implements CriterionGrader {
 	}
 
 	@Override
-	public CriterionGrade grade() throws GradingException {
+	public Mark mark() throws GradingException {
 		final List<String> groupIdElements = pomContext.getGroupIdElements();
 
 		if (groupIdElements.isEmpty()) {
-			return CriterionGrade.min(criterion, "Unknown group id");
+			return Mark.min(criterion, "Unknown group id");
 		}
 		final Optional<Path> relRootOpt = pomSupplier.getProjectRelativeRoot();
 		if (!relRootOpt.isPresent()) {
-			return CriterionGrade.min(criterion, "No unique pom found.");
+			return Mark.min(criterion, "No unique pom found.");
 		}
 
 		final Path relativeRoot = relRootOpt.get();
@@ -84,5 +84,5 @@ public class PackageGroupIdGrader implements CriterionGrader {
 	}
 
 	@SuppressWarnings("unused")
-	private static final Logger LOGGER = LoggerFactory.getLogger(PackageGroupIdGrader.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(PackageGroupIdMarker.class);
 }

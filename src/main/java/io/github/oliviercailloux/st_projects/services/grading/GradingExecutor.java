@@ -21,11 +21,10 @@ import com.google.common.graph.ImmutableGraph;
 import com.google.common.graph.Traverser;
 
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
-import io.github.oliviercailloux.st_projects.model.CriterionGrade;
 import io.github.oliviercailloux.st_projects.model.GradingContexter;
+import io.github.oliviercailloux.st_projects.model.Mark;
 import io.github.oliviercailloux.st_projects.model.StudentGrade;
 import io.github.oliviercailloux.st_projects.model.StudentOnGitHub;
-import io.github.oliviercailloux.st_projects.model.StudentOnGitHubKnown;
 import io.github.oliviercailloux.st_projects.utils.Utils;
 
 public class GradingExecutor {
@@ -43,8 +42,8 @@ public class GradingExecutor {
 		criteriaComparator = null;
 	}
 
-	private ImmutableSet<CriterionGrade> grade(RepositoryCoordinates coordinates) throws GradingException {
-		final ImmutableSet.Builder<CriterionGrade> gradesBuilder = ImmutableSet.builder();
+	private ImmutableSet<Mark> grade(RepositoryCoordinates coordinates) throws GradingException {
+		final ImmutableSet.Builder<Mark> gradesBuilder = ImmutableSet.builder();
 
 		for (Object worker : sortedTasks) {
 			if (worker instanceof BoxSupplier) {
@@ -55,10 +54,10 @@ public class GradingExecutor {
 				final GradingContexter contexter = (GradingContexter) worker;
 				LOGGER.debug("Initializing contexter {}.", contexter);
 				contexter.init();
-			} else if (worker instanceof CriterionGrader) {
-				final CriterionGrader grader = (CriterionGrader) worker;
+			} else if (worker instanceof CriterionMarker) {
+				final CriterionMarker grader = (CriterionMarker) worker;
 				LOGGER.debug("Grading from {}.", grader);
-				CriterionGrade grade = grader.grade();
+				Mark grade = grader.mark();
 				gradesBuilder.add(grade);
 			} else {
 				throw new AssertionError();
@@ -78,14 +77,14 @@ public class GradingExecutor {
 	private ImmutableGraph<Object> prerequisites;
 	private Queue<Object> sortedTasks;
 	private ImmutableSet<GradingContexter> contexters;
-	private Comparator<CriterionGrade> criteriaComparator;
+	private Comparator<Mark> criteriaComparator;
 
 	public StudentGrade grade(StudentOnGitHub student, RepositoryCoordinates coordinates) throws GradingException {
-		final ImmutableSet<CriterionGrade> grades = grade(coordinates);
+		final ImmutableSet<Mark> marks = grade(coordinates);
 		if (criteriaComparator == null) {
-			return StudentGrade.of(student, grades);
+			return StudentGrade.of(student, marks);
 		}
-		final ImmutableSortedSet<CriterionGrade> sortedGrades = ImmutableSortedSet.copyOf(criteriaComparator, grades);
+		final ImmutableSortedSet<Mark> sortedGrades = ImmutableSortedSet.copyOf(criteriaComparator, marks);
 		return StudentGrade.of(student, sortedGrades);
 	}
 
@@ -100,7 +99,7 @@ public class GradingExecutor {
 		checkArgument(reachableNodes.size() == prerequisites.nodes().size());
 		final Predicate<Object> checker = Predicates.instanceOf(BoxSupplier.class)
 				.and(Predicates.equalTo(coordinatesSupplier))
-				.or(Predicates.instanceOf(GradingContexter.class).or(Predicates.instanceOf(CriterionGrader.class)));
+				.or(Predicates.instanceOf(GradingContexter.class).or(Predicates.instanceOf(CriterionMarker.class)));
 		final ImmutableSet<Object> invalid = reachableNodes.stream().filter(checker.negate())
 				.collect(ImmutableSet.toImmutableSet());
 		checkArgument(invalid.isEmpty(), invalid);
@@ -115,24 +114,24 @@ public class GradingExecutor {
 		return prerequisites;
 	}
 
-	public ImmutableSet<StudentGrade> gradeAll(ImmutableMap<StudentOnGitHubKnown, RepositoryCoordinates> repositories) {
+	public ImmutableSet<StudentGrade> gradeAll(ImmutableMap<StudentOnGitHub, RepositoryCoordinates> repositories) {
 		final ImmutableSet.Builder<StudentGrade> gradesBuilder = ImmutableSet.builder();
-		for (Entry<StudentOnGitHubKnown, RepositoryCoordinates> entry : repositories.entrySet()) {
-			final StudentOnGitHubKnown student = entry.getKey();
+		for (Entry<StudentOnGitHub, RepositoryCoordinates> entry : repositories.entrySet()) {
+			final StudentOnGitHub student = entry.getKey();
 			final RepositoryCoordinates repo = entry.getValue();
-			final StudentGrade grade = grade(student.asStudentOnGitHub(), repo);
+			final StudentGrade grade = grade(student, repo);
 			gradesBuilder.add(grade);
-			LOGGER.debug("Student {}, grades {}.", student, grade.getGrades().values());
+			LOGGER.debug("Student {}, grades {}.", student, grade.getMarks().values());
 			LOGGER.info("Evaluation: {}", grade.getAsMyCourseString());
 		}
 		return gradesBuilder.build();
 	}
 
-	public Comparator<CriterionGrade> getCriteriaComparator() {
+	public Comparator<Mark> getCriteriaComparator() {
 		return criteriaComparator;
 	}
 
-	public void setCriteriaComparator(Comparator<CriterionGrade> criteriaComparator) {
+	public void setCriteriaComparator(Comparator<Mark> criteriaComparator) {
 		this.criteriaComparator = criteriaComparator;
 	}
 }

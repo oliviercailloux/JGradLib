@@ -15,8 +15,8 @@ import org.slf4j.LoggerFactory;
 import com.google.common.base.MoreObjects;
 
 @JsonbPropertyOrder({ "criterion", "points", "comment" })
-public class CriterionGrade {
-	private Criterion criterion;
+public class Mark {
+	private final Criterion criterion;
 
 	public Criterion getCriterion() {
 		return criterion;
@@ -28,10 +28,10 @@ public class CriterionGrade {
 
 	@Override
 	public boolean equals(Object o2) {
-		if (!(o2 instanceof CriterionGrade)) {
+		if (!(o2 instanceof Mark)) {
 			return false;
 		}
-		final CriterionGrade s2 = (CriterionGrade) o2;
+		final Mark s2 = (Mark) o2;
 		return criterion.equals(s2.criterion) && points == s2.points && comment.equals(s2.comment);
 	}
 
@@ -50,44 +50,43 @@ public class CriterionGrade {
 		return comment;
 	}
 
-	public static CriterionGrade min(Criterion criterion) {
-		return new CriterionGrade(criterion, criterion.getMinPoints(), "");
+	public static Mark min(Criterion criterion) {
+		return new Mark(criterion, criterion.getMinPoints(), "");
 	}
 
 	@JsonbCreator
-	public static CriterionGrade of(@JsonbProperty("criterion") Criterion criterion,
-			@JsonbProperty("points") double points, @JsonbProperty("comment") String comment) {
-		final CriterionGrade g = new CriterionGrade(criterion, points, comment);
+	public static Mark of(@JsonbProperty("criterion") Criterion criterion, @JsonbProperty("points") double points,
+			@JsonbProperty("comment") String comment) {
+		final Mark g = new Mark(criterion, points, comment);
 		return g;
 	}
 
-	public static CriterionGrade binary(Criterion criterion, boolean conditionForPoints) {
-		return new CriterionGrade(criterion, conditionForPoints ? criterion.getMaxPoints() : criterion.getMinPoints(),
-				"");
+	public static Mark binary(Criterion criterion, boolean conditionForPoints) {
+		return new Mark(criterion, conditionForPoints ? criterion.getMaxPoints() : criterion.getMinPoints(), "");
 	}
 
 	@SuppressWarnings("unused")
-	private static final Logger LOGGER = LoggerFactory.getLogger(CriterionGrade.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(Mark.class);
 
 	/**
 	 * May be negative (penalty); may be greater than maxPoints of the corresponding
 	 * criterion (bonus).
 	 */
-	private double points;
-	private String comment;
+	private final double points;
+	private final String comment;
 
-	private CriterionGrade(Criterion criterion, double points, String comment) {
+	private Mark(Criterion criterion, double points, String comment) {
 		this.criterion = requireNonNull(criterion);
 		checkArgument(Double.isFinite(points));
 		this.points = points;
 		this.comment = requireNonNull(comment);
 	}
 
-	public static CriterionGrade min(Criterion criterion, String comment) {
-		return new CriterionGrade(criterion, criterion.getMinPoints(), comment);
+	public static Mark min(Criterion criterion, String comment) {
+		return new Mark(criterion, criterion.getMinPoints(), comment);
 	}
 
-	public static CriterionGrade max(Criterion criterion) {
-		return new CriterionGrade(criterion, criterion.getMaxPoints(), "");
+	public static Mark max(Criterion criterion) {
+		return new Mark(criterion, criterion.getMaxPoints(), "");
 	}
 }

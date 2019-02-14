@@ -58,58 +58,32 @@ import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.mycourse.MyCourseCsvWriter;
 import io.github.oliviercailloux.st_projects.GraderOrchestrator;
 import io.github.oliviercailloux.st_projects.model.Criterion;
-import io.github.oliviercailloux.st_projects.model.CriterionGrade;
 import io.github.oliviercailloux.st_projects.model.GitContext;
 import io.github.oliviercailloux.st_projects.model.GradingContexter;
+import io.github.oliviercailloux.st_projects.model.Mark;
 import io.github.oliviercailloux.st_projects.model.StudentGrade;
-import io.github.oliviercailloux.st_projects.model.StudentOnGitHubKnown;
+import io.github.oliviercailloux.st_projects.model.StudentOnGitHub;
 import io.github.oliviercailloux.st_projects.services.grading.ContextInitializer;
-import io.github.oliviercailloux.st_projects.services.grading.CriterionGrader;
+import io.github.oliviercailloux.st_projects.services.grading.CriterionMarker;
 import io.github.oliviercailloux.st_projects.services.grading.FileCrawler;
 import io.github.oliviercailloux.st_projects.services.grading.GitAndBaseToSourcer;
-import io.github.oliviercailloux.st_projects.services.grading.GitGrader;
+import io.github.oliviercailloux.st_projects.services.grading.GitMarker;
 import io.github.oliviercailloux.st_projects.services.grading.GitToMultipleSourcer;
 import io.github.oliviercailloux.st_projects.services.grading.GitToSourcer;
 import io.github.oliviercailloux.st_projects.services.grading.GitToTestSourcer;
-import io.github.oliviercailloux.st_projects.services.grading.Graders;
 import io.github.oliviercailloux.st_projects.services.grading.GradingException;
 import io.github.oliviercailloux.st_projects.services.grading.GradingExecutor;
+import io.github.oliviercailloux.st_projects.services.grading.Markers;
 import io.github.oliviercailloux.st_projects.services.grading.PomContexter;
 import io.github.oliviercailloux.st_projects.services.grading.PomSupplier;
-import io.github.oliviercailloux.st_projects.services.grading.TimeGrader;
+import io.github.oliviercailloux.st_projects.services.grading.TimeMarker;
 
 public class Ex3GradingBuilder {
-
-	public static void main(String[] args) throws Exception {
-		final Ex3GradingBuilder grader = new Ex3GradingBuilder();
-		grader.proceed();
-		// orch.jsonToMyCourse();
-		// orch.writeCsv();
-	}
 
 	private ContextInitializer contextInitializer;
 	private Instant deadline;
 	private Instant ignoreAfter;
 	private MutableGraph<Object> g;
-
-	public void proceed() throws Exception {
-		final GraderOrchestrator orch = new GraderOrchestrator("ci");
-		orch.readUsernames();
-
-		orch.readRepositories();
-//		orch.setSingleRepo("guillaumerg7");
-
-		final GradingExecutor executor = build();
-		final Comparator<Criterion> comparingEx3Criteria = Comparator.comparing((c) -> (Ex3Criterion) c,
-				Comparator.naturalOrder());
-		executor.setCriteriaComparator(Comparator.comparing(CriterionGrade::getCriterion, comparingEx3Criteria));
-
-		final ImmutableMap<StudentOnGitHubKnown, RepositoryCoordinates> repositories = orch
-				.getRepositoriesByStudentKnown();
-		final ImmutableSet<StudentGrade> grades = executor.gradeAll(repositories);
-		orch.writeCsv(grades);
-		new MyCourseCsvWriter().writeCsv("Devoir CI", 110774, grades);
-	}
 
 	public GradingExecutor build() {
 		final GradingExecutor executor = new GradingExecutor();
@@ -120,8 +94,8 @@ public class Ex3GradingBuilder {
 
 		final Double maxGrade = Stream.of(Ex3Criterion.values())
 				.collect(Collectors.summingDouble(Criterion::getMaxPoints));
-		putTaskWithDependencies(TimeGrader.given(ON_TIME, contextInitializer, deadline, maxGrade), contextInitializer);
-		putTaskWithDependencies(GitGrader.repoGrader(REPO_EXISTS, contextInitializer), contextInitializer);
+		putTaskWithDependencies(TimeMarker.given(ON_TIME, contextInitializer, deadline, maxGrade), contextInitializer);
+		putTaskWithDependencies(GitMarker.repoMarker(REPO_EXISTS, contextInitializer), contextInitializer);
 		/**
 		 * Need to limit depth, otherwise will find
 		 * target/m2e-wtp/web-resources/META-INF/maven/<groupId>/<artifactId>/pom.xml.
@@ -130,99 +104,98 @@ public class Ex3GradingBuilder {
 				(p) -> p.getNameCount() <= 6 && p.getFileName().toString().equals("pom.xml"));
 		putTaskWithDependencies(multiPomSupplier, contextInitializer);
 		final PomSupplier pomSupplier = PomSupplier.basedOn(multiPomSupplier);
-		putTaskWithDependencies(() -> CriterionGrade.binary(AT_ROOT, pomSupplier.isProjectAtRoot()), multiPomSupplier);
+		putTaskWithDependencies(() -> Mark.binary(AT_ROOT, pomSupplier.isProjectAtRoot()), multiPomSupplier);
 		final PomContexter pomContexter = new PomContexter(pomSupplier);
 		putTaskWithDependencies(pomContexter, multiPomSupplier);
-		putTaskWithDependencies(Graders.groupIdGrader(GROUP_ID, pomContexter), pomContexter);
+		putTaskWithDependencies(Markers.groupIdMarker(GROUP_ID, pomContexter), pomContexter);
 		putTaskWithDependencies(
-				Graders.predicateGrader(JUNIT5_DEP, pomSupplier,
-						Graders.containsOnce(Pattern.compile("<dependencies>" + ANY + "<dependency>" + ANY
+				Markers.predicateMarker(JUNIT5_DEP, pomSupplier,
+						Markers.containsOnce(Pattern.compile("<dependencies>" + ANY + "<dependency>" + ANY
 								+ "<groupId>org\\.junit\\.jupiter</groupId>" + ANY
 								+ "<artifactId>junit-jupiter-engine</artifactId>" + ANY + "<version>5\\.[23]\\." + ANY
 								+ "</version>" + ANY + "<scope>test</scope>"))),
 				multiPomSupplier);
-		putTaskWithDependencies(Graders.predicateGrader(UTF, pomSupplier,
-				Graders.containsOnce(Pattern.compile("<properties>" + ANY
+		putTaskWithDependencies(Markers.predicateMarker(UTF, pomSupplier,
+				Markers.containsOnce(Pattern.compile("<properties>" + ANY
 						+ "<project\\.build\\.sourceEncoding>UTF-8</project\\.build\\.sourceEncoding>" + ANY
 						+ "</properties>"))),
 				multiPomSupplier);
 		putTaskWithDependencies(
-				Graders.predicateGrader(SOURCE, pomSupplier, Graders.containsOnce(Pattern.compile("<properties>" + ANY
+				Markers.predicateMarker(SOURCE, pomSupplier, Markers.containsOnce(Pattern.compile("<properties>" + ANY
 						+ "<maven\\.compiler\\.source>.*</maven\\.compiler\\.source>" + ANY + "</properties>"))),
 				multiPomSupplier);
 		putTaskWithDependencies(
-				Graders.predicateGrader(NO_MISLEADING_URL, pomSupplier,
+				Markers.predicateMarker(NO_MISLEADING_URL, pomSupplier,
 						Predicates.contains(Pattern.compile("<url>.*\\.apache\\.org.*</url>")).negate()),
 				multiPomSupplier);
-		putTaskWithDependencies(Graders.predicateGrader(WAR, pomSupplier,
-				Graders.containsOnce(Pattern.compile("<packaging>war</packaging>"))), multiPomSupplier);
-		putTaskWithDependencies(Graders.packageGroupIdGrader(PREFIX, contextInitializer, pomSupplier, pomContexter),
+		putTaskWithDependencies(Markers.predicateMarker(WAR, pomSupplier,
+				Markers.containsOnce(Pattern.compile("<packaging>war</packaging>"))), multiPomSupplier);
+		putTaskWithDependencies(Markers.packageGroupIdMarker(PREFIX, contextInitializer, pomSupplier, pomContexter),
 				contextInitializer, multiPomSupplier, pomContexter);
-		putTaskWithDependencies(Graders.mavenCompileGrader(COMPILE, contextInitializer, pomSupplier),
+		putTaskWithDependencies(Markers.mavenCompileMarker(COMPILE, contextInitializer, pomSupplier),
 				contextInitializer);
 		final GitToMultipleSourcer servletSourcer = GitToMultipleSourcer.satisfyingPath(contextInitializer,
-				Graders.startsWithPredicate(pomSupplier, Paths.get("src/main/java"))
+				Markers.startsWithPredicate(pomSupplier, Paths.get("src/main/java"))
 						.and((p) -> p.getFileName().equals(Paths.get("HelloServlet.java"))));
 		putTaskWithDependencies(servletSourcer, contextInitializer, multiPomSupplier);
-		putTaskWithDependencies(() -> CriterionGrade.binary(NO_JSP, getNoJsp(contextInitializer)), contextInitializer);
-		putTaskWithDependencies(() -> CriterionGrade.binary(NO_WEB_XML, getNoWebXml(contextInitializer)),
-				contextInitializer);
+		putTaskWithDependencies(() -> Mark.binary(NO_JSP, getNoJsp(contextInitializer)), contextInitializer);
+		putTaskWithDependencies(() -> Mark.binary(NO_WEB_XML, getNoWebXml(contextInitializer)), contextInitializer);
 		putTaskWithDependencies(
-				Graders.predicateGrader(DO_GET, servletSourcer,
-						Graders.containsOnce(
+				Markers.predicateMarker(DO_GET, servletSourcer,
+						Markers.containsOnce(
 								Pattern.compile("void\\s*doGet\\s*\\(\\s*(final)?\\s*HttpServletRequest .*\\)"))),
 				servletSourcer);
-		putTaskWithDependencies(Graders.predicateGrader(NO_DO_POST, servletSourcer,
-				Graders.containsOnce(Pattern.compile("void\\s*doPost\\s*\\(\\s*(final)?\\s*HttpServletRequest .*\\)"))
+		putTaskWithDependencies(Markers.predicateMarker(NO_DO_POST, servletSourcer,
+				Markers.containsOnce(Pattern.compile("void\\s*doPost\\s*\\(\\s*(final)?\\s*HttpServletRequest .*\\)"))
 						.negate()),
 				servletSourcer);
 		final GitToTestSourcer testSourcer = GitToTestSourcer.testSourcer(contextInitializer);
 		putTaskWithDependencies(testSourcer, contextInitializer);
-		putTaskWithDependencies(Graders.predicateGrader(NOT_POLLUTED, servletSourcer,
+		putTaskWithDependencies(Markers.predicateMarker(NOT_POLLUTED, servletSourcer,
 				Predicates.contains(Pattern.compile("Auto-generated")).negate()
 						.and(Predicates.contains(Pattern.compile("@see HttpServlet#doGet")).negate()
 								.and((c) -> testSourcer.getContents().size() <= 1))),
 				servletSourcer);
-		putTaskWithDependencies(Graders.predicateGrader(EXC, servletSourcer,
+		putTaskWithDependencies(Markers.predicateMarker(EXC, servletSourcer,
 				Predicates.contains(Pattern.compile("printStackTrace")).negate()), servletSourcer);
-		putTaskWithDependencies(Graders.predicateGrader(LOC, servletSourcer,
+		putTaskWithDependencies(Markers.predicateMarker(LOC, servletSourcer,
 				Predicates.contains(Pattern.compile("setLocale.+ENGLISH"))), servletSourcer);
-		putTaskWithDependencies(Graders.predicateGrader(MTYPE, servletSourcer,
+		putTaskWithDependencies(Markers.predicateMarker(MTYPE, servletSourcer,
 				Predicates.contains(Pattern.compile("setContentType.+PLAIN"))), servletSourcer);
-		putTaskWithDependencies(Graders.predicateGrader(ANNOT, servletSourcer,
+		putTaskWithDependencies(Markers.predicateMarker(ANNOT, servletSourcer,
 				Predicates.contains(Pattern.compile("@WebServlet.*\\(.*/hello\".*\\)"))), servletSourcer);
 		putTaskWithDependencies(
-				Graders.predicateGrader(FINAL_NAME, pomSupplier,
-						Graders.containsOnce(
+				Markers.predicateMarker(FINAL_NAME, pomSupplier,
+						Markers.containsOnce(
 								Pattern.compile("<build>" + ANY + "<finalName>myapp</finalName>" + ANY + "</build>"))),
 				multiPomSupplier);
-		putTaskWithDependencies(Graders.gradeOnlyOrig(ONLY_ORIG, contextInitializer), contextInitializer);
-		putTaskWithDependencies(Graders.predicateGrader(GET_HELLO, servletSourcer,
+		putTaskWithDependencies(Markers.gradeOnlyOrig(ONLY_ORIG, contextInitializer), contextInitializer);
+		putTaskWithDependencies(Markers.predicateMarker(GET_HELLO, servletSourcer,
 				Predicates.contains(Pattern.compile("\"Hello,? world\\.?\""))), servletSourcer);
-		putTaskWithDependencies(Graders.notEmpty(TEST_EXISTS, testSourcer), testSourcer);
+		putTaskWithDependencies(Markers.notEmpty(TEST_EXISTS, testSourcer), testSourcer);
 		putTaskWithDependencies(
-				() -> CriterionGrade.binary(TEST_LOCATION,
+				() -> Mark.binary(TEST_LOCATION,
 						testSourcer.getContents().keySet().stream()
-								.allMatch(Graders.startsWithPredicate(pomSupplier, Paths.get("src/test/java")))),
+								.allMatch(Markers.startsWithPredicate(pomSupplier, Paths.get("src/test/java")))),
 				multiPomSupplier, testSourcer);
-		putTaskWithDependencies(Graders.mavenTestGrader(TEST_GREEN, contextInitializer, testSourcer, pomSupplier),
+		putTaskWithDependencies(Markers.mavenTestMarker(TEST_GREEN, contextInitializer, testSourcer, pomSupplier),
 				contextInitializer, testSourcer, multiPomSupplier);
-		putTaskWithDependencies(Graders.predicateGraderAny(ASSERT_EQUALS, testSourcer, Predicates
+		putTaskWithDependencies(Markers.predicateMarkerAny(ASSERT_EQUALS, testSourcer, Predicates
 				.contains(Pattern.compile("assertEquals")).and(Predicates.contains(Pattern.compile("sayHello()")))),
 				testSourcer);
 		final GitToSourcer travisSupplier = new GitToSourcer(contextInitializer, Paths.get(".travis.yml"));
 		putTaskWithDependencies(travisSupplier, contextInitializer);
-		putTaskWithDependencies(Graders.notEmpty(TRAVIS_CONF, travisSupplier), travisSupplier);
+		putTaskWithDependencies(Markers.notEmpty(TRAVIS_CONF, travisSupplier), travisSupplier);
 		final GitAndBaseToSourcer readmeSupplier = new GitAndBaseToSourcer(contextInitializer, pomSupplier,
 				Paths.get("README.adoc"));
 		putTaskWithDependencies(readmeSupplier, contextInitializer, multiPomSupplier);
-		final CriterionGrader travisBadgeGrader = () -> CriterionGrade.binary(TRAVIS_BADGE,
+		final CriterionMarker travisBadgeMarker = () -> Mark.binary(TRAVIS_BADGE,
 				Predicates
 						.contains(Pattern.compile("image:https://(?:api\\.)?travis-ci\\.com/oliviercailloux-org/"
 								+ initialSupplier.get().getRepositoryName() + "\\.svg"))
 						.apply(readmeSupplier.getContent()));
-		putTaskWithDependencies(travisBadgeGrader, readmeSupplier);
-		g.putEdge(initialSupplier, travisBadgeGrader);
+		putTaskWithDependencies(travisBadgeMarker, readmeSupplier);
+		g.putEdge(initialSupplier, travisBadgeMarker);
 		putTaskWithDependencies(getTravisConfGrader(travisSupplier), testSourcer);
 
 		executor.setGraph(g);
@@ -257,11 +230,11 @@ public class Ex3GradingBuilder {
 		}
 	}
 
-	private CriterionGrader getTravisConfGrader(final GitToSourcer travisSupplier) {
+	private CriterionMarker getTravisConfGrader(final GitToSourcer travisSupplier) {
 		return () -> {
 			final String travisConf = travisSupplier.getContent();
 			if (travisConf.isEmpty()) {
-				return CriterionGrade.min(TRAVIS_OK, "Configuration not found or incorrectly named.");
+				return Mark.min(TRAVIS_OK, "Configuration not found or incorrectly named.");
 			}
 
 			final Predicate<CharSequence> lang = Predicates.contains(Pattern.compile("language: java"));
@@ -299,7 +272,7 @@ public class Ex3GradingBuilder {
 					comment = "Inappropriate script, why not default?";
 				}
 			}
-			return CriterionGrade.of(TRAVIS_OK, points, comment);
+			return Mark.of(TRAVIS_OK, points, comment);
 		};
 	}
 
@@ -318,7 +291,7 @@ public class Ex3GradingBuilder {
 		this.ignoreAfter = requireNonNull(ignoreAfter);
 	}
 
-	private void putTaskWithDependencies(CriterionGrader criterionGrader, GradingContexter... contexters) {
+	private void putTaskWithDependencies(CriterionMarker criterionGrader, GradingContexter... contexters) {
 //		g.nodes().stream().filter(Predicates.instanceOf(CriterionGrader.class)).map((n)->(CriterionGrader)n).map(CriterionGrader::)
 		g.addNode(criterionGrader);
 		for (GradingContexter contexter : contexters) {

@@ -1,0 +1,8 @@
+{
+    "criterion": {
+        "class": "io.github.oliviercailloux.st_projects.ex2.Ex2Criterion",
+        "name": "ENC"
+    },
+    "points": 1.0,
+    "comment": ""
+}

@@ -53,7 +53,8 @@ import io.github.oliviercailloux.git.git_hub.model.v3.Event;
 import io.github.oliviercailloux.git.git_hub.model.v3.EventType;
 import io.github.oliviercailloux.git.git_hub.model.v3.SearchResult;
 import io.github.oliviercailloux.git.git_hub.model.v3.SearchResults;
-import io.github.oliviercailloux.git.utils.JsonUtils;
+import io.github.oliviercailloux.json.JsonObjectWrapper;
+import io.github.oliviercailloux.json.JsonValueWrapper;
 
 public class GitHubFetcherV3 implements AutoCloseable {
 	public static final Set<String> FORBIDDEN_IN_SEARCH = ImmutableSet.of(".", ",", ":", ";", "/", "\\", "`", "'", "\"",
@@ -227,7 +228,7 @@ public class GitHubFetcherV3 implements AutoCloseable {
 				}));
 		final Optional<Event> matchingEvent = matchingEvents.collect(MoreCollectors.toOptional());
 		LOGGER.debug("Matching: {}.",
-				JsonUtils.asPrettyString(matchingEvent.<JsonValue>map(Event::getJson).orElse(JsonValue.NULL)));
+				JsonValueWrapper.wrap(matchingEvent.<JsonValue>map(Event::getJson).orElse(JsonValue.NULL)));
 		return matchingEvent.map(Event::getCreatedAt);
 	}
 
@@ -237,7 +238,7 @@ public class GitHubFetcherV3 implements AutoCloseable {
 		final List<Event> events = getContentAsList(target, Event::from, false);
 		final ImmutableList<Event> startEvents = events.stream()
 				.filter((e) -> e.getType().equals(EventType.CREATE_EVENT)).collect(ImmutableList.toImmutableList());
-		LOGGER.info("All: {}.", startEvents.stream().<String>map((e) -> JsonUtils.asPrettyString(e.getJson()))
+		LOGGER.info("All: {}.", startEvents.stream().<String>map((e) -> JsonObjectWrapper.wrap(e.getJson()).toString())
 				.collect(Collectors.joining(", ")));
 		return startEvents;
 	}
@@ -246,7 +247,7 @@ public class GitHubFetcherV3 implements AutoCloseable {
 		final WebTarget target = client.target(EVENTS_URI).resolveTemplate("owner", repositoryCoordinates.getOwner())
 				.resolveTemplate("repo", repositoryCoordinates.getRepositoryName());
 		final Optional<JsonArray> eventsArray = getContent(target, JsonArray.class);
-		LOGGER.info("Events: {}", JsonUtils.asPrettyString(eventsArray.get()));
+		LOGGER.info("Events: {}", JsonValueWrapper.wrap(eventsArray.get()));
 	}
 
 	public List<SearchResult> searchForCode(RepositoryCoordinates repositoryCoordinates, String code,
@@ -305,7 +306,7 @@ public class GitHubFetcherV3 implements AutoCloseable {
 			accumulator = Optional.empty();
 		} else {
 			accumulator = Optional
-					.of((v1, v2) -> JsonUtils.addAllTo(JsonUtils.addAllTo(Json.createArrayBuilder(), v1), v2).build());
+					.of((v1, v2) -> Json.createArrayBuilder(v1).addAll(Json.createArrayBuilder(v2)).build());
 		}
 		return getContent(target, JsonArray.class, GIT_HUB_MEDIA_TYPE, accumulator);
 	}
@@ -338,14 +339,16 @@ public class GitHubFetcherV3 implements AutoCloseable {
 
 				final T content = response.readEntity(c);
 
-				final String contentStr;
-				if (content instanceof JsonValue) {
-					final JsonValue contentAsJson = (JsonValue) content;
-					contentStr = JsonUtils.asPrettyString(contentAsJson);
-				} else {
-					contentStr = content.toString();
+				{
+					final String contentStr;
+					if (content instanceof JsonValue) {
+						final JsonValue contentAsJson = (JsonValue) content;
+						contentStr = JsonValueWrapper.wrap(contentAsJson).toString();
+					} else {
+						contentStr = content.toString();
+					}
+					LOGGER.debug("Got: {}.", contentStr);
 				}
-				LOGGER.debug("Got: {}.", contentStr);
 
 				if (response.getStatus() == HttpServletResponse.SC_NOT_FOUND) {
 					assert nextTarget == null;
@@ -419,7 +422,7 @@ public class GitHubFetcherV3 implements AutoCloseable {
 		final ImmutableList<Event> events = getEvents(repositoryCoordinates);
 		final ImmutableList<Event> pushEvents = events.stream().filter((e) -> e.getPushPayload().isPresent())
 				.collect(ImmutableList.toImmutableList());
-		LOGGER.debug("All: {}.", pushEvents.stream().<String>map((e) -> JsonUtils.asPrettyString(e.getJson()))
+		LOGGER.debug("All: {}.", pushEvents.stream().<String>map((e) -> JsonObjectWrapper.wrap(e.getJson()).toString())
 				.collect(Collectors.joining(", ")));
 		return pushEvents;
 	}

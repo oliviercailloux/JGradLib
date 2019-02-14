@@ -10,7 +10,7 @@ import javax.json.JsonObject;
 import com.google.common.base.MoreObjects;
 
 import io.github.oliviercailloux.git.git_hub.services.GitHubJsonParser;
-import io.github.oliviercailloux.git.utils.JsonUtils;
+import io.github.oliviercailloux.json.JsonObjectWrapper;
 
 /**
  * <p>
@@ -58,7 +58,7 @@ public class Event {
 
 	@Override
 	public String toString() {
-		return MoreObjects.toStringHelper(this).addValue(JsonUtils.asPrettyString(json)).toString();
+		return MoreObjects.toStringHelper(this).addValue(JsonObjectWrapper.wrap(json)).toString();
 	}
 
 }
