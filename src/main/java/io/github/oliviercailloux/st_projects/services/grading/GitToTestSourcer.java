@@ -63,7 +63,9 @@ public class GitToTestSourcer implements GradingContexter, MultiContent {
 	}
 
 	public static GitToTestSourcer testSourcer(GitContext context) {
-		return new GitToTestSourcer(context);
+		final GitToTestSourcer sourcer = new GitToTestSourcer(context);
+		sourcer.init();
+		return sourcer;
 	}
 
 }

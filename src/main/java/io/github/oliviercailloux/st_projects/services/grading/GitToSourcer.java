@@ -12,11 +12,17 @@ import io.github.oliviercailloux.st_projects.model.GradingContexter;
 
 public class GitToSourcer implements GradingContexter, ContentSupplier {
 
+	public static ContentSupplier given(GitContext context, Path path) {
+		final GitToSourcer sourcer = new GitToSourcer(context, path);
+		sourcer.init();
+		return sourcer;
+	}
+
 	private final GitContext context;
 	private String content;
 	private final Path path;
 
-	public GitToSourcer(GitContext context, Path path) {
+	private GitToSourcer(GitContext context, Path path) {
 		this.context = requireNonNull(context);
 		this.path = path;
 		clear();

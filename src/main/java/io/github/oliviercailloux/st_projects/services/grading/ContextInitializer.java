@@ -71,37 +71,35 @@ public class ContextInitializer implements Supplier<GitFullContext> {
 
 	}
 
-	public static ContextInitializer with(Supplier<RepositoryCoordinates> coordinatesSupplier) {
+	public static ContextInitializer with(RepositoryCoordinates coordinates) {
 		final String tmpDir = System.getProperty("java.io.tmpdir");
-		return new ContextInitializer(coordinatesSupplier, Paths.get(tmpDir), Instant.MAX);
+		return new ContextInitializer(coordinates, Paths.get(tmpDir), Instant.MAX);
 	}
 
-	public static ContextInitializer withPathAndIgnore(Supplier<RepositoryCoordinates> coordinatesSupplier,
-			Path projectsBaseDir, Instant ignoreAfter) {
-		return new ContextInitializer(coordinatesSupplier, projectsBaseDir, ignoreAfter);
-	}
-
-	public static ContextInitializer withIgnore(Supplier<RepositoryCoordinates> coordinatesSupplier,
+	public static ContextInitializer withPathAndIgnore(RepositoryCoordinates coordinates, Path projectsBaseDir,
 			Instant ignoreAfter) {
-		final String tmpDir = System.getProperty("java.io.tmpdir");
-		return new ContextInitializer(coordinatesSupplier, Paths.get(tmpDir), ignoreAfter);
+		return new ContextInitializer(coordinates, projectsBaseDir, ignoreAfter);
 	}
 
-	private Supplier<RepositoryCoordinates> coordinatesSupplier;
+	public static ContextInitializer withIgnore(RepositoryCoordinates coordinates, Instant ignoreAfter) {
+		final String tmpDir = System.getProperty("java.io.tmpdir");
+		return new ContextInitializer(coordinates, Paths.get(tmpDir), ignoreAfter);
+	}
+
+	private RepositoryCoordinates coordinates;
 	private Path projectsBaseDir;
 	private Instant ignoreAfter;
 
-	private ContextInitializer(Supplier<RepositoryCoordinates> coordinatesSupplier, Path projectsBaseDir,
-			Instant ignoredAfter) {
+	private ContextInitializer(RepositoryCoordinates coordinates, Path projectsBaseDir, Instant ignoredAfter) {
 		this.ignoreAfter = requireNonNull(ignoredAfter);
-		this.coordinatesSupplier = requireNonNull(coordinatesSupplier);
+		this.coordinates = requireNonNull(coordinates);
 		this.projectsBaseDir = requireNonNull(projectsBaseDir);
 	}
 
 	@Override
 	public GitFullContext get() throws GradingException {
 		try {
-			final Client client = Client.aboutAndUsing(coordinatesSupplier.get(), projectsBaseDir);
+			final Client client = Client.aboutAndUsing(coordinates, projectsBaseDir);
 			{
 				client.tryRetrieve();
 				client.hasContent();

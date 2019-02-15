@@ -18,35 +18,34 @@ import com.google.common.collect.ImmutableMap;
 
 import io.github.oliviercailloux.git.Client;
 import io.github.oliviercailloux.st_projects.model.GitContext;
-import io.github.oliviercailloux.st_projects.model.GradingContexter;
 import io.github.oliviercailloux.st_projects.model.MultiContent;
 
-public class GitToMultipleSourcerOld implements GradingContexter, MultiContent {
+public class GitToMultipleSourcerNew implements MultiContent {
 
 	private final GitContext context;
 	private ImmutableMap<Path, String> contents;
 
 	public static MultiContent satisfyingPathAndInit(GitContext context, Predicate<Path> pathPredicate) {
-		final GitToMultipleSourcerOld sourcer = new GitToMultipleSourcerOld(context,
+		final GitToMultipleSourcerNew sourcer = new GitToMultipleSourcerNew(context,
 				(f) -> pathPredicate.test(f.getPath()));
 		sourcer.init();
 		return sourcer;
 	}
 
-	public static GitToMultipleSourcerOld satisfyingPathThenContent(GitContext context, Predicate<Path> pathPredicate,
+	public static GitToMultipleSourcerNew satisfyingPathThenContent(GitContext context, Predicate<Path> pathPredicate,
 			Predicate<String> contentPredicate) {
-		return new GitToMultipleSourcerOld(context,
+		return new GitToMultipleSourcerNew(context,
 				(f) -> pathPredicate.test(f.getPath()) && contentPredicate.test(f.getContent()));
 	}
 
-	public static GitToMultipleSourcerOld satisfyingOnContent(GitContext context, Predicate<FileContent> predicate) {
-		return new GitToMultipleSourcerOld(context, predicate);
+	public static GitToMultipleSourcerNew satisfyingOnContent(GitContext context, Predicate<FileContent> predicate) {
+		return new GitToMultipleSourcerNew(context, predicate);
 	}
 
-	private GitToMultipleSourcerOld(GitContext context, Predicate<FileContent> predicate) {
+	private GitToMultipleSourcerNew(GitContext context, Predicate<FileContent> predicate) {
 		this.context = requireNonNull(context);
 		this.predicate = requireNonNull(predicate);
-		clear();
+		contents = null;
 	}
 
 	@Override
@@ -55,12 +54,6 @@ public class GitToMultipleSourcerOld implements GradingContexter, MultiContent {
 		return contents;
 	}
 
-	@Override
-	public void clear() {
-		contents = null;
-	}
-
-	@Override
 	public void init() throws GradingException {
 		final Client client = context.getClient();
 		final FileCrawler fileCrawler = new FileCrawler(client);
@@ -89,12 +82,14 @@ public class GitToMultipleSourcerOld implements GradingContexter, MultiContent {
 		contents = contentBuilder.build();
 	}
 
-	public static GitToMultipleSourcerOld satisfyingPath(GitContext context, Predicate<Path> pathPredicate) {
-		return new GitToMultipleSourcerOld(context, (f) -> pathPredicate.test(f.getPath()));
+	public static GitToMultipleSourcerNew satisfyingPath(GitContext context, Predicate<Path> pathPredicate) {
+		final GitToMultipleSourcerNew sourcer = new GitToMultipleSourcerNew(context,
+				(f) -> pathPredicate.test(f.getPath()));
+		return sourcer;
 	}
 
 	@SuppressWarnings("unused")
-	static final Logger LOGGER = LoggerFactory.getLogger(GitToMultipleSourcerOld.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(GitToMultipleSourcerNew.class);
 	private final Predicate<FileContent> predicate;
 
 	static FileContent getAsFileContent(FileCrawler crawler, Path path) {

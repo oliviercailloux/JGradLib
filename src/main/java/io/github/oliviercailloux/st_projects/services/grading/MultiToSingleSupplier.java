@@ -3,10 +3,10 @@ package io.github.oliviercailloux.st_projects.services.grading;
 import static java.util.Objects.requireNonNull;
 
 import java.nio.file.Path;
-import java.util.function.Supplier;
 
 import com.google.common.collect.ImmutableMap;
 
+import io.github.oliviercailloux.st_projects.model.ContentSupplier;
 import io.github.oliviercailloux.st_projects.model.GradingContexter;
 import io.github.oliviercailloux.st_projects.model.MultiContent;
 
@@ -16,16 +16,16 @@ import io.github.oliviercailloux.st_projects.model.MultiContent;
  * @author Olivier Cailloux
  *
  */
-public class MultiToSingleSupplier implements Supplier<String> {
-	private final Supplier<MultiContent> supplier;
+public class MultiToSingleSupplier implements ContentSupplier {
+	private final MultiContent wrapped;
 
-	public MultiToSingleSupplier(Supplier<MultiContent> supplier) {
-		this.supplier = requireNonNull(supplier);
+	public MultiToSingleSupplier(MultiContent wrapped) {
+		this.wrapped = requireNonNull(wrapped);
 	}
 
 	@Override
-	public String get() {
-		final ImmutableMap<Path, String> contents = supplier.get().getContents();
+	public String getContent() {
+		final ImmutableMap<Path, String> contents = wrapped.getContents();
 		return contents.size() == 1 ? contents.values().iterator().next() : "";
 	}
 

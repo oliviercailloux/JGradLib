@@ -7,7 +7,6 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
-import java.util.function.Supplier;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,20 +17,19 @@ import io.github.oliviercailloux.st_projects.model.GitFullContext;
 import io.github.oliviercailloux.st_projects.model.Mark;
 
 public class TimeMarker implements CriterionMarker {
-	private final Supplier<GitFullContext> contextSupplier;
+	private final GitFullContext context;
 	private Instant deadline;
 	private double maxGrade;
 	private Criterion criterion;
 
-	public static TimeMarker given(Criterion criterion, Supplier<GitFullContext> contextSupplier, Instant deadline,
+	public static TimeMarker given(Criterion criterion, GitFullContext contextSupplier, Instant deadline,
 			double maxGrade) {
 		return new TimeMarker(criterion, contextSupplier, deadline, maxGrade);
 	}
 
-	private TimeMarker(Criterion criterion, Supplier<GitFullContext> contextSupplier, Instant deadline,
-			double maxGrade) {
+	private TimeMarker(Criterion criterion, GitFullContext contextSupplier, Instant deadline, double maxGrade) {
 		this.criterion = requireNonNull(criterion);
-		this.contextSupplier = requireNonNull(contextSupplier);
+		this.context = requireNonNull(contextSupplier);
 		this.deadline = requireNonNull(deadline);
 		this.maxGrade = maxGrade;
 		checkArgument(Double.isFinite(maxGrade));
@@ -39,8 +37,6 @@ public class TimeMarker implements CriterionMarker {
 
 	@Override
 	public Mark mark() {
-		final GitFullContext context = contextSupplier.get();
-
 		final Client client = context.getClient();
 
 		if (!client.hasContentCached() || !client.getDefaultRevSpec().isPresent()) {

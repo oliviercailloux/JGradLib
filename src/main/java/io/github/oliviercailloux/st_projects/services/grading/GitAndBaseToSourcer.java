@@ -19,13 +19,18 @@ import io.github.oliviercailloux.st_projects.model.GradingContexter;
  *
  */
 public class GitAndBaseToSourcer implements GradingContexter, ContentSupplier {
+	public static ContentSupplier given(GitContext context, PomSupplier pomSupplier, Path relativePath) {
+		final GitAndBaseToSourcer sourcer = new GitAndBaseToSourcer(context, pomSupplier, relativePath);
+		sourcer.init();
+		return sourcer;
+	}
 
 	private final GitContext context;
 	private String content;
 	private final Path relativePath;
 	private PomSupplier pomSupplier;
 
-	public GitAndBaseToSourcer(GitContext context, PomSupplier pomSupplier, Path relativePath) {
+	private GitAndBaseToSourcer(GitContext context, PomSupplier pomSupplier, Path relativePath) {
 		this.context = requireNonNull(context);
 		this.pomSupplier = requireNonNull(pomSupplier);
 		this.relativePath = requireNonNull(relativePath);

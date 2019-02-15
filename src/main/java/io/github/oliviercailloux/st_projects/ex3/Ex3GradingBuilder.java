@@ -54,17 +54,19 @@ import com.google.common.collect.ImmutableSet;
 
 import io.github.oliviercailloux.git.Client;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
+import io.github.oliviercailloux.st_projects.model.ContentSupplier;
 import io.github.oliviercailloux.st_projects.model.Criterion;
 import io.github.oliviercailloux.st_projects.model.GitContext;
 import io.github.oliviercailloux.st_projects.model.GitFullContext;
 import io.github.oliviercailloux.st_projects.model.GradingContexter;
 import io.github.oliviercailloux.st_projects.model.Mark;
 import io.github.oliviercailloux.st_projects.model.MultiContent;
-import io.github.oliviercailloux.st_projects.services.grading.ContextInitializer;
+import io.github.oliviercailloux.st_projects.services.grading.ContextInitializerNew;
 import io.github.oliviercailloux.st_projects.services.grading.CriterionMarker;
 import io.github.oliviercailloux.st_projects.services.grading.FileCrawler;
 import io.github.oliviercailloux.st_projects.services.grading.GitAndBaseToSourcer;
 import io.github.oliviercailloux.st_projects.services.grading.GitMarker;
+import io.github.oliviercailloux.st_projects.services.grading.GitToMultipleSourcerNew;
 import io.github.oliviercailloux.st_projects.services.grading.GitToMultipleSourcerOld;
 import io.github.oliviercailloux.st_projects.services.grading.GitToSourcer;
 import io.github.oliviercailloux.st_projects.services.grading.GitToTestSourcer;
@@ -228,10 +230,121 @@ public class Ex3GradingBuilder {
 		return contextDirect;
 	}
 
-	private void gradeStuff(RepositoryCoordinates coord) {
-		final GitFullContext fullContext = ContextInitializer.withPathAndIgnore(() -> coord,
-				Paths.get("/home/olivier/Professions/Enseignement/En cours/ci"), ignoreAfter).get();
+	private ImmutableSet<Mark> gradeStuff(RepositoryCoordinates coord) {
+		final ImmutableSet.Builder<Mark> gradesBuilder = ImmutableSet.builder();
 
+		final GitFullContext fullContext = ContextInitializerNew.withPathAndIgnoreAndInit(coord,
+				Paths.get("/home/olivier/Professions/Enseignement/En cours/ci"), ignoreAfter);
+		final double maxGrade = Stream.of(Ex3Criterion.values())
+				.collect(Collectors.summingDouble(Criterion::getMaxPoints));
+
+		gradesBuilder.add(TimeMarker.given(ON_TIME, fullContext, deadline, maxGrade).mark());
+		gradesBuilder.add(GitMarker.repoMarker(REPO_EXISTS, fullContext).mark());
+
+		/**
+		 * Need to limit depth, otherwise will find
+		 * target/m2e-wtp/web-resources/META-INF/maven/<groupId>/<artifactId>/pom.xml.
+		 */
+		final MultiContent multiPom = GitToMultipleSourcerNew.satisfyingPathAndInit(fullContext,
+				(p) -> p.getNameCount() <= 6 && p.getFileName().toString().equals("pom.xml"));
+		final PomSupplier pomSupplier = PomSupplier.basedOn(multiPom);
+
+		gradesBuilder.add(Mark.binary(AT_ROOT, pomSupplier.isProjectAtRoot()));
+
+		final PomContexter pomContexter = new PomContexter(pomSupplier);
+		pomContexter.init();
+
+		gradesBuilder.add(Markers.groupIdMarker(GROUP_ID, pomContexter).mark());
+		gradesBuilder
+				.add(Markers.predicateMarker(JUNIT5_DEP, pomSupplier,
+						Markers.containsOnce(Pattern.compile("<dependencies>" + ANY + "<dependency>" + ANY
+								+ "<groupId>org\\.junit\\.jupiter</groupId>" + ANY
+								+ "<artifactId>junit-jupiter-engine</artifactId>" + ANY + "<version>5\\.[23]\\." + ANY
+								+ "</version>" + ANY + "<scope>test</scope>")))
+						.mark());
+		gradesBuilder.add(Markers.predicateMarker(UTF, pomSupplier,
+				Markers.containsOnce(Pattern.compile("<properties>" + ANY
+						+ "<project\\.build\\.sourceEncoding>UTF-8</project\\.build\\.sourceEncoding>" + ANY
+						+ "</properties>")))
+				.mark());
+		gradesBuilder.add(Markers
+				.predicateMarker(SOURCE, pomSupplier,
+						Markers.containsOnce(Pattern.compile("<properties>" + ANY
+								+ "<maven\\.compiler\\.source>.*</maven\\.compiler\\.source>" + ANY + "</properties>")))
+				.mark());
+		gradesBuilder
+				.add(Markers
+						.predicateMarker(NO_MISLEADING_URL, pomSupplier,
+								Predicates.contains(Pattern.compile("<url>.*\\.apache\\.org.*</url>")).negate())
+						.mark());
+		gradesBuilder.add(Markers
+				.predicateMarker(WAR, pomSupplier, Markers.containsOnce(Pattern.compile("<packaging>war</packaging>")))
+				.mark());
+		gradesBuilder.add(Markers.packageGroupIdMarker(PREFIX, fullContext, pomSupplier, pomContexter).mark());
+		gradesBuilder.add(Markers.mavenCompileMarker(COMPILE, fullContext, pomSupplier).mark());
+
+		final MultiContent servletSourcer = GitToMultipleSourcerOld.satisfyingPathAndInit(fullContext,
+				Markers.startsWithPredicate(pomSupplier, Paths.get("src/main/java"))
+						.and((p) -> p.getFileName().equals(Paths.get("HelloServlet.java"))));
+
+		gradesBuilder.add(Mark.binary(NO_JSP, getNoJsp(fullContext)));
+		gradesBuilder.add(Mark.binary(NO_WEB_XML, getNoWebXml(fullContext)));
+		gradesBuilder
+				.add(Markers
+						.predicateMarker(DO_GET, servletSourcer,
+								Markers.containsOnce(Pattern
+										.compile("void\\s*doGet\\s*\\(\\s*(final)?\\s*HttpServletRequest .*\\)")))
+						.mark());
+		gradesBuilder.add(Markers.predicateMarker(NO_DO_POST, servletSourcer,
+				Markers.containsOnce(Pattern.compile("void\\s*doPost\\s*\\(\\s*(final)?\\s*HttpServletRequest .*\\)"))
+						.negate())
+				.mark());
+		final GitToTestSourcer testSourcer = GitToTestSourcer.testSourcer(fullContext);
+		gradesBuilder.add(Markers.predicateMarker(NOT_POLLUTED, servletSourcer,
+				Predicates.contains(Pattern.compile("Auto-generated")).negate()
+						.and(Predicates.contains(Pattern.compile("@see HttpServlet#doGet")).negate()
+								.and((c) -> testSourcer.getContents().size() <= 1)))
+				.mark());
+		gradesBuilder.add(Markers
+				.predicateMarker(EXC, servletSourcer, Predicates.contains(Pattern.compile("printStackTrace")).negate())
+				.mark());
+		gradesBuilder.add(
+				Markers.predicateMarker(LOC, servletSourcer, Predicates.contains(Pattern.compile("setLocale.+ENGLISH")))
+						.mark());
+		gradesBuilder.add(Markers
+				.predicateMarker(MTYPE, servletSourcer, Predicates.contains(Pattern.compile("setContentType.+PLAIN")))
+				.mark());
+		gradesBuilder.add(Markers.predicateMarker(ANNOT, servletSourcer,
+				Predicates.contains(Pattern.compile("@WebServlet.*\\(.*/hello\".*\\)"))).mark());
+		gradesBuilder
+				.add(Markers
+						.predicateMarker(FINAL_NAME, pomSupplier,
+								Markers.containsOnce(Pattern
+										.compile("<build>" + ANY + "<finalName>myapp</finalName>" + ANY + "</build>")))
+						.mark());
+		gradesBuilder.add(Markers.gradeOnlyOrig(ONLY_ORIG, fullContext).mark());
+		gradesBuilder.add(Markers.predicateMarker(GET_HELLO, servletSourcer,
+				Predicates.contains(Pattern.compile("\"Hello,? world\\.?\""))).mark());
+		gradesBuilder.add(Markers.notEmpty(TEST_EXISTS, testSourcer).mark());
+		gradesBuilder.add(Mark.binary(TEST_LOCATION, testSourcer.getContents().keySet().stream()
+				.allMatch(Markers.startsWithPredicate(pomSupplier, Paths.get("src/test/java")))));
+		gradesBuilder.add(Markers.mavenTestMarker(TEST_GREEN, fullContext, testSourcer, pomSupplier).mark());
+		gradesBuilder.add(Markers.predicateMarkerAny(ASSERT_EQUALS, testSourcer, Predicates
+				.contains(Pattern.compile("assertEquals")).and(Predicates.contains(Pattern.compile("sayHello()"))))
+				.mark());
+		final ContentSupplier travisSupplier = GitToSourcer.given(fullContext, Paths.get(".travis.yml"));
+		gradesBuilder.add(Markers.notEmpty(TRAVIS_CONF, travisSupplier).mark());
+		final ContentSupplier readmeSupplier = GitAndBaseToSourcer.given(fullContext, pomSupplier,
+				Paths.get("README.adoc"));
+		final CriterionMarker travisBadgeMarker = () -> Mark.binary(TRAVIS_BADGE,
+				Predicates
+						.contains(Pattern.compile("image:https://(?:api\\.)?travis-ci\\.com/oliviercailloux-org/"
+								+ initialSupplier.get().getRepositoryName() + "\\.svg"))
+						.apply(readmeSupplier.getContent()));
+		gradesBuilder.add(travisBadgeMarker.mark());
+		gradesBuilder.add(getTravisConfGrade(travisSupplier));
+
+		return gradesBuilder.build();
 	}
 
 	private boolean getNoJsp(GitContext context) {
@@ -262,50 +375,48 @@ public class Ex3GradingBuilder {
 		}
 	}
 
-	private CriterionMarker getTravisConfGrader(final GitToSourcer travisSupplier) {
-		return () -> {
-			final String travisConf = travisSupplier.getContent();
-			if (travisConf.isEmpty()) {
-				return Mark.min(TRAVIS_OK, "Configuration not found or incorrectly named.");
-			}
+	private Mark getTravisConfGrade(ContentSupplier travisSupplier) {
+		final String travisConf = travisSupplier.getContent();
+		if (travisConf.isEmpty()) {
+			return Mark.min(TRAVIS_OK, "Configuration not found or incorrectly named.");
+		}
 
-			final Predicate<CharSequence> lang = Predicates.contains(Pattern.compile("language: java"));
-			final Predicate<CharSequence> dist = Predicates.contains(Pattern.compile("dist: xenial"));
-			final Predicate<CharSequence> script = Predicates.contains(Pattern.compile("script: "));
-			final boolean hasLang = lang.apply(travisConf);
-			final boolean hasDist = dist.apply(travisConf);
-			final boolean hasScript = script.apply(travisConf);
-			final double points;
-			final String comment;
-			assert TRAVIS_OK.getMinPoints() == 0d;
-			if (!hasLang && !hasScript) {
-				points = TRAVIS_OK.getMinPoints();
-				comment = "Missing language.";
-			} else if (!hasLang && hasScript && !hasDist) {
+		final Predicate<CharSequence> lang = Predicates.contains(Pattern.compile("language: java"));
+		final Predicate<CharSequence> dist = Predicates.contains(Pattern.compile("dist: xenial"));
+		final Predicate<CharSequence> script = Predicates.contains(Pattern.compile("script: "));
+		final boolean hasLang = lang.apply(travisConf);
+		final boolean hasDist = dist.apply(travisConf);
+		final boolean hasScript = script.apply(travisConf);
+		final double points;
+		final String comment;
+		assert TRAVIS_OK.getMinPoints() == 0d;
+		if (!hasLang && !hasScript) {
+			points = TRAVIS_OK.getMinPoints();
+			comment = "Missing language.";
+		} else if (!hasLang && hasScript && !hasDist) {
+			points = TRAVIS_OK.getMaxPoints() / 3d;
+			comment = "Missing language (script should be defaulted).";
+		} else if (!hasLang && hasScript && hasDist) {
+			points = TRAVIS_OK.getMinPoints();
+			comment = "Missing language (script should be defaulted). Missing dist.";
+		} else {
+			assert hasLang;
+			if (!hasDist && !hasScript) {
+				points = TRAVIS_OK.getMaxPoints() * 2d / 3d;
+				comment = "Missing dist.";
+			} else if (!hasDist && hasScript) {
 				points = TRAVIS_OK.getMaxPoints() / 3d;
-				comment = "Missing language (script should be defaulted).";
-			} else if (!hasLang && hasScript && hasDist) {
-				points = TRAVIS_OK.getMinPoints();
-				comment = "Missing language (script should be defaulted). Missing dist.";
+				comment = "Missing dist. Inappropriate script, why not default?";
+			} else if (hasDist && !hasScript) {
+				points = TRAVIS_OK.getMaxPoints();
+				comment = "";
 			} else {
-				assert hasLang;
-				if (!hasDist && !hasScript) {
-					points = TRAVIS_OK.getMaxPoints() * 2d / 3d;
-					comment = "Missing dist.";
-				} else if (!hasDist && hasScript) {
-					points = TRAVIS_OK.getMaxPoints() / 3d;
-					comment = "Missing dist. Inappropriate script, why not default?";
-				} else if (hasDist && !hasScript) {
-					points = TRAVIS_OK.getMaxPoints();
-					comment = "";
-				} else {
-					assert hasDist && hasScript;
-					points = TRAVIS_OK.getMaxPoints() / 2d;
-					comment = "Inappropriate script, why not default?";
-				}
+				assert hasDist && hasScript;
+				points = TRAVIS_OK.getMaxPoints() / 2d;
+				comment = "Inappropriate script, why not default?";
 			}
-			return Mark.of(TRAVIS_OK, points, comment);
-		};
+		}
+		return Mark.of(TRAVIS_OK, points, comment);
 	}
 
 	public void setDeadline(Instant deadline) {
