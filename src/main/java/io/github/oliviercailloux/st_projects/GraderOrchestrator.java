@@ -8,7 +8,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.text.NumberFormat;
-import java.util.Comparator;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
@@ -32,14 +31,11 @@ import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherV3;
 import io.github.oliviercailloux.git.utils.JsonUtils;
 import io.github.oliviercailloux.mycourse.MyCourseCsvWriter;
-import io.github.oliviercailloux.st_projects.ex3.Ex3Criterion;
-import io.github.oliviercailloux.st_projects.ex3.Ex3GradingBuilder;
+import io.github.oliviercailloux.st_projects.ex3.Ex3Grader;
 import io.github.oliviercailloux.st_projects.model.Criterion;
-import io.github.oliviercailloux.st_projects.model.Mark;
 import io.github.oliviercailloux.st_projects.model.StudentGrade;
 import io.github.oliviercailloux.st_projects.model.StudentOnGitHub;
 import io.github.oliviercailloux.st_projects.model.StudentOnGitHubKnown;
-import io.github.oliviercailloux.st_projects.services.grading.GradingExecutor;
 import io.github.oliviercailloux.st_projects.services.json.JsonGrade;
 import io.github.oliviercailloux.st_projects.services.read.UsernamesReader;
 
@@ -157,6 +153,20 @@ public class GraderOrchestrator {
 		return repositoriesByStudent;
 	}
 
+	public ImmutableSet<StudentGrade> gradeAll(Ex3Grader grader,
+			ImmutableMap<StudentOnGitHub, RepositoryCoordinates> repositories) {
+		final ImmutableSet.Builder<StudentGrade> gradesBuilder = ImmutableSet.builder();
+		for (Map.Entry<StudentOnGitHub, RepositoryCoordinates> entry : repositories.entrySet()) {
+			final StudentOnGitHub student = entry.getKey();
+			final RepositoryCoordinates repo = entry.getValue();
+			final StudentGrade grade = StudentGrade.of(student, grader.grade(repo));
+			gradesBuilder.add(grade);
+			LOGGER.debug("Student {}, grades {}.", student, grade.getMarks().values());
+			LOGGER.info("Evaluation: {}", grade.getAsMyCourseString());
+		}
+		return gradesBuilder.build();
+	}
+
 	public static void main(String[] args) throws Exception {
 		final String prefix = "ci";
 		final GraderOrchestrator orch = new GraderOrchestrator(prefix);
@@ -166,11 +176,9 @@ public class GraderOrchestrator {
 		// orch.setSingleRepo("guillaumerg7");
 		final ImmutableMap<StudentOnGitHub, RepositoryCoordinates> repositories = orch.getRepositoriesByStudent();
 
-		final GradingExecutor executor = new Ex3GradingBuilder().build();
-		final Comparator<Criterion> comparingHomogenousCriteria = Comparator.comparing((c) -> (Ex3Criterion) c);
-		executor.setCriteriaComparator(Comparator.comparing(Mark::getCriterion, comparingHomogenousCriteria));
+		final Ex3Grader grader = new Ex3Grader();
 
-		final ImmutableSet<StudentGrade> grades = executor.gradeAll(repositories);
+		final ImmutableSet<StudentGrade> grades = orch.gradeAll(grader, repositories);
 //		final ImmutableSet<StudentGrade> grades = orch.readJson();
 		orch.writeCsv(grades);
 		orch.writeJson(grades);

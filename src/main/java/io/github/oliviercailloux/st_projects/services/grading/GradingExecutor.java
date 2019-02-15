@@ -114,19 +114,6 @@ public class GradingExecutor {
 		return prerequisites;
 	}
 
-	public ImmutableSet<StudentGrade> gradeAll(ImmutableMap<StudentOnGitHub, RepositoryCoordinates> repositories) {
-		final ImmutableSet.Builder<StudentGrade> gradesBuilder = ImmutableSet.builder();
-		for (Entry<StudentOnGitHub, RepositoryCoordinates> entry : repositories.entrySet()) {
-			final StudentOnGitHub student = entry.getKey();
-			final RepositoryCoordinates repo = entry.getValue();
-			final StudentGrade grade = grade(student, repo);
-			gradesBuilder.add(grade);
-			LOGGER.debug("Student {}, grades {}.", student, grade.getMarks().values());
-			LOGGER.info("Evaluation: {}", grade.getAsMyCourseString());
-		}
-		return gradesBuilder.build();
-	}
-
 	public Comparator<Mark> getCriteriaComparator() {
 		return criteriaComparator;
 	}
