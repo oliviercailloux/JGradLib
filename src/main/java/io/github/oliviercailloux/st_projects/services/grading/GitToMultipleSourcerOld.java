@@ -8,7 +8,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Set;
 import java.util.function.Predicate;
-import java.util.function.Supplier;
 
 import org.eclipse.jgit.errors.IncorrectObjectTypeException;
 import org.eclipse.jgit.errors.MissingObjectException;
@@ -19,66 +18,58 @@ import com.google.common.collect.ImmutableMap;
 
 import io.github.oliviercailloux.git.Client;
 import io.github.oliviercailloux.st_projects.model.GitContext;
+import io.github.oliviercailloux.st_projects.model.GradingContexter;
 import io.github.oliviercailloux.st_projects.model.MultiContent;
 
-public class GitToMultipleSourcer implements Supplier<MultiContent> {
+public class GitToMultipleSourcerOld implements GradingContexter, MultiContent {
 
-	private static class MultiContentSupplier implements MultiContent {
-		private ImmutableMap<Path, String> contents;
+	private final GitContext context;
+	private ImmutableMap<Path, String> contents;
 
-		public MultiContentSupplier(ImmutableMap<Path, String> contents) {
-			this.contents = contents;
-		}
-
-		@Override
-		public ImmutableMap<Path, String> getContents() {
-			return contents;
-		}
+	public static GitToMultipleSourcerOld satisfyingPath(GitContext context, Predicate<Path> pathPredicate) {
+		return new GitToMultipleSourcerOld(context, (f) -> pathPredicate.test(f.getPath()));
 	}
 
-	private final Supplier<? extends GitContext> contextSupplier;
-
-	public static GitToMultipleSourcer satisfyingPath(Supplier<? extends GitContext> context,
-			Predicate<Path> pathPredicate) {
-		return new GitToMultipleSourcer(context, (f) -> pathPredicate.test(f.getPath()));
-	}
-
-	public static GitToMultipleSourcer satisfyingPathThenContent(Supplier<? extends GitContext> context,
-			Predicate<Path> pathPredicate, Predicate<String> contentPredicate) {
-		return new GitToMultipleSourcer(context,
+	public static GitToMultipleSourcerOld satisfyingPathThenContent(GitContext context, Predicate<Path> pathPredicate,
+			Predicate<String> contentPredicate) {
+		return new GitToMultipleSourcerOld(context,
 				(f) -> pathPredicate.test(f.getPath()) && contentPredicate.test(f.getContent()));
 	}
 
-	public static GitToMultipleSourcer satisfyingOnContent(Supplier<? extends GitContext> context,
-			Predicate<FileContent> predicate) {
-		return new GitToMultipleSourcer(context, predicate);
+	public static GitToMultipleSourcerOld satisfyingOnContent(GitContext context, Predicate<FileContent> predicate) {
+		return new GitToMultipleSourcerOld(context, predicate);
 	}
 
-	private GitToMultipleSourcer(Supplier<? extends GitContext> context, Predicate<FileContent> predicate) {
-		this.contextSupplier = requireNonNull(context);
+	private GitToMultipleSourcerOld(GitContext context, Predicate<FileContent> predicate) {
+		this.context = requireNonNull(context);
 		this.predicate = requireNonNull(predicate);
+		clear();
 	}
 
 	@Override
-	public MultiContent get() {
-		ImmutableMap<Path, String> contents = init(contextSupplier.get());
+	public ImmutableMap<Path, String> getContents() {
 		assert contents != null;
-		return new MultiContentSupplier(contents);
+		return contents;
 	}
 
-	private ImmutableMap<Path, String> init(GitContext context) throws GradingException {
+	@Override
+	public void clear() {
+		contents = null;
+	}
+
+	@Override
+	public void init() throws GradingException {
 		final Client client = context.getClient();
 		final FileCrawler fileCrawler = new FileCrawler(client);
 
 		try {
-			return initSources(fileCrawler);
+			initSources(fileCrawler);
 		} catch (IOException e) {
 			throw new GradingException(e);
 		}
 	}
 
-	ImmutableMap<Path, String> initSources(FileCrawler fileCrawler)
-			throws IOException, MissingObjectException, IncorrectObjectTypeException {
+	void initSources(FileCrawler fileCrawler) throws IOException, MissingObjectException, IncorrectObjectTypeException {
 		final Set<Path> allPaths = fileCrawler.getRecursively(Paths.get(""));
 
 		final ImmutableMap.Builder<Path, String> contentBuilder = ImmutableMap.builder();
@@ -92,11 +83,11 @@ public class GitToMultipleSourcer implements Supplier<MultiContent> {
 				contentBuilder.put(path, fileContent.getContent());
 			}
 		}
-		return contentBuilder.build();
+		contents = contentBuilder.build();
 	}
 
 	@SuppressWarnings("unused")
-	private static final Logger LOGGER = LoggerFactory.getLogger(GitToMultipleSourcer.class);
+	static final Logger LOGGER = LoggerFactory.getLogger(GitToMultipleSourcerOld.class);
 	private final Predicate<FileContent> predicate;
 
 	static FileContent getAsFileContent(FileCrawler crawler, Path path) {

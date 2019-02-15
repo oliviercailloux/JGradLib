@@ -4,7 +4,7 @@ import java.nio.file.Path;
 
 import com.google.common.collect.ImmutableMap;
 
-public interface MultiContentSupplier {
+public interface MultiContent {
 	/**
 	 * @return the paths are relative to the project directory.
 	 */

@@ -58,7 +58,7 @@ class GradingTest {
 			}
 		};
 
-		final GitToMultipleSourcer testSourcer = GitToTestSourcer.testSourcer(Mockito.mock(GitContext.class))
+		final GitToMultipleSourcerOld testSourcer = GitToTestSourcer.testSourcer(Mockito.mock(GitContext.class))
 				.getDelegate();
 		testSourcer.initSources(fileCrawler);
 		final ImmutableMap<Path, String> contents = testSourcer.getContents();

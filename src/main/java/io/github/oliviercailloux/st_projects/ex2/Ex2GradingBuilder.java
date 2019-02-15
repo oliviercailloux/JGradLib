@@ -23,13 +23,13 @@ import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.st_projects.GraderOrchestrator;
 import io.github.oliviercailloux.st_projects.model.ContentSupplier;
 import io.github.oliviercailloux.st_projects.model.Mark;
-import io.github.oliviercailloux.st_projects.model.MultiContentSupplier;
+import io.github.oliviercailloux.st_projects.model.MultiContent;
 import io.github.oliviercailloux.st_projects.model.StudentGrade;
 import io.github.oliviercailloux.st_projects.model.StudentOnGitHub;
-import io.github.oliviercailloux.st_projects.services.grading.ContextInitializer;
+import io.github.oliviercailloux.st_projects.services.grading.ContextInitializerOld;
 import io.github.oliviercailloux.st_projects.services.grading.CriterionMarker;
 import io.github.oliviercailloux.st_projects.services.grading.GitMarker;
-import io.github.oliviercailloux.st_projects.services.grading.GitToMultipleSourcer;
+import io.github.oliviercailloux.st_projects.services.grading.GitToMultipleSourcerOld;
 import io.github.oliviercailloux.st_projects.services.grading.GitToSourcer;
 import io.github.oliviercailloux.st_projects.services.grading.GradingExecutor;
 import io.github.oliviercailloux.st_projects.services.grading.Markers;
@@ -37,7 +37,7 @@ import io.github.oliviercailloux.st_projects.services.grading.PomContexter;
 import io.github.oliviercailloux.st_projects.services.grading.TimeMarker;
 
 public class Ex2GradingBuilder {
-	private ContextInitializer contextInitializer;
+	private ContextInitializerOld contextInitializer;
 
 	public Ex2GradingBuilder() {
 		contextInitializer = null;
@@ -53,7 +53,7 @@ public class Ex2GradingBuilder {
 	public GradingExecutor build() {
 		final GradingExecutor executor = new GradingExecutor();
 		final Supplier<RepositoryCoordinates> initialSupplier = executor.getInitialSupplier();
-		contextInitializer = ContextInitializer.withIgnore(initialSupplier, ignoreAfter);
+		contextInitializer = ContextInitializerOld.withIgnore(initialSupplier, ignoreAfter);
 		MutableGraph<Object> g = GraphBuilder.directed().build();
 		g.addNode(initialSupplier);
 		g.putEdge(initialSupplier, contextInitializer);
@@ -91,7 +91,7 @@ public class Ex2GradingBuilder {
 //		g.putEdge(pomContexter, packageGroupIdGrader);
 		g.putEdge(contextInitializer, (CriterionMarker) (() -> Mark.binary(Ex2Criterion.COMPILE,
 				new MavenManager().compile(contextInitializer.getClient().getProjectDirectory().resolve("pom.xml")))));
-		final GitToMultipleSourcer servletSourcer = GitToMultipleSourcer.satisfyingPath(contextInitializer,
+		final GitToMultipleSourcerOld servletSourcer = GitToMultipleSourcerOld.satisfyingPath(contextInitializer,
 				(p) -> p.startsWith("src/main/java") && p.getFileName().equals(Paths.get("AdditionerServlet.java")));
 		g.putEdge(contextInitializer, servletSourcer);
 		final CriterionMarker doGetGrader = Markers.predicateMarkerWithComment(Ex2Criterion.DO_GET, servletSourcer,
@@ -159,7 +159,7 @@ public class Ex2GradingBuilder {
 		return thisGrade;
 	}
 
-	private Mark gradeErrorStatus(MultiContentSupplier servletSourcer) {
+	private Mark gradeErrorStatus(MultiContent servletSourcer) {
 		final ImmutableCollection<String> contents = servletSourcer.getContents().values();
 		Ex2Criterion criterion = Ex2Criterion.ERROR_STATUS;
 		if (contents.size() != 1) {

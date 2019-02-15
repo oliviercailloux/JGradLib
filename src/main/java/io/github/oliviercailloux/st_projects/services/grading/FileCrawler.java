@@ -34,12 +34,12 @@ public class FileCrawler {
 			final Path projectDirectory = client.getProjectDirectory();
 			final Path start = projectDirectory.resolve(relativeStart);
 			if (!Files.isDirectory(start)) {
-				GitToMultipleSourcer.LOGGER.debug("No directory " + relativeStart + ".");
+				GitToMultipleSourcerOld.LOGGER.debug("No directory " + relativeStart + ".");
 				all = ImmutableSet.of();
 			} else {
 				all = Files.walk(start).filter((p) -> Files.isRegularFile(p)).map((p) -> projectDirectory.relativize(p))
 						.collect(ImmutableSet.toImmutableSet());
-				GitToMultipleSourcer.LOGGER.debug("Sources: {}.", all);
+				GitToMultipleSourcerOld.LOGGER.debug("Sources: {}.", all);
 			}
 		}
 		return all;

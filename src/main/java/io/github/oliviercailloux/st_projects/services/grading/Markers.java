@@ -27,9 +27,9 @@ import io.github.oliviercailloux.git.Client;
 import io.github.oliviercailloux.st_projects.ex2.MavenManager;
 import io.github.oliviercailloux.st_projects.model.ContentSupplier;
 import io.github.oliviercailloux.st_projects.model.Criterion;
-import io.github.oliviercailloux.st_projects.model.Mark;
 import io.github.oliviercailloux.st_projects.model.GitContext;
-import io.github.oliviercailloux.st_projects.model.MultiContentSupplier;
+import io.github.oliviercailloux.st_projects.model.Mark;
+import io.github.oliviercailloux.st_projects.model.MultiContent;
 import io.github.oliviercailloux.st_projects.model.PomContext;
 import io.github.oliviercailloux.st_projects.utils.GradingUtils;
 
@@ -51,12 +51,12 @@ public class Markers {
 	private static final Logger LOGGER = LoggerFactory.getLogger(Markers.class);
 
 	public static CriterionMarker predicateMarkerWithComment(Criterion criterion,
-			GitToMultipleSourcer multipleSourcesSupplier, Predicate<CharSequence> predicate) {
+			GitToMultipleSourcerOld multipleSourcesSupplier, Predicate<CharSequence> predicate) {
 		return () -> markFromMultipleSources(criterion, multipleSourcesSupplier, predicate);
 	}
 
-	private static Mark markFromMultipleSources(Criterion criterion,
-			MultiContentSupplier mutlipleSourcesSupplier, Predicate<CharSequence> predicate) {
+	private static Mark markFromMultipleSources(Criterion criterion, MultiContent mutlipleSourcesSupplier,
+			Predicate<CharSequence> predicate) {
 		final Set<Path> sources = mutlipleSourcesSupplier.getContents().keySet();
 		final boolean okay;
 		final String comment;
@@ -76,15 +76,13 @@ public class Markers {
 		return Mark.of(criterion, okay ? criterion.getMaxPoints() : 0d, comment);
 	}
 
-	public static Function<Boolean, Mark> fromBool(Criterion criterion, double pointsSucceeds,
-			double pointsFail) {
+	public static Function<Boolean, Mark> fromBool(Criterion criterion, double pointsSucceeds, double pointsFail) {
 		requireNonNull(criterion);
 		checkArgument(Double.isFinite(pointsSucceeds));
 		checkArgument(Double.isFinite(pointsFail));
 		checkArgument(pointsSucceeds >= pointsFail);
 
-		final Function<Boolean, Mark> f = (b) -> Mark.of(criterion, b ? pointsSucceeds : pointsFail,
-				"");
+		final Function<Boolean, Mark> f = (b) -> Mark.of(criterion, b ? pointsSucceeds : pointsFail, "");
 		return f;
 	}
 
@@ -103,7 +101,7 @@ public class Markers {
 		return new GraderUsingSupplierAndPredicate<>(criterion, supplier, conditionForPoints);
 	}
 
-	public static CriterionMarker predicateMarkerAny(Criterion criterion, MultiContentSupplier supplier,
+	public static CriterionMarker predicateMarkerAny(Criterion criterion, MultiContent supplier,
 			Predicate<? super String> conditionForPoints) {
 		final Predicate<? super Map<Path, String>> p = (m) -> m.values().stream().anyMatch(conditionForPoints);
 		return new GraderUsingSupplierAndPredicate<>(criterion, () -> supplier.getContents(), p);
@@ -145,22 +143,23 @@ public class Markers {
 		return new GraderUsingSupplierAndPredicate<>(criterion, () -> supplier.getContent(), conditionForPoints);
 	}
 
-	public static CriterionMarker notEmpty(Criterion criterion, MultiContentSupplier multiSupplier) {
-		return () -> !multiSupplier.getContents().isEmpty() ? Mark.of(criterion, criterion.getMaxPoints(),
-				"Found: " + multiSupplier.getContents().keySet() + ".") : Mark.min(criterion);
+	public static CriterionMarker notEmpty(Criterion criterion, MultiContent multiSupplier) {
+		return () -> !multiSupplier.getContents().isEmpty()
+				? Mark.of(criterion, criterion.getMaxPoints(), "Found: " + multiSupplier.getContents().keySet() + ".")
+				: Mark.min(criterion);
 	}
 
 	public static CriterionMarker notEmpty(Criterion criterion, ContentSupplier contentSupplier) {
 		return () -> Mark.binary(criterion, !contentSupplier.getContent().isEmpty());
 	}
 
-	public static CriterionMarker mavenTestMarker(Criterion criterion, ContextInitializer contextInitializer,
-			GitToTestSourcer testSourcer, PomSupplier pomSupplier) {
+	public static CriterionMarker mavenTestMarker(Criterion criterion, GitContext context, GitToTestSourcer testSourcer,
+			PomSupplier pomSupplier) {
 		final MavenManager mavenManager = new MavenManager();
 		return () -> Mark.binary(criterion,
 				testSourcer.getContents().keySet().stream().anyMatch(testSourcer::isSurefireTestFile)
 						&& pomSupplier.getProjectRelativeRoot().isPresent()
-						&& mavenManager.test(contextInitializer.getClient().getProjectDirectory()
+						&& mavenManager.test(context.getClient().getProjectDirectory()
 								.resolve(pomSupplier.getProjectRelativeRoot().get().resolve("pom.xml"))));
 	}
 
@@ -169,18 +168,16 @@ public class Markers {
 		return p1.and((p) -> p.startsWith(pomSupplier.getProjectRelativeRoot().get().resolve(start)));
 	}
 
-	public static CriterionMarker mavenCompileMarker(Criterion criterion, ContextInitializer contextInitializer,
-			PomSupplier pomSupplier) {
+	public static CriterionMarker mavenCompileMarker(Criterion criterion, GitContext context, PomSupplier pomSupplier) {
 		final MavenManager mavenManager = new MavenManager();
 		return () -> {
 			final Optional<Path> projectRelativeRootOpt = pomSupplier.getProjectRelativeRoot();
-			return Mark.binary(criterion,
-					projectRelativeRootOpt.isPresent() && mavenManager.compile(contextInitializer.getClient()
-							.getProjectDirectory().resolve(projectRelativeRootOpt.get().resolve("pom.xml"))));
+			return Mark.binary(criterion, projectRelativeRootOpt.isPresent() && mavenManager.compile(context.getClient()
+					.getProjectDirectory().resolve(projectRelativeRootOpt.get().resolve("pom.xml"))));
 		};
 	}
 
-	public static CriterionMarker predicateMarker(Criterion criterion, MultiContentSupplier supplier,
+	public static CriterionMarker predicateMarker(Criterion criterion, MultiContent supplier,
 			Predicate<? super String> conditionForPoints) {
 		final Predicate<? super Map<Path, String>> p = (m) -> m.values().stream().allMatch(conditionForPoints);
 		return new GraderUsingSupplierAndPredicate<>(criterion, () -> supplier.getContents(), p);

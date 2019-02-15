@@ -13,7 +13,7 @@ import com.google.common.collect.ImmutableSet;
 
 import io.github.oliviercailloux.st_projects.model.ContentSupplier;
 import io.github.oliviercailloux.st_projects.model.GradingContexter;
-import io.github.oliviercailloux.st_projects.model.MultiContentSupplier;
+import io.github.oliviercailloux.st_projects.model.MultiContent;
 
 /**
  * Has no internal state, thus, does not implement {@link GradingContexter}.
@@ -23,14 +23,14 @@ import io.github.oliviercailloux.st_projects.model.MultiContentSupplier;
  */
 public class PomSupplier implements ContentSupplier {
 
-	public static PomSupplier basedOn(MultiContentSupplier supplier) {
+	public static PomSupplier basedOn(MultiContent supplier) {
 		return new PomSupplier(supplier);
 	}
 
 	private final ContentSupplier delegate;
-	private MultiContentSupplier underlyingMultiSupplier;
+	private MultiContent underlyingMultiSupplier;
 
-	private PomSupplier(MultiContentSupplier supplier) {
+	private PomSupplier(MultiContent supplier) {
 		this.underlyingMultiSupplier = requireNonNull(supplier);
 		this.delegate = new MultiToSingleSupplier(supplier);
 	}

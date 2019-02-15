@@ -10,18 +10,18 @@ import com.google.common.collect.ImmutableMap;
 
 import io.github.oliviercailloux.st_projects.model.GitContext;
 import io.github.oliviercailloux.st_projects.model.GradingContexter;
-import io.github.oliviercailloux.st_projects.model.MultiContentSupplier;
+import io.github.oliviercailloux.st_projects.model.MultiContent;
 
-public class GitToTestSourcer implements GradingContexter, MultiContentSupplier {
+public class GitToTestSourcer implements GradingContexter, MultiContent {
 	private final static Pattern HAS_JUNIT_TEST_CONTENT = Pattern
 			.compile("(\\h*@Test)|(org\\.junit\\.jupiter\\.api\\.Assertions)");
-	private final GitToMultipleSourcer delegate;
+	private final GitToMultipleSourcerOld delegate;
 
 	private GitToTestSourcer(GitContext context) {
-		delegate = GitToMultipleSourcer.satisfyingOnContent(context, this::isTestFile);
+		delegate = GitToMultipleSourcerOld.satisfyingOnContent(context, this::isTestFile);
 	}
 
-	GitToMultipleSourcer getDelegate() {
+	GitToMultipleSourcerOld getDelegate() {
 		return delegate;
 	}
 
