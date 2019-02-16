@@ -1,4 +1,4 @@
-package io.github.oliviercailloux.git.utils;
+package io.github.oliviercailloux.utils;
 
 import java.net.URI;
 
@@ -14,5 +14,7 @@ public class Utils {
 	public static boolean implies(boolean a, boolean b) {
 		return !a || b;
 	}
+
+	public static final String ANY_REG_EXP = "[\\s\\S]*";
 
 }

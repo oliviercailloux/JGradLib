@@ -47,6 +47,5 @@ public class Utils {
 
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(Utils.class);
-	public static final String ANY = "[\\s\\S]*";
 
 }

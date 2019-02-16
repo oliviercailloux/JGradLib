@@ -30,7 +30,6 @@ import static io.github.oliviercailloux.st_projects.ex3.Ex3Criterion.TRAVIS_CONF
 import static io.github.oliviercailloux.st_projects.ex3.Ex3Criterion.TRAVIS_OK;
 import static io.github.oliviercailloux.st_projects.ex3.Ex3Criterion.UTF;
 import static io.github.oliviercailloux.st_projects.ex3.Ex3Criterion.WAR;
-import static io.github.oliviercailloux.st_projects.utils.Utils.ANY;
 import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
@@ -69,6 +68,7 @@ import io.github.oliviercailloux.st_projects.services.grading.Markers;
 import io.github.oliviercailloux.st_projects.services.grading.PomContexter;
 import io.github.oliviercailloux.st_projects.services.grading.PomSupplier;
 import io.github.oliviercailloux.st_projects.services.grading.TimeMarker;
+import io.github.oliviercailloux.utils.Utils;
 
 public class Ex3Grader {
 
@@ -100,23 +100,23 @@ public class Ex3Grader {
 		pomContexter.init();
 
 		gradesBuilder.add(Markers.groupIdMarker(GROUP_ID, pomContexter).mark());
-		gradesBuilder
-				.add(Markers.predicateMarker(JUNIT5_DEP, pomSupplier,
-						Markers.containsOnce(Pattern.compile("<dependencies>" + ANY + "<dependency>" + ANY
-								+ "<groupId>org\\.junit\\.jupiter</groupId>" + ANY
-								+ "<artifactId>junit-jupiter-engine</artifactId>" + ANY + "<version>5\\.[23]\\." + ANY
-								+ "</version>" + ANY + "<scope>test</scope>")))
-						.mark());
+		gradesBuilder.add(Markers.predicateMarker(JUNIT5_DEP, pomSupplier,
+				Markers.containsOnce(Pattern.compile("<dependencies>" + Utils.ANY_REG_EXP + "<dependency>"
+						+ Utils.ANY_REG_EXP + "<groupId>org\\.junit\\.jupiter</groupId>" + Utils.ANY_REG_EXP
+						+ "<artifactId>junit-jupiter-engine</artifactId>" + Utils.ANY_REG_EXP + "<version>5\\.[23]\\."
+						+ Utils.ANY_REG_EXP + "</version>" + Utils.ANY_REG_EXP + "<scope>test</scope>")))
+				.mark());
 		gradesBuilder.add(Markers.predicateMarker(UTF, pomSupplier,
-				Markers.containsOnce(Pattern.compile("<properties>" + ANY
-						+ "<project\\.build\\.sourceEncoding>UTF-8</project\\.build\\.sourceEncoding>" + ANY
-						+ "</properties>")))
+				Markers.containsOnce(Pattern.compile("<properties>" + Utils.ANY_REG_EXP
+						+ "<project\\.build\\.sourceEncoding>UTF-8</project\\.build\\.sourceEncoding>"
+						+ Utils.ANY_REG_EXP + "</properties>")))
 				.mark());
-		gradesBuilder.add(Markers
-				.predicateMarker(SOURCE, pomSupplier,
-						Markers.containsOnce(Pattern.compile("<properties>" + ANY
-								+ "<maven\\.compiler\\.source>.*</maven\\.compiler\\.source>" + ANY + "</properties>")))
-				.mark());
+		gradesBuilder
+				.add(Markers.predicateMarker(SOURCE, pomSupplier,
+						Markers.containsOnce(Pattern.compile("<properties>" + Utils.ANY_REG_EXP
+								+ "<maven\\.compiler\\.source>.*</maven\\.compiler\\.source>" + Utils.ANY_REG_EXP
+								+ "</properties>")))
+						.mark());
 		gradesBuilder
 				.add(Markers
 						.predicateMarker(NO_MISLEADING_URL, pomSupplier,
@@ -161,12 +161,10 @@ public class Ex3Grader {
 				.mark());
 		gradesBuilder.add(Markers.predicateMarker(ANNOT, servletSourcer,
 				Predicates.contains(Pattern.compile("@WebServlet.*\\(.*/hello\".*\\)"))).mark());
-		gradesBuilder
-				.add(Markers
-						.predicateMarker(FINAL_NAME, pomSupplier,
-								Markers.containsOnce(Pattern
-										.compile("<build>" + ANY + "<finalName>myapp</finalName>" + ANY + "</build>")))
-						.mark());
+		gradesBuilder.add(Markers
+				.predicateMarker(FINAL_NAME, pomSupplier, Markers.containsOnce(Pattern.compile("<build>"
+						+ Utils.ANY_REG_EXP + "<finalName>myapp</finalName>" + Utils.ANY_REG_EXP + "</build>")))
+				.mark());
 		gradesBuilder.add(Markers.gradeOnlyOrig(ONLY_ORIG, fullContext).mark());
 		gradesBuilder.add(Markers.predicateMarker(GET_HELLO, servletSourcer,
 				Predicates.contains(Pattern.compile("\"Hello,? world\\.?\""))).mark());

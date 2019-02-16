@@ -50,7 +50,7 @@ import com.google.common.collect.Table;
 import com.google.common.collect.TreeBasedTable;
 
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
-import io.github.oliviercailloux.git.utils.Utils;
+import io.github.oliviercailloux.utils.Utils;
 
 public class Client {
 	public static Client aboutAndUsing(RepositoryCoordinates coordinates, Path path) {
