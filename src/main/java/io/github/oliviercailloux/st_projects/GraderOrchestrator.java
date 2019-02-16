@@ -95,7 +95,8 @@ public class GraderOrchestrator {
 	}
 
 	public void readUsernames() throws IOException {
-		try (InputStream inputStream = Files.newInputStream(Paths.get("usernames.json"))) {
+		try (InputStream inputStream = Files
+				.newInputStream(Paths.get("../../Java SITN, app, concept°/usernames.json"))) {
 			usernames.read(inputStream);
 		}
 	}
