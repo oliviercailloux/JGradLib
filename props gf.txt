@@ -1,0 +1,35 @@
+asadmin create-system-properties "token_github_projects_review=…"
+
+also: change manifest of GF5, see https://stackoverflow.com/questions/46584107/eclipse-support-for-glassfish-5/47365860#47365860
+
+remove guava from GF5 modules, too old
+GF5.0.0 stable: can’t use joda time (required by asciidoctor), see https://github.com/javaee/glassfish/issues/22270
+glassfish-5.0.1-b01-10_03_2017: same
+GF latest (15 march): fails when posting query, maybe masks SSL exception. When changed code slightly, fails when posting query, java.lang.NoClassDefFoundError: sun/security/ssl/EllipticCurvesExtension
+
+glassfish-5.0.1-b01-11_30_2017: works! (And no guava there.)
+… but then doesn’t work (javax.ws.rs.ProcessingException: Already connected).
+
+Tried Payara 5.183
+https://docs.payara.fish/documentation/payara-server/classloading.html
+asadmin create-system-properties "fish.payara.classloading.delegate=false"
+		LOGGER.info("Path: {}.", Table.class.getProtectionDomain().getCodeSource().getLocation().getPath());
+Path: /home/olivier/Local/Dropbox/Logiciels/Progra/payara5/glassfish/modules/guava.jar
+asadmin list-system-properties
+
+asadmin list-system-properties server-config
+JMS_PROVIDER_PORT=7676
+
+https://github.com/payara/Payara/issues/1249
+
+also tried to delete the osgi cache folder.
+
+
+WF
+./bin/jboss-cli.sh --connect
+/system-property=token_github_projects_review:add(value=6cf9872b3b12afb79e59e7f0eb4e94bbbcce8cfd)
+/system-property=ee8.preview.mode:add(value=true)
+(otherwize see /home/olivier/Logiciels/Progra/wildfly-12.0.0.Final/modules/system/layers/base/org/glassfish/javax/json/main/module.xml, it uses javax.json-1.0.4.jar instead of javax.json-1.1.2.jar and crashes with java.lang.NoSuchMethodError: javax.json.JsonWriter.write(Ljavax/json/JsonValue;)V
+
+Remaining: problem with loading asciidoctor in OSGi environment.
+
