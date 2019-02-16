@@ -18,7 +18,7 @@ public class JsonCriterion {
 		final JsonObjectBuilder builder = Json.createObjectBuilder();
 		builder.add("class", cEnum.getClass().getCanonicalName());
 		builder.add("name", cEnum.name());
-		return PrintableJsonObjectFactory.wrap(builder.build());
+		return PrintableJsonObjectFactory.wrapObject(builder.build());
 	}
 
 	public static Criterion asCriterion(JsonObject json) {

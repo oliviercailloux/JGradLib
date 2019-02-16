@@ -91,7 +91,7 @@ public class TestGitHubProject {
 			assertFalse(project.getIssuesOriginallyNamed("non-existant").size() == 1);
 			assertEquals("testrel", project.getBare().getName());
 
-			LOGGER.debug(PrintableJsonObjectFactory.wrap(project.getOwner().getJson()).toString());
+			LOGGER.debug(PrintableJsonObjectFactory.wrapObject(project.getOwner().getJson()).toString());
 			assertEquals("oliviercailloux", project.getOwner().getLogin());
 		}
 	}

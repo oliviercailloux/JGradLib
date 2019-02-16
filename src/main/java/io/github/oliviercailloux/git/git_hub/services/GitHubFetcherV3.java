@@ -239,7 +239,7 @@ public class GitHubFetcherV3 implements AutoCloseable {
 		final ImmutableList<Event> startEvents = events.stream()
 				.filter((e) -> e.getType().equals(EventType.CREATE_EVENT)).collect(ImmutableList.toImmutableList());
 		LOGGER.info("All: {}.",
-				startEvents.stream().<String>map((e) -> PrintableJsonObjectFactory.wrap(e.getJson()).toString())
+				startEvents.stream().<String>map((e) -> PrintableJsonObjectFactory.wrapObject(e.getJson()).toString())
 						.collect(Collectors.joining(", ")));
 		return startEvents;
 	}
@@ -424,7 +424,7 @@ public class GitHubFetcherV3 implements AutoCloseable {
 		final ImmutableList<Event> pushEvents = events.stream().filter((e) -> e.getPushPayload().isPresent())
 				.collect(ImmutableList.toImmutableList());
 		LOGGER.debug("All: {}.",
-				pushEvents.stream().<String>map((e) -> PrintableJsonObjectFactory.wrap(e.getJson()).toString())
+				pushEvents.stream().<String>map((e) -> PrintableJsonObjectFactory.wrapObject(e.getJson()).toString())
 						.collect(Collectors.joining(", ")));
 		return pushEvents;
 	}

@@ -22,7 +22,7 @@ public class JsonStudentOnGitHub {
 		}
 
 		final JsonObject json = Json.createObjectBuilder().add("gitHubUsername", student.getGitHubUsername()).build();
-		return PrintableJsonObjectFactory.wrap(json);
+		return PrintableJsonObjectFactory.wrapObject(json);
 	}
 
 	public static StudentOnGitHub asStudentOnGitHub(JsonObject json) {

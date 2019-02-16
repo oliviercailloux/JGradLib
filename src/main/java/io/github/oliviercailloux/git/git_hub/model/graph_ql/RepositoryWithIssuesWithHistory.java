@@ -52,7 +52,7 @@ public class RepositoryWithIssuesWithHistory {
 	private final Repository repository;
 
 	private RepositoryWithIssuesWithHistory(JsonObject json) {
-		LOGGER.debug(PrintableJsonObjectFactory.wrap(json).toString());
+		LOGGER.debug(PrintableJsonObjectFactory.wrapObject(json).toString());
 		repository = Repository.from(json);
 		final JsonObject issuesConnection = json.getJsonObject("issues");
 		/**

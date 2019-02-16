@@ -58,7 +58,7 @@ public class Event {
 
 	@Override
 	public String toString() {
-		return MoreObjects.toStringHelper(this).addValue(PrintableJsonObjectFactory.wrap(json)).toString();
+		return MoreObjects.toStringHelper(this).addValue(PrintableJsonObjectFactory.wrapObject(json)).toString();
 	}
 
 }

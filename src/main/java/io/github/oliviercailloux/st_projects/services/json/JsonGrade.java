@@ -34,7 +34,7 @@ public class JsonGrade {
 			}
 		}
 		builder.add("marks", marksBuilder);
-		return PrintableJsonObjectFactory.wrap(builder.build());
+		return PrintableJsonObjectFactory.wrapObject(builder.build());
 //		return JsonUtils.serializeWithJsonB(grade, JsonStudentOnGitHub.asAdapter(), JsonCriterion.asAdapter());
 	}
 

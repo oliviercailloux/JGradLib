@@ -128,7 +128,7 @@ public class GitHubFetcherQL implements AutoCloseable {
 			throw new IllegalStateException(ret.toString());
 		}
 		final JsonObject data = ret.getJsonObject("data");
-		LOGGER.debug(PrintableJsonObjectFactory.wrap(data).toString());
+		LOGGER.debug(PrintableJsonObjectFactory.wrapObject(data).toString());
 		return data;
 	}
 
@@ -141,7 +141,7 @@ public class GitHubFetcherQL implements AutoCloseable {
 			dataOpt = Optional.empty();
 		} else {
 			final JsonObject data = ret.getJsonObject("data");
-			LOGGER.debug(PrintableJsonObjectFactory.wrap(data).toString());
+			LOGGER.debug(PrintableJsonObjectFactory.wrapObject(data).toString());
 			dataOpt = Optional.of(data);
 		}
 		return dataOpt;
@@ -171,7 +171,7 @@ public class GitHubFetcherQL implements AutoCloseable {
 				String message;
 				try {
 					ret = response.readEntity(JsonObject.class);
-					message = PrintableJsonObjectFactory.wrap(ret).toString();
+					message = PrintableJsonObjectFactory.wrapObject(ret).toString();
 				} catch (Exception masqued) {
 					message = "(and could not read entity: " + masqued.getMessage() + ")";
 				}

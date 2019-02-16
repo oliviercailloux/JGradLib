@@ -22,7 +22,7 @@ public class JsonStudentOnGitHubKnown {
 		LOGGER.debug("Created {}.", mcJson);
 		final JsonObject json = Json.createObjectBuilder().add("gitHubUsername", student.getGitHubUsername())
 				.addAll(Json.createObjectBuilder(mcJson)).build();
-		return PrintableJsonObjectFactory.wrap(json);
+		return PrintableJsonObjectFactory.wrapObject(json);
 	}
 
 	public static StudentOnGitHubKnown asStudentOnGitHubKnown(JsonObject json) {
