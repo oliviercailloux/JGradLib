@@ -16,27 +16,26 @@ import org.eclipse.jgit.revwalk.RevCommit;
 
 import io.github.oliviercailloux.git.Client;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
-import io.github.oliviercailloux.st_projects.ex2.GitAndGitHub;
 import io.github.oliviercailloux.st_projects.model.GitFullContext;
 import io.github.oliviercailloux.st_projects.model.GradingContextWithTimeline;
 
-public class ContextInitializerNew implements GitFullContext {
+public class ContextInitializer implements GitFullContext {
 
-	public static ContextInitializerNew with(RepositoryCoordinates coordinatesSupplier) {
+	public static ContextInitializer with(RepositoryCoordinates coordinatesSupplier) {
 		final String tmpDir = System.getProperty("java.io.tmpdir");
-		return new ContextInitializerNew(coordinatesSupplier, Paths.get(tmpDir), Instant.MAX);
+		return new ContextInitializer(coordinatesSupplier, Paths.get(tmpDir), Instant.MAX);
 	}
 
 	public static GitFullContext withPathAndIgnoreAndInit(RepositoryCoordinates coordinatesSupplier,
 			Path projectsBaseDir, Instant ignoreAfter) {
-		final ContextInitializerNew ci = new ContextInitializerNew(coordinatesSupplier, projectsBaseDir, ignoreAfter);
+		final ContextInitializer ci = new ContextInitializer(coordinatesSupplier, projectsBaseDir, ignoreAfter);
 		ci.init();
 		return ci;
 	}
 
-	public static ContextInitializerNew withIgnore(RepositoryCoordinates coordinatesSupplier, Instant ignoreAfter) {
+	public static ContextInitializer withIgnore(RepositoryCoordinates coordinatesSupplier, Instant ignoreAfter) {
 		final String tmpDir = System.getProperty("java.io.tmpdir");
-		return new ContextInitializerNew(coordinatesSupplier, Paths.get(tmpDir), ignoreAfter);
+		return new ContextInitializer(coordinatesSupplier, Paths.get(tmpDir), ignoreAfter);
 	}
 
 	private Client client;
@@ -46,7 +45,7 @@ public class ContextInitializerNew implements GitFullContext {
 	private RepositoryCoordinates coordinatesSupplier;
 	private Path projectsBaseDir;
 
-	private ContextInitializerNew(RepositoryCoordinates coordinatesSupplier, Path projectsBaseDir,
+	private ContextInitializer(RepositoryCoordinates coordinatesSupplier, Path projectsBaseDir,
 			Instant ignoredAfter) {
 		this.ignoreAfter = requireNonNull(ignoredAfter);
 		this.coordinatesSupplier = requireNonNull(coordinatesSupplier);
@@ -107,9 +106,9 @@ public class ContextInitializerNew implements GitFullContext {
 		return context.getCommitsReceptionTime().get(lastCommitNotIgnored.get());
 	}
 
-	public static ContextInitializerNew withPathAndIgnore(RepositoryCoordinates coordinatesSupplier,
+	public static ContextInitializer withPathAndIgnore(RepositoryCoordinates coordinatesSupplier,
 			Path projectsBaseDir, Instant ignoreAfter) {
-		return new ContextInitializerNew(coordinatesSupplier, projectsBaseDir, ignoreAfter);
+		return new ContextInitializer(coordinatesSupplier, projectsBaseDir, ignoreAfter);
 	}
 
 }

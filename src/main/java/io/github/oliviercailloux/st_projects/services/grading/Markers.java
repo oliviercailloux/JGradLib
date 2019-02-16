@@ -24,7 +24,6 @@ import com.diffplug.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 
 import io.github.oliviercailloux.git.Client;
-import io.github.oliviercailloux.st_projects.ex2.MavenManager;
 import io.github.oliviercailloux.st_projects.model.ContentSupplier;
 import io.github.oliviercailloux.st_projects.model.Criterion;
 import io.github.oliviercailloux.st_projects.model.GitContext;
@@ -51,7 +50,7 @@ public class Markers {
 	private static final Logger LOGGER = LoggerFactory.getLogger(Markers.class);
 
 	public static CriterionMarker predicateMarkerWithComment(Criterion criterion,
-			GitToMultipleSourcerOld multipleSourcesSupplier, Predicate<CharSequence> predicate) {
+			GitToMultipleSourcer multipleSourcesSupplier, Predicate<CharSequence> predicate) {
 		return () -> markFromMultipleSources(criterion, multipleSourcesSupplier, predicate);
 	}
 

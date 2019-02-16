@@ -38,13 +38,10 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Instant;
 import java.time.ZonedDateTime;
-import java.util.Optional;
-import java.util.function.Supplier;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import org.eclipse.jgit.revwalk.RevCommit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -52,7 +49,6 @@ import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableSet;
 
-import io.github.oliviercailloux.git.Client;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.st_projects.model.ContentSupplier;
 import io.github.oliviercailloux.st_projects.model.Criterion;
@@ -60,13 +56,12 @@ import io.github.oliviercailloux.st_projects.model.GitContext;
 import io.github.oliviercailloux.st_projects.model.GitFullContext;
 import io.github.oliviercailloux.st_projects.model.Mark;
 import io.github.oliviercailloux.st_projects.model.MultiContent;
-import io.github.oliviercailloux.st_projects.services.grading.ContextInitializerNew;
+import io.github.oliviercailloux.st_projects.services.grading.ContextInitializer;
 import io.github.oliviercailloux.st_projects.services.grading.CriterionMarker;
 import io.github.oliviercailloux.st_projects.services.grading.FileCrawler;
 import io.github.oliviercailloux.st_projects.services.grading.GitAndBaseToSourcer;
 import io.github.oliviercailloux.st_projects.services.grading.GitMarker;
-import io.github.oliviercailloux.st_projects.services.grading.GitToMultipleSourcerNew;
-import io.github.oliviercailloux.st_projects.services.grading.GitToMultipleSourcerOld;
+import io.github.oliviercailloux.st_projects.services.grading.GitToMultipleSourcer;
 import io.github.oliviercailloux.st_projects.services.grading.GitToSourcer;
 import io.github.oliviercailloux.st_projects.services.grading.GitToTestSourcer;
 import io.github.oliviercailloux.st_projects.services.grading.GradingException;
@@ -83,7 +78,7 @@ public class Ex3Grader {
 	public ImmutableSet<Mark> grade(RepositoryCoordinates coord) {
 		final ImmutableSet.Builder<Mark> gradesBuilder = ImmutableSet.builder();
 
-		final GitFullContext fullContext = ContextInitializerNew.withPathAndIgnoreAndInit(coord,
+		final GitFullContext fullContext = ContextInitializer.withPathAndIgnoreAndInit(coord,
 				Paths.get("/home/olivier/Professions/Enseignement/En cours/ci"), ignoreAfter);
 		final double maxGrade = Stream.of(Ex3Criterion.values())
 				.collect(Collectors.summingDouble(Criterion::getMaxPoints));
@@ -95,7 +90,7 @@ public class Ex3Grader {
 		 * Need to limit depth, otherwise will find
 		 * target/m2e-wtp/web-resources/META-INF/maven/<groupId>/<artifactId>/pom.xml.
 		 */
-		final MultiContent multiPom = GitToMultipleSourcerNew.satisfyingPathAndInit(fullContext,
+		final MultiContent multiPom = GitToMultipleSourcer.satisfyingPathAndInit(fullContext,
 				(p) -> p.getNameCount() <= 6 && p.getFileName().toString().equals("pom.xml"));
 		final PomSupplier pomSupplier = PomSupplier.basedOn(multiPom);
 
@@ -133,7 +128,7 @@ public class Ex3Grader {
 		gradesBuilder.add(Markers.packageGroupIdMarker(PREFIX, fullContext, pomSupplier, pomContexter).mark());
 		gradesBuilder.add(Markers.mavenCompileMarker(COMPILE, fullContext, pomSupplier).mark());
 
-		final MultiContent servletSourcer = GitToMultipleSourcerOld.satisfyingPathAndInit(fullContext,
+		final MultiContent servletSourcer = GitToMultipleSourcer.satisfyingPathAndInit(fullContext,
 				Markers.startsWithPredicate(pomSupplier, Paths.get("src/main/java"))
 						.and((p) -> p.getFileName().equals(Paths.get("HelloServlet.java"))));
 

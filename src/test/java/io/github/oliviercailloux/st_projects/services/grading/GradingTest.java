@@ -24,7 +24,7 @@ import io.github.oliviercailloux.st_projects.model.GitContext;
 class GradingTest {
 
 	@Test
-	void testJunitDiscovery() throws IOException {
+	void testJunitDiscovery() {
 		/**
 		 * 1 iff is in src/test/java, 2 iff is named Test* or *Test, 3 iff contains
 		 * right content.
@@ -46,7 +46,8 @@ class GradingTest {
 		expected.remove(t1.getPath());
 		expected.remove(t2.getPath());
 
-		final FileCrawler fileCrawler = new FileCrawler(Mockito.mock(Client.class)) {
+		final Client mockedClient = Mockito.mock(Client.class);
+		final FileCrawler mockedFileCrawler = new FileCrawler(mockedClient) {
 			@Override
 			public String getFileContent(Path path) throws IOException {
 				return filesMap.get(path);
@@ -57,10 +58,13 @@ class GradingTest {
 				return filesMap.keySet();
 			}
 		};
+		final GitContext mockedContext = Mockito.mock(GitContext.class);
+		Mockito.when(mockedContext.getClient()).thenReturn(mockedClient);
 
-		final GitToMultipleSourcerOld testSourcer = GitToTestSourcer.testSourcer(Mockito.mock(GitContext.class))
-				.getDelegate();
-		testSourcer.initSources(fileCrawler);
+		final GitToTestSourcer testSourcer = new GitToTestSourcer(mockedContext);
+		testSourcer.getDelegate().setFileCrawlerFactory((c) -> mockedFileCrawler);
+
+		testSourcer.init();
 		final ImmutableMap<Path, String> contents = testSourcer.getContents();
 		LOGGER.info("Expected: {}.", expected);
 		LOGGER.info("Got: {}.", contents);
@@ -102,15 +106,6 @@ class GradingTest {
 			assertEquals("one.two", c.getGroupId());
 			assertEquals(ImmutableList.of("one", "two"), c.getGroupIdElements());
 		}
-	}
-
-	private ContentSupplier getContentSupplier(String content) {
-		return new ContentSupplier() {
-			@Override
-			public String getContent() {
-				return content;
-			}
-		};
 	}
 
 	private PomContexter getPomContexter(String pom) {

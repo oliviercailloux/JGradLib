@@ -1,4 +1,4 @@
-package io.github.oliviercailloux.st_projects.ex2;
+package io.github.oliviercailloux.st_projects.services.draft;
 
 import java.io.IOException;
 import java.lang.reflect.Constructor;

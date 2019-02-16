@@ -10,7 +10,7 @@
         "marks": [
             {
                 "criterion": {
-                    "class": "io.github.oliviercailloux.st_projects.ex2.Ex2Criterion",
+                    "class": "io.github.oliviercailloux.st_projects.services.json.TestCriterion",
                     "name": "ENC"
                 },
                 "points": 1.0,
@@ -29,7 +29,7 @@
         "marks": [
             {
                 "criterion": {
-                    "class": "io.github.oliviercailloux.st_projects.ex2.Ex2Criterion",
+                    "class": "io.github.oliviercailloux.st_projects.services.json.TestCriterion",
                     "name": "ANNOT"
                 },
                 "points": 0.0,

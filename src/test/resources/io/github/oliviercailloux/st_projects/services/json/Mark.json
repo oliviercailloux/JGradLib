@@ -1,6 +1,6 @@
 {
     "criterion": {
-        "class": "io.github.oliviercailloux.st_projects.ex2.Ex2Criterion",
+        "class": "io.github.oliviercailloux.st_projects.services.json.TestCriterion",
         "name": "ENC"
     },
     "points": 1.0,

@@ -12,15 +12,8 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.ImmutableSet;
 
 import io.github.oliviercailloux.st_projects.model.ContentSupplier;
-import io.github.oliviercailloux.st_projects.model.GradingContexter;
 import io.github.oliviercailloux.st_projects.model.MultiContent;
 
-/**
- * Has no internal state, thus, does not implement {@link GradingContexter}.
- *
- * @author Olivier Cailloux
- *
- */
 public class PomSupplier implements ContentSupplier {
 
 	public static PomSupplier basedOn(MultiContent supplier) {

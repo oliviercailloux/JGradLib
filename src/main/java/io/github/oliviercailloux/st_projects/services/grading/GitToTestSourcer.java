@@ -9,19 +9,18 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.ImmutableMap;
 
 import io.github.oliviercailloux.st_projects.model.GitContext;
-import io.github.oliviercailloux.st_projects.model.GradingContexter;
 import io.github.oliviercailloux.st_projects.model.MultiContent;
 
-public class GitToTestSourcer implements GradingContexter, MultiContent {
+public class GitToTestSourcer implements MultiContent {
 	private final static Pattern HAS_JUNIT_TEST_CONTENT = Pattern
 			.compile("(\\h*@Test)|(org\\.junit\\.jupiter\\.api\\.Assertions)");
-	private final GitToMultipleSourcerOld delegate;
+	private final GitToMultipleSourcer delegate;
 
-	private GitToTestSourcer(GitContext context) {
-		delegate = GitToMultipleSourcerOld.satisfyingOnContent(context, this::isTestFile);
+	GitToTestSourcer(GitContext context) {
+		delegate = GitToMultipleSourcer.satisfyingOnContent(context, this::isTestFile);
 	}
 
-	GitToMultipleSourcerOld getDelegate() {
+	GitToMultipleSourcer getDelegate() {
 		return delegate;
 	}
 
@@ -48,16 +47,10 @@ public class GitToTestSourcer implements GradingContexter, MultiContent {
 	private static final Logger LOGGER = LoggerFactory.getLogger(GitToTestSourcer.class);
 
 	@Override
-	public void clear() {
-		delegate.clear();
-	}
-
-	@Override
 	public ImmutableMap<Path, String> getContents() {
 		return delegate.getContents();
 	}
 
-	@Override
 	public void init() throws GradingException {
 		delegate.init();
 	}

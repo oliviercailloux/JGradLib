@@ -13,10 +13,9 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.ImmutableList;
 
 import io.github.oliviercailloux.st_projects.model.ContentSupplier;
-import io.github.oliviercailloux.st_projects.model.GradingContexter;
 import io.github.oliviercailloux.st_projects.model.PomContext;
 
-public class PomContexter implements GradingContexter, PomContext {
+public class PomContexter implements PomContext {
 	private final ContentSupplier supplier;
 	private String groupId;
 	/**
@@ -26,16 +25,10 @@ public class PomContexter implements GradingContexter, PomContext {
 
 	public PomContexter(ContentSupplier supplier) {
 		this.supplier = requireNonNull(supplier);
-		clear();
-	}
-
-	@Override
-	public void clear() {
 		groupId = null;
 		groupIdElements = null;
 	}
 
-	@Override
 	public void init() throws GradingException {
 		final String content = supplier.getContent();
 		final Matcher matcher = Pattern.compile(

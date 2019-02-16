@@ -1,4 +1,4 @@
-package io.github.oliviercailloux.st_projects.ex2;
+package io.github.oliviercailloux.st_projects.services.grading;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;

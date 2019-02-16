@@ -1,7 +1,7 @@
 package io.github.oliviercailloux.st_projects.services.json;
 
-import static io.github.oliviercailloux.st_projects.ex2.Ex2Criterion.ANNOT;
-import static io.github.oliviercailloux.st_projects.ex2.Ex2Criterion.ENC;
+import static io.github.oliviercailloux.st_projects.services.json.TestCriterion.ANNOT;
+import static io.github.oliviercailloux.st_projects.services.json.TestCriterion.ENC;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.nio.charset.StandardCharsets;

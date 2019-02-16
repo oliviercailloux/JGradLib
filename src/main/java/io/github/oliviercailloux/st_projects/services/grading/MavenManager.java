@@ -1,4 +1,4 @@
-package io.github.oliviercailloux.st_projects.ex2;
+package io.github.oliviercailloux.st_projects.services.grading;
 
 import static com.google.common.base.Preconditions.checkState;
 
@@ -20,8 +20,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
-
-import io.github.oliviercailloux.st_projects.services.grading.GradingException;
 
 public class MavenManager {
 
