@@ -1,7 +1,0 @@
-A grader depends on pieces of context. Those are provided by context providers. Those providers may be shared among several graders. The providers create conceptually scoped contexts. The GraderController will tell the producers where the scope starts and ends. Within a given scope, the graders that ask for a context to a provider will all receive the same context.
-
-Guice wants that the logic of who creates the instance to be injected be controlled externally, be unknown from its user, and be simple; in my case it is appropriate that the Grader knows how to create the instances, and the logic of creating providers is sufficiently complex that it shouldn’t be completely automated.
-
-Might work with https://google.github.io/guice/api-docs/latest/javadoc/index.html?com/google/inject/PrivateModule.html[Private modules] (see https://stackoverflow.com/questions/20041776/multiple-instance-of-the-same-provider, https://stackoverflow.com/questions/18505960/giving-a-value-to-provider-in-guice), but feels like using a tool for something it is not conceived for. 
-
-The contexter should be associated with a Provider<Context>. Its users should depend on this provider. Only the Coordinator should access init() and clear(). The grader does not know its contexter, only the provider.
