@@ -11,7 +11,7 @@ import javax.json.JsonArray;
 import javax.json.JsonObject;
 import javax.json.JsonValue;
 
-import io.github.oliviercailloux.json.JsonObjectWrapper;
+import io.github.oliviercailloux.json.PrintableJsonObjectFactory;
 
 public class GitHubJsonParser {
 
@@ -39,7 +39,7 @@ public class GitHubJsonParser {
 
 	static public Stream<JsonObject> getContent(JsonObject connection, boolean allowPartial) {
 		final JsonArray nodes = connection.getJsonArray("nodes");
-		checkArgument(allowPartial || isConnectionComplete(connection), JsonObjectWrapper.wrap(connection));
+		checkArgument(allowPartial || isConnectionComplete(connection), PrintableJsonObjectFactory.wrap(connection));
 		final Stream<JsonObject> contents = nodes.stream().map(JsonValue::asJsonObject);
 		return contents;
 	}

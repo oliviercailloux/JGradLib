@@ -35,7 +35,7 @@ import io.github.oliviercailloux.git.git_hub.model.GitHubRealToken;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.git.git_hub.model.graph_ql.RepositoryWithFiles;
 import io.github.oliviercailloux.git.git_hub.model.graph_ql.RepositoryWithIssuesWithHistory;
-import io.github.oliviercailloux.json.JsonObjectWrapper;
+import io.github.oliviercailloux.json.PrintableJsonObjectFactory;
 
 public class GitHubFetcherQL implements AutoCloseable {
 	public static final String GRAPHQL_ENDPOINT = "https://api.github.com/graphql";
@@ -128,7 +128,7 @@ public class GitHubFetcherQL implements AutoCloseable {
 			throw new IllegalStateException(ret.toString());
 		}
 		final JsonObject data = ret.getJsonObject("data");
-		LOGGER.debug(JsonObjectWrapper.wrap(data).toString());
+		LOGGER.debug(PrintableJsonObjectFactory.wrap(data).toString());
 		return data;
 	}
 
@@ -141,7 +141,7 @@ public class GitHubFetcherQL implements AutoCloseable {
 			dataOpt = Optional.empty();
 		} else {
 			final JsonObject data = ret.getJsonObject("data");
-			LOGGER.debug(JsonObjectWrapper.wrap(data).toString());
+			LOGGER.debug(PrintableJsonObjectFactory.wrap(data).toString());
 			dataOpt = Optional.of(data);
 		}
 		return dataOpt;
@@ -171,7 +171,7 @@ public class GitHubFetcherQL implements AutoCloseable {
 				String message;
 				try {
 					ret = response.readEntity(JsonObject.class);
-					message = JsonObjectWrapper.wrap(ret).toString();
+					message = PrintableJsonObjectFactory.wrap(ret).toString();
 				} catch (Exception masqued) {
 					message = "(and could not read entity: " + masqued.getMessage() + ")";
 				}

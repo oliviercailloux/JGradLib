@@ -1,4 +1,4 @@
-package io.github.oliviercailloux.git.utils;
+package io.github.oliviercailloux.json;
 
 import java.lang.reflect.Type;
 import java.util.function.Function;
@@ -9,10 +9,7 @@ import javax.json.bind.JsonbBuilder;
 import javax.json.bind.JsonbConfig;
 import javax.json.bind.adapter.JsonbAdapter;
 
-import io.github.oliviercailloux.json.JsonStringToObjectWrapper;
-import io.github.oliviercailloux.json.PrintableJsonObject;
-
-public class JsonUtils {
+public class JsonbUtils {
 	private static JsonbBuilder jsonbDefaultBuilder = null;
 
 	public static Jsonb getDefaultJsonb() {
@@ -22,8 +19,7 @@ public class JsonUtils {
 		return jsonbDefaultBuilder.build();
 	}
 
-	public static <T> T deserializeWithJsonB(String source, Type type,
-			@SuppressWarnings("rawtypes") JsonbAdapter... adapters) {
+	public static <T> T fromJson(String source, Type type, @SuppressWarnings("rawtypes") JsonbAdapter... adapters) {
 		final T asObj;
 		try (Jsonb jsonb = getInstance(adapters)) {
 			asObj = jsonb.fromJson(source, type);
@@ -40,8 +36,19 @@ public class JsonUtils {
 		return JsonbBuilder.create(new JsonbConfig().withAdapters(adapters).withFormatting(true));
 	}
 
-	public static PrintableJsonObject serializeWithJsonB(Object source,
+	public static PrintableJsonObject toJsonObject(Object source,
 			@SuppressWarnings("rawtypes") JsonbAdapter... adapters) {
+		final String asStr = toPrettyPrinted(source, adapters);
+		return PrintableJsonObjectFactory.wrapPrettyPrintedString(asStr.substring(1));
+	}
+
+	public static PrintableJsonValue toJsonValue(Object source,
+			@SuppressWarnings("rawtypes") JsonbAdapter... adapters) {
+		final String asStr = toPrettyPrinted(source, adapters);
+		return PrintableJsonValueFactory.wrapPrettyPrintedString(asStr.substring(1));
+	}
+
+	private static String toPrettyPrinted(Object source, @SuppressWarnings("rawtypes") JsonbAdapter... adapters) {
 		final String asStr;
 		try (Jsonb jsonb = getInstance(adapters)) {
 			asStr = jsonb.toJson(source);
@@ -49,7 +56,7 @@ public class JsonUtils {
 		} catch (Exception e) {
 			throw new IllegalStateException(e);
 		}
-		return JsonStringToObjectWrapper.wrapPrettyPrinted(asStr.substring(1));
+		return asStr;
 	}
 
 	public static <T> JsonbAdapter<T, JsonObject> getAdapter(Function<JsonObject, T> asOriginalFct,

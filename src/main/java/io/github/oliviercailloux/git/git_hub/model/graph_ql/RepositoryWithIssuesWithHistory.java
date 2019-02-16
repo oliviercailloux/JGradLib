@@ -26,7 +26,7 @@ import com.google.common.collect.ImmutableSetMultimap.Builder;
 import com.google.common.collect.ImmutableSortedSet;
 
 import io.github.oliviercailloux.git.git_hub.services.GitHubJsonParser;
-import io.github.oliviercailloux.json.JsonObjectWrapper;
+import io.github.oliviercailloux.json.PrintableJsonObjectFactory;
 
 public class RepositoryWithIssuesWithHistory {
 	@SuppressWarnings("unused")
@@ -52,7 +52,7 @@ public class RepositoryWithIssuesWithHistory {
 	private final Repository repository;
 
 	private RepositoryWithIssuesWithHistory(JsonObject json) {
-		LOGGER.debug(JsonObjectWrapper.wrap(json).toString());
+		LOGGER.debug(PrintableJsonObjectFactory.wrap(json).toString());
 		repository = Repository.from(json);
 		final JsonObject issuesConnection = json.getJsonObject("issues");
 		/**

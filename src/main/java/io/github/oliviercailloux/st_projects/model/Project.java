@@ -53,10 +53,6 @@ public class Project {
 
 	public static Project from(String name, List<Functionality> functionalities, Instant lastModification,
 			Instant queried) {
-		/**
-		 * TODO remove all the constructors that have no URLs, which really should not
-		 * exist, I suppose.
-		 */
 		return new Project(name, Utils.EXAMPLE_URI, functionalities, lastModification, queried);
 	}
 

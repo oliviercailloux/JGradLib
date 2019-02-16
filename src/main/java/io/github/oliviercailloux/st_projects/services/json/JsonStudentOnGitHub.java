@@ -7,8 +7,8 @@ import javax.json.bind.adapter.JsonbAdapter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.github.oliviercailloux.json.JsonObjectWrapper;
 import io.github.oliviercailloux.json.PrintableJsonObject;
+import io.github.oliviercailloux.json.PrintableJsonObjectFactory;
 import io.github.oliviercailloux.st_projects.model.StudentOnGitHub;
 import io.github.oliviercailloux.st_projects.model.StudentOnGitHubKnown;
 
@@ -22,7 +22,7 @@ public class JsonStudentOnGitHub {
 		}
 
 		final JsonObject json = Json.createObjectBuilder().add("gitHubUsername", student.getGitHubUsername()).build();
-		return JsonObjectWrapper.wrap(json);
+		return PrintableJsonObjectFactory.wrap(json);
 	}
 
 	public static StudentOnGitHub asStudentOnGitHub(JsonObject json) {

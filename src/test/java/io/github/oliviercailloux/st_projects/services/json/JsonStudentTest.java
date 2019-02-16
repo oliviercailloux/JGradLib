@@ -11,7 +11,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.io.Resources;
 
-import io.github.oliviercailloux.json.JsonStringToObjectWrapper;
+import io.github.oliviercailloux.json.PrintableJsonObjectFactory;
 import io.github.oliviercailloux.json.PrintableJsonObject;
 import io.github.oliviercailloux.st_projects.model.StudentOnGitHubKnown;
 import io.github.oliviercailloux.st_projects.model.StudentOnMyCourse;
@@ -72,8 +72,8 @@ class JsonStudentTest {
 	}
 
 	public PrintableJsonObject readObject(String resource) throws IOException {
-		return JsonStringToObjectWrapper
-				.wrapPrettyPrinted(Resources.toString(this.getClass().getResource(resource), StandardCharsets.UTF_8));
+		return PrintableJsonObjectFactory
+				.wrapPrettyPrintedString(Resources.toString(this.getClass().getResource(resource), StandardCharsets.UTF_8));
 	}
 
 }

@@ -13,10 +13,10 @@ import javax.json.bind.adapter.JsonbAdapter;
 
 import com.google.common.collect.ImmutableSet;
 
-import io.github.oliviercailloux.git.utils.JsonUtils;
-import io.github.oliviercailloux.json.JsonObjectWrapper;
-import io.github.oliviercailloux.json.JsonStringToObjectWrapper;
+import io.github.oliviercailloux.json.JsonbUtils;
 import io.github.oliviercailloux.json.PrintableJsonObject;
+import io.github.oliviercailloux.json.PrintableJsonObjectFactory;
+import io.github.oliviercailloux.json.PrintableJsonValue;
 import io.github.oliviercailloux.st_projects.model.Mark;
 import io.github.oliviercailloux.st_projects.model.StudentGrade;
 import io.github.oliviercailloux.st_projects.model.StudentOnGitHub;
@@ -34,8 +34,12 @@ public class JsonGrade {
 			}
 		}
 		builder.add("marks", marksBuilder);
-		return JsonObjectWrapper.wrap(builder.build());
+		return PrintableJsonObjectFactory.wrap(builder.build());
 //		return JsonUtils.serializeWithJsonB(grade, JsonStudentOnGitHub.asAdapter(), JsonCriterion.asAdapter());
+	}
+
+	public static PrintableJsonValue asJsonArray(Set<StudentGrade> grades) {
+		return JsonbUtils.toJsonValue(grades, JsonGrade.asAdapter());
 	}
 
 	public static StudentGrade asGrade(String json) {
@@ -45,7 +49,7 @@ public class JsonGrade {
 		 */
 //		return JsonUtils.deserializeWithJsonB(json, StudentGrade.class, JsonStudentOnGitHub.asAdapter(),
 //				JsonCriterion.asAdapter());
-		return asGrade(JsonStringToObjectWrapper.wrapUnknown(json));
+		return asGrade(PrintableJsonObjectFactory.wrapUnknownStringForm(json));
 	}
 
 	public static ImmutableSet<StudentGrade> asGrades(String json) {
@@ -53,7 +57,7 @@ public class JsonGrade {
 		final Set<StudentGrade> targetSet = new HashSet<StudentGrade>() {
 			/** Just for type! */
 		};
-		final Set<StudentGrade> read = JsonUtils.deserializeWithJsonB(json, targetSet.getClass().getGenericSuperclass(),
+		final Set<StudentGrade> read = JsonbUtils.fromJson(json, targetSet.getClass().getGenericSuperclass(),
 				JsonGrade.asAdapter());
 		return ImmutableSet.copyOf(read);
 	}

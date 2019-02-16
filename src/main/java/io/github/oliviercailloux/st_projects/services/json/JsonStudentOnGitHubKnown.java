@@ -7,9 +7,9 @@ import javax.json.bind.adapter.JsonbAdapter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.github.oliviercailloux.git.utils.JsonUtils;
-import io.github.oliviercailloux.json.JsonObjectWrapper;
+import io.github.oliviercailloux.json.JsonbUtils;
 import io.github.oliviercailloux.json.PrintableJsonObject;
+import io.github.oliviercailloux.json.PrintableJsonObjectFactory;
 import io.github.oliviercailloux.st_projects.model.StudentOnGitHubKnown;
 import io.github.oliviercailloux.st_projects.model.StudentOnMyCourse;
 
@@ -18,16 +18,16 @@ public class JsonStudentOnGitHubKnown {
 	private static final Logger LOGGER = LoggerFactory.getLogger(JsonStudentOnGitHubKnown.class);
 
 	public static PrintableJsonObject asJson(StudentOnGitHubKnown student) {
-		final PrintableJsonObject mcJson = JsonUtils.serializeWithJsonB(student.asStudentOnMyCourse());
+		final PrintableJsonObject mcJson = JsonbUtils.toJsonObject(student.asStudentOnMyCourse());
 		LOGGER.debug("Created {}.", mcJson);
 		final JsonObject json = Json.createObjectBuilder().add("gitHubUsername", student.getGitHubUsername())
 				.addAll(Json.createObjectBuilder(mcJson)).build();
-		return JsonObjectWrapper.wrap(json);
+		return PrintableJsonObjectFactory.wrap(json);
 	}
 
 	public static StudentOnGitHubKnown asStudentOnGitHubKnown(JsonObject json) {
 		final String gitHubUsername = json.getString("gitHubUsername");
-		final StudentOnMyCourse mc = JsonUtils.deserializeWithJsonB(json.toString(), StudentOnMyCourse.class);
+		final StudentOnMyCourse mc = JsonbUtils.fromJson(json.toString(), StudentOnMyCourse.class);
 		return StudentOnGitHubKnown.with(mc, gitHubUsername);
 	}
 

@@ -120,14 +120,6 @@ class JsonValueGeneralWrapper implements PrintableJsonValue {
 		return getDelegate().asJsonObject();
 	}
 
-	private static JsonObject asJsonObject(String data) {
-		final JsonObject json;
-		try (JsonReader jr = Json.createReader(new StringReader(data))) {
-			json = jr.readObject();
-		}
-		return json;
-	}
-
 	private static JsonValue asJsonValue(String data) {
 		final JsonValue json;
 		try (JsonReader jr = Json.createReader(new StringReader(data))) {

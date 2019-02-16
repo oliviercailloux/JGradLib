@@ -26,7 +26,7 @@ import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.git.git_hub.model.graph_ql.IssueWithHistory;
 import io.github.oliviercailloux.git.git_hub.model.graph_ql.RepositoryWithIssuesWithHistory;
 import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherQL;
-import io.github.oliviercailloux.json.JsonObjectWrapper;
+import io.github.oliviercailloux.json.PrintableJsonObjectFactory;
 
 public class TestGitHubProject {
 
@@ -91,7 +91,7 @@ public class TestGitHubProject {
 			assertFalse(project.getIssuesOriginallyNamed("non-existant").size() == 1);
 			assertEquals("testrel", project.getBare().getName());
 
-			LOGGER.debug(JsonObjectWrapper.wrap(project.getOwner().getJson()).toString());
+			LOGGER.debug(PrintableJsonObjectFactory.wrap(project.getOwner().getJson()).toString());
 			assertEquals("oliviercailloux", project.getOwner().getLogin());
 		}
 	}

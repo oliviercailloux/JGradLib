@@ -7,8 +7,8 @@ import javax.json.JsonObject;
 import javax.json.JsonObjectBuilder;
 import javax.json.bind.adapter.JsonbAdapter;
 
-import io.github.oliviercailloux.json.JsonObjectWrapper;
 import io.github.oliviercailloux.json.PrintableJsonObject;
+import io.github.oliviercailloux.json.PrintableJsonObjectFactory;
 import io.github.oliviercailloux.st_projects.model.Criterion;
 
 public class JsonCriterion {
@@ -18,7 +18,7 @@ public class JsonCriterion {
 		final JsonObjectBuilder builder = Json.createObjectBuilder();
 		builder.add("class", cEnum.getClass().getCanonicalName());
 		builder.add("name", cEnum.name());
-		return JsonObjectWrapper.wrap(builder.build());
+		return PrintableJsonObjectFactory.wrap(builder.build());
 	}
 
 	public static Criterion asCriterion(JsonObject json) {

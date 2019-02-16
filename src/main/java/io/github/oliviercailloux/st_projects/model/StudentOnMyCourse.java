@@ -15,7 +15,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.base.MoreObjects;
 
-import io.github.oliviercailloux.git.utils.JsonUtils;
+import io.github.oliviercailloux.json.JsonbUtils;
 import io.github.oliviercailloux.json.PrintableJsonObject;
 
 @JsonbPropertyOrder({ "studentId", "myCourseUsername", "firstName", "lastName" })
@@ -28,7 +28,7 @@ public class StudentOnMyCourse {
 	}
 
 	public static StudentOnMyCourse fromJson(JsonObject data) {
-		return JsonUtils.deserializeWithJsonB(data.toString(), StudentOnMyCourse.class);
+		return JsonbUtils.fromJson(data.toString(), StudentOnMyCourse.class);
 	}
 
 	private int studentId;
@@ -45,7 +45,7 @@ public class StudentOnMyCourse {
 	}
 
 	public PrintableJsonObject asJson() {
-		return JsonUtils.serializeWithJsonB(this);
+		return JsonbUtils.toJsonObject(this);
 	}
 
 	@Override

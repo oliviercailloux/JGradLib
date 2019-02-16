@@ -29,7 +29,6 @@ import com.univocity.parsers.csv.CsvWriterSettings;
 import io.github.oliviercailloux.git.git_hub.model.GitHubToken;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherV3;
-import io.github.oliviercailloux.git.utils.JsonUtils;
 import io.github.oliviercailloux.mycourse.MyCourseCsvWriter;
 import io.github.oliviercailloux.st_projects.ex3.Ex3Grader;
 import io.github.oliviercailloux.st_projects.model.Criterion;
@@ -48,7 +47,7 @@ public class GraderOrchestrator {
 	}
 
 	public void writeJson(Set<StudentGrade> grades) throws IOException {
-		final String str = JsonUtils.serializeWithJsonB(grades, JsonGrade.asAdapter()).toString();
+		final String str = JsonGrade.asJsonArray(grades).toString();
 		try (BufferedWriter fileWriter = Files.newBufferedWriter(Paths.get("out.json"), StandardCharsets.UTF_8)) {
 			fileWriter.write(str);
 		}

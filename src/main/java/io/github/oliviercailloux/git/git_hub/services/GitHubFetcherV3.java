@@ -53,8 +53,8 @@ import io.github.oliviercailloux.git.git_hub.model.v3.Event;
 import io.github.oliviercailloux.git.git_hub.model.v3.EventType;
 import io.github.oliviercailloux.git.git_hub.model.v3.SearchResult;
 import io.github.oliviercailloux.git.git_hub.model.v3.SearchResults;
-import io.github.oliviercailloux.json.JsonObjectWrapper;
-import io.github.oliviercailloux.json.JsonValueWrapper;
+import io.github.oliviercailloux.json.PrintableJsonObjectFactory;
+import io.github.oliviercailloux.json.PrintableJsonValueFactory;
 
 public class GitHubFetcherV3 implements AutoCloseable {
 	public static final Set<String> FORBIDDEN_IN_SEARCH = ImmutableSet.of(".", ",", ":", ";", "/", "\\", "`", "'", "\"",
@@ -227,8 +227,8 @@ public class GitHubFetcherV3 implements AutoCloseable {
 					return c.getSha().equals(sha);
 				}));
 		final Optional<Event> matchingEvent = matchingEvents.collect(MoreCollectors.toOptional());
-		LOGGER.debug("Matching: {}.",
-				JsonValueWrapper.wrap(matchingEvent.<JsonValue>map(Event::getJson).orElse(JsonValue.NULL)));
+		LOGGER.debug("Matching: {}.", PrintableJsonValueFactory
+				.wrapValue(matchingEvent.<JsonValue>map(Event::getJson).orElse(JsonValue.NULL)));
 		return matchingEvent.map(Event::getCreatedAt);
 	}
 
@@ -238,8 +238,9 @@ public class GitHubFetcherV3 implements AutoCloseable {
 		final List<Event> events = getContentAsList(target, Event::from, false);
 		final ImmutableList<Event> startEvents = events.stream()
 				.filter((e) -> e.getType().equals(EventType.CREATE_EVENT)).collect(ImmutableList.toImmutableList());
-		LOGGER.info("All: {}.", startEvents.stream().<String>map((e) -> JsonObjectWrapper.wrap(e.getJson()).toString())
-				.collect(Collectors.joining(", ")));
+		LOGGER.info("All: {}.",
+				startEvents.stream().<String>map((e) -> PrintableJsonObjectFactory.wrap(e.getJson()).toString())
+						.collect(Collectors.joining(", ")));
 		return startEvents;
 	}
 
@@ -247,7 +248,7 @@ public class GitHubFetcherV3 implements AutoCloseable {
 		final WebTarget target = client.target(EVENTS_URI).resolveTemplate("owner", repositoryCoordinates.getOwner())
 				.resolveTemplate("repo", repositoryCoordinates.getRepositoryName());
 		final Optional<JsonArray> eventsArray = getContent(target, JsonArray.class);
-		LOGGER.info("Events: {}", JsonValueWrapper.wrap(eventsArray.get()));
+		LOGGER.info("Events: {}", PrintableJsonValueFactory.wrapValue(eventsArray.get()));
 	}
 
 	public List<SearchResult> searchForCode(RepositoryCoordinates repositoryCoordinates, String code,
@@ -343,7 +344,7 @@ public class GitHubFetcherV3 implements AutoCloseable {
 					final String contentStr;
 					if (content instanceof JsonValue) {
 						final JsonValue contentAsJson = (JsonValue) content;
-						contentStr = JsonValueWrapper.wrap(contentAsJson).toString();
+						contentStr = PrintableJsonValueFactory.wrapValue(contentAsJson).toString();
 					} else {
 						contentStr = content.toString();
 					}
@@ -422,8 +423,9 @@ public class GitHubFetcherV3 implements AutoCloseable {
 		final ImmutableList<Event> events = getEvents(repositoryCoordinates);
 		final ImmutableList<Event> pushEvents = events.stream().filter((e) -> e.getPushPayload().isPresent())
 				.collect(ImmutableList.toImmutableList());
-		LOGGER.debug("All: {}.", pushEvents.stream().<String>map((e) -> JsonObjectWrapper.wrap(e.getJson()).toString())
-				.collect(Collectors.joining(", ")));
+		LOGGER.debug("All: {}.",
+				pushEvents.stream().<String>map((e) -> PrintableJsonObjectFactory.wrap(e.getJson()).toString())
+						.collect(Collectors.joining(", ")));
 		return pushEvents;
 	}
 

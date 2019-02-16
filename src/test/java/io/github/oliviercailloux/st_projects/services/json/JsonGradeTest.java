@@ -13,7 +13,6 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.io.Resources;
 
-import io.github.oliviercailloux.git.utils.JsonUtils;
 import io.github.oliviercailloux.st_projects.model.Mark;
 import io.github.oliviercailloux.st_projects.model.StudentGrade;
 import io.github.oliviercailloux.st_projects.model.StudentOnGitHubKnown;
@@ -34,7 +33,7 @@ public class JsonGradeTest {
 		final StudentGrade grade2 = StudentGrade.of(getStudentOnGitHubKnown("g2", 2).asStudentOnGitHub(),
 				ImmutableSet.of(mark2));
 		final ImmutableSet<StudentGrade> grades = ImmutableSet.of(grade1, grade2);
-		final String written = JsonUtils.serializeWithJsonB(grades, JsonGrade.asAdapter()).toString();
+		final String written = JsonGrade.asJsonArray(grades).toString();
 		LOGGER.debug("Serialized pretty json: {}.", written);
 		assertEquals(expected, written);
 	}
