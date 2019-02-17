@@ -13,14 +13,11 @@ import java.util.function.Predicate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.collect.ImmutableList;
-
 import io.github.oliviercailloux.git.Client;
 import io.github.oliviercailloux.st_projects.model.Criterion;
-import io.github.oliviercailloux.st_projects.model.Mark;
 import io.github.oliviercailloux.st_projects.model.GitContext;
+import io.github.oliviercailloux.st_projects.model.Mark;
 import io.github.oliviercailloux.st_projects.model.PomContext;
-import io.github.oliviercailloux.st_projects.utils.GradingUtils;
 
 public class PackageGroupIdMarker implements CriterionMarker {
 	private Criterion criterion;
@@ -49,10 +46,19 @@ public class PackageGroupIdMarker implements CriterionMarker {
 		}
 
 		final Path relativeRoot = relRootOpt.get();
-		boolean allMatchMain = allMatch(relativeRoot.resolve(Paths.get("src/main/java")));
-		boolean allMatchTest = allMatch(relativeRoot.resolve(Paths.get("src/test/java")));
-		final ImmutableList<Boolean> successes = ImmutableList.of(allMatchMain, allMatchTest);
-		return GradingUtils.getGradeFromSuccesses(criterion, successes);
+
+		double weightOk = 0d;
+		if (allMatch(relativeRoot.resolve(Paths.get("src/main/java")))) {
+			weightOk += 0.5d;
+		}
+		if (allMatch(relativeRoot.resolve(Paths.get("src/test/java")))) {
+			weightOk += 0.5d;
+		}
+		final double weightKo = 1d - weightOk;
+
+		final double points = criterion.getMinPoints() * weightKo + criterion.getMaxPoints() * weightOk;
+		final Mark grade = Mark.of(criterion, points, "");
+		return grade;
 	}
 
 	private boolean allMatch(Path start) {

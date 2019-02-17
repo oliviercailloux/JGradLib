@@ -30,7 +30,6 @@ import io.github.oliviercailloux.st_projects.model.GitContext;
 import io.github.oliviercailloux.st_projects.model.Mark;
 import io.github.oliviercailloux.st_projects.model.MultiContent;
 import io.github.oliviercailloux.st_projects.model.PomContext;
-import io.github.oliviercailloux.st_projects.utils.GradingUtils;
 
 public class Markers {
 	public static CriterionMarker groupIdMarker(Criterion criterion, PomContext context) {
@@ -122,16 +121,15 @@ public class Markers {
 		final Client client = context.getClient();
 		final RevCommit mainCommit = mainCommitOpt.get();
 		try {
-			Optional<AnyObjectId> classpathId;
-			classpathId = client.getBlobId(mainCommit, Paths.get(".classpath"));
+			final Optional<AnyObjectId> classpathId = client.getBlobId(mainCommit, Paths.get(".classpath"));
 			final Optional<AnyObjectId> settingsId = client.getBlobId(mainCommit, Paths.get(".settings/"));
 			final Optional<AnyObjectId> projectId = client.getBlobId(mainCommit, Paths.get(".project"));
 			final Optional<AnyObjectId> targetId = client.getBlobId(mainCommit, Paths.get("target/"));
 			LOGGER.debug("Found settings? {}.", settingsId);
-			final ImmutableList<Boolean> succeeded = ImmutableList.of(classpathId, settingsId, projectId, targetId)
-					.stream().map((o) -> !o.isPresent()).collect(ImmutableList.toImmutableList());
-			final Mark grade = GradingUtils.getGradeFromSuccesses(criterion, succeeded);
-			return grade;
+			final double weightOk = ImmutableList.of(classpathId, settingsId, projectId, targetId).stream()
+					.filter((o) -> !o.isPresent()).count() / 4d;
+			final double weightKo = 1d - weightOk;
+			return Mark.of(criterion, criterion.getMinPoints() * weightKo + criterion.getMaxPoints() * weightOk, "");
 		} catch (IOException e) {
 			throw new GradingException(e);
 		}
