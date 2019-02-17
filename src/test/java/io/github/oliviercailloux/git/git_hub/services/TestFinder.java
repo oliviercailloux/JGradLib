@@ -1,4 +1,4 @@
-package io.github.oliviercailloux.st_projects.services.git_hub;
+package io.github.oliviercailloux.git.git_hub.services;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;

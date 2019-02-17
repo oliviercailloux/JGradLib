@@ -1,4 +1,4 @@
-package io.github.oliviercailloux.st_projects.services.json;
+package io.github.oliviercailloux.mycourse.json;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
