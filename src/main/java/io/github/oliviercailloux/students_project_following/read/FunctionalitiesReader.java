@@ -1,4 +1,4 @@
-package io.github.oliviercailloux.st_projects.services.read;
+package io.github.oliviercailloux.students_project_following.read;
 
 import static java.util.Objects.requireNonNull;
 
@@ -31,7 +31,7 @@ import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 
-import io.github.oliviercailloux.st_projects.model.Functionality;
+import io.github.oliviercailloux.students_project_following.Functionality;
 
 public class FunctionalitiesReader {
 	@SuppressWarnings("unused")

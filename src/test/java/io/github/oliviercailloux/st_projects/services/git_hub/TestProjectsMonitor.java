@@ -8,8 +8,8 @@ import org.asciidoctor.Asciidoctor;
 import org.junit.jupiter.api.Test;
 
 import io.github.oliviercailloux.git.git_hub.model.GitHubToken;
-import io.github.oliviercailloux.st_projects.model.Project;
-import io.github.oliviercailloux.st_projects.services.ProjectsMonitor;
+import io.github.oliviercailloux.students_project_following.Project;
+import io.github.oliviercailloux.students_project_following.ProjectsMonitor;
 
 public class TestProjectsMonitor {
 	@Test

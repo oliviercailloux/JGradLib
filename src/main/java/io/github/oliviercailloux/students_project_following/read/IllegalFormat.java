@@ -1,4 +1,4 @@
-package io.github.oliviercailloux.st_projects.services.read;
+package io.github.oliviercailloux.students_project_following.read;
 
 public class IllegalFormat extends RuntimeException {
 

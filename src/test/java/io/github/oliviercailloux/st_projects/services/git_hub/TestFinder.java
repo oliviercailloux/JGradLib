@@ -20,7 +20,7 @@ import com.google.common.collect.ImmutableList;
 import io.github.oliviercailloux.git.git_hub.model.GitHubToken;
 import io.github.oliviercailloux.git.git_hub.model.graph_ql.RepositoryWithIssuesWithHistory;
 import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherQL;
-import io.github.oliviercailloux.st_projects.model.Project;
+import io.github.oliviercailloux.students_project_following.Project;
 
 public class TestFinder {
 

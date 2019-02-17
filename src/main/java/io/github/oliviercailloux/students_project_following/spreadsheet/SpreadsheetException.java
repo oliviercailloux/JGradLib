@@ -1,4 +1,4 @@
-package io.github.oliviercailloux.st_projects.services.spreadsheet;
+package io.github.oliviercailloux.students_project_following.spreadsheet;
 
 public class SpreadsheetException extends Exception {
 

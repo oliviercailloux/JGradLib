@@ -27,6 +27,7 @@ import io.github.oliviercailloux.git.git_hub.model.graph_ql.IssueWithHistory;
 import io.github.oliviercailloux.git.git_hub.model.graph_ql.RepositoryWithIssuesWithHistory;
 import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherQL;
 import io.github.oliviercailloux.json.PrintableJsonObjectFactory;
+import io.github.oliviercailloux.students_project_following.Project;
 
 public class TestGitHubProject {
 

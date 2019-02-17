@@ -1,4 +1,4 @@
-package io.github.oliviercailloux.st_projects.model;
+package io.github.oliviercailloux.students_project_following;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;

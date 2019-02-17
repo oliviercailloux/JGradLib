@@ -1,4 +1,4 @@
-package io.github.oliviercailloux.st_projects.servlets;
+package io.github.oliviercailloux.students_project_following;
 
 import javax.json.JsonArray;
 import javax.json.JsonObject;
@@ -11,7 +11,8 @@ import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.git.git_hub.model.graph_ql.RepositoryWithIssuesWithHistory;
 import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherQL;
 import io.github.oliviercailloux.json.PrintableJsonValueFactory;
-import io.github.oliviercailloux.st_projects.model.Project;
+import io.github.oliviercailloux.students_project_following.Project;
+import io.github.oliviercailloux.students_project_following.ProjectServlet;
 
 public class TestProjectServlet {
 	@SuppressWarnings("unused")

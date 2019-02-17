@@ -1,4 +1,4 @@
-package io.github.oliviercailloux.st_projects.services.read;
+package io.github.oliviercailloux.students_project_following.read;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
@@ -24,8 +24,8 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.io.CharStreams;
 
-import io.github.oliviercailloux.st_projects.model.Functionality;
-import io.github.oliviercailloux.st_projects.model.Project;
+import io.github.oliviercailloux.students_project_following.Functionality;
+import io.github.oliviercailloux.students_project_following.Project;
 
 public class ProjectReader {
 

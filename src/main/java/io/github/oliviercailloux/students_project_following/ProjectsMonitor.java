@@ -1,4 +1,4 @@
-package io.github.oliviercailloux.st_projects.services;
+package io.github.oliviercailloux.students_project_following;
 
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
@@ -54,11 +54,10 @@ import io.github.oliviercailloux.git.git_hub.model.graph_ql.RepositoryWithIssues
 import io.github.oliviercailloux.git.git_hub.model.v3.CommitGitHubDescription;
 import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherQL;
 import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherV3;
-import io.github.oliviercailloux.st_projects.model.Project;
-import io.github.oliviercailloux.st_projects.services.read.FunctionalitiesReader;
-import io.github.oliviercailloux.st_projects.services.read.IllegalFormat;
-import io.github.oliviercailloux.st_projects.services.read.ProjectReader;
 import io.github.oliviercailloux.st_projects.servlets.GitHubToken;
+import io.github.oliviercailloux.students_project_following.read.FunctionalitiesReader;
+import io.github.oliviercailloux.students_project_following.read.IllegalFormat;
+import io.github.oliviercailloux.students_project_following.read.ProjectReader;
 
 @ApplicationScoped
 @Path("stateless-bean")

@@ -1,4 +1,4 @@
-package io.github.oliviercailloux.st_projects.servlets;
+package io.github.oliviercailloux.students_project_following;
 
 import static java.util.Objects.requireNonNull;
 
@@ -33,10 +33,7 @@ import com.google.common.base.Predicates;
 import io.github.oliviercailloux.git.git_hub.model.GitHubRealToken;
 import io.github.oliviercailloux.git.git_hub.model.graph_ql.IssueWithHistory;
 import io.github.oliviercailloux.git.git_hub.model.graph_ql.RepositoryWithIssuesWithHistory;
-import io.github.oliviercailloux.st_projects.model.Functionality;
-import io.github.oliviercailloux.st_projects.model.Project;
-import io.github.oliviercailloux.st_projects.services.ProjectsMonitor;
-import io.github.oliviercailloux.st_projects.services.read.IllegalFormat;
+import io.github.oliviercailloux.students_project_following.read.IllegalFormat;
 
 @Path("project")
 @RequestScoped

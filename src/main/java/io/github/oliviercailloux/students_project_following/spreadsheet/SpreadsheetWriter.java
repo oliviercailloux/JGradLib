@@ -1,4 +1,4 @@
-package io.github.oliviercailloux.st_projects.services.spreadsheet;
+package io.github.oliviercailloux.students_project_following.spreadsheet;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
@@ -31,9 +31,9 @@ import io.github.oliviercailloux.git.git_hub.model.graph_ql.IssueWithHistory;
 import io.github.oliviercailloux.git.git_hub.model.graph_ql.Repository;
 import io.github.oliviercailloux.git.git_hub.model.graph_ql.RepositoryWithIssuesWithHistory;
 import io.github.oliviercailloux.git.git_hub.model.graph_ql.User;
-import io.github.oliviercailloux.st_projects.model.Functionality;
-import io.github.oliviercailloux.st_projects.model.ProjectWithRepoOpt;
-import io.github.oliviercailloux.st_projects.model.Project;
+import io.github.oliviercailloux.students_project_following.Functionality;
+import io.github.oliviercailloux.students_project_following.Project;
+import io.github.oliviercailloux.students_project_following.ProjectWithRepoOpt;
 
 public class SpreadsheetWriter {
 	@SuppressWarnings("unused")

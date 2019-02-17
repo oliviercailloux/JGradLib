@@ -1,4 +1,4 @@
-package io.github.oliviercailloux.st_projects.services.read;
+package io.github.oliviercailloux.students_project_following.read;
 
 import static java.util.Objects.requireNonNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -19,7 +19,9 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.CharStreams;
 
-import io.github.oliviercailloux.st_projects.model.Functionality;
+import io.github.oliviercailloux.students_project_following.Functionality;
+import io.github.oliviercailloux.students_project_following.read.FunctionalitiesReader;
+import io.github.oliviercailloux.students_project_following.read.IllegalFormat;
 
 public class TestRead {
 

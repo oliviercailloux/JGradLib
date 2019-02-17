@@ -1,4 +1,4 @@
-package io.github.oliviercailloux.st_projects;
+package io.github.oliviercailloux.students_project_following;
 
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -48,12 +48,9 @@ import io.github.oliviercailloux.git.git_hub.model.v3.SearchResult;
 import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherQL;
 import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherV3;
 import io.github.oliviercailloux.mycourse.UsernamesReader;
-import io.github.oliviercailloux.st_projects.model.Functionality;
-import io.github.oliviercailloux.st_projects.model.Project;
-import io.github.oliviercailloux.st_projects.services.ProjectsMonitor;
-import io.github.oliviercailloux.st_projects.services.read.IllegalFormat;
-import io.github.oliviercailloux.st_projects.services.spreadsheet.SpreadsheetException;
-import io.github.oliviercailloux.st_projects.services.spreadsheet.SpreadsheetWriter;
+import io.github.oliviercailloux.students_project_following.read.IllegalFormat;
+import io.github.oliviercailloux.students_project_following.spreadsheet.SpreadsheetException;
+import io.github.oliviercailloux.students_project_following.spreadsheet.SpreadsheetWriter;
 
 public class App implements AutoCloseable {
 	@SuppressWarnings("unused")
