@@ -22,24 +22,24 @@ import com.google.common.collect.ImmutableBiMap;
 import io.github.oliviercailloux.mycourse.StudentOnGitHub;
 
 @JsonbPropertyOrder({ "student", "marks" })
-public class StudentGrade {
-	private StudentGrade(StudentOnGitHub student, ImmutableBiMap<Criterion, Mark> marks) {
+public class Grade {
+	private Grade(StudentOnGitHub student, ImmutableBiMap<Criterion, Mark> marks) {
 		this.student = requireNonNull(student);
 		this.marks = requireNonNull(marks);
 	}
 
 	@JsonbCreator
-	public static StudentGrade of(@JsonbProperty("student") StudentOnGitHub student,
+	public static Grade of(@JsonbProperty("student") StudentOnGitHub student,
 			@JsonbProperty("marks") Set<Mark> marks) {
 		LOGGER.debug("Building with {}, {}.", student, marks.iterator().next().getClass());
 		final Collector<Mark, ?, ImmutableBiMap<Criterion, Mark>> toI = ImmutableBiMap
 				.toImmutableBiMap((g) -> g.getCriterion(), (g) -> g);
 		final ImmutableBiMap<Criterion, Mark> im = marks.stream().collect(toI);
-		return new StudentGrade(student, im);
+		return new Grade(student, im);
 	}
 
 	@SuppressWarnings("unused")
-	private static final Logger LOGGER = LoggerFactory.getLogger(StudentGrade.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(Grade.class);
 	private StudentOnGitHub student;
 	/**
 	 * points ≤ maxPoints of the corresponding criterion.
@@ -49,10 +49,10 @@ public class StudentGrade {
 
 	@Override
 	public boolean equals(Object o2) {
-		if (!(o2 instanceof StudentGrade)) {
+		if (!(o2 instanceof Grade)) {
 			return false;
 		}
-		final StudentGrade g2 = (StudentGrade) o2;
+		final Grade g2 = (Grade) o2;
 		return student.equals(g2.student) && marks.equals(g2.marks);
 	}
 
@@ -73,10 +73,6 @@ public class StudentGrade {
 	@JsonbTransient
 	public ImmutableBiMap<Criterion, Mark> getMarks() {
 		return marks;
-	}
-
-	Set<Mark> getGradeValues() {
-		return marks.values();
 	}
 
 	@JsonbTransient

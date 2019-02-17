@@ -35,7 +35,7 @@ import io.github.oliviercailloux.mycourse.StudentOnGitHubKnown;
 import io.github.oliviercailloux.mycourse.UsernamesReader;
 import io.github.oliviercailloux.st_projects.ex3.Ex3Grader;
 import io.github.oliviercailloux.st_projects.model.Criterion;
-import io.github.oliviercailloux.st_projects.model.StudentGrade;
+import io.github.oliviercailloux.st_projects.model.Grade;
 import io.github.oliviercailloux.st_projects.services.json.JsonGrade;
 
 public class GraderOrchestrator {
@@ -46,14 +46,14 @@ public class GraderOrchestrator {
 		repositoriesByStudent = null;
 	}
 
-	public void writeJson(Set<StudentGrade> grades) throws IOException {
+	public void writeJson(Set<Grade> grades) throws IOException {
 		final String str = JsonGrade.asJsonArray(grades).toString();
 		try (BufferedWriter fileWriter = Files.newBufferedWriter(Paths.get("out.json"), StandardCharsets.UTF_8)) {
 			fileWriter.write(str);
 		}
 	}
 
-	public ImmutableSet<StudentGrade> readJson() throws IOException {
+	public ImmutableSet<Grade> readJson() throws IOException {
 		final String filename = "manual - 12-08-23h.json";
 //		final String filename = "out.json";
 		final String jsonStr = new String(Files.readAllBytes(Paths.get(filename)), StandardCharsets.UTF_8);
@@ -101,7 +101,7 @@ public class GraderOrchestrator {
 		}
 	}
 
-	public void writeCsv(Set<StudentGrade> grades) throws IOException {
+	public void writeCsv(Set<Grade> grades) throws IOException {
 		final Path out = Paths.get("allgrades.csv");
 		final NumberFormat formatter = NumberFormat.getNumberInstance(Locale.FRENCH);
 		try (BufferedWriter fileWriter = Files.newBufferedWriter(out, StandardCharsets.UTF_8)) {
@@ -110,7 +110,7 @@ public class GraderOrchestrator {
 					.collect(ImmutableSet.toImmutableSet());
 			writer.writeHeaders(Streams.concat(Stream.of("Name", "GitHub username"),
 					allKeys.stream().map(Object::toString), Stream.of("Grade")).collect(Collectors.toList()));
-			for (StudentGrade grade : grades) {
+			for (Grade grade : grades) {
 				final StudentOnGitHub student = grade.getStudent();
 				LOGGER.info("Writing {}.", student);
 				writer.addValue("Name", student.getLastName().orElse("unknown"));
@@ -153,13 +153,13 @@ public class GraderOrchestrator {
 		return repositoriesByStudent;
 	}
 
-	public ImmutableSet<StudentGrade> gradeAll(Ex3Grader grader,
+	public ImmutableSet<Grade> gradeAll(Ex3Grader grader,
 			ImmutableMap<StudentOnGitHub, RepositoryCoordinates> repositories) {
-		final ImmutableSet.Builder<StudentGrade> gradesBuilder = ImmutableSet.builder();
+		final ImmutableSet.Builder<Grade> gradesBuilder = ImmutableSet.builder();
 		for (Map.Entry<StudentOnGitHub, RepositoryCoordinates> entry : repositories.entrySet()) {
 			final StudentOnGitHub student = entry.getKey();
 			final RepositoryCoordinates repo = entry.getValue();
-			final StudentGrade grade = StudentGrade.of(student, grader.grade(repo));
+			final Grade grade = Grade.of(student, grader.grade(repo));
 			gradesBuilder.add(grade);
 			LOGGER.debug("Student {}, grades {}.", student, grade.getMarks().values());
 			LOGGER.info("Evaluation: {}", grade.getAsMyCourseString());
@@ -178,7 +178,7 @@ public class GraderOrchestrator {
 
 		final Ex3Grader grader = new Ex3Grader();
 
-		final ImmutableSet<StudentGrade> grades = orch.gradeAll(grader, repositories);
+		final ImmutableSet<Grade> grades = orch.gradeAll(grader, repositories);
 //		final ImmutableSet<StudentGrade> grades = orch.readJson();
 		orch.writeCsv(grades);
 		orch.writeJson(grades);

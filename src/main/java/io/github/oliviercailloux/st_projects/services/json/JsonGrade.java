@@ -20,10 +20,10 @@ import io.github.oliviercailloux.json.PrintableJsonValue;
 import io.github.oliviercailloux.mycourse.StudentOnGitHub;
 import io.github.oliviercailloux.mycourse.json.JsonStudentOnGitHub;
 import io.github.oliviercailloux.st_projects.model.Mark;
-import io.github.oliviercailloux.st_projects.model.StudentGrade;
+import io.github.oliviercailloux.st_projects.model.Grade;
 
 public class JsonGrade {
-	public static PrintableJsonObject asJson(StudentGrade grade) {
+	public static PrintableJsonObject asJson(Grade grade) {
 		final JsonObjectBuilder builder = Json.createObjectBuilder();
 		builder.add("student", JsonStudentOnGitHub.asJson(grade.getStudent()));
 		final JsonArrayBuilder marksBuilder = Json.createArrayBuilder();
@@ -39,11 +39,11 @@ public class JsonGrade {
 //		return JsonUtils.serializeWithJsonB(grade, JsonStudentOnGitHub.asAdapter(), JsonCriterion.asAdapter());
 	}
 
-	public static PrintableJsonValue asJsonArray(Set<StudentGrade> grades) {
+	public static PrintableJsonValue asJsonArray(Set<Grade> grades) {
 		return JsonbUtils.toJsonValue(grades, JsonGrade.asAdapter());
 	}
 
-	public static StudentGrade asGrade(String json) {
+	public static Grade asGrade(String json) {
 		/**
 		 * We proceed manually for now: the below code <a
 		 * href=https://github.com/eclipse-ee4j/yasson/issues/201>bugs</a>.
@@ -53,17 +53,17 @@ public class JsonGrade {
 		return asGrade(PrintableJsonObjectFactory.wrapUnknownStringForm(json));
 	}
 
-	public static ImmutableSet<StudentGrade> asGrades(String json) {
+	public static ImmutableSet<Grade> asGrades(String json) {
 		@SuppressWarnings("serial")
-		final Set<StudentGrade> targetSet = new HashSet<StudentGrade>() {
+		final Set<Grade> targetSet = new HashSet<Grade>() {
 			/** Just for type! */
 		};
-		final Set<StudentGrade> read = JsonbUtils.fromJson(json, targetSet.getClass().getGenericSuperclass(),
+		final Set<Grade> read = JsonbUtils.fromJson(json, targetSet.getClass().getGenericSuperclass(),
 				JsonGrade.asAdapter());
 		return ImmutableSet.copyOf(read);
 	}
 
-	public static StudentGrade asGrade(JsonObject json) {
+	public static Grade asGrade(JsonObject json) {
 //		return asGrade(json.toString());
 		final StudentOnGitHub student = JsonStudentOnGitHub.asStudentOnGitHub(json.getJsonObject("student"));
 		final ImmutableSet<Mark> marks;
@@ -77,18 +77,18 @@ public class JsonGrade {
 			}
 			marks = marksBuilder.build();
 		}
-		return StudentGrade.of(student, marks);
+		return Grade.of(student, marks);
 	}
 
-	public static JsonbAdapter<StudentGrade, JsonObject> asAdapter() {
-		return new JsonbAdapter<StudentGrade, JsonObject>() {
+	public static JsonbAdapter<Grade, JsonObject> asAdapter() {
+		return new JsonbAdapter<Grade, JsonObject>() {
 			@Override
-			public JsonObject adaptToJson(StudentGrade obj) throws Exception {
+			public JsonObject adaptToJson(Grade obj) throws Exception {
 				return asJson(obj);
 			}
 
 			@Override
-			public StudentGrade adaptFromJson(JsonObject obj) throws Exception {
+			public Grade adaptFromJson(JsonObject obj) throws Exception {
 				return asGrade(obj);
 			}
 		};
