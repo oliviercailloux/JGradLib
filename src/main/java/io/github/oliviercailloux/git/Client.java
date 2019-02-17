@@ -136,6 +136,7 @@ public class Client {
 	public boolean tryRetrieve() throws GitAPIException, IOException, IllegalStateException, CheckoutConflictException {
 		final String name = coordinates.getRepositoryName();
 		final Path outputProjectDir = outputBaseDir.resolve(name);
+		LOGGER.debug("Using output dir: {}.", outputProjectDir);
 		if (Files.exists(outputProjectDir)) {
 			update();
 		} else {
