@@ -44,10 +44,6 @@ public class StudentOnMyCourse {
 		this.username = requireNonNull(username);
 	}
 
-	public PrintableJsonObject asJson() {
-		return JsonbUtils.toJsonObject(this);
-	}
-
 	@Override
 	public boolean equals(Object o2) {
 		if (!(o2 instanceof StudentOnMyCourse)) {

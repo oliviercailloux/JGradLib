@@ -11,8 +11,8 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.io.Resources;
 
-import io.github.oliviercailloux.json.PrintableJsonObjectFactory;
 import io.github.oliviercailloux.json.PrintableJsonObject;
+import io.github.oliviercailloux.json.PrintableJsonObjectFactory;
 import io.github.oliviercailloux.st_projects.model.StudentOnGitHubKnown;
 import io.github.oliviercailloux.st_projects.model.StudentOnMyCourse;
 
@@ -24,7 +24,7 @@ class JsonStudentTest {
 	public void studentMyCourseReadJson() throws Exception {
 		final StudentOnMyCourse expected = getStudentOnMyCourse();
 		final PrintableJsonObject readObj = readObject("Student MyCourse.json");
-		final StudentOnMyCourse read = StudentOnMyCourse.fromJson(readObj);
+		final StudentOnMyCourse read = JsonStudentOnMyCourse.asStudentOnMyCourse(readObj);
 		LOGGER.info("Deserialized: {}.", read);
 		assertEquals(expected, read);
 	}
@@ -35,7 +35,7 @@ class JsonStudentTest {
 				StandardCharsets.UTF_8);
 
 		final StudentOnMyCourse student = getStudentOnMyCourse();
-		final String written = student.asJson().toString();
+		final String written = JsonStudentOnMyCourse.asJson(student).toString();
 		LOGGER.info("Serialized pretty json: {}.", written);
 		assertEquals(expected, written);
 	}
@@ -72,8 +72,8 @@ class JsonStudentTest {
 	}
 
 	public PrintableJsonObject readObject(String resource) throws IOException {
-		return PrintableJsonObjectFactory
-				.wrapPrettyPrintedString(Resources.toString(this.getClass().getResource(resource), StandardCharsets.UTF_8));
+		return PrintableJsonObjectFactory.wrapPrettyPrintedString(
+				Resources.toString(this.getClass().getResource(resource), StandardCharsets.UTF_8));
 	}
 
 }
