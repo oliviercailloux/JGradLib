@@ -17,9 +17,10 @@ import io.github.oliviercailloux.json.JsonbUtils;
 import io.github.oliviercailloux.json.PrintableJsonObject;
 import io.github.oliviercailloux.json.PrintableJsonObjectFactory;
 import io.github.oliviercailloux.json.PrintableJsonValue;
+import io.github.oliviercailloux.mycourse.StudentOnGitHub;
+import io.github.oliviercailloux.mycourse.json.JsonStudentOnGitHub;
 import io.github.oliviercailloux.st_projects.model.Mark;
 import io.github.oliviercailloux.st_projects.model.StudentGrade;
-import io.github.oliviercailloux.st_projects.model.StudentOnGitHub;
 
 public class JsonGrade {
 	public static PrintableJsonObject asJson(StudentGrade grade) {

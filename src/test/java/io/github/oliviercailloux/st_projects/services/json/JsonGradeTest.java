@@ -13,10 +13,10 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.io.Resources;
 
+import io.github.oliviercailloux.mycourse.StudentOnGitHubKnown;
+import io.github.oliviercailloux.mycourse.StudentOnMyCourse;
 import io.github.oliviercailloux.st_projects.model.Mark;
 import io.github.oliviercailloux.st_projects.model.StudentGrade;
-import io.github.oliviercailloux.st_projects.model.StudentOnGitHubKnown;
-import io.github.oliviercailloux.st_projects.model.StudentOnMyCourse;
 
 public class JsonGradeTest {
 	@SuppressWarnings("unused")

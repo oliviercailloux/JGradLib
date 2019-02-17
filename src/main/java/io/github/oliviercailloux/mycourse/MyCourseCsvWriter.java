@@ -22,7 +22,6 @@ import com.univocity.parsers.csv.CsvWriter;
 import com.univocity.parsers.csv.CsvWriterSettings;
 
 import io.github.oliviercailloux.st_projects.model.StudentGrade;
-import io.github.oliviercailloux.st_projects.model.StudentOnMyCourse;
 
 public class MyCourseCsvWriter {
 

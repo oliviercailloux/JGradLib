@@ -22,8 +22,8 @@ import io.github.oliviercailloux.git.Client;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.git.git_hub.model.v3.Event;
 import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherV3;
-import io.github.oliviercailloux.st_projects.model.StudentOnGitHub;
-import io.github.oliviercailloux.st_projects.model.StudentOnMyCourse;
+import io.github.oliviercailloux.mycourse.StudentOnGitHub;
+import io.github.oliviercailloux.mycourse.StudentOnMyCourse;
 
 public class Ex1Test {
 	@Test

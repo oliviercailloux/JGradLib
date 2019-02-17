@@ -1,4 +1,4 @@
-package io.github.oliviercailloux.st_projects.model;
+package io.github.oliviercailloux.mycourse;
 
 import static java.util.Objects.requireNonNull;
 

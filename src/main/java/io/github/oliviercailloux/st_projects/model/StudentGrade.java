@@ -19,6 +19,8 @@ import org.slf4j.LoggerFactory;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableBiMap;
 
+import io.github.oliviercailloux.mycourse.StudentOnGitHub;
+
 @JsonbPropertyOrder({ "student", "marks" })
 public class StudentGrade {
 	private StudentGrade(StudentOnGitHub student, ImmutableBiMap<Criterion, Mark> marks) {

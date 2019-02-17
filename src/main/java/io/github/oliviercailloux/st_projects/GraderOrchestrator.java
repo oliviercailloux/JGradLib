@@ -30,13 +30,13 @@ import io.github.oliviercailloux.git.git_hub.model.GitHubToken;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherV3;
 import io.github.oliviercailloux.mycourse.MyCourseCsvWriter;
+import io.github.oliviercailloux.mycourse.StudentOnGitHub;
+import io.github.oliviercailloux.mycourse.StudentOnGitHubKnown;
+import io.github.oliviercailloux.mycourse.UsernamesReader;
 import io.github.oliviercailloux.st_projects.ex3.Ex3Grader;
 import io.github.oliviercailloux.st_projects.model.Criterion;
 import io.github.oliviercailloux.st_projects.model.StudentGrade;
-import io.github.oliviercailloux.st_projects.model.StudentOnGitHub;
-import io.github.oliviercailloux.st_projects.model.StudentOnGitHubKnown;
 import io.github.oliviercailloux.st_projects.services.json.JsonGrade;
-import io.github.oliviercailloux.st_projects.services.read.UsernamesReader;
 
 public class GraderOrchestrator {
 

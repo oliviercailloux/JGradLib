@@ -1,4 +1,4 @@
-package io.github.oliviercailloux.st_projects.services.json;
+package io.github.oliviercailloux.mycourse.json;
 
 import javax.json.JsonObject;
 
@@ -7,7 +7,7 @@ import org.slf4j.LoggerFactory;
 
 import io.github.oliviercailloux.json.JsonbUtils;
 import io.github.oliviercailloux.json.PrintableJsonObject;
-import io.github.oliviercailloux.st_projects.model.StudentOnMyCourse;
+import io.github.oliviercailloux.mycourse.StudentOnMyCourse;
 
 public class JsonStudentOnMyCourse {
 	@SuppressWarnings("unused")

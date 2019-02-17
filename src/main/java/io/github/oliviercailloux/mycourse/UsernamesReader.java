@@ -1,4 +1,4 @@
-package io.github.oliviercailloux.st_projects.services.read;
+package io.github.oliviercailloux.mycourse;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
@@ -16,9 +16,6 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-
-import io.github.oliviercailloux.st_projects.model.StudentOnGitHub;
-import io.github.oliviercailloux.st_projects.model.StudentOnMyCourse;
 
 public class UsernamesReader {
 

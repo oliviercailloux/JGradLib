@@ -13,8 +13,10 @@ import com.google.common.io.Resources;
 
 import io.github.oliviercailloux.json.PrintableJsonObject;
 import io.github.oliviercailloux.json.PrintableJsonObjectFactory;
-import io.github.oliviercailloux.st_projects.model.StudentOnGitHubKnown;
-import io.github.oliviercailloux.st_projects.model.StudentOnMyCourse;
+import io.github.oliviercailloux.mycourse.StudentOnGitHubKnown;
+import io.github.oliviercailloux.mycourse.StudentOnMyCourse;
+import io.github.oliviercailloux.mycourse.json.JsonStudentOnGitHubKnown;
+import io.github.oliviercailloux.mycourse.json.JsonStudentOnMyCourse;
 
 class JsonStudentTest {
 	@SuppressWarnings("unused")

@@ -47,11 +47,11 @@ import io.github.oliviercailloux.git.git_hub.model.v3.CommitGitHubDescription;
 import io.github.oliviercailloux.git.git_hub.model.v3.SearchResult;
 import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherQL;
 import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherV3;
+import io.github.oliviercailloux.mycourse.UsernamesReader;
 import io.github.oliviercailloux.st_projects.model.Functionality;
 import io.github.oliviercailloux.st_projects.model.Project;
 import io.github.oliviercailloux.st_projects.services.ProjectsMonitor;
 import io.github.oliviercailloux.st_projects.services.read.IllegalFormat;
-import io.github.oliviercailloux.st_projects.services.read.UsernamesReader;
 import io.github.oliviercailloux.st_projects.services.spreadsheet.SpreadsheetException;
 import io.github.oliviercailloux.st_projects.services.spreadsheet.SpreadsheetWriter;
 
