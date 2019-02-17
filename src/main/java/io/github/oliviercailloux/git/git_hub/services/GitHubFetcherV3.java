@@ -25,7 +25,6 @@ import javax.json.JsonArray;
 import javax.json.JsonObject;
 import javax.json.JsonReader;
 import javax.json.JsonValue;
-import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.ProcessingException;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.client.Client;
@@ -351,11 +350,11 @@ public class GitHubFetcherV3 implements AutoCloseable {
 					LOGGER.debug("Got: {}.", contentStr);
 				}
 
-				if (response.getStatus() == HttpServletResponse.SC_NOT_FOUND) {
+				if (response.getStatus() == Response.Status.NOT_FOUND.getStatusCode()) {
 					assert nextTarget == null;
 					assert currentTarget.equals(target);
 					return Optional.empty();
-				} else if (response.getStatus() != HttpServletResponse.SC_OK) {
+				} else if (response.getStatus() != Response.Status.OK.getStatusCode()) {
 					throw new WebApplicationException(response);
 				}
 				contents.add(content);

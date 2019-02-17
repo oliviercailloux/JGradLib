@@ -14,7 +14,6 @@ import javax.json.Json;
 import javax.json.JsonArray;
 import javax.json.JsonBuilderFactory;
 import javax.json.JsonObject;
-import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
@@ -167,7 +166,7 @@ public class GitHubFetcherQL implements AutoCloseable {
 		final JsonObject ret;
 		try (Response response = request.post(Entity.json(queryJson))) {
 			readRates(response);
-			if (response.getStatus() != HttpServletResponse.SC_OK) {
+			if (response.getStatus() != Response.Status.OK.getStatusCode()) {
 				String message;
 				try {
 					ret = response.readEntity(JsonObject.class);
