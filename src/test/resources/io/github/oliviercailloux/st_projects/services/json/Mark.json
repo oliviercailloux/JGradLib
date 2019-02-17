@@ -1,8 +1,0 @@
-{
-    "criterion": {
-        "class": "io.github.oliviercailloux.st_projects.services.json.TestCriterion",
-        "name": "ENC"
-    },
-    "points": 1.0,
-    "comment": ""
-}

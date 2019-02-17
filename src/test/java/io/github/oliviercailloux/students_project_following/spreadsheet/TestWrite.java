@@ -28,7 +28,7 @@ import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.git.git_hub.model.graph_ql.RepositoryWithIssuesWithHistory;
 import io.github.oliviercailloux.git.git_hub.model.graph_ql.User;
 import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherQL;
-import io.github.oliviercailloux.st_projects.model.ModelMocker;
+import io.github.oliviercailloux.git.git_hub.services.ModelMocker;
 import io.github.oliviercailloux.students_project_following.Functionality;
 import io.github.oliviercailloux.students_project_following.Project;
 import io.github.oliviercailloux.utils.Utils;
