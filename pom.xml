@@ -6,7 +6,6 @@
 	<groupId>io.github.oliviercailloux</groupId>
 	<artifactId>st-projects</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<packaging>jar</packaging>
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
