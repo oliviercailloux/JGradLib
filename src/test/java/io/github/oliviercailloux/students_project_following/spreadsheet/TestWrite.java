@@ -31,7 +31,6 @@ import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherQL;
 import io.github.oliviercailloux.st_projects.model.ModelMocker;
 import io.github.oliviercailloux.students_project_following.Functionality;
 import io.github.oliviercailloux.students_project_following.Project;
-import io.github.oliviercailloux.students_project_following.spreadsheet.SpreadsheetWriter;
 import io.github.oliviercailloux.utils.Utils;
 
 public class TestWrite {
@@ -87,7 +86,7 @@ public class TestWrite {
 			assertTrue(sheet.getRowCount() >= 3);
 			assertEquals(10, sheet.getColumnCount());
 		}
-		save(written);
+//		save(written);
 	}
 
 	@Test
@@ -104,7 +103,7 @@ public class TestWrite {
 			writer.write(ImmutableList.of(p1), ImmutableMap.of());
 			written = out.toByteArray();
 		}
-		save(written);
+//		save(written);
 		final ByteArrayInputStream input = new ByteArrayInputStream(written);
 		try (SpreadsheetDocument doc = SpreadsheetDocument.loadDocument(input)) {
 			assertEquals(1, doc.getTableList().size());
@@ -135,7 +134,7 @@ public class TestWrite {
 			writer.write(ImmutableList.of(p1, p2), ImmutableMap.of(p1, ghp1, p2, ghp2));
 			written = out.toByteArray();
 		}
-		save(written);
+//		save(written);
 		final ByteArrayInputStream input = new ByteArrayInputStream(written);
 		try (SpreadsheetDocument doc = SpreadsheetDocument.loadDocument(input)) {
 			assertEquals(1, doc.getTableList().size());
@@ -172,7 +171,7 @@ public class TestWrite {
 			assertEquals(7, sheet.getRowCount());
 			assertEquals(10, sheet.getColumnCount());
 		}
-		save(written);
+//		save(written);
 	}
 
 	@SuppressWarnings("unused")
