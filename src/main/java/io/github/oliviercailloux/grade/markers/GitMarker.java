@@ -1,7 +1,5 @@
 package io.github.oliviercailloux.grade.markers;
 
-import static java.util.Objects.requireNonNull;
-
 import java.util.function.Function;
 
 import io.github.oliviercailloux.git.Client;
@@ -9,29 +7,12 @@ import io.github.oliviercailloux.grade.Criterion;
 import io.github.oliviercailloux.grade.Mark;
 import io.github.oliviercailloux.grade.context.GitContext;
 
-public class GitMarker implements CriterionMarker {
-	private GitContext context;
-	private Function<GitContext, Mark> f;
-
-	public static CriterionMarker using(GitContext context, Function<GitContext, Mark> f) {
-		return new GitMarker(context, f);
-	}
-
-	private GitMarker(GitContext context, Function<GitContext, Mark> f) {
-		this.context = requireNonNull(context);
-		this.f = requireNonNull(f);
-	}
-
-	@Override
-	public Mark mark() {
+public class GitMarker {
+	public static Mark using(GitContext context, Function<GitContext, Mark> f) {
 		return f.apply(context);
 	}
 
-	public static CriterionMarker repoMarker(Criterion criterion, GitContext context) {
-		return () -> markRepo(context, criterion);
-	}
-
-	private static Mark markRepo(GitContext context, Criterion criterion) {
+	public static Mark repoMark(Criterion criterion, GitContext context) {
 		final Client client = context.getClient();
 
 		final Mark grade;

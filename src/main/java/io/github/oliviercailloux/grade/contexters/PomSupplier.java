@@ -11,27 +11,25 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableSet;
 
-import io.github.oliviercailloux.grade.context.ContentSupplier;
 import io.github.oliviercailloux.grade.context.MultiContent;
 
-public class PomSupplier implements ContentSupplier {
+public class PomSupplier {
 
 	public static PomSupplier basedOn(MultiContent supplier) {
 		return new PomSupplier(supplier);
 	}
 
-	private final ContentSupplier delegate;
+	private final String delegate;
 	private MultiContent underlyingMultiSupplier;
 
 	private PomSupplier(MultiContent supplier) {
 		this.underlyingMultiSupplier = requireNonNull(supplier);
-		this.delegate = new MultiToSingleSupplier(supplier);
+		this.delegate = MultiToSingleSupplier.getContent(supplier);
 	}
 
-	@Override
 	public String getContent() {
 		LOGGER.debug("Found poms: {}.", underlyingMultiSupplier.getContents().keySet());
-		return delegate.getContent();
+		return delegate;
 	}
 
 	@SuppressWarnings("unused")

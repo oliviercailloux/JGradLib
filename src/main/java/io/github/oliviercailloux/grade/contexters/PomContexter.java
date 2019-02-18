@@ -13,29 +13,27 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.ImmutableList;
 
 import io.github.oliviercailloux.grade.GradingException;
-import io.github.oliviercailloux.grade.context.ContentSupplier;
 import io.github.oliviercailloux.grade.context.PomContext;
 
 public class PomContexter implements PomContext {
-	private final ContentSupplier supplier;
+	private final String pomContent;
 	private String groupId;
 	/**
 	 * empty iff groupId is empty.
 	 */
 	private ImmutableList<String> groupIdElements;
 
-	public PomContexter(ContentSupplier supplier) {
-		this.supplier = requireNonNull(supplier);
+	public PomContexter(String pomContent) {
+		this.pomContent = requireNonNull(pomContent);
 		groupId = null;
 		groupIdElements = null;
 	}
 
 	public void init() throws GradingException {
-		final String content = supplier.getContent();
 		final Matcher matcher = Pattern.compile(
 				"<project[^>]*>" + "[^<]*" + "(?:<[^>]*>[^<]*</[^>]*>[^<]*)*" + "<groupId>(([^\\.<]\\.?)+)</groupId>")
-				.matcher(content);
-		LOGGER.debug("Matching for group id against {}.", content);
+				.matcher(pomContent);
+		LOGGER.debug("Matching for group id against {}.", pomContent);
 		final boolean found = matcher.find();
 		final MatchResult result = matcher.toMatchResult();
 		final boolean foundTwice = matcher.find();

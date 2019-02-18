@@ -52,7 +52,6 @@ import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.grade.Criterion;
 import io.github.oliviercailloux.grade.GradingException;
 import io.github.oliviercailloux.grade.Mark;
-import io.github.oliviercailloux.grade.context.ContentSupplier;
 import io.github.oliviercailloux.grade.context.GitContext;
 import io.github.oliviercailloux.grade.context.GitFullContext;
 import io.github.oliviercailloux.grade.context.MultiContent;
@@ -64,7 +63,6 @@ import io.github.oliviercailloux.grade.contexters.GitToSourcer;
 import io.github.oliviercailloux.grade.contexters.GitToTestSourcer;
 import io.github.oliviercailloux.grade.contexters.PomContexter;
 import io.github.oliviercailloux.grade.contexters.PomSupplier;
-import io.github.oliviercailloux.grade.markers.CriterionMarker;
 import io.github.oliviercailloux.grade.markers.GitMarker;
 import io.github.oliviercailloux.grade.markers.Markers;
 import io.github.oliviercailloux.grade.markers.TimeMarker;
@@ -83,8 +81,8 @@ public class Ex3Grader {
 		final double maxGrade = Stream.of(Ex3Criterion.values())
 				.collect(Collectors.summingDouble(Criterion::getMaxPoints));
 
-		gradesBuilder.add(TimeMarker.given(ON_TIME, fullContext, deadline, maxGrade).mark());
-		gradesBuilder.add(GitMarker.repoMarker(REPO_EXISTS, fullContext).mark());
+		gradesBuilder.add(TimeMarker.given(ON_TIME, fullContext, deadline, maxGrade));
+		gradesBuilder.add(GitMarker.repoMark(REPO_EXISTS, fullContext));
 
 		/**
 		 * Need to limit depth, otherwise will find
@@ -93,40 +91,35 @@ public class Ex3Grader {
 		final MultiContent multiPom = GitToMultipleSourcer.satisfyingPathAndInit(fullContext,
 				(p) -> p.getNameCount() <= 6 && p.getFileName().toString().equals("pom.xml"));
 		final PomSupplier pomSupplier = PomSupplier.basedOn(multiPom);
+		final Path projectRelativeRoot = pomSupplier.getProjectRelativeRoot().orElse(Paths.get(""));
+		final String pomContent = pomSupplier.getContent();
 
 		gradesBuilder.add(Mark.binary(AT_ROOT, pomSupplier.isProjectAtRoot()));
 
-		final PomContexter pomContexter = new PomContexter(pomSupplier);
+		final PomContexter pomContexter = new PomContexter(pomContent);
 		pomContexter.init();
 
-		gradesBuilder.add(Markers.groupIdMarker(GROUP_ID, pomContexter).mark());
-		gradesBuilder.add(Markers.predicateMarker(JUNIT5_DEP, pomSupplier,
+		gradesBuilder.add(Markers.groupIdMark(GROUP_ID, pomContexter));
+		gradesBuilder.add(Markers.predicateMark(JUNIT5_DEP, pomContent,
 				Markers.containsOnce(Pattern.compile("<dependencies>" + Utils.ANY_REG_EXP + "<dependency>"
 						+ Utils.ANY_REG_EXP + "<groupId>org\\.junit\\.jupiter</groupId>" + Utils.ANY_REG_EXP
 						+ "<artifactId>junit-jupiter-engine</artifactId>" + Utils.ANY_REG_EXP + "<version>5\\.[23]\\."
-						+ Utils.ANY_REG_EXP + "</version>" + Utils.ANY_REG_EXP + "<scope>test</scope>")))
-				.mark());
-		gradesBuilder.add(Markers.predicateMarker(UTF, pomSupplier,
+						+ Utils.ANY_REG_EXP + "</version>" + Utils.ANY_REG_EXP + "<scope>test</scope>"))));
+		gradesBuilder.add(Markers.predicateMark(UTF, pomContent,
 				Markers.containsOnce(Pattern.compile("<properties>" + Utils.ANY_REG_EXP
 						+ "<project\\.build\\.sourceEncoding>UTF-8</project\\.build\\.sourceEncoding>"
-						+ Utils.ANY_REG_EXP + "</properties>")))
-				.mark());
+						+ Utils.ANY_REG_EXP + "</properties>"))));
 		gradesBuilder
-				.add(Markers.predicateMarker(SOURCE, pomSupplier,
+				.add(Markers.predicateMark(SOURCE, pomContent,
 						Markers.containsOnce(Pattern.compile("<properties>" + Utils.ANY_REG_EXP
 								+ "<maven\\.compiler\\.source>.*</maven\\.compiler\\.source>" + Utils.ANY_REG_EXP
-								+ "</properties>")))
-						.mark());
-		gradesBuilder
-				.add(Markers
-						.predicateMarker(NO_MISLEADING_URL, pomSupplier,
-								Predicates.contains(Pattern.compile("<url>.*\\.apache\\.org.*</url>")).negate())
-						.mark());
-		gradesBuilder.add(Markers
-				.predicateMarker(WAR, pomSupplier, Markers.containsOnce(Pattern.compile("<packaging>war</packaging>")))
-				.mark());
-		gradesBuilder.add(Markers.packageGroupIdMarker(PREFIX, fullContext, pomSupplier, pomContexter).mark());
-		gradesBuilder.add(Markers.mavenCompileMarker(COMPILE, fullContext, pomSupplier).mark());
+								+ "</properties>"))));
+		gradesBuilder.add(Markers.predicateMark(NO_MISLEADING_URL, pomContent,
+				Predicates.contains(Pattern.compile("<url>.*\\.apache\\.org.*</url>")).negate()));
+		gradesBuilder.add(Markers.predicateMark(WAR, pomContent,
+				Markers.containsOnce(Pattern.compile("<packaging>war</packaging>"))));
+		gradesBuilder.add(Markers.packageGroupIdMark(PREFIX, fullContext, pomSupplier, pomContexter));
+		gradesBuilder.add(Markers.mavenCompileMark(COMPILE, fullContext, pomSupplier));
 
 		final MultiContent servletSourcer = GitToMultipleSourcer.satisfyingPathAndInit(fullContext,
 				Markers.startsWithPredicate(pomSupplier, Paths.get("src/main/java"))
@@ -134,60 +127,43 @@ public class Ex3Grader {
 
 		gradesBuilder.add(Mark.binary(NO_JSP, getNoJsp(fullContext)));
 		gradesBuilder.add(Mark.binary(NO_WEB_XML, getNoWebXml(fullContext)));
-		gradesBuilder
-				.add(Markers
-						.predicateMarker(DO_GET, servletSourcer,
-								Markers.containsOnce(Pattern
-										.compile("void\\s*doGet\\s*\\(\\s*(final)?\\s*HttpServletRequest .*\\)")))
-						.mark());
-		gradesBuilder.add(Markers.predicateMarker(NO_DO_POST, servletSourcer,
+		gradesBuilder.add(Markers.predicateMark(DO_GET, servletSourcer,
+				Markers.containsOnce(Pattern.compile("void\\s*doGet\\s*\\(\\s*(final)?\\s*HttpServletRequest .*\\)"))));
+		gradesBuilder.add(Markers.predicateMark(NO_DO_POST, servletSourcer,
 				Markers.containsOnce(Pattern.compile("void\\s*doPost\\s*\\(\\s*(final)?\\s*HttpServletRequest .*\\)"))
-						.negate())
-				.mark());
+						.negate()));
 		final GitToTestSourcer testSourcer = GitToTestSourcer.testSourcer(fullContext);
-		gradesBuilder.add(Markers.predicateMarker(NOT_POLLUTED, servletSourcer,
+		gradesBuilder.add(Markers.predicateMark(NOT_POLLUTED, servletSourcer,
 				Predicates.contains(Pattern.compile("Auto-generated")).negate()
 						.and(Predicates.contains(Pattern.compile("@see HttpServlet#doGet")).negate()
-								.and((c) -> testSourcer.getContents().size() <= 1)))
-				.mark());
-		gradesBuilder.add(Markers
-				.predicateMarker(EXC, servletSourcer, Predicates.contains(Pattern.compile("printStackTrace")).negate())
-				.mark());
+								.and((c) -> testSourcer.getContents().size() <= 1))));
+		gradesBuilder.add(Markers.predicateMark(EXC, servletSourcer,
+				Predicates.contains(Pattern.compile("printStackTrace")).negate()));
 		gradesBuilder.add(
-				Markers.predicateMarker(LOC, servletSourcer, Predicates.contains(Pattern.compile("setLocale.+ENGLISH")))
-						.mark());
-		gradesBuilder.add(Markers
-				.predicateMarker(MTYPE, servletSourcer, Predicates.contains(Pattern.compile("setContentType.+PLAIN")))
-				.mark());
-		gradesBuilder.add(Markers.predicateMarker(ANNOT, servletSourcer,
-				Predicates.contains(Pattern.compile("@WebServlet.*\\(.*/hello\".*\\)"))).mark());
-		gradesBuilder.add(Markers
-				.predicateMarker(FINAL_NAME, pomSupplier, Markers.containsOnce(Pattern.compile("<build>"
-						+ Utils.ANY_REG_EXP + "<finalName>myapp</finalName>" + Utils.ANY_REG_EXP + "</build>")))
-				.mark());
-		gradesBuilder.add(Markers.gradeOnlyOrig(ONLY_ORIG, fullContext).mark());
-		gradesBuilder.add(Markers.predicateMarker(GET_HELLO, servletSourcer,
-				Predicates.contains(Pattern.compile("\"Hello,? world\\.?\""))).mark());
-		gradesBuilder.add(Markers.notEmpty(TEST_EXISTS, testSourcer).mark());
+				Markers.predicateMark(LOC, servletSourcer, Predicates.contains(Pattern.compile("setLocale.+ENGLISH"))));
+		gradesBuilder.add(Markers.predicateMark(MTYPE, servletSourcer,
+				Predicates.contains(Pattern.compile("setContentType.+PLAIN"))));
+		gradesBuilder.add(Markers.predicateMark(ANNOT, servletSourcer,
+				Predicates.contains(Pattern.compile("@WebServlet.*\\(.*/hello\".*\\)"))));
+		gradesBuilder.add(Markers.predicateMark(FINAL_NAME, pomContent, Markers.containsOnce(Pattern.compile(
+				"<build>" + Utils.ANY_REG_EXP + "<finalName>myapp</finalName>" + Utils.ANY_REG_EXP + "</build>"))));
+		gradesBuilder.add(Markers.gradeOnlyOrig(ONLY_ORIG, fullContext));
+		gradesBuilder.add(Markers.predicateMark(GET_HELLO, servletSourcer,
+				Predicates.contains(Pattern.compile("\"Hello,? world\\.?\""))));
+		gradesBuilder.add(Markers.notEmpty(TEST_EXISTS, testSourcer));
 		gradesBuilder.add(Mark.binary(TEST_LOCATION, testSourcer.getContents().keySet().stream()
 				.allMatch(Markers.startsWithPredicate(pomSupplier, Paths.get("src/test/java")))));
-		gradesBuilder.add(Markers.mavenTestMarker(TEST_GREEN, fullContext, testSourcer, pomSupplier).mark());
-		gradesBuilder.add(Markers.predicateMarkerAny(ASSERT_EQUALS, testSourcer, Predicates
-				.contains(Pattern.compile("assertEquals")).and(Predicates.contains(Pattern.compile("sayHello()"))))
-				.mark());
-		final ContentSupplier travisSupplier = GitToSourcer.given(fullContext, Paths.get(".travis.yml"));
-		gradesBuilder.add(Markers.notEmpty(TRAVIS_CONF, travisSupplier).mark());
-		final ContentSupplier readmeSupplier = GitAndBaseToSourcer.given(fullContext, pomSupplier,
+		gradesBuilder.add(Markers.mavenTestMark(TEST_GREEN, fullContext, testSourcer, pomSupplier));
+		gradesBuilder.add(Markers.predicateMarkAny(ASSERT_EQUALS, testSourcer, Predicates
+				.contains(Pattern.compile("assertEquals")).and(Predicates.contains(Pattern.compile("sayHello()")))));
+		final String travisContent = GitToSourcer.given(fullContext, Paths.get(".travis.yml"));
+		gradesBuilder.add(Mark.binary(TRAVIS_CONF, !travisContent.isEmpty()));
+		final String readmeContent = GitAndBaseToSourcer.given(fullContext, projectRelativeRoot,
 				Paths.get("README.adoc"));
-		final CriterionMarker travisBadgeMarker = () -> Mark
-				.binary(TRAVIS_BADGE,
-						Predicates
-								.contains(
-										Pattern.compile("image:https://(?:api\\.)?travis-ci\\.com/oliviercailloux-org/"
-												+ coord.getRepositoryName() + "\\.svg"))
-								.apply(readmeSupplier.getContent()));
-		gradesBuilder.add(travisBadgeMarker.mark());
-		gradesBuilder.add(getTravisConfGrade(travisSupplier));
+		gradesBuilder.add(Mark.binary(TRAVIS_BADGE, Pattern.compile(
+				"image:https://(?:api\\.)?travis-ci\\.com/oliviercailloux-org/" + coord.getRepositoryName() + "\\.svg")
+				.matcher(readmeContent).find()));
+		gradesBuilder.add(getTravisConfGrade(travisContent));
 
 		return gradesBuilder.build();
 	}
@@ -219,18 +195,17 @@ public class Ex3Grader {
 		}
 	}
 
-	private Mark getTravisConfGrade(ContentSupplier travisSupplier) {
-		final String travisConf = travisSupplier.getContent();
-		if (travisConf.isEmpty()) {
+	private Mark getTravisConfGrade(String travisContent) {
+		if (travisContent.isEmpty()) {
 			return Mark.min(TRAVIS_OK, "Configuration not found or incorrectly named.");
 		}
 
 		final Predicate<CharSequence> lang = Predicates.contains(Pattern.compile("language: java"));
 		final Predicate<CharSequence> dist = Predicates.contains(Pattern.compile("dist: xenial"));
 		final Predicate<CharSequence> script = Predicates.contains(Pattern.compile("script: "));
-		final boolean hasLang = lang.apply(travisConf);
-		final boolean hasDist = dist.apply(travisConf);
-		final boolean hasScript = script.apply(travisConf);
+		final boolean hasLang = lang.apply(travisContent);
+		final boolean hasDist = dist.apply(travisContent);
+		final boolean hasScript = script.apply(travisContent);
 		final double points;
 		final String comment;
 		assert TRAVIS_OK.getMinPoints() == 0d;

@@ -21,7 +21,7 @@ import io.github.oliviercailloux.grade.context.GitContext;
 import io.github.oliviercailloux.grade.context.PomContext;
 import io.github.oliviercailloux.grade.contexters.PomSupplier;
 
-public class PackageGroupIdMarker implements CriterionMarker {
+public class PackageGroupIdMarker {
 	private Criterion criterion;
 	private GitContext context;
 	private PomContext pomContext;
@@ -35,7 +35,6 @@ public class PackageGroupIdMarker implements CriterionMarker {
 		this.pomContext = requireNonNull(pomContext);
 	}
 
-	@Override
 	public Mark mark() throws GradingException {
 		final List<String> groupIdElements = pomContext.getGroupIdElements();
 

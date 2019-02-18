@@ -19,12 +19,8 @@ import com.google.common.collect.ImmutableSet;
 
 import io.github.oliviercailloux.git.Client;
 import io.github.oliviercailloux.grade.GradingException;
-import io.github.oliviercailloux.grade.context.ContentSupplier;
 import io.github.oliviercailloux.grade.context.FileContent;
 import io.github.oliviercailloux.grade.context.GitContext;
-import io.github.oliviercailloux.grade.contexters.FileCrawler;
-import io.github.oliviercailloux.grade.contexters.GitToTestSourcer;
-import io.github.oliviercailloux.grade.contexters.PomContexter;
 
 class GradingTest {
 
@@ -114,12 +110,7 @@ class GradingTest {
 	}
 
 	private PomContexter getPomContexter(String pom) {
-		final PomContexter supp = new PomContexter(new ContentSupplier() {
-			@Override
-			public String getContent() {
-				return pom;
-			}
-		});
+		final PomContexter supp = new PomContexter(pom);
 		supp.init();
 		return supp;
 	}

@@ -16,15 +16,14 @@ import io.github.oliviercailloux.grade.Criterion;
 import io.github.oliviercailloux.grade.Mark;
 import io.github.oliviercailloux.grade.context.GitFullContext;
 
-public class TimeMarker implements CriterionMarker {
+public class TimeMarker {
 	private final GitFullContext context;
 	private Instant deadline;
 	private double maxGrade;
 	private Criterion criterion;
 
-	public static TimeMarker given(Criterion criterion, GitFullContext contextSupplier, Instant deadline,
-			double maxGrade) {
-		return new TimeMarker(criterion, contextSupplier, deadline, maxGrade);
+	public static Mark given(Criterion criterion, GitFullContext contextSupplier, Instant deadline, double maxGrade) {
+		return new TimeMarker(criterion, contextSupplier, deadline, maxGrade).mark();
 	}
 
 	private TimeMarker(Criterion criterion, GitFullContext contextSupplier, Instant deadline, double maxGrade) {
@@ -35,7 +34,6 @@ public class TimeMarker implements CriterionMarker {
 		checkArgument(Double.isFinite(maxGrade));
 	}
 
-	@Override
 	public Mark mark() {
 		final Client client = context.getClient();
 
