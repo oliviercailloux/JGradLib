@@ -1,9 +1,10 @@
-package io.github.oliviercailloux.grade.ex1;
+package io.github.oliviercailloux.java_grade.ex1;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.time.Instant;
 import java.util.EnumSet;
@@ -22,8 +23,6 @@ import io.github.oliviercailloux.git.Client;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.git.git_hub.model.v3.Event;
 import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherV3;
-import io.github.oliviercailloux.grade.ex1.Ex1Criterion;
-import io.github.oliviercailloux.grade.ex1.Ex1Grader;
 import io.github.oliviercailloux.grade.mycourse.StudentOnGitHub;
 import io.github.oliviercailloux.grade.mycourse.StudentOnMyCourse;
 
@@ -64,6 +63,10 @@ public class Ex1Test {
 		Mockito.when(coordinates.getRepositoryName()).thenReturn("sol-ex-1");
 		Mockito.when(coordinates.getSshURLString()).thenReturn(path);
 		final Client client = Client.about(coordinates);
+		final boolean exists = Files.exists(client.getProjectDirectory());
+		if (exists) {
+			LOGGER.info("Path exists, project will be reused: {}.", client.getProjectDirectory());
+		}
 		client.tryRetrieve();
 		client.checkout("origin/dev");
 		final ObjectId master = client.resolve("master");

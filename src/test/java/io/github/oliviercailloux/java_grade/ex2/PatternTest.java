@@ -1,4 +1,4 @@
-package io.github.oliviercailloux.grade.ex2;
+package io.github.oliviercailloux.java_grade.ex2;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 

@@ -1,4 +1,4 @@
-package io.github.oliviercailloux.grade.ex3;
+package io.github.oliviercailloux.java_grade.ex3;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;

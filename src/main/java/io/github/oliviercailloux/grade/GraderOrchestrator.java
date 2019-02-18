@@ -29,12 +29,12 @@ import com.univocity.parsers.csv.CsvWriterSettings;
 import io.github.oliviercailloux.git.git_hub.model.GitHubToken;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherV3;
-import io.github.oliviercailloux.grade.ex3.Ex3Grader;
 import io.github.oliviercailloux.grade.json.JsonGrade;
 import io.github.oliviercailloux.grade.mycourse.MyCourseCsvWriter;
 import io.github.oliviercailloux.grade.mycourse.StudentOnGitHub;
 import io.github.oliviercailloux.grade.mycourse.StudentOnGitHubKnown;
 import io.github.oliviercailloux.grade.mycourse.UsernamesReader;
+import io.github.oliviercailloux.java_grade.ex3.Ex3Grader;
 
 public class GraderOrchestrator {
 
@@ -166,6 +166,15 @@ public class GraderOrchestrator {
 	}
 
 	public static void main(String[] args) throws Exception {
+		/**
+		 * TODO 1) no need of history. Repo is cloned locally and set at right commit.
+		 * Then, only need a path, no git client.
+		 *
+		 * 2) Need navigation through history. Use plumbing API, no work space is
+		 * necessary; a main commit and a plumbing client are required. Get everything
+		 * including the main commit from API. The main commit should be provided by a
+		 * distinct object as it is useful in both cases (author, date…)?
+		 */
 		final String prefix = "ci";
 		final GraderOrchestrator orch = new GraderOrchestrator(prefix);
 		orch.readUsernames();
