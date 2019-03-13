@@ -17,12 +17,12 @@ import io.github.oliviercailloux.grade.context.GitContext;
  *
  */
 public class GitAndBaseToSourcer {
-	public static String given(GitContext context, Path projectRelativeRoot, Path relativePath) {
-		requireNonNull(projectRelativeRoot);
+	public static String given(GitContext context, Path path) {
+		requireNonNull(path);
 		final Client client = context.getClient();
 		final String content;
 		try {
-			content = client.fetchBlobOrEmpty(projectRelativeRoot.resolve(relativePath));
+			content = client.fetchBlobOrEmpty(path);
 		} catch (IOException e) {
 			throw new GradingException(e);
 		}

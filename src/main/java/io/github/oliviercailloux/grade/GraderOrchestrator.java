@@ -34,7 +34,7 @@ import io.github.oliviercailloux.grade.mycourse.MyCourseCsvWriter;
 import io.github.oliviercailloux.grade.mycourse.StudentOnGitHub;
 import io.github.oliviercailloux.grade.mycourse.StudentOnGitHubKnown;
 import io.github.oliviercailloux.grade.mycourse.UsernamesReader;
-import io.github.oliviercailloux.java_grade.ex3.Ex3Grader;
+import io.github.oliviercailloux.java_grade.ex_jpa.ExJpaGrader;
 
 public class GraderOrchestrator {
 
@@ -151,7 +151,7 @@ public class GraderOrchestrator {
 		return repositoriesByStudent;
 	}
 
-	public ImmutableSet<Grade> gradeAll(Ex3Grader grader,
+	public ImmutableSet<Grade> gradeAll(ExJpaGrader grader,
 			ImmutableMap<StudentOnGitHub, RepositoryCoordinates> repositories) {
 		final ImmutableSet.Builder<Grade> gradesBuilder = ImmutableSet.builder();
 		for (Map.Entry<StudentOnGitHub, RepositoryCoordinates> entry : repositories.entrySet()) {
@@ -175,15 +175,15 @@ public class GraderOrchestrator {
 		 * including the main commit from API. The main commit should be provided by a
 		 * distinct object as it is useful in both cases (author, date…)?
 		 */
-		final String prefix = "ci";
+		final String prefix = "jpa";
 		final GraderOrchestrator orch = new GraderOrchestrator(prefix);
 		orch.readUsernames();
 
 		orch.readRepositories();
-		// orch.setSingleRepo("guillaumerg7");
+		orch.setSingleRepo("guillaumerg7");
 		final ImmutableMap<StudentOnGitHub, RepositoryCoordinates> repositories = orch.getRepositoriesByStudent();
 
-		final Ex3Grader grader = new Ex3Grader();
+		final ExJpaGrader grader = new ExJpaGrader();
 
 		final ImmutableSet<Grade> grades = orch.gradeAll(grader, repositories);
 //		final ImmutableSet<StudentGrade> grades = orch.readJson();

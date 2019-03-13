@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TimeZone;
+import java.util.function.Predicate;
 
 import org.eclipse.jgit.api.CloneCommand;
 import org.eclipse.jgit.api.Git;
@@ -42,10 +43,12 @@ import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.revwalk.RevTree;
 import org.eclipse.jgit.revwalk.RevWalk;
 import org.eclipse.jgit.treewalk.TreeWalk;
+import org.eclipse.jgit.treewalk.filter.PathFilter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Table;
 import com.google.common.collect.TreeBasedTable;
 
@@ -200,9 +203,8 @@ public class Client {
 		}
 
 		LOGGER.debug("Blob cache miss, fetching {}.", path);
-		final Optional<AnyObjectId> foundId;
 		try (Repository repository = openRepository()) {
-			foundId = getBlobId(repository, revSpec, path);
+			final Optional<AnyObjectId> foundId = getBlobId(repository, revSpec, path);
 
 			final String read;
 			if (foundId.isPresent()) {
@@ -276,13 +278,114 @@ public class Client {
 		}
 	}
 
-	private String read(Repository repository, AnyObjectId id) throws MissingObjectException, IOException {
-		final String read;
-		try (ObjectReader reader = repository.newObjectReader()) {
-			byte[] data = reader.open(id).getBytes();
-			read = new String(data, StandardCharsets.UTF_8);
+	String cachedOrRead(Repository repository, AnyObjectId revSpec, Path path, AnyObjectId blobId)
+			throws MissingObjectException, IOException {
+		if (blobCache.contains(revSpec, path)) {
+			return blobCache.get(revSpec, path);
 		}
+		final String read = read(repository, blobId);
+		blobCache.put(revSpec.copy(), path, read);
 		return read;
+	}
+
+	public ImmutableList<Path> getContents(AnyObjectId revSpec, Path path)
+			throws MissingObjectException, IncorrectObjectTypeException, CorruptObjectException, IOException {
+		try (Repository repository = openRepository()) {
+			final RevTree tree;
+			{
+				final RevCommit commit = getCommit(repository, revSpec);
+				tree = commit.getTree();
+			}
+
+			final Path rel = path.isAbsolute() ? getProjectDirectory().relativize(path) : path;
+			LOGGER.debug("Trying to relativize {} against {}: {}.", getProjectDirectory(), path, rel);
+//			final Optional<AnyObjectId> foundId;
+//			try (TreeWalk treewalk = TreeWalk.forPath(repository, rel.toString(), tree)) {
+//				if (treewalk != null) {
+//					foundId = Optional.of(treewalk.getObjectId(0));
+//				} else {
+//					foundId = Optional.empty();
+//				}
+//			}
+
+//			final String read;
+//			if (foundId.isPresent()) {
+//				final AnyObjectId id = foundId.get();
+//				read = read(repository, id);
+//			} else {
+//				read = "";
+//			}
+//			blobCache.put(revSpec.copy(), path, read);
+//			return read;
+
+			final ImmutableList.Builder<Path> builder = ImmutableList.builder();
+			try (TreeWalk treeWalk = new TreeWalk(repository)) {
+//			try (TreeWalk treeWalk = TreeWalk.forPath(repository, rel.toString(), tree)) {
+				treeWalk.addTree(tree);
+				LOGGER.info("Filtering for {}.", path);
+				/** Doesn’t work: accepts parents and children of the given path. */
+				treeWalk.setFilter(PathFilter.create(path.toString()));
+				treeWalk.setRecursive(false);
+				do {
+					final boolean foundPath = treeWalk.next();
+					checkArgument(foundPath);
+					LOGGER.info("Now in {}.", treeWalk.getPathString());
+					treeWalk.enterSubtree();
+				} while (!treeWalk.getPathString().equals(path.toString()));
+				while (treeWalk.next()) {
+					if (treeWalk.isSubtree()) {
+						builder.add(Paths.get(treeWalk.getPathString()));
+//						treeWalk.enterSubtree();
+//						System.out.println("dir: " + treeWalk.getPathString());
+//					} else {
+//						System.out.println("file: " + treeWalk.getPathString());
+					}
+				}
+			}
+			return builder.build();
+		}
+	}
+
+	public ImmutableMap<Path, String> getContents(AnyObjectId revSpec, Predicate<FileContent> predicate)
+			throws MissingObjectException, IncorrectObjectTypeException, CorruptObjectException, IOException {
+		try (Repository repository = openRepository()) {
+			final RevTree tree;
+			{
+				final RevCommit commit = getCommit(repository, revSpec);
+				tree = commit.getTree();
+			}
+
+			final ImmutableMap.Builder<Path, String> builder = ImmutableMap.builder();
+			try (TreeWalk treeWalk = new TreeWalk(repository)) {
+				treeWalk.addTree(tree);
+				treeWalk.setRecursive(true);
+				while (treeWalk.next()) {
+					final Path path = Paths.get(treeWalk.getPathString());
+					final ObjectId objectId = treeWalk.getObjectId(0);
+					final FileContent fc = new FileContent() {
+						@Override
+						public Path getPath() {
+							return path;
+						}
+
+						@Override
+						public String getContent() {
+							try {
+								return cachedOrRead(repository, revSpec, path, objectId);
+							} catch (IOException e) {
+								throw new IllegalStateException(e);
+							}
+						}
+					};
+					final boolean test = predicate.test(fc);
+					if (test) {
+						builder.put(path, fc.getContent());
+					}
+					LOGGER.debug("Now in {}.", path);
+				}
+			}
+			return builder.build();
+		}
 	}
 
 	public void cloneRepository() throws GitAPIException {
@@ -387,5 +490,14 @@ public class Client {
 
 	public Optional<ObjectId> getDefaultRevSpec() {
 		return Optional.ofNullable(defaultRevSpec);
+	}
+
+	private String read(Repository repository, AnyObjectId id) throws MissingObjectException, IOException {
+		final String read;
+		try (ObjectReader reader = repository.newObjectReader()) {
+			byte[] data = reader.open(id).getBytes();
+			read = new String(data, StandardCharsets.UTF_8);
+		}
+		return read;
 	}
 }

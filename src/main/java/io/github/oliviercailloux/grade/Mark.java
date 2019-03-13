@@ -13,6 +13,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.MoreObjects;
+import com.google.common.primitives.Booleans;
 
 @JsonbPropertyOrder({ "criterion", "points", "comment" })
 public class Mark {
@@ -48,6 +49,19 @@ public class Mark {
 
 	public String getComment() {
 		return comment;
+	}
+
+	public static Mark proportional(Criterion criterion, boolean firstTest, boolean... tests) {
+		final int nbTests = 1 + tests.length;
+		final int nbOk = firstTest ? 1 : 0 + Booleans.countTrue(tests);
+		return proportional(criterion, nbOk, nbTests);
+	}
+
+	public static Mark proportional(Criterion criterion, int nbOk, int nbTests) {
+		final double weightOk = (double) nbOk / (double) nbTests;
+		final double weightKo = 1d - weightOk;
+		return Mark.of(criterion, criterion.getMinPoints() * weightKo + criterion.getMaxPoints() * weightOk,
+				"nbOk / nbTests");
 	}
 
 	public static Mark min(Criterion criterion) {

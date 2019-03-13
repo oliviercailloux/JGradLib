@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Instant;
 import java.util.EnumSet;
@@ -18,6 +19,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 
 import io.github.oliviercailloux.git.Client;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
@@ -51,6 +53,28 @@ public class Ex1Test {
 		assertTrue(grader.getPass().contains(Ex1Criterion.ON_TIME));
 		assertEquals(EnumSet.range(Ex1Criterion.SUBMITTED_GITHUB_USER_NAME, Ex1Criterion.MERGE2_COMMIT),
 				grader.getPass());
+	}
+
+	@Test
+	void testReadDir() throws Exception {
+		/** Note that this will not work outside my computer! */
+		final String path = "/home/olivier/Professions/Enseignement/java-course";
+		LOGGER.info("Using path: {}.", path);
+		final RepositoryCoordinates coordinates = Mockito.mock(RepositoryCoordinates.class);
+		Mockito.when(coordinates.getOwner()).thenReturn("oliviercailloux");
+		Mockito.when(coordinates.getRepositoryName()).thenReturn("sol-ex-1");
+		Mockito.when(coordinates.getSshURLString()).thenReturn(path);
+		final Client client = Client.about(coordinates);
+		final boolean exists = Files.exists(client.getProjectDirectory());
+		if (exists) {
+			LOGGER.info("Path exists, project will be reused: {}.", client.getProjectDirectory());
+		}
+		client.tryRetrieve();
+		final ObjectId master = client.resolve("master");
+		final Optional<AnyObjectId> dir = client.getBlobId(master, Paths.get("src"));
+		assertFalse(dir.isPresent());
+		final ImmutableMap<Path, String> contents = client.getContents(master, (fc) -> fc.getPath().startsWith("Git"));
+		assertTrue(contents.keySet().contains(Paths.get("Git/C1.svg")));
 	}
 
 	@Test

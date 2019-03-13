@@ -27,6 +27,12 @@ public class FileCrawler {
 	}
 
 	/**
+	 * TODO (first priority!) implement a visit using git structure only, not disk.
+	 * Define queue containing just start path. While queue not empty: pop from
+	 * queue, list folders and add to queue, visit folder (remember those that match
+	 * the predicate). Then (second priority) set current commit in this class and
+	 * use it with client.
+	 *
 	 * @return paths relative to project directory
 	 */
 	public ImmutableSet<Path> getRecursively(Path relativeStart) throws IOException {

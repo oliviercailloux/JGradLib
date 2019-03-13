@@ -18,8 +18,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
 import io.github.oliviercailloux.git.Client;
+import io.github.oliviercailloux.git.FileContent;
 import io.github.oliviercailloux.grade.GradingException;
-import io.github.oliviercailloux.grade.context.FileContent;
 import io.github.oliviercailloux.grade.context.GitContext;
 
 class GradingTest {

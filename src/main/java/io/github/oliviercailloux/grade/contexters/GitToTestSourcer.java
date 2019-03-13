@@ -8,8 +8,8 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableMap;
 
+import io.github.oliviercailloux.git.FileContent;
 import io.github.oliviercailloux.grade.GradingException;
-import io.github.oliviercailloux.grade.context.FileContent;
 import io.github.oliviercailloux.grade.context.GitContext;
 import io.github.oliviercailloux.grade.context.MultiContent;
 
@@ -19,7 +19,7 @@ public class GitToTestSourcer implements MultiContent {
 	private final GitToMultipleSourcer delegate;
 
 	GitToTestSourcer(GitContext context) {
-		delegate = GitToMultipleSourcer.satisfyingOnContent(context, this::isTestFile);
+		delegate = new GitToMultipleSourcer(context, this::isTestFile);
 	}
 
 	GitToMultipleSourcer getDelegate() {

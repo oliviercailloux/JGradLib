@@ -16,17 +16,13 @@ import io.github.oliviercailloux.grade.Criterion;
 import io.github.oliviercailloux.grade.Mark;
 import io.github.oliviercailloux.grade.context.GitFullContext;
 
-public class TimeMarker {
+class TimeMarker {
 	private final GitFullContext context;
 	private Instant deadline;
 	private double maxGrade;
 	private Criterion criterion;
 
-	public static Mark given(Criterion criterion, GitFullContext contextSupplier, Instant deadline, double maxGrade) {
-		return new TimeMarker(criterion, contextSupplier, deadline, maxGrade).mark();
-	}
-
-	private TimeMarker(Criterion criterion, GitFullContext contextSupplier, Instant deadline, double maxGrade) {
+	public TimeMarker(Criterion criterion, GitFullContext contextSupplier, Instant deadline, double maxGrade) {
 		this.criterion = requireNonNull(criterion);
 		this.context = requireNonNull(contextSupplier);
 		this.deadline = requireNonNull(deadline);

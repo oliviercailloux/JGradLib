@@ -18,8 +18,8 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.ImmutableMap;
 
 import io.github.oliviercailloux.git.Client;
+import io.github.oliviercailloux.git.FileContent;
 import io.github.oliviercailloux.grade.GradingException;
-import io.github.oliviercailloux.grade.context.FileContent;
 import io.github.oliviercailloux.grade.context.GitContext;
 import io.github.oliviercailloux.grade.context.MultiContent;
 
@@ -28,23 +28,24 @@ public class GitToMultipleSourcer implements MultiContent {
 	private final GitContext context;
 	private ImmutableMap<Path, String> contents;
 
-	public static MultiContent satisfyingPathAndInit(GitContext context, Predicate<Path> pathPredicate) {
-		final GitToMultipleSourcer sourcer = new GitToMultipleSourcer(context, (f) -> pathPredicate.test(f.getPath()));
+	public static MultiContent satisfyingPath(GitContext context, Predicate<Path> pathPredicate) {
+		return satisfyingOnContent(context, (f) -> pathPredicate.test(f.getPath()));
+	}
+
+	public static MultiContent satisfyingPathThenContent(GitContext context, Predicate<Path> pathPredicate,
+			Predicate<String> contentPredicate) {
+		return satisfyingOnContent(context,
+				(f) -> pathPredicate.test(f.getPath()) && contentPredicate.test(f.getContent()));
+	}
+
+	public static MultiContent satisfyingOnContent(GitContext context, Predicate<FileContent> predicate)
+			throws GradingException {
+		final GitToMultipleSourcer sourcer = new GitToMultipleSourcer(context, predicate);
 		sourcer.init();
 		return sourcer;
 	}
 
-	public static GitToMultipleSourcer satisfyingPathThenContent(GitContext context, Predicate<Path> pathPredicate,
-			Predicate<String> contentPredicate) {
-		return new GitToMultipleSourcer(context,
-				(f) -> pathPredicate.test(f.getPath()) && contentPredicate.test(f.getContent()));
-	}
-
-	public static GitToMultipleSourcer satisfyingOnContent(GitContext context, Predicate<FileContent> predicate) {
-		return new GitToMultipleSourcer(context, predicate);
-	}
-
-	private GitToMultipleSourcer(GitContext context, Predicate<FileContent> predicate) {
+	GitToMultipleSourcer(GitContext context, Predicate<FileContent> predicate) {
 		this.context = requireNonNull(context);
 		this.predicate = requireNonNull(predicate);
 		contents = null;
@@ -83,11 +84,6 @@ public class GitToMultipleSourcer implements MultiContent {
 			}
 		}
 		contents = contentBuilder.build();
-	}
-
-	public static GitToMultipleSourcer satisfyingPath(GitContext context, Predicate<Path> pathPredicate) {
-		final GitToMultipleSourcer sourcer = new GitToMultipleSourcer(context, (f) -> pathPredicate.test(f.getPath()));
-		return sourcer;
 	}
 
 	@SuppressWarnings("unused")

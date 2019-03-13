@@ -21,7 +21,7 @@ import io.github.oliviercailloux.grade.context.GitContext;
 import io.github.oliviercailloux.grade.context.PomContext;
 import io.github.oliviercailloux.grade.contexters.PomSupplier;
 
-public class PackageGroupIdMarker {
+class PackageGroupIdMarker {
 	private Criterion criterion;
 	private GitContext context;
 	private PomContext pomContext;
@@ -41,7 +41,7 @@ public class PackageGroupIdMarker {
 		if (groupIdElements.isEmpty()) {
 			return Mark.min(criterion, "Unknown group id");
 		}
-		final Optional<Path> relRootOpt = pomSupplier.getProjectRelativeRoot();
+		final Optional<Path> relRootOpt = pomSupplier.getMavenRelativeRoot();
 		if (!relRootOpt.isPresent()) {
 			return Mark.min(criterion, "No unique pom found.");
 		}

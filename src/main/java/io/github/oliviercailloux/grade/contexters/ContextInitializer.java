@@ -9,16 +9,20 @@ import java.nio.file.Paths;
 import java.time.Instant;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Predicate;
 
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.revwalk.RevCommit;
 
 import io.github.oliviercailloux.git.Client;
+import io.github.oliviercailloux.git.FileContent;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.grade.GradingException;
+import io.github.oliviercailloux.grade.context.FilesReader;
 import io.github.oliviercailloux.grade.context.GitFullContext;
 import io.github.oliviercailloux.grade.context.GradingContextWithTimeline;
+import io.github.oliviercailloux.grade.context.MultiContent;
 
 public class ContextInitializer implements GitFullContext {
 
@@ -46,8 +50,7 @@ public class ContextInitializer implements GitFullContext {
 	private RepositoryCoordinates coordinatesSupplier;
 	private Path projectsBaseDir;
 
-	private ContextInitializer(RepositoryCoordinates coordinatesSupplier, Path projectsBaseDir,
-			Instant ignoredAfter) {
+	private ContextInitializer(RepositoryCoordinates coordinatesSupplier, Path projectsBaseDir, Instant ignoredAfter) {
 		this.ignoreAfter = requireNonNull(ignoredAfter);
 		this.coordinatesSupplier = requireNonNull(coordinatesSupplier);
 		this.projectsBaseDir = requireNonNull(projectsBaseDir);
@@ -107,9 +110,39 @@ public class ContextInitializer implements GitFullContext {
 		return context.getCommitsReceptionTime().get(lastCommitNotIgnored.get());
 	}
 
-	public static ContextInitializer withPathAndIgnore(RepositoryCoordinates coordinatesSupplier,
-			Path projectsBaseDir, Instant ignoreAfter) {
+	String fetchContentFromClient(Path relativePath) throws GradingException {
+		requireNonNull(relativePath);
+		final String content;
+		try {
+			content = getClient().fetchBlobOrEmpty(relativePath);
+		} catch (IOException e) {
+			throw new GradingException(e);
+		}
+		return content;
+	}
+
+	public static ContextInitializer withPathAndIgnore(RepositoryCoordinates coordinatesSupplier, Path projectsBaseDir,
+			Instant ignoreAfter) {
 		return new ContextInitializer(coordinatesSupplier, projectsBaseDir, ignoreAfter);
+	}
+
+	@Override
+	public FilesReader getFilesReader(RevCommit sourceCommit) {
+		/**
+		 * TODO (priority!) cache myself, instead of caching in the client; use the
+		 * client more directly, make client immutable.
+		 */
+		return new FilesReader() {
+			@Override
+			public MultiContent getMultiContent(Predicate<FileContent> predicate) throws GradingException {
+				return GitToMultipleSourcer.satisfyingOnContent(ContextInitializer.this, predicate);
+			}
+
+			@Override
+			public String getContent(Path relativePath) throws GradingException {
+				return fetchContentFromClient(relativePath);
+			}
+		};
 	}
 
 }
