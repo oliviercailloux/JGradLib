@@ -2,14 +2,12 @@ package io.github.oliviercailloux.grade.contexters;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -17,10 +15,10 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
-import io.github.oliviercailloux.git.Client;
 import io.github.oliviercailloux.git.FileContent;
 import io.github.oliviercailloux.grade.GradingException;
-import io.github.oliviercailloux.grade.context.GitContext;
+import io.github.oliviercailloux.grade.context.FilesSource;
+import io.github.oliviercailloux.java_grade.testers.TestFileRecognizer;
 
 class GradingTest {
 
@@ -42,31 +40,14 @@ class GradingTest {
 
 		final ImmutableSet<FileContent> files = ImmutableSet.of(t1, t2, t3, u3, v3, t12, t13, t23);
 		final ImmutableMap<Path, String> filesMap = files.stream()
-				.collect(ImmutableMap.toImmutableMap((f) -> f.getPath(), (f) -> f.getContent()));
+				.collect(ImmutableMap.toImmutableMap(FileContent::getPath, FileContent::getContent));
 		final Map<Path, String> expected = new LinkedHashMap<>(filesMap);
 		expected.remove(t1.getPath());
 		expected.remove(t2.getPath());
 
-		final Client mockedClient = Mockito.mock(Client.class);
-		final FileCrawler mockedFileCrawler = new FileCrawler(mockedClient) {
-			@Override
-			public String getFileContent(Path path) throws IOException {
-				return filesMap.get(path);
-			}
+		final FilesSource testFiles = TestFileRecognizer.getTestFiles(FilesSource.fromMemory(filesMap));
+		final ImmutableMap<Path, String> contents = testFiles.getContents();
 
-			@Override
-			public ImmutableSet<Path> getRecursively(Path relativeStart) throws IOException {
-				return filesMap.keySet();
-			}
-		};
-		final GitContext mockedContext = Mockito.mock(GitContext.class);
-		Mockito.when(mockedContext.getClient()).thenReturn(mockedClient);
-
-		final GitToTestSourcer testSourcer = new GitToTestSourcer(mockedContext);
-		testSourcer.getDelegate().setFileCrawlerFactory((c) -> mockedFileCrawler);
-
-		testSourcer.init();
-		final ImmutableMap<Path, String> contents = testSourcer.getContents();
 		LOGGER.info("Expected: {}.", expected);
 		LOGGER.info("Got: {}.", contents);
 		assertEquals(expected, contents);

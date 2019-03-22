@@ -18,6 +18,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.TimeZone;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 import org.eclipse.jgit.api.CloneCommand;
 import org.eclipse.jgit.api.Git;
@@ -49,12 +50,24 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Table;
 import com.google.common.collect.TreeBasedTable;
 
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.utils.Utils;
 
+/**
+ * This could be simplified by splitting in a row client with basic operations
+ * and a higher level one with caching and predicate search
+ * (getContents<Predicate>). Note that predicate search must use caching.
+ *
+ * Does not depend on the content on the work dir. Only uses the content of the
+ * .git directory on the disk.
+ *
+ * @author Olivier Cailloux
+ *
+ */
 public class Client {
 	public static Client aboutAndUsing(RepositoryCoordinates coordinates, Path path) {
 		return new Client(coordinates, path);
@@ -82,23 +95,13 @@ public class Client {
 
 	private final Table<ObjectId, Path, String> blobCache;
 
-	private ObjectId defaultRevSpec;
-
-	private Client(RepositoryCoordinates coordinates, Path outputBaseDir) {
+	Client(RepositoryCoordinates coordinates, Path outputBaseDir) {
 		this.coordinates = requireNonNull(coordinates);
 		this.outputBaseDir = requireNonNull(outputBaseDir);
 		allHistory = null;
 		exists = null;
 		hasContent = null;
 		blobCache = TreeBasedTable.create();
-		defaultRevSpec = null;
-	}
-
-	@Deprecated
-	public void checkout(String name) throws IOException, GitAPIException {
-		try (Git git = open()) {
-			git.checkout().setName(name).call();
-		}
 	}
 
 	private Repository openRepository() throws IOException {
@@ -154,7 +157,10 @@ public class Client {
 			LOGGER.info("Updating {}.", coordinates);
 			git.fetch().call();
 			exists = true;
-
+			if (hasContent != null && !hasContent) {
+				/** Previously cached information about no content may now be invalid. */
+				hasContent = null;
+			}
 //			final Ref masterRef = repo.getRepository().exactRef("refs/heads/master");
 //			assert masterRef != null : repo.branchList().call();
 //			final RevCommit masterCommit = repo.getRepository().parseCommit(masterRef.getObjectId());
@@ -189,12 +195,6 @@ public class Client {
 		}
 	}
 
-	public void checkout(AnyObjectId commitId) throws IOException, GitAPIException {
-		try (Git git = open()) {
-			git.checkout().setName(commitId.getName()).call();
-		}
-	}
-
 	public String fetchBlob(AnyObjectId revSpec, Path path)
 			throws MissingObjectException, IncorrectObjectTypeException, IOException {
 		checkArgument(!path.toString().equals(""));
@@ -217,19 +217,6 @@ public class Client {
 			blobCache.put(revSpec.copy(), path, read);
 			return read;
 		}
-	}
-
-	public String fetchBlobOrEmpty(Path path) throws MissingObjectException, IncorrectObjectTypeException, IOException {
-		checkArgument(!path.toString().equals(""));
-		LOGGER.debug("Fetching from {} using default {}.", path, defaultRevSpec);
-		if (defaultRevSpec == null) {
-			return "";
-		}
-		return fetchBlob(defaultRevSpec, path);
-	}
-
-	public void setDefaultRevSpec(AnyObjectId revSpec) {
-		defaultRevSpec = revSpec.copy();
 	}
 
 	private Optional<AnyObjectId> getBlobId(Repository repository, AnyObjectId revSpec, Path path)
@@ -346,8 +333,15 @@ public class Client {
 		}
 	}
 
-	public ImmutableMap<Path, String> getContents(AnyObjectId revSpec, Predicate<FileContent> predicate)
+	public ImmutableSet<Path> getPaths(AnyObjectId revSpec, Predicate<FileContent> predicate)
 			throws MissingObjectException, IncorrectObjectTypeException, CorruptObjectException, IOException {
+		return getFileContents(revSpec, predicate).stream().map(FileContent::getPath)
+				.collect(ImmutableSet.toImmutableSet());
+	}
+
+	public ImmutableSet<FileContent> getFileContents(AnyObjectId revSpec, Predicate<FileContent> predicate)
+			throws MissingObjectException, IncorrectObjectTypeException, IOException, CorruptObjectException {
+		final ImmutableSet<FileContent> built;
 		try (Repository repository = openRepository()) {
 			final RevTree tree;
 			{
@@ -355,37 +349,36 @@ public class Client {
 				tree = commit.getTree();
 			}
 
-			final ImmutableMap.Builder<Path, String> builder = ImmutableMap.builder();
+			final ImmutableSet.Builder<FileContent> builder = ImmutableSet.builder();
 			try (TreeWalk treeWalk = new TreeWalk(repository)) {
 				treeWalk.addTree(tree);
 				treeWalk.setRecursive(true);
 				while (treeWalk.next()) {
 					final Path path = Paths.get(treeWalk.getPathString());
-					final ObjectId objectId = treeWalk.getObjectId(0);
-					final FileContent fc = new FileContent() {
-						@Override
-						public Path getPath() {
-							return path;
-						}
-
-						@Override
-						public String getContent() {
-							try {
-								return cachedOrRead(repository, revSpec, path, objectId);
-							} catch (IOException e) {
-								throw new IllegalStateException(e);
-							}
+					final Supplier<String> contentSupplier = () -> {
+						try {
+							/**
+							 * To get better perf, we might use this access, but it works only before
+							 * closing the repository thus can’t be returned to the caller.
+							 */
+//							final ObjectId objectId = treeWalk.getObjectId(0);
+//							return cachedOrRead(repository, revSpec, path, objectId);
+							return fetchBlob(revSpec, path);
+						} catch (IOException e) {
+							throw new IllegalStateException(e);
 						}
 					};
+					final FileContent fc = new FileContentImpl(path, contentSupplier);
 					final boolean test = predicate.test(fc);
 					if (test) {
-						builder.put(path, fc.getContent());
+						builder.add(fc);
 					}
 					LOGGER.debug("Now in {}.", path);
 				}
 			}
-			return builder.build();
+			built = builder.build();
 		}
+		return built;
 	}
 
 	public void cloneRepository() throws GitAPIException {
@@ -397,6 +390,10 @@ public class Client {
 		LOGGER.info("Cloning from {} to {}.", uri, dest);
 		cloneCmd.call().close();
 		exists = true;
+		if (hasContent != null && !hasContent) {
+			/** Previously cached information about no content may now be invalid. */
+			hasContent = null;
+		}
 	}
 
 	@Deprecated
@@ -441,11 +438,15 @@ public class Client {
 		return exists;
 	}
 
+	public boolean testedExistence() {
+		return exists != null;
+	}
+
 	public RepositoryCoordinates getCoordinates() {
 		return coordinates;
 	}
 
-	private Git open() throws IOException {
+	Git open() throws IOException {
 		return Git.open(getProjectDirectory().toFile());
 	}
 
@@ -488,10 +489,6 @@ public class Client {
 		}
 	}
 
-	public Optional<ObjectId> getDefaultRevSpec() {
-		return Optional.ofNullable(defaultRevSpec);
-	}
-
 	private String read(Repository repository, AnyObjectId id) throws MissingObjectException, IOException {
 		final String read;
 		try (ObjectReader reader = repository.newObjectReader()) {
@@ -499,5 +496,44 @@ public class Client {
 			read = new String(data, StandardCharsets.UTF_8);
 		}
 		return read;
+	}
+
+	public ImmutableMap<Path, String> getContents(AnyObjectId revSpec, Predicate<FileContent> predicate)
+			throws MissingObjectException, IncorrectObjectTypeException, CorruptObjectException, IOException {
+		/**
+		 * Code is largely redundant with other filtering behavior of this class, but
+		 * not factored yet.
+		 */
+		try (Repository repository = openRepository()) {
+			final RevTree tree;
+			{
+				final RevCommit commit = getCommit(repository, revSpec);
+				tree = commit.getTree();
+			}
+
+			final ImmutableMap.Builder<Path, String> builder = ImmutableMap.builder();
+			try (TreeWalk treeWalk = new TreeWalk(repository)) {
+				treeWalk.addTree(tree);
+				treeWalk.setRecursive(true);
+				while (treeWalk.next()) {
+					final Path path = Paths.get(treeWalk.getPathString());
+					final ObjectId objectId = treeWalk.getObjectId(0);
+					final Supplier<String> contentSupplier = () -> {
+						try {
+							return cachedOrRead(repository, revSpec, path, objectId);
+						} catch (IOException e) {
+							throw new IllegalStateException(e);
+						}
+					};
+					final FileContent fc = new FileContentImpl(path, contentSupplier);
+					final boolean test = predicate.test(fc);
+					if (test) {
+						builder.put(path, fc.getContent());
+					}
+					LOGGER.debug("Now in {}.", path);
+				}
+			}
+			return builder.build();
+		}
 	}
 }

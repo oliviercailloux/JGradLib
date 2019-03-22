@@ -21,19 +21,22 @@ class TimeMarker {
 	private Instant deadline;
 	private double maxGrade;
 	private Criterion criterion;
+	private boolean binary;
 
-	public TimeMarker(Criterion criterion, GitFullContext contextSupplier, Instant deadline, double maxGrade) {
+	public TimeMarker(Criterion criterion, GitFullContext contextSupplier, Instant deadline, double maxGrade,
+			boolean binary) {
 		this.criterion = requireNonNull(criterion);
 		this.context = requireNonNull(contextSupplier);
 		this.deadline = requireNonNull(deadline);
 		this.maxGrade = maxGrade;
+		this.binary = binary;
 		checkArgument(Double.isFinite(maxGrade));
 	}
 
 	public Mark mark() {
 		final Client client = context.getClient();
 
-		if (!client.hasContentCached() || !client.getDefaultRevSpec().isPresent()) {
+		if (!client.hasContentCached() || !context.getMainCommit().isPresent()) {
 			return Mark.of(criterion, 0d, "");
 		}
 
@@ -45,10 +48,15 @@ class TimeMarker {
 		final Mark grade;
 		if (!tardiness.isNegative()) {
 			LOGGER.warn("Last event after deadline: {}.", submitted);
-			final long hoursLate = tardiness.toHours() + 1;
-			grade = Mark.of(criterion, -3d / 20d * maxGrade * hoursLate,
-					"Last event after deadline: " + ZonedDateTime.ofInstant(submitted, ZoneId.of("Europe/Paris")) + ", "
-							+ hoursLate + " hours late.");
+			if (binary) {
+				grade = Mark.min(criterion, "Last event after deadline: "
+						+ ZonedDateTime.ofInstant(submitted, ZoneId.of("Europe/Paris")) + ".");
+			} else {
+				final long hoursLate = tardiness.toHours() + 1;
+				grade = Mark.of(criterion, -3d / 20d * maxGrade * hoursLate,
+						"Last event after deadline: " + ZonedDateTime.ofInstant(submitted, ZoneId.of("Europe/Paris"))
+								+ ", " + hoursLate + " hours late.");
+			}
 		} else {
 			grade = Mark.of(criterion, 0d, "");
 		}

@@ -1,4 +1,4 @@
-package io.github.oliviercailloux.grade;
+package io.github.oliviercailloux.java_grade;
 
 import java.io.BufferedWriter;
 import java.io.IOException;
@@ -8,6 +8,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.text.NumberFormat;
+import java.time.Instant;
+import java.time.ZonedDateTime;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
@@ -26,19 +28,26 @@ import com.google.common.collect.Streams;
 import com.univocity.parsers.csv.CsvWriter;
 import com.univocity.parsers.csv.CsvWriterSettings;
 
+import io.github.oliviercailloux.git.Client;
 import io.github.oliviercailloux.git.git_hub.model.GitHubToken;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherV3;
+import io.github.oliviercailloux.grade.Criterion;
+import io.github.oliviercailloux.grade.Grade;
+import io.github.oliviercailloux.grade.Mark;
+import io.github.oliviercailloux.grade.context.GitFullContext;
+import io.github.oliviercailloux.grade.contexters.FullContextInitializer;
 import io.github.oliviercailloux.grade.json.JsonGrade;
+import io.github.oliviercailloux.grade.markers.Marks;
 import io.github.oliviercailloux.grade.mycourse.StudentOnGitHub;
 import io.github.oliviercailloux.grade.mycourse.StudentOnGitHubKnown;
 import io.github.oliviercailloux.grade.mycourse.csv.MyCourseCsvWriter;
 import io.github.oliviercailloux.grade.mycourse.json.StudentsReaderFromJson;
-import io.github.oliviercailloux.java_grade.ex_jpa.ExJpaGrader;
+import io.github.oliviercailloux.java_grade.ex_eck.ExEckCriterion;
 
-public class GraderOrchestrator {
+public class GraderEck {
 
-	public GraderOrchestrator(String prefix) {
+	public GraderEck(String prefix) {
 		this.prefix = prefix;
 		usernames = new StudentsReaderFromJson();
 		repositoriesByStudent = null;
@@ -93,8 +102,7 @@ public class GraderOrchestrator {
 	}
 
 	public void readUsernames() throws IOException {
-		try (InputStream inputStream = Files
-				.newInputStream(Paths.get("../../Java SITN, app, concept°/usernames.json"))) {
+		try (InputStream inputStream = Files.newInputStream(Paths.get("../../Java L3/usernamesGH-manual.json"))) {
 			usernames.read(inputStream);
 		}
 	}
@@ -141,7 +149,7 @@ public class GraderOrchestrator {
 	private final StudentsReaderFromJson usernames;
 
 	@SuppressWarnings("unused")
-	private static final Logger LOGGER = LoggerFactory.getLogger(GraderOrchestrator.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(GraderEck.class);
 
 	private ImmutableMap<StudentOnGitHub, RepositoryCoordinates> repositoriesByStudent;
 
@@ -151,13 +159,12 @@ public class GraderOrchestrator {
 		return repositoriesByStudent;
 	}
 
-	public ImmutableSet<Grade> gradeAll(ExJpaGrader grader,
-			ImmutableMap<StudentOnGitHub, RepositoryCoordinates> repositories) {
+	public ImmutableSet<Grade> gradeAll(ImmutableMap<StudentOnGitHubKnown, RepositoryCoordinates> repositories) {
 		final ImmutableSet.Builder<Grade> gradesBuilder = ImmutableSet.builder();
-		for (Map.Entry<StudentOnGitHub, RepositoryCoordinates> entry : repositories.entrySet()) {
-			final StudentOnGitHub student = entry.getKey();
+		for (Map.Entry<StudentOnGitHubKnown, RepositoryCoordinates> entry : repositories.entrySet()) {
+			final StudentOnGitHubKnown student = entry.getKey();
 			final RepositoryCoordinates repo = entry.getValue();
-			final Grade grade = Grade.of(student, grader.grade(repo));
+			final Grade grade = grade(student, repo);
 			gradesBuilder.add(grade);
 			LOGGER.debug("Student {}, grades {}.", student, grade.getMarks().values());
 			LOGGER.info("Evaluation: {}", grade.getAsMyCourseString());
@@ -165,32 +172,64 @@ public class GraderOrchestrator {
 		return gradesBuilder.build();
 	}
 
+	private Grade grade(StudentOnGitHubKnown student, RepositoryCoordinates coord) {
+		final GitFullContext context = FullContextInitializer.withPath(coord,
+				Paths.get("/home/olivier/Professions/Enseignement/En cours", prefix));
+		final Client client = context.getClient();
+		final ImmutableSet.Builder<Mark> gradeBuilder = ImmutableSet.builder();
+		final Instant deadline = ZonedDateTime.parse("2019-03-14T00:00:00+01:00").toInstant();
+
+		final Mark contents;
+		if (!client.existsCached()) {
+			contents = Mark.min(ExEckCriterion.CONTENTS, "Repository not found");
+		} else if (!client.hasContentCached()) {
+			contents = Mark.min(ExEckCriterion.CONTENTS, "Repository found but is empty");
+		} else if (!context.getMainCommit().isPresent()) {
+			throw new IllegalStateException();
+		} else if (context.getMainFilesReader().filter(
+				(fc) -> fc.getPath().toString().endsWith("java") && fc.getContent().contains("static void main"))
+				.asFileContents().isEmpty()) {
+			throw new IllegalStateException("Repo but no java");
+		} else {
+			contents = Mark.max(ExEckCriterion.CONTENTS);
+		}
+		gradeBuilder.add(contents);
+		gradeBuilder.add(Marks.timeMark(ExEckCriterion.ON_TIME, context, deadline, 1d, true));
+
+		final Mark username;
+		if (usernames.getIdsNotSubmitted().contains(student.getStudentId())) {
+			username = Mark.min(ExEckCriterion.USERNAME, "Username not properly submitted.");
+		} else {
+			username = Mark.max(ExEckCriterion.USERNAME);
+		}
+		gradeBuilder.add(username);
+		return Grade.of(student.asStudentOnGitHub(), gradeBuilder.build());
+	}
+
 	public static void main(String[] args) throws Exception {
-		/**
-		 * TODO 1) no need of history. Repo is cloned locally and set at right commit.
-		 * Then, only need a path, no git client.
-		 *
-		 * 2) Need navigation through history. Use plumbing API, no work space is
-		 * necessary; a main commit and a plumbing client are required. Get everything
-		 * including the main commit from API. The main commit should be provided by a
-		 * distinct object as it is useful in both cases (author, date…)?
-		 */
-		final String prefix = "jpa";
-		final GraderOrchestrator orch = new GraderOrchestrator(prefix);
+		final String prefix = "eck1";
+		final GraderEck orch = new GraderEck(prefix);
 		orch.readUsernames();
 
 		orch.readRepositories();
-		orch.setSingleRepo("edoreld");
 		final ImmutableMap<StudentOnGitHub, RepositoryCoordinates> repositories = orch.getRepositoriesByStudent();
 
-		final ExJpaGrader grader = new ExJpaGrader();
+		final ImmutableMap<StudentOnGitHubKnown, RepositoryCoordinates> repositoriesByKnown = repositories.entrySet()
+				.stream().filter((e) -> e.getKey().hasStudentOnMyCourse())
+				.collect(ImmutableMap.toImmutableMap((e) -> e.getKey().asStudentOnGitHubKnown(), (e) -> e.getValue()));
 
-		final ImmutableSet<Grade> grades = orch.gradeAll(grader, repositories);
-//		final ImmutableSet<StudentGrade> grades = orch.readJson();
+//		final ImmutableList<StudentOnGitHub> unknown = repositories.keySet().stream()
+//				.filter((s) -> !s.hasStudentOnMyCourse()).collect(ImmutableList.toImmutableList());
+//		checkState(unknown.isEmpty(), unknown);
+//		final ImmutableMap<StudentOnGitHubKnown, RepositoryCoordinates> repositoriesByKnown = repositories.entrySet()
+//				.stream()
+//				.collect(ImmutableMap.toImmutableMap((e) -> e.getKey().asStudentOnGitHubKnown(), (e) -> e.getValue()));
+
+		final ImmutableSet<Grade> grades = orch.gradeAll(repositoriesByKnown);
 		orch.writeCsv(grades);
 		orch.writeJson(grades);
 
-		new MyCourseCsvWriter().writeCsv("Devoir " + prefix, 110774, grades);
+		new MyCourseCsvWriter().writeCsv(prefix, 112144, grades);
 	}
 
 }

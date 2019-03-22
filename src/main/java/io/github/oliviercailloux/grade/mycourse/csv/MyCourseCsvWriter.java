@@ -1,7 +1,9 @@
-package io.github.oliviercailloux.grade.mycourse;
+package io.github.oliviercailloux.grade.mycourse.csv;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
+import static io.github.oliviercailloux.grade.mycourse.csv.CsvStudentsOnMyCourse.LAST_NAME_COLUMN;
+import static io.github.oliviercailloux.grade.mycourse.csv.CsvStudentsOnMyCourse.USERNAME_COLUMN;
 
 import java.io.BufferedWriter;
 import java.io.IOException;
@@ -22,11 +24,10 @@ import com.univocity.parsers.csv.CsvWriter;
 import com.univocity.parsers.csv.CsvWriterSettings;
 
 import io.github.oliviercailloux.grade.Grade;
+import io.github.oliviercailloux.grade.mycourse.StudentOnMyCourse;
 
 public class MyCourseCsvWriter {
 
-	private static final String NAME_COLUMN = "Nom";
-	private static final String USERNAME_COLUMN = "Nom d'utilisateur";
 	private static final String NOTES_COLUMN = "Notes";
 	private static final String NOTES_FORMAT_COLUMN = "Format des notes";
 	private static final String FEEDBACK_COLUMN = "Feed-back fourni à l'apprenant";
@@ -51,11 +52,11 @@ public class MyCourseCsvWriter {
 			/** Stupid MyCourse requires a BOM. */
 			fileWriter.write('\uFEFF');
 			writer = new CsvWriter(fileWriter, new CsvWriterSettings());
-			writer.writeHeaders(NAME_COLUMN, USERNAME_COLUMN, gradeC, NOTES_COLUMN, NOTES_FORMAT_COLUMN,
+			writer.writeHeaders(LAST_NAME_COLUMN, USERNAME_COLUMN, gradeC, NOTES_COLUMN, NOTES_FORMAT_COLUMN,
 					FEEDBACK_COLUMN, FEEDBACK_FORMAT_COLUMN);
 			for (StudentOnMyCourse student : grades.keySet()) {
 				LOGGER.info("Writing {}.", student);
-				writer.addValue(NAME_COLUMN, student.getLastName());
+				writer.addValue(LAST_NAME_COLUMN, student.getLastName());
 				writer.addValue(USERNAME_COLUMN, student.getMyCourseUsername());
 				writer.addValue(gradeC, formatter.format(grades.get(student)));
 				addFeedback(feedbacks.get(student));
@@ -81,12 +82,12 @@ public class MyCourseCsvWriter {
 			/** Stupid MyCourse requires a BOM. */
 			fileWriter.write('\uFEFF');
 			writer = new CsvWriter(fileWriter, new CsvWriterSettings());
-			writer.writeHeaders(NAME_COLUMN, USERNAME_COLUMN, gradeC, NOTES_COLUMN, NOTES_FORMAT_COLUMN,
+			writer.writeHeaders(LAST_NAME_COLUMN, USERNAME_COLUMN, gradeC, NOTES_COLUMN, NOTES_FORMAT_COLUMN,
 					FEEDBACK_COLUMN, FEEDBACK_FORMAT_COLUMN);
 			for (Grade grade : grades) {
 				final StudentOnMyCourse student = grade.getStudent().asStudentOnGitHubKnown().asStudentOnMyCourse();
 				LOGGER.info("Writing {}.", student);
-				writer.addValue(NAME_COLUMN, student.getLastName());
+				writer.addValue(LAST_NAME_COLUMN, student.getLastName());
 				writer.addValue(USERNAME_COLUMN, student.getMyCourseUsername());
 				writer.addValue(gradeC, formatter.format(grade.getGrade()));
 				addFeedback(grade.getAsMyCourseString());

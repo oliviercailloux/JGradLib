@@ -21,6 +21,7 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
+import io.github.oliviercailloux.git.Checkouter;
 import io.github.oliviercailloux.git.Client;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.git.git_hub.model.v3.Event;
@@ -62,7 +63,7 @@ public class Ex1Test {
 		LOGGER.info("Using path: {}.", path);
 		final RepositoryCoordinates coordinates = Mockito.mock(RepositoryCoordinates.class);
 		Mockito.when(coordinates.getOwner()).thenReturn("oliviercailloux");
-		Mockito.when(coordinates.getRepositoryName()).thenReturn("sol-ex-1");
+		Mockito.when(coordinates.getRepositoryName()).thenReturn("java-course");
 		Mockito.when(coordinates.getSshURLString()).thenReturn(path);
 		final Client client = Client.about(coordinates);
 		final boolean exists = Files.exists(client.getProjectDirectory());
@@ -86,7 +87,7 @@ public class Ex1Test {
 		Mockito.when(coordinates.getOwner()).thenReturn("oliviercailloux");
 		Mockito.when(coordinates.getRepositoryName()).thenReturn("sol-ex-1");
 		Mockito.when(coordinates.getSshURLString()).thenReturn(path);
-		final Client client = Client.about(coordinates);
+		final Checkouter client = Checkouter.about(coordinates);
 		final boolean exists = Files.exists(client.getProjectDirectory());
 		if (exists) {
 			LOGGER.info("Path exists, project will be reused: {}.", client.getProjectDirectory());

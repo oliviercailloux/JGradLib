@@ -5,6 +5,7 @@ import static java.util.Objects.requireNonNull;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Optional;
+import java.util.regex.Pattern;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -12,29 +13,30 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
-import io.github.oliviercailloux.grade.context.GitContext;
-import io.github.oliviercailloux.grade.context.MultiContent;
+import io.github.oliviercailloux.grade.context.FilesSource;
+import io.github.oliviercailloux.grade.markers.MarkingPredicates;
+import io.github.oliviercailloux.utils.Utils;
 
 public class PomSupplier {
 
-	public static PomSupplier basedOn(GitContext context) {
+	public static PomSupplier basedOn(FilesSource source) {
 		/**
 		 * Need to limit depth, otherwise will find
 		 * target/m2e-wtp/web-resources/META-INF/maven/<groupId>/<artifactId>/pom.xml.
 		 */
-		final MultiContent multiPom = GitToMultipleSourcer.satisfyingPath(context,
-				(p) -> p.getNameCount() <= 6 && p.getFileName().toString().equals("pom.xml"));
+		final FilesSource multiPom = source
+				.filterOnPath((p) -> p.getNameCount() <= 6 && p.getFileName().toString().equals("pom.xml"));
 		return new PomSupplier(multiPom);
 	}
 
 	private final String content;
-	private MultiContent underlyingMultiSupplier;
+	private FilesSource underlyingMultiSupplier;
 
-	public MultiContent asMultiContent() {
+	public FilesSource asMultiContent() {
 		return underlyingMultiSupplier;
 	}
 
-	private PomSupplier(MultiContent supplier) {
+	private PomSupplier(FilesSource supplier) {
 		this.underlyingMultiSupplier = requireNonNull(supplier);
 		final ImmutableMap<Path, String> contents = underlyingMultiSupplier.getContents();
 		this.content = contents.size() == 1 ? contents.values().iterator().next() : "";
@@ -113,8 +115,11 @@ public class PomSupplier {
 		return possibleMavenRelativeRoots.size() == 1 && getForcedMavenRelativeRoot().equals(Paths.get(""));
 	}
 
-	public static PomSupplier basedOn(MultiContent supplier) {
-		return new PomSupplier(supplier);
+	public boolean hasJunit5() {
+		return MarkingPredicates.containsOnce(Pattern.compile("<dependencies>" + Utils.ANY_REG_EXP + "<dependency>"
+				+ Utils.ANY_REG_EXP + "<groupId>org\\.junit\\.jupiter</groupId>" + Utils.ANY_REG_EXP
+				+ "<artifactId>junit-jupiter-engine</artifactId>" + Utils.ANY_REG_EXP + "<version>5\\.[234]\\."
+				+ Utils.ANY_REG_EXP + "</version>" + Utils.ANY_REG_EXP + "<scope>test</scope>")).test(content);
 	}
 
 }

@@ -4,7 +4,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public enum EventType {
-	OTHER("Other"), CREATE_EVENT("CreateEvent"), MEMBER_EVENT("MemberEvent"), PUSH_EVENT("PushEvent");
+	OTHER("Other"), ISSUES_EVENT("IssuesEvent"), ISSUE_COMMENT_EVENT("IssueCommentEvent"), CREATE_EVENT("CreateEvent"),
+	MEMBER_EVENT("MemberEvent"), PUSH_EVENT("PushEvent");
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(EventType.class);
 

@@ -31,16 +31,16 @@ import com.univocity.parsers.csv.CsvWriterSettings;
 import io.github.oliviercailloux.git.git_hub.model.GitHubToken;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherV3;
-import io.github.oliviercailloux.grade.mycourse.MyCourseCsvWriter;
 import io.github.oliviercailloux.grade.mycourse.StudentOnGitHub;
 import io.github.oliviercailloux.grade.mycourse.StudentOnGitHubKnown;
 import io.github.oliviercailloux.grade.mycourse.StudentOnMyCourse;
-import io.github.oliviercailloux.grade.mycourse.UsernamesReader;
+import io.github.oliviercailloux.grade.mycourse.csv.MyCourseCsvWriter;
+import io.github.oliviercailloux.grade.mycourse.json.StudentsReaderFromJson;
 
 public class Ex1GraderOrchestrator {
 
 	public Ex1GraderOrchestrator() {
-		usernames = new UsernamesReader();
+		usernames = new StudentsReaderFromJson();
 	}
 
 	public static void main(String[] args) throws Exception {
@@ -132,7 +132,7 @@ public class Ex1GraderOrchestrator {
 		}
 	}
 
-	private final UsernamesReader usernames;
+	private final StudentsReaderFromJson usernames;
 
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(Ex1GraderOrchestrator.class);

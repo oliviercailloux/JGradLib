@@ -27,10 +27,6 @@ public class StudentOnMyCourse {
 		return new StudentOnMyCourse(id, firstName, lastName, username);
 	}
 
-	public static StudentOnMyCourse fromJson(JsonObject data) {
-		return JsonbUtils.fromJson(data.toString(), StudentOnMyCourse.class);
-	}
-
 	private int studentId;
 	private String firstName;
 	private String lastName;

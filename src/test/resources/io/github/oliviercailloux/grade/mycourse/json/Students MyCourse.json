@@ -1,0 +1,14 @@
+[
+    {
+        "studentId": 1,
+        "myCourseUsername": "u",
+        "firstName": "f",
+        "lastName": "l"
+    },
+    {
+        "studentId": 2,
+        "myCourseUsername": "u2",
+        "firstName": "f2",
+        "lastName": "l2"
+    }
+]

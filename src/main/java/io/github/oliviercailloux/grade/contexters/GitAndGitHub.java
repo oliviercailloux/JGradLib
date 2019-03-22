@@ -131,17 +131,60 @@ public class GitAndGitHub {
 		 */
 		final Iterator<Event> eventsRevIt = Lists.reverse(events).iterator();
 		final Event last = eventsRevIt.next();
-		checkState(last.getType().equals(EventType.CREATE_EVENT));
-		final Event beforeLast = eventsRevIt.next();
-		checkState(beforeLast.getType().equals(EventType.MEMBER_EVENT));
-		final Event beforePenultimate = eventsRevIt.next();
-		checkState(beforePenultimate.getType().equals(EventType.CREATE_EVENT));
+		/**
+		 * Almost always: last is CREATE, before last is MEMBER, before penultimate is
+		 * CREATE. But I have seen once a deviation where last was MEMBER, before last
+		 * CREATE, and that was all.
+		 */
+		final Event lastCreateEvent;
+		if (last.getType().equals(EventType.CREATE_EVENT)) {
+			final Event beforeLast = eventsRevIt.next();
+			checkState(beforeLast.getType().equals(EventType.MEMBER_EVENT));
+			Event beforePenultimate;
+			do {
+				beforePenultimate = eventsRevIt.next();
+			} while (beforePenultimate.getType().equals(EventType.ISSUES_EVENT)
+					|| beforePenultimate.getType().equals(EventType.ISSUE_COMMENT_EVENT));
+			checkState(beforePenultimate.getType().equals(EventType.CREATE_EVENT), events);
+			/**
+			 * I have seen two create events following each other with the same timestamp
+			 * and one being "ref"="temp", "ref"="master".
+			 */
+			if (eventsRevIt.hasNext()) {
+				final Event againEvent = eventsRevIt.next();
+				if (againEvent.getType().equals(EventType.CREATE_EVENT)) {
+					lastCreateEvent = againEvent;
+				} else {
+					lastCreateEvent = beforePenultimate;
+				}
+			} else {
+				lastCreateEvent = beforePenultimate;
+			}
+		} else {
+			checkState(last.getType().equals(EventType.MEMBER_EVENT), events);
+			final Event beforeLast = eventsRevIt.next();
+			checkState(beforeLast.getType().equals(EventType.CREATE_EVENT));
+			/**
+			 * I have seen two create events following each other with the same timestamp
+			 * and one being "ref"="temp", "ref"="master".
+			 */
+			if (eventsRevIt.hasNext()) {
+				final Event againEvent = eventsRevIt.next();
+				if (againEvent.getType().equals(EventType.CREATE_EVENT)) {
+					lastCreateEvent = againEvent;
+				} else {
+					lastCreateEvent = beforeLast;
+				}
+			} else {
+				lastCreateEvent = beforeLast;
+			}
+		}
 		while (eventsRevIt.hasNext()) {
 			final Event otherEvent = eventsRevIt.next();
-			checkState(!otherEvent.getType().equals(EventType.CREATE_EVENT));
+			checkState(!otherEvent.getType().equals(EventType.CREATE_EVENT), otherEvent);
 		}
 
-		final Instant lastCreate = beforePenultimate.getCreatedAt();
+		final Instant lastCreate = lastCreateEvent.getCreatedAt();
 		commitsUnknown.stream().forEachOrdered((c) -> receivedAt.put(c.getId(), lastCreate));
 		LOGGER.info("Unknown (after second pass): {}.", unknown());
 		checkState(unknown().isEmpty());

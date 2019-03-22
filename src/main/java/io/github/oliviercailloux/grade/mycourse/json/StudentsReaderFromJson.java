@@ -1,4 +1,4 @@
-package io.github.oliviercailloux.grade.mycourse;
+package io.github.oliviercailloux.grade.mycourse.json;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
@@ -17,10 +17,13 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
-public class UsernamesReader {
+import io.github.oliviercailloux.grade.mycourse.StudentOnGitHub;
+import io.github.oliviercailloux.grade.mycourse.StudentOnMyCourse;
+
+public class StudentsReaderFromJson {
 
 	@SuppressWarnings("unused")
-	private static final Logger LOGGER = LoggerFactory.getLogger(UsernamesReader.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(StudentsReaderFromJson.class);
 
 	private Map<Integer, String> idsToMyCourseUsernames;
 
@@ -34,7 +37,7 @@ public class UsernamesReader {
 
 	private JsonArray json;
 
-	public UsernamesReader() {
+	public StudentsReaderFromJson() {
 		gitHubUsernamesToIds = null;
 		idsToFirstNames = null;
 		idsToLastNames = null;

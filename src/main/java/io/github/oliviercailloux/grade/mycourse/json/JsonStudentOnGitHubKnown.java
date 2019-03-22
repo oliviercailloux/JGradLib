@@ -1,5 +1,7 @@
 package io.github.oliviercailloux.grade.mycourse.json;
 
+import java.util.List;
+
 import javax.json.Json;
 import javax.json.JsonObject;
 import javax.json.bind.adapter.JsonbAdapter;
@@ -12,6 +14,7 @@ import io.github.oliviercailloux.grade.mycourse.StudentOnMyCourse;
 import io.github.oliviercailloux.json.JsonbUtils;
 import io.github.oliviercailloux.json.PrintableJsonObject;
 import io.github.oliviercailloux.json.PrintableJsonObjectFactory;
+import io.github.oliviercailloux.json.PrintableJsonValue;
 
 public class JsonStudentOnGitHubKnown {
 	@SuppressWarnings("unused")
@@ -23,6 +26,10 @@ public class JsonStudentOnGitHubKnown {
 		final JsonObject json = Json.createObjectBuilder().add("gitHubUsername", student.getGitHubUsername())
 				.addAll(Json.createObjectBuilder(mcJson)).build();
 		return PrintableJsonObjectFactory.wrapObject(json);
+	}
+
+	public static PrintableJsonValue asJsonFromList(List<StudentOnGitHubKnown> students) {
+		return JsonbUtils.toJsonValue(students, asAdapter());
 	}
 
 	public static StudentOnGitHubKnown asStudentOnGitHubKnown(JsonObject json) {

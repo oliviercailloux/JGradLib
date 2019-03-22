@@ -23,7 +23,6 @@ import static io.github.oliviercailloux.java_grade.ex3.Ex3Criterion.PREFIX;
 import static io.github.oliviercailloux.java_grade.ex3.Ex3Criterion.REPO_EXISTS;
 import static io.github.oliviercailloux.java_grade.ex3.Ex3Criterion.SOURCE;
 import static io.github.oliviercailloux.java_grade.ex3.Ex3Criterion.TEST_EXISTS;
-import static io.github.oliviercailloux.java_grade.ex3.Ex3Criterion.TEST_GREEN;
 import static io.github.oliviercailloux.java_grade.ex3.Ex3Criterion.TEST_LOCATION;
 import static io.github.oliviercailloux.java_grade.ex3.Ex3Criterion.TRAVIS_BADGE;
 import static io.github.oliviercailloux.java_grade.ex3.Ex3Criterion.TRAVIS_CONF;
@@ -49,17 +48,15 @@ import com.google.common.collect.ImmutableSet;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.grade.Criterion;
 import io.github.oliviercailloux.grade.Mark;
+import io.github.oliviercailloux.grade.context.FilesSource;
 import io.github.oliviercailloux.grade.context.GitFullContext;
-import io.github.oliviercailloux.grade.context.MultiContent;
-import io.github.oliviercailloux.grade.contexters.ContextInitializer;
-import io.github.oliviercailloux.grade.contexters.GitAndBaseToSourcer;
-import io.github.oliviercailloux.grade.contexters.GitToMultipleSourcer;
-import io.github.oliviercailloux.grade.contexters.GitToTestSourcer;
+import io.github.oliviercailloux.grade.contexters.FullContextInitializer;
 import io.github.oliviercailloux.grade.contexters.PomContexter;
 import io.github.oliviercailloux.grade.contexters.PomSupplier;
 import io.github.oliviercailloux.grade.markers.JavaEEMarkers;
 import io.github.oliviercailloux.grade.markers.MarkingPredicates;
 import io.github.oliviercailloux.grade.markers.Marks;
+import io.github.oliviercailloux.java_grade.testers.TestFileRecognizer;
 import io.github.oliviercailloux.utils.Utils;
 
 public class Ex3Grader {
@@ -70,20 +67,21 @@ public class Ex3Grader {
 	public ImmutableSet<Mark> grade(RepositoryCoordinates coord) {
 		final ImmutableSet.Builder<Mark> gradesBuilder = ImmutableSet.builder();
 
-		final GitFullContext fullContext = ContextInitializer.withPathAndIgnoreAndInit(coord,
+		final GitFullContext fullContext = FullContextInitializer.withPathAndIgnore(coord,
 				Paths.get("/home/olivier/Professions/Enseignement/En cours/ci"), ignoreAfter);
+		final FilesSource filesReader = fullContext.getMainFilesReader();
 		final double maxGrade = Stream.of(Ex3Criterion.values())
 				.collect(Collectors.summingDouble(Criterion::getMaxPoints));
 
-		gradesBuilder.add(Marks.timeMark(ON_TIME, fullContext, deadline, maxGrade));
+		gradesBuilder.add(Marks.timeMark(ON_TIME, fullContext, deadline, maxGrade, false));
 		gradesBuilder.add(Marks.gitRepo(REPO_EXISTS, fullContext));
 
 		/**
 		 * Need to limit depth, otherwise will find
 		 * target/m2e-wtp/web-resources/META-INF/maven/<groupId>/<artifactId>/pom.xml.
 		 */
-		final MultiContent multiPom = GitToMultipleSourcer.satisfyingPath(fullContext,
-				(p) -> p.getNameCount() <= 6 && p.getFileName().toString().equals("pom.xml"));
+		final FilesSource multiPom = filesReader
+				.filterOnPath((p) -> p.getNameCount() <= 6 && p.getFileName().toString().equals("pom.xml"));
 		final PomSupplier pomSupplier = PomSupplier.basedOn(multiPom);
 		final Path projectRelativeRoot = pomSupplier.getMavenRelativeRoot().orElse(Paths.get(""));
 		final String pomContent = pomSupplier.getContent();
@@ -113,23 +111,22 @@ public class Ex3Grader {
 				Predicates.contains(Pattern.compile("<url>.*\\.apache\\.org.*</url>")).negate().test(pomContent)));
 		gradesBuilder.add(Mark.binary(WAR,
 				MarkingPredicates.containsOnce(Pattern.compile("<packaging>war</packaging>")).test(pomContent)));
-		gradesBuilder.add(Marks.packageGroupId(PREFIX, fullContext, pomSupplier, pomContexter));
+		gradesBuilder.add(Marks.packageGroupId(PREFIX, filesReader, pomSupplier, pomContexter));
 		gradesBuilder.add(Marks.mavenCompile(COMPILE, fullContext, pomSupplier));
 
-		final MultiContent servletSourcer = GitToMultipleSourcer.satisfyingPath(fullContext,
-				MarkingPredicates
-						.startsWithPathRelativeTo(pomSupplier.getMavenRelativeRoot(), Paths.get("src/main/java"))
-						.and((p) -> p.getFileName().equals(Paths.get("HelloServlet.java"))));
+		final FilesSource servletSourcer = filesReader.filterOnPath(MarkingPredicates
+				.startsWithPathRelativeTo(pomSupplier.getMavenRelativeRoot(), Paths.get("src/main/java"))
+				.and((p) -> p.getFileName().equals(Paths.get("HelloServlet.java"))));
 
-		gradesBuilder.add(Mark.binary(NO_JSP, JavaEEMarkers.getNoJsp(fullContext)));
-		gradesBuilder.add(Mark.binary(NO_WEB_XML, JavaEEMarkers.getNoWebXml(fullContext)));
+		gradesBuilder.add(Mark.binary(NO_JSP, JavaEEMarkers.getNoJsp(filesReader)));
+		gradesBuilder.add(Mark.binary(NO_WEB_XML, JavaEEMarkers.getNoWebXml(filesReader)));
 		gradesBuilder.add(Mark.binary(DO_GET, servletSourcer.existsAndAllMatch(MarkingPredicates
 				.containsOnce(Pattern.compile("void\\s*doGet\\s*\\(\\s*(final)?\\s*HttpServletRequest .*\\)")))));
 		gradesBuilder.add(Mark.binary(NO_DO_POST,
 				servletSourcer.existsAndAllMatch(MarkingPredicates
 						.containsOnce(Pattern.compile("void\\s*doPost\\s*\\(\\s*(final)?\\s*HttpServletRequest .*\\)"))
 						.negate())));
-		final GitToTestSourcer testSourcer = GitToTestSourcer.testSourcer(fullContext);
+		final FilesSource testSourcer = TestFileRecognizer.getTestFiles(fullContext.getMainFilesReader());
 		gradesBuilder.add(Mark.binary(NOT_POLLUTED,
 				servletSourcer.existsAndAllMatch(Predicates.contains(Pattern.compile("Auto-generated")).negate()
 						.and(Predicates.contains(Pattern.compile("@see HttpServlet#doGet")).negate()
@@ -155,12 +152,13 @@ public class Ex3Grader {
 		gradesBuilder
 				.add(Mark.binary(TEST_LOCATION, testSourcer.getContents().keySet().stream().allMatch(MarkingPredicates
 						.startsWithPathRelativeTo(pomSupplier.getMavenRelativeRoot(), Paths.get("src/test/java")))));
-		gradesBuilder.add(Marks.mavenTest(TEST_GREEN, fullContext, testSourcer, pomSupplier));
+//		gradesBuilder.add(Marks.mavenTest(TEST_GREEN, fullContext, testSourcer, pomSupplier));
 		gradesBuilder.add(Mark.binary(ASSERT_EQUALS, testSourcer.anyMatch(Predicates
 				.contains(Pattern.compile("assertEquals")).and(Predicates.contains(Pattern.compile("sayHello()"))))));
-		final String travisContent = fullContext.getMainCommitFilesReader().getContent(Paths.get(".travis.yml"));
+		final String travisContent = fullContext.getMainFilesReader().getContent(Paths.get(".travis.yml"));
 		gradesBuilder.add(Mark.binary(TRAVIS_CONF, !travisContent.isEmpty()));
-		final String readmeContent = GitAndBaseToSourcer.given(fullContext, projectRelativeRoot.resolve("README.adoc"));
+		final String readmeContent = fullContext.getMainFilesReader()
+				.getContent(projectRelativeRoot.resolve("README.adoc"));
 		gradesBuilder.add(Mark.binary(TRAVIS_BADGE, Pattern.compile(
 				"image:https://(?:api\\.)?travis-ci\\.com/oliviercailloux-org/" + coord.getRepositoryName() + "\\.svg")
 				.matcher(readmeContent).find()));

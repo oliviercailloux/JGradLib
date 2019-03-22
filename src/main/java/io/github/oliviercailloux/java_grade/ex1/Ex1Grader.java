@@ -64,7 +64,7 @@ import com.google.common.collect.MoreCollectors;
 import com.google.common.collect.Streams;
 import com.google.common.graph.Traverser;
 
-import io.github.oliviercailloux.git.Client;
+import io.github.oliviercailloux.git.Checkouter;
 import io.github.oliviercailloux.git.GitHistory;
 import io.github.oliviercailloux.git.git_hub.model.GitHubToken;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
@@ -79,7 +79,7 @@ public class Ex1Grader {
 	private final EnumMap<Ex1Criterion, Double> penalties;
 	private final Set<Ex1Criterion> pass;
 
-	private Client client;
+	private Checkouter client;
 
 	private StudentOnGitHub student;
 
@@ -433,7 +433,7 @@ public class Ex1Grader {
 		comments.clear();
 		pass.clear();
 
-		client = Client.about(coordinates);
+		client = Checkouter.about(coordinates);
 		{
 			final boolean exists = client.tryRetrieve();
 			if (!exists) {

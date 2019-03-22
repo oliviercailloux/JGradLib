@@ -29,8 +29,7 @@ public class Grade {
 	}
 
 	@JsonbCreator
-	public static Grade of(@JsonbProperty("student") StudentOnGitHub student,
-			@JsonbProperty("marks") Set<Mark> marks) {
+	public static Grade of(@JsonbProperty("student") StudentOnGitHub student, @JsonbProperty("marks") Set<Mark> marks) {
 		LOGGER.debug("Building with {}, {}.", student, marks.iterator().next().getClass());
 		final Collector<Mark, ?, ImmutableBiMap<Criterion, Mark>> toI = ImmutableBiMap
 				.toImmutableBiMap((g) -> g.getCriterion(), (g) -> g);
@@ -103,6 +102,7 @@ public class Grade {
 		builder.append(criterion.getRequirement());
 		builder.append(")");
 		builder.append("</td><td>");
+		LOGGER.debug("Evaluation for {}: max={}, points={}.", grade, criterion.getMaxPoints(), grade.getPoints());
 		if (criterion.getMaxPoints() == 0d && grade.getPoints() == 0d) {
 			builder.append("OK");
 		} else {

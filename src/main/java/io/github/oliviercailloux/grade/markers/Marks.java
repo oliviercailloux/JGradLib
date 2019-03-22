@@ -5,9 +5,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Instant;
 import java.util.Optional;
-import java.util.function.Predicate;
 import java.util.regex.Pattern;
-import java.util.stream.Stream;
 
 import org.eclipse.jgit.lib.AnyObjectId;
 import org.eclipse.jgit.revwalk.RevCommit;
@@ -21,21 +19,23 @@ import io.github.oliviercailloux.git.Client;
 import io.github.oliviercailloux.grade.Criterion;
 import io.github.oliviercailloux.grade.GradingException;
 import io.github.oliviercailloux.grade.Mark;
+import io.github.oliviercailloux.grade.context.FilesSource;
 import io.github.oliviercailloux.grade.context.GitContext;
 import io.github.oliviercailloux.grade.context.GitFullContext;
-import io.github.oliviercailloux.grade.context.MultiContent;
 import io.github.oliviercailloux.grade.context.PomContext;
-import io.github.oliviercailloux.grade.contexters.GitToTestSourcer;
 import io.github.oliviercailloux.grade.contexters.MavenManager;
 import io.github.oliviercailloux.grade.contexters.PomSupplier;
 
 public class Marks {
-	public static Mark packageGroupId(Criterion criterion, GitContext context, PomSupplier pomSupplier,
+	public static Mark packageGroupId(Criterion criterion, FilesSource source, PomSupplier pomSupplier,
 			PomContext pomContext) {
-		return new PackageGroupIdMarker(criterion, context, pomSupplier, pomContext).mark();
+		return new PackageGroupIdMarker(criterion, source, pomSupplier, pomContext).mark();
 	}
 
-	public static Mark noDerivedFiles(Criterion criterion, GitContext context) {
+	/**
+	 * TODO should use only file sourcer.
+	 */
+	public static Mark noDerivedFiles(Criterion criterion, GitFullContext context) {
 		final Optional<RevCommit> mainCommitOpt = context.getMainCommit();
 		if (!mainCommitOpt.isPresent()) {
 			return Mark.min(criterion);
@@ -61,22 +61,16 @@ public class Marks {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(Marks.class);
 
-	public static Mark notEmpty(Criterion criterion, MultiContent multiSupplier) {
+	public static Mark notEmpty(Criterion criterion, FilesSource multiSupplier) {
 		return !multiSupplier.getContents().isEmpty()
 				? Mark.of(criterion, criterion.getMaxPoints(), "Found: " + multiSupplier.getContents().keySet() + ".")
 				: Mark.min(criterion);
 	}
 
-	public static Mark mavenTest(Criterion criterion, GitContext context, GitToTestSourcer testSourcer,
-			PomSupplier pomSupplier) {
-		final MavenManager mavenManager = new MavenManager();
-		return Mark.binary(criterion,
-				testSourcer.getContents().keySet().stream().anyMatch(testSourcer::isSurefireTestFile)
-						&& pomSupplier.getMavenRelativeRoot().isPresent()
-						&& mavenManager.test(context.getClient().getProjectDirectory()
-								.resolve(pomSupplier.getMavenRelativeRoot().get().resolve("pom.xml"))));
-	}
-
+	/**
+	 * The project must be checked out at the version to be tested, at the path
+	 * indicated by the project directory of the client.
+	 */
 	public static Mark mavenCompile(Criterion criterion, GitContext context, PomSupplier pomSupplier) {
 		final MavenManager mavenManager = new MavenManager();
 		final Optional<Path> projectRelativeRootOpt = pomSupplier.getMavenRelativeRoot();
@@ -129,7 +123,7 @@ public class Marks {
 		return Mark.of(criterion, points, comment);
 	}
 
-	public static Mark gitRepo(Criterion criterion, GitContext context) {
+	public static Mark gitRepo(Criterion criterion, GitFullContext context) {
 		final Client client = context.getClient();
 
 		final Mark grade;
@@ -146,8 +140,9 @@ public class Marks {
 		return grade;
 	}
 
-	public static Mark timeMark(Criterion criterion, GitFullContext contextSupplier, Instant deadline,
-			double maxGrade) {
-		return new TimeMarker(criterion, contextSupplier, deadline, maxGrade).mark();
+	public static Mark timeMark(Criterion criterion, GitFullContext contextSupplier, Instant deadline, double maxGrade,
+			boolean binary) {
+		return new TimeMarker(criterion, contextSupplier, deadline, maxGrade, binary).mark();
 	}
+
 }

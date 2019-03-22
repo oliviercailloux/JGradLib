@@ -9,12 +9,11 @@ import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.io.Resources;
 
 import io.github.oliviercailloux.grade.mycourse.StudentOnGitHubKnown;
 import io.github.oliviercailloux.grade.mycourse.StudentOnMyCourse;
-import io.github.oliviercailloux.grade.mycourse.json.JsonStudentOnGitHubKnown;
-import io.github.oliviercailloux.grade.mycourse.json.JsonStudentOnMyCourse;
 import io.github.oliviercailloux.json.PrintableJsonObject;
 import io.github.oliviercailloux.json.PrintableJsonObjectFactory;
 
@@ -32,12 +31,12 @@ class JsonStudentTest {
 	}
 
 	@Test
-	public void studentMyCourseWriteJson() throws Exception {
-		final String expected = Resources.toString(this.getClass().getResource("Student MyCourse.json"),
+	public void studentsMyCourseWriteJson() throws Exception {
+		final String expected = Resources.toString(this.getClass().getResource("Students MyCourse.json"),
 				StandardCharsets.UTF_8);
 
-		final StudentOnMyCourse student = getStudentOnMyCourse();
-		final String written = JsonStudentOnMyCourse.asJson(student).toString();
+		final String written = JsonStudentOnMyCourse
+				.asJsonFromList(ImmutableList.of(getStudentOnMyCourse(), getStudentOnMyCourse2())).toString();
 		LOGGER.info("Serialized pretty json: {}.", written);
 		assertEquals(expected, written);
 	}
@@ -59,8 +58,8 @@ class JsonStudentTest {
 		return studentGH;
 	}
 
-	private StudentOnMyCourse getStudentOnMyCourse() {
-		final StudentOnMyCourse studentMC = StudentOnMyCourse.with(1, "f", "l", "u");
+	private StudentOnMyCourse getStudentOnMyCourse2() {
+		final StudentOnMyCourse studentMC = StudentOnMyCourse.with(2, "f2", "l2", "u2");
 		return studentMC;
 	}
 
@@ -76,6 +75,22 @@ class JsonStudentTest {
 	public PrintableJsonObject readObject(String resource) throws IOException {
 		return PrintableJsonObjectFactory.wrapPrettyPrintedString(
 				Resources.toString(this.getClass().getResource(resource), StandardCharsets.UTF_8));
+	}
+
+	@Test
+	public void studentMyCourseWriteJson() throws Exception {
+		final String expected = Resources.toString(this.getClass().getResource("Student MyCourse.json"),
+				StandardCharsets.UTF_8);
+
+		final StudentOnMyCourse student = getStudentOnMyCourse();
+		final String written = JsonStudentOnMyCourse.asJson(student).toString();
+		LOGGER.info("Serialized pretty json: {}.", written);
+		assertEquals(expected, written);
+	}
+
+	private StudentOnMyCourse getStudentOnMyCourse() {
+		final StudentOnMyCourse studentMC = StudentOnMyCourse.with(1, "f", "l", "u");
+		return studentMC;
 	}
 
 }
