@@ -12,11 +12,9 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Instant;
 import java.time.ZonedDateTime;
-import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-import java.util.TimeZone;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
@@ -116,6 +114,7 @@ public class Client {
 			LOGGER.info("Cloning.", e);
 			exists = false;
 			hasContent = false;
+			allHistory = null;
 		}
 		return exists;
 	}
@@ -157,6 +156,7 @@ public class Client {
 			LOGGER.info("Updating {}.", coordinates);
 			git.fetch().call();
 			exists = true;
+			allHistory = null;
 			if (hasContent != null && !hasContent) {
 				/** Previously cached information about no content may now be invalid. */
 				hasContent = null;
@@ -387,20 +387,23 @@ public class Client {
 		cloneCmd.setURI(uri);
 		final File dest = getProjectDirectory().toFile();
 		cloneCmd.setDirectory(dest);
-		LOGGER.info("Cloning from {} to {}.", uri, dest);
+		LOGGER.info("Cloning {} to {}.", uri, dest);
 		cloneCmd.call().close();
 		exists = true;
+		allHistory = null;
 		if (hasContent != null && !hasContent) {
 			/** Previously cached information about no content may now be invalid. */
 			hasContent = null;
 		}
 	}
 
-	@Deprecated
-	public GitHistory getHistory(boolean all) throws IOException, GitAPIException {
-		/** Should become private. */
+	private GitHistory getHistory(boolean all) throws IOException, GitAPIException {
+		checkState(exists != null);
 		if (all && allHistory != null) {
 			return allHistory;
+		}
+		if (!exists) {
+			return GitHistory.from(ImmutableSet.of());
 		}
 
 		final GitHistory history;
@@ -419,6 +422,13 @@ public class Client {
 		return history;
 	}
 
+	/**
+	 * The existence of the repository must have been determined already.
+	 *
+	 * @return an empty history if the repository does not exist.
+	 * @throws IOException
+	 * @throws GitAPIException
+	 */
 	public GitHistory getWholeHistory() throws IOException, GitAPIException {
 		return getHistory(true);
 	}
@@ -428,7 +438,7 @@ public class Client {
 		return allHistory;
 	}
 
-	public static Client about(RepositoryCoordinates coordinates) {
+	public static Client aboutAndUsingTmp(RepositoryCoordinates coordinates) {
 		final String tmpDir = System.getProperty("java.io.tmpdir");
 		return new Client(coordinates, Paths.get(tmpDir));
 	}
@@ -450,21 +460,6 @@ public class Client {
 		return Git.open(getProjectDirectory().toFile());
 	}
 
-	public ZonedDateTime getCreationTime(RevCommit commit) {
-		final ZonedDateTime authorCreationTime = getCreationTime(commit.getAuthorIdent());
-		final ZonedDateTime committerCreationTime = getCreationTime(commit.getCommitterIdent());
-		checkArgument(authorCreationTime.equals(committerCreationTime));
-		return authorCreationTime;
-	}
-
-	public ZonedDateTime getCreationTime(PersonIdent ident) {
-		Date creationInstant = ident.getWhen();
-		TimeZone creationZone = ident.getTimeZone();
-		final ZonedDateTime creationTime = ZonedDateTime.ofInstant(creationInstant.toInstant(),
-				creationZone.toZoneId());
-		return creationTime;
-	}
-
 	public ObjectId resolve(String revSpec) throws IOException {
 		try (Repository repository = openRepository()) {
 			final ObjectId resolved = repository.resolve(revSpec);
@@ -475,7 +470,7 @@ public class Client {
 
 	public Instant getCreationTimeSimple(RevCommit commit) {
 		PersonIdent ident = commit.getAuthorIdent();
-		final ZonedDateTime creationTime = getCreationTime(ident);
+		final ZonedDateTime creationTime = GitUtils.getCreationTime(ident);
 		return creationTime.toInstant();
 	}
 
@@ -535,5 +530,10 @@ public class Client {
 			}
 			return builder.build();
 		}
+	}
+
+	public static Client about(RepositoryCoordinates coordinates) {
+		final String tmpDir = System.getProperty("java.io.tmpdir");
+		return new Client(coordinates, Paths.get(tmpDir).resolve(Instant.now().toString()));
 	}
 }

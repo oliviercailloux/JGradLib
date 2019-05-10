@@ -11,6 +11,10 @@ import java.util.List;
 import java.util.Optional;
 
 import javax.json.JsonObject;
+import javax.ws.rs.client.ClientBuilder;
+import javax.ws.rs.client.Entity;
+import javax.ws.rs.client.Invocation.Builder;
+import javax.ws.rs.core.Response;
 
 import org.eclipse.jgit.lib.ObjectId;
 import org.junit.jupiter.api.Test;
@@ -22,8 +26,6 @@ import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.git.git_hub.model.graph_ql.RepositoryWithFiles;
 import io.github.oliviercailloux.git.git_hub.model.graph_ql.RepositoryWithIssuesWithHistory;
 import io.github.oliviercailloux.git.git_hub.model.v3.SearchResult;
-import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherQL;
-import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherV3;
 
 public class TestFetch {
 
@@ -138,6 +140,15 @@ public class TestFetch {
 		try (GitHubFetcherQL fetcher = GitHubFetcherQL.using(GitHubToken.getRealInstance())) {
 			final RepositoryWithIssuesWithHistory project = fetcher.getRepository(coord).get();
 			assertEquals(1, project.getIssuesOriginallyNamed("PHP").size());
+		}
+	}
+
+	@Test
+	void testBasicJaxRs() throws Exception {
+		final Builder request = ClientBuilder.newClient().target(GitHubFetcherQL.GRAPHQL_ENDPOINT).request();
+		try (Response response = request.post(Entity.json("{}"))) {
+			LOGGER.info("Response: {}.", response);
+			assertEquals(Response.Status.UNAUTHORIZED.getStatusCode(), response.getStatus());
 		}
 	}
 

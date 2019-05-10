@@ -24,7 +24,7 @@ public class JsonCriterion {
 	public static Criterion asCriterion(JsonObject json) {
 		final String enumClassName = json.getString("class");
 		final String enumInstanceName = json.getString("name");
-		Class<?> enumTentativeClass;
+		final Class<?> enumTentativeClass;
 		try {
 			enumTentativeClass = Class.forName(enumClassName);
 		} catch (ClassNotFoundException e) {
@@ -39,7 +39,7 @@ public class JsonCriterion {
 
 	public static JsonbAdapter<Criterion, JsonObject> asAdapter() {
 //		return JsonUtils.getAdapter(JsonCriterion::asCriterion, JsonCriterion::asJson);
-		return new JsonbAdapter<Criterion, JsonObject>() {
+		return new JsonbAdapter<>() {
 			@Override
 			public JsonObject adaptToJson(Criterion obj) throws Exception {
 				return asJson(obj);

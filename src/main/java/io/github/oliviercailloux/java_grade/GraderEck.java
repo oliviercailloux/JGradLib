@@ -167,7 +167,7 @@ public class GraderEck {
 			final Grade grade = grade(student, repo);
 			gradesBuilder.add(grade);
 			LOGGER.debug("Student {}, grades {}.", student, grade.getMarks().values());
-			LOGGER.info("Evaluation: {}", grade.getAsMyCourseString());
+			LOGGER.info("Evaluation: {}", grade.getAsMyCourseString(10d));
 		}
 		return gradesBuilder.build();
 	}
@@ -186,7 +186,7 @@ public class GraderEck {
 			contents = Mark.min(ExEckCriterion.CONTENTS, "Repository found but is empty");
 		} else if (!context.getMainCommit().isPresent()) {
 			throw new IllegalStateException();
-		} else if (context.getMainFilesReader().filter(
+		} else if (context.getFilesReader(context.getMainCommit()).filter(
 				(fc) -> fc.getPath().toString().endsWith("java") && fc.getContent().contains("static void main"))
 				.asFileContents().isEmpty()) {
 			throw new IllegalStateException("Repo but no java");
@@ -194,7 +194,7 @@ public class GraderEck {
 			contents = Mark.max(ExEckCriterion.CONTENTS);
 		}
 		gradeBuilder.add(contents);
-		gradeBuilder.add(Marks.timeMark(ExEckCriterion.ON_TIME, context, deadline, 1d, true));
+		gradeBuilder.add(Marks.timeMark(ExEckCriterion.ON_TIME, context, deadline, (d) -> 1d));
 
 		final Mark username;
 		if (usernames.getIdsNotSubmitted().contains(student.getStudentId())) {
@@ -229,7 +229,8 @@ public class GraderEck {
 		orch.writeCsv(grades);
 		orch.writeJson(grades);
 
-		new MyCourseCsvWriter().writeCsv(prefix, 112144, grades);
+		Files.writeString(Paths.get("MyCourse.csv"),
+				new MyCourseCsvWriter().asMyCourseCsv(prefix, 112144, grades, 10d));
 	}
 
 }

@@ -43,6 +43,12 @@ public interface FilesSource {
 	}
 
 	/**
+	 * Two FilesSource are equal iff they have the same contents.
+	 */
+	@Override
+	boolean equals(Object o2);
+
+	/**
 	 * The content is cached if this provides significant benefit compared to
 	 * fetching the content again from the source of this interface (typically:
 	 * caches iff the content comes from the network or a hard disk, does not cache
@@ -73,7 +79,7 @@ public interface FilesSource {
 	 */
 	FilesSource filter(Predicate<FileContent> predicate);
 
-	FilesSource filterOnContent(Predicate<String> predicate);
+	FilesSource filterOnContent(Predicate<? super String> predicate);
 
 	ImmutableMap<Path, String> getContents();
 

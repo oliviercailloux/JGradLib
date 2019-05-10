@@ -1,7 +1,8 @@
 package io.github.oliviercailloux.grade.json;
 
-import java.util.HashSet;
-import java.util.Set;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 
 import javax.json.Json;
 import javax.json.JsonArray;
@@ -39,7 +40,7 @@ public class JsonGrade {
 //		return JsonUtils.serializeWithJsonB(grade, JsonStudentOnGitHub.asAdapter(), JsonCriterion.asAdapter());
 	}
 
-	public static PrintableJsonValue asJsonArray(Set<Grade> grades) {
+	public static PrintableJsonValue asJsonArray(Collection<Grade> grades) {
 		return JsonbUtils.toJsonValue(grades, JsonGrade.asAdapter());
 	}
 
@@ -55,10 +56,17 @@ public class JsonGrade {
 
 	public static ImmutableSet<Grade> asGrades(String json) {
 		@SuppressWarnings("serial")
-		final Set<Grade> targetSet = new HashSet<Grade>() {
+//		final Set<Grade> targetType = new HashSet<>() {
+//			/** Just for type! */
+//		};
+		final List<Grade> targetType = new ArrayList<>() {
 			/** Just for type! */
 		};
-		final Set<Grade> read = JsonbUtils.fromJson(json, targetSet.getClass().getGenericSuperclass(),
+		/**
+		 * Need to read into a list then only copy into a set: if read directly into a
+		 * set, Json does not maintain the ordering.
+		 */
+		final List<Grade> read = JsonbUtils.fromJson(json, targetType.getClass().getGenericSuperclass(),
 				JsonGrade.asAdapter());
 		return ImmutableSet.copyOf(read);
 	}
@@ -81,7 +89,7 @@ public class JsonGrade {
 	}
 
 	public static JsonbAdapter<Grade, JsonObject> asAdapter() {
-		return new JsonbAdapter<Grade, JsonObject>() {
+		return new JsonbAdapter<>() {
 			@Override
 			public JsonObject adaptToJson(Grade obj) throws Exception {
 				return asJson(obj);

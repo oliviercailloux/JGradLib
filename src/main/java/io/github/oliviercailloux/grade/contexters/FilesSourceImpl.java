@@ -3,6 +3,7 @@ package io.github.oliviercailloux.grade.contexters;
 import static java.util.Objects.requireNonNull;
 
 import java.nio.file.Path;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -33,6 +34,20 @@ public class FilesSourceImpl implements FilesSource {
 		return paths;
 	}
 
+	@Override
+	public boolean equals(Object o2) {
+		if (!(o2 instanceof FilesSource)) {
+			return false;
+		}
+		final FilesSource f2 = (FilesSource) o2;
+		return getContents().equals(f2.getContents());
+	}
+
+	@Override
+	public int hashCode() {
+		return Objects.hash(getContents());
+	}
+
 	public ImmutableMap<Path, String> asMapToRename() {
 		return getPaths().stream().collect(ImmutableMap.toImmutableMap((p) -> p, (p) -> contentSupplier.apply(p)));
 	}
@@ -43,7 +58,7 @@ public class FilesSourceImpl implements FilesSource {
 	}
 
 	@Override
-	public FilesSource filterOnContent(Predicate<String> predicate) {
+	public FilesSource filterOnContent(Predicate<? super String> predicate) {
 		final ImmutableSet<Path> matching = getPaths().stream().filter((p) -> predicate.test(contentSupplier.apply(p)))
 				.collect(ImmutableSet.toImmutableSet());
 		return new FilesSourceImpl(matching, contentSupplier);

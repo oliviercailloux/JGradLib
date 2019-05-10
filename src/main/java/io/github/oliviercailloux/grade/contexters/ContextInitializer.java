@@ -5,6 +5,7 @@ import static java.util.Objects.requireNonNull;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Optional;
 
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.revwalk.RevCommit;
@@ -57,7 +58,12 @@ public class ContextInitializer implements GitContext {
 	}
 
 	@Override
-	public FilesSource getFilesReader(RevCommit sourceCommit) {
+	public FilesSource getFilesReader(Optional<RevCommit> sourceCommitOpt) {
+		if (!sourceCommitOpt.isPresent()) {
+			return FilesSource.empty();
+		}
+
+		final RevCommit sourceCommit = sourceCommitOpt.get();
 		final ImmutableSet<Path> paths;
 		try {
 			paths = getClient().getPaths(sourceCommit, Predicates.alwaysTrue());

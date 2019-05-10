@@ -36,8 +36,6 @@ import java.nio.file.Paths;
 import java.time.Instant;
 import java.time.ZonedDateTime;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,7 +44,6 @@ import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableSet;
 
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
-import io.github.oliviercailloux.grade.Criterion;
 import io.github.oliviercailloux.grade.Mark;
 import io.github.oliviercailloux.grade.context.FilesSource;
 import io.github.oliviercailloux.grade.context.GitFullContext;
@@ -56,7 +53,7 @@ import io.github.oliviercailloux.grade.contexters.PomSupplier;
 import io.github.oliviercailloux.grade.markers.JavaEEMarkers;
 import io.github.oliviercailloux.grade.markers.MarkingPredicates;
 import io.github.oliviercailloux.grade.markers.Marks;
-import io.github.oliviercailloux.java_grade.testers.TestFileRecognizer;
+import io.github.oliviercailloux.java_grade.testers.MarkHelper;
 import io.github.oliviercailloux.utils.Utils;
 
 public class Ex3Grader {
@@ -69,11 +66,14 @@ public class Ex3Grader {
 
 		final GitFullContext fullContext = FullContextInitializer.withPathAndIgnore(coord,
 				Paths.get("/home/olivier/Professions/Enseignement/En cours/ci"), ignoreAfter);
-		final FilesSource filesReader = fullContext.getMainFilesReader();
-		final double maxGrade = Stream.of(Ex3Criterion.values())
-				.collect(Collectors.summingDouble(Criterion::getMaxPoints));
+		final FilesSource filesReader = fullContext.getFilesReader(fullContext.getMainCommit());
+//		final double maxGrade = Stream.of(Ex3Criterion.values())
+//				.collect(Collectors.summingDouble(Criterion::getMaxPoints));
 
-		gradesBuilder.add(Marks.timeMark(ON_TIME, fullContext, deadline, maxGrade, false));
+		/**
+		 * Not up to date.
+		 */
+		gradesBuilder.add(Marks.timeMark(ON_TIME, fullContext, deadline, null));
 		gradesBuilder.add(Marks.gitRepo(REPO_EXISTS, fullContext));
 
 		/**
@@ -126,7 +126,8 @@ public class Ex3Grader {
 				servletSourcer.existsAndAllMatch(MarkingPredicates
 						.containsOnce(Pattern.compile("void\\s*doPost\\s*\\(\\s*(final)?\\s*HttpServletRequest .*\\)"))
 						.negate())));
-		final FilesSource testSourcer = TestFileRecognizer.getTestFiles(fullContext.getMainFilesReader());
+		final FilesSource testSourcer = MarkHelper
+				.getTestFiles(fullContext.getFilesReader(fullContext.getMainCommit()));
 		gradesBuilder.add(Mark.binary(NOT_POLLUTED,
 				servletSourcer.existsAndAllMatch(Predicates.contains(Pattern.compile("Auto-generated")).negate()
 						.and(Predicates.contains(Pattern.compile("@see HttpServlet#doGet")).negate()
@@ -145,7 +146,7 @@ public class Ex3Grader {
 								.containsOnce(Pattern.compile("<build>" + Utils.ANY_REG_EXP
 										+ "<finalName>myapp</finalName>" + Utils.ANY_REG_EXP + "</build>"))
 								.test(pomContent)));
-		gradesBuilder.add(Marks.noDerivedFiles(ONLY_ORIG, fullContext));
+		gradesBuilder.add(Marks.noDerivedFiles(ONLY_ORIG, filesReader));
 		gradesBuilder.add(Mark.binary(GET_HELLO,
 				servletSourcer.existsAndAllMatch(Predicates.contains(Pattern.compile("\"Hello,? world\\.?\"")))));
 		gradesBuilder.add(Marks.notEmpty(TEST_EXISTS, testSourcer));
@@ -155,9 +156,10 @@ public class Ex3Grader {
 //		gradesBuilder.add(Marks.mavenTest(TEST_GREEN, fullContext, testSourcer, pomSupplier));
 		gradesBuilder.add(Mark.binary(ASSERT_EQUALS, testSourcer.anyMatch(Predicates
 				.contains(Pattern.compile("assertEquals")).and(Predicates.contains(Pattern.compile("sayHello()"))))));
-		final String travisContent = fullContext.getMainFilesReader().getContent(Paths.get(".travis.yml"));
+		final String travisContent = fullContext.getFilesReader(fullContext.getMainCommit())
+				.getContent(Paths.get(".travis.yml"));
 		gradesBuilder.add(Mark.binary(TRAVIS_CONF, !travisContent.isEmpty()));
-		final String readmeContent = fullContext.getMainFilesReader()
+		final String readmeContent = fullContext.getFilesReader(fullContext.getMainCommit())
 				.getContent(projectRelativeRoot.resolve("README.adoc"));
 		gradesBuilder.add(Mark.binary(TRAVIS_BADGE, Pattern.compile(
 				"image:https://(?:api\\.)?travis-ci\\.com/oliviercailloux-org/" + coord.getRepositoryName() + "\\.svg")

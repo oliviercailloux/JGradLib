@@ -11,6 +11,7 @@ import java.nio.charset.StandardCharsets;
 import org.asciidoctor.Asciidoctor;
 import org.asciidoctor.ast.DescriptionListEntry;
 import org.asciidoctor.ast.ListItem;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
@@ -20,19 +21,22 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.io.CharStreams;
 
 import io.github.oliviercailloux.students_project_following.Functionality;
-import io.github.oliviercailloux.students_project_following.read.FunctionalitiesReader;
-import io.github.oliviercailloux.students_project_following.read.IllegalFormat;
 
 public class TestRead {
 
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(TestRead.class);
+	private static Asciidoctor asciidoctor;
+
+	@BeforeAll
+	static void setup() {
+		LOGGER.info("Loading asciidoctor.");
+		asciidoctor = Asciidoctor.Factory.create();
+		LOGGER.info("Loaded asciidoctor.");
+	}
 
 	@Test
 	public void test() throws IOException, IllegalFormat {
-		LOGGER.info("Loading.");
-		final Asciidoctor asciidoctor = Asciidoctor.Factory.create();
-		LOGGER.info("Loaded.");
 		final FunctionalitiesReader reader = FunctionalitiesReader.using(asciidoctor);
 		try (InputStreamReader sourceReader = new InputStreamReader(
 				getClass().getResourceAsStream("Assisted Board Games.adoc"), StandardCharsets.UTF_8)) {
@@ -48,9 +52,6 @@ public class TestRead {
 
 		final DescriptionListEntry input = getMockedInput(termText, fullDescrText);
 
-		LOGGER.info("Loading.");
-		final Asciidoctor asciidoctor = Asciidoctor.Factory.create();
-		LOGGER.info("Loaded.");
 		final FunctionalitiesReader functionalitiesReader = FunctionalitiesReader.using(asciidoctor);
 
 		final Functionality obtained = functionalitiesReader.asFunctionality(input);
@@ -67,9 +68,6 @@ public class TestRead {
 
 		final DescriptionListEntry input = getMockedInput(termText, fullDescrText);
 
-		LOGGER.info("Loading.");
-		final Asciidoctor asciidoctor = Asciidoctor.Factory.create();
-		LOGGER.info("Loaded.");
 		final FunctionalitiesReader functionalitiesReader = FunctionalitiesReader.using(asciidoctor);
 
 		final Functionality obtained = functionalitiesReader.asFunctionality(input);
@@ -85,9 +83,6 @@ public class TestRead {
 
 		final DescriptionListEntry input = getMockedInput(termText, descrText);
 
-		LOGGER.info("Loading.");
-		final Asciidoctor asciidoctor = Asciidoctor.Factory.create();
-		LOGGER.info("Loaded.");
 		final FunctionalitiesReader functionalitiesReader = FunctionalitiesReader.usingDefault(asciidoctor,
 				BigDecimal.valueOf(4.5d));
 

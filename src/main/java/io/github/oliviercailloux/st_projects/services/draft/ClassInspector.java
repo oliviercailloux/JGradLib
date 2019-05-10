@@ -15,15 +15,39 @@ import io.github.classgraph.ClassGraph;
 import io.github.classgraph.ClassInfo;
 import io.github.classgraph.ClassInfoList;
 import io.github.classgraph.ScanResult;
+import io.github.oliviercailloux.grade.context.FilesSource;
 
-public class ClassInspector {
+class ClassInspector {
 	public static void main(String[] args) throws Exception {
 		final ClassInspector grader = new ClassInspector();
 //		grader.proceed();
-		grader.access();
+//		grader.access();
+		grader.runStuff(null);
 	}
 
-	@SuppressWarnings("rawtypes")
+	@SuppressWarnings("unused")
+	private void runStuff(FilesSource srcFiles) throws IOException {
+//		final URL url = Paths
+//				.get("/home/olivier/Local/Dropbox/Recherche/Decision Deck/J-MCDA/jmcda-utils/target/classes/").toUri()
+//				.toURL();
+		/**
+		 * Finds compiled classes that are in their expected folder, not the other ones.
+		 */
+		final URL url = Paths.get("").toUri().toURL();
+		try (URLClassLoader child = new URLClassLoader(new URL[] { url }, this.getClass().getClassLoader())) {
+			final ClassGraph graph = new ClassGraph().overrideClassLoaders(child).enableAllInfo()
+					.whitelistPackages("*");
+			try (ScanResult scanResult = graph.scan()) {
+				final ClassInfoList cls = scanResult.getAllClasses();
+				LOGGER.info("Size: {}.", cls.size());
+				for (ClassInfo info : cls) {
+					LOGGER.info("Name: {}.", info.getName());
+				}
+			}
+		}
+	}
+
+	@SuppressWarnings({ "rawtypes", "unused" })
 	private void access()
 			throws ClassNotFoundException, NoSuchMethodException, SecurityException, InstantiationException,
 			IllegalAccessException, IllegalArgumentException, InvocationTargetException, IOException {

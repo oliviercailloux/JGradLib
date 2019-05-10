@@ -3,6 +3,8 @@ package io.github.oliviercailloux.git;
 import java.nio.file.Path;
 import java.util.function.Supplier;
 
+import com.google.common.base.MoreObjects;
+
 /**
  * This class does not cache, the supplier supposedly does if deemed useful.
  *
@@ -26,5 +28,10 @@ public class FileContentImpl implements FileContent {
 	@Override
 	public String getContent() {
 		return contentSupplier.get();
+	}
+
+	@Override
+	public String toString() {
+		return MoreObjects.toStringHelper(this).add("Path", path).add("Content", getContent()).toString();
 	}
 }

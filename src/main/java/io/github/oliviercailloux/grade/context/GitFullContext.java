@@ -13,11 +13,4 @@ public interface GitFullContext extends GitContext {
 
 	public Optional<RevCommit> getMainCommit();
 
-	/**
-	 * If no main commit, returns a files reader which never finds any file.
-	 */
-	public default FilesSource getMainFilesReader() {
-		return getMainCommit().isPresent() ? getFilesReader(getMainCommit().get()) : FilesSource.empty();
-	}
-
 }

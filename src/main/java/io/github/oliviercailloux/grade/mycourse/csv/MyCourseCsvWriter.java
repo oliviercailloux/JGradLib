@@ -1,25 +1,16 @@
 package io.github.oliviercailloux.grade.mycourse.csv;
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
 import static io.github.oliviercailloux.grade.mycourse.csv.CsvStudentsOnMyCourse.LAST_NAME_COLUMN;
 import static io.github.oliviercailloux.grade.mycourse.csv.CsvStudentsOnMyCourse.USERNAME_COLUMN;
 
-import java.io.BufferedWriter;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.io.StringWriter;
 import java.text.NumberFormat;
+import java.util.Collection;
 import java.util.Locale;
-import java.util.Map;
-import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.collect.Sets;
 import com.univocity.parsers.csv.CsvWriter;
 import com.univocity.parsers.csv.CsvWriterSettings;
 
@@ -32,69 +23,40 @@ public class MyCourseCsvWriter {
 	private static final String NOTES_FORMAT_COLUMN = "Format des notes";
 	private static final String FEEDBACK_COLUMN = "Feed-back fourni à l'apprenant";
 	private static final String FEEDBACK_FORMAT_COLUMN = "Format du feed-back";
-	private CsvWriter writer;
+	private CsvWriter cSVWriter;
 
 	public MyCourseCsvWriter() {
-		writer = null;
-	}
-
-	@Deprecated
-	public void writeCsv(String gradeName, int gradeId, Map<StudentOnMyCourse, Double> grades,
-			Map<StudentOnMyCourse, String> feedbacks) throws IOException {
-		LOGGER.info("Writing for {}.", grades.keySet());
-		final Path out = Paths.get("out.csv");
-		final String gradeC = gradeName + " |" + gradeId;
-		checkNotNull(gradeName);
-		checkArgument(grades.keySet().equals(feedbacks.keySet()),
-				Sets.symmetricDifference(grades.keySet(), feedbacks.keySet()));
-		final NumberFormat formatter = NumberFormat.getNumberInstance(Locale.FRENCH);
-		try (BufferedWriter fileWriter = Files.newBufferedWriter(out, StandardCharsets.UTF_8)) {
-			/** Stupid MyCourse requires a BOM. */
-			fileWriter.write('\uFEFF');
-			writer = new CsvWriter(fileWriter, new CsvWriterSettings());
-			writer.writeHeaders(LAST_NAME_COLUMN, USERNAME_COLUMN, gradeC, NOTES_COLUMN, NOTES_FORMAT_COLUMN,
-					FEEDBACK_COLUMN, FEEDBACK_FORMAT_COLUMN);
-			for (StudentOnMyCourse student : grades.keySet()) {
-				LOGGER.info("Writing {}.", student);
-				writer.addValue(LAST_NAME_COLUMN, student.getLastName());
-				writer.addValue(USERNAME_COLUMN, student.getMyCourseUsername());
-				writer.addValue(gradeC, formatter.format(grades.get(student)));
-				addFeedback(feedbacks.get(student));
-				writer.writeValuesToRow();
-			}
-			writer.close();
-		}
+		cSVWriter = null;
 	}
 
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(MyCourseCsvWriter.class);
 
 	private void addFeedback(String feedback) {
-		writer.addValue(FEEDBACK_COLUMN, feedback);
-		writer.addValue(FEEDBACK_FORMAT_COLUMN, "SMART_TEXT");
+		cSVWriter.addValue(FEEDBACK_COLUMN, feedback);
+		cSVWriter.addValue(FEEDBACK_FORMAT_COLUMN, "SMART_TEXT");
 	}
 
-	public void writeCsv(String gradeName, int gradeId, Set<Grade> grades) throws IOException {
-		final Path out = Paths.get("out.csv");
+	public String asMyCourseCsv(String gradeName, int gradeId, Collection<Grade> grades, double scaleMax) {
 		final String gradeC = gradeName + " |" + gradeId;
 		final NumberFormat formatter = NumberFormat.getNumberInstance(Locale.FRENCH);
-		try (BufferedWriter fileWriter = Files.newBufferedWriter(out, StandardCharsets.UTF_8)) {
-			/** Stupid MyCourse requires a BOM. */
-			fileWriter.write('\uFEFF');
-			writer = new CsvWriter(fileWriter, new CsvWriterSettings());
-			writer.writeHeaders(LAST_NAME_COLUMN, USERNAME_COLUMN, gradeC, NOTES_COLUMN, NOTES_FORMAT_COLUMN,
-					FEEDBACK_COLUMN, FEEDBACK_FORMAT_COLUMN);
-			for (Grade grade : grades) {
-				final StudentOnMyCourse student = grade.getStudent().asStudentOnGitHubKnown().asStudentOnMyCourse();
-				LOGGER.info("Writing {}.", student);
-				writer.addValue(LAST_NAME_COLUMN, student.getLastName());
-				writer.addValue(USERNAME_COLUMN, student.getMyCourseUsername());
-				writer.addValue(gradeC, formatter.format(grade.getGrade()));
-				addFeedback(grade.getAsMyCourseString());
-				writer.writeValuesToRow();
-			}
-			writer.close();
+		final StringWriter stringWriter = new StringWriter();
+		/** Stupid MyCourse requires a BOM. */
+		stringWriter.write('\uFEFF');
+		cSVWriter = new CsvWriter(stringWriter, new CsvWriterSettings());
+		cSVWriter.writeHeaders(LAST_NAME_COLUMN, USERNAME_COLUMN, gradeC, NOTES_COLUMN, NOTES_FORMAT_COLUMN,
+				FEEDBACK_COLUMN, FEEDBACK_FORMAT_COLUMN);
+		for (Grade grade : grades) {
+			final StudentOnMyCourse student = grade.getStudent().asStudentOnGitHubKnown().asStudentOnMyCourse();
+			LOGGER.info("Writing {}.", student);
+			cSVWriter.addValue(LAST_NAME_COLUMN, student.getLastName());
+			cSVWriter.addValue(USERNAME_COLUMN, student.getMyCourseUsername());
+			cSVWriter.addValue(gradeC, formatter.format(grade.getScaledGrade(scaleMax)));
+			addFeedback(grade.getAsMyCourseString(scaleMax));
+			cSVWriter.writeValuesToRow();
 		}
+		cSVWriter.close();
+		return stringWriter.toString();
 	}
 
 }

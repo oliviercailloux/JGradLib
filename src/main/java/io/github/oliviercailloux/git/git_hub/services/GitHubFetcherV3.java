@@ -1,7 +1,6 @@
 package io.github.oliviercailloux.git.git_hub.services;
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkState;
+import static com.google.common.base.Preconditions.*;
 import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
@@ -50,6 +49,7 @@ import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.git.git_hub.model.v3.CommitGitHubDescription;
 import io.github.oliviercailloux.git.git_hub.model.v3.Event;
 import io.github.oliviercailloux.git.git_hub.model.v3.EventType;
+import io.github.oliviercailloux.git.git_hub.model.v3.PushEvent;
 import io.github.oliviercailloux.git.git_hub.model.v3.SearchResult;
 import io.github.oliviercailloux.git.git_hub.model.v3.SearchResults;
 import io.github.oliviercailloux.json.PrintableJsonObjectFactory;
@@ -218,14 +218,14 @@ public class GitHubFetcherV3 implements AutoCloseable {
 	 *
 	 */
 	public Optional<Instant> getReceivedTime(RepositoryCoordinates repositoryCoordinates, ObjectId sha) {
-		final ImmutableList<Event> pushEvents = getPushEvents(repositoryCoordinates);
+		final ImmutableList<PushEvent> pushEvents = getPushEvents(repositoryCoordinates);
 		LOGGER.info("Push events: {}.", pushEvents);
-		final Stream<Event> matchingEvents = pushEvents.stream()
-				.filter((e) -> e.getPushPayload().get().getCommits().stream().anyMatch((c) -> {
+		final Stream<PushEvent> matchingEvents = pushEvents.stream()
+				.filter((e) -> e.getPushPayload().getCommits().stream().anyMatch((c) -> {
 					LOGGER.info("Comparing {} to {}.", c.getSha(), sha);
 					return c.getSha().equals(sha);
 				}));
-		final Optional<Event> matchingEvent = matchingEvents.collect(MoreCollectors.toOptional());
+		final Optional<PushEvent> matchingEvent = matchingEvents.collect(MoreCollectors.toOptional());
 		LOGGER.debug("Matching: {}.", PrintableJsonValueFactory
 				.wrapValue(matchingEvent.<JsonValue>map(Event::getJson).orElse(JsonValue.NULL)));
 		return matchingEvent.map(Event::getCreatedAt);
@@ -236,7 +236,8 @@ public class GitHubFetcherV3 implements AutoCloseable {
 				.resolveTemplate("repo", repositoryCoordinates.getRepositoryName());
 		final List<Event> events = getContentAsList(target, Event::from, false);
 		final ImmutableList<Event> startEvents = events.stream()
-				.filter((e) -> e.getType().equals(EventType.CREATE_EVENT)).collect(ImmutableList.toImmutableList());
+				.filter((e) -> e.getType().equals(EventType.CREATE_REPOSITORY_EVENT))
+				.collect(ImmutableList.toImmutableList());
 		LOGGER.info("All: {}.",
 				startEvents.stream().<String>map((e) -> PrintableJsonObjectFactory.wrapObject(e.getJson()).toString())
 						.collect(Collectors.joining(", ")));
@@ -300,7 +301,8 @@ public class GitHubFetcherV3 implements AutoCloseable {
 		}));
 	}
 
-	private Optional<JsonArray> getContentArray(WebTarget target, boolean truncate) {
+	private Optional<JsonArray> getContentArray(WebTarget target, boolean truncate)
+			throws ProcessingException, WebApplicationException {
 		final Optional<BinaryOperator<JsonArray>> accumulator;
 		if (truncate) {
 			accumulator = Optional.empty();
@@ -312,7 +314,7 @@ public class GitHubFetcherV3 implements AutoCloseable {
 	}
 
 	private <T> Optional<T> getContent(WebTarget target, Class<T> c, MediaType type,
-			Optional<BinaryOperator<T>> accumulator) {
+			Optional<BinaryOperator<T>> accumulator) throws ProcessingException, WebApplicationException {
 		requireNonNull(target);
 		if (JsonValue.class.isAssignableFrom(c)) {
 			checkArgument(type.equals(GIT_HUB_MEDIA_TYPE));
@@ -370,7 +372,7 @@ public class GitHubFetcherV3 implements AutoCloseable {
 	}
 
 	private <T> ImmutableList<T> getContentAsList(WebTarget target, Function<JsonObject, ? extends T> jsonDeser,
-			boolean truncate) {
+			boolean truncate) throws WebApplicationException {
 		final Optional<JsonArray> respOpt = getContentArray(target, truncate);
 		final Function<JsonArray, Stream<JsonObject>> arrayToObjects = (a) -> a.stream().map(JsonValue::asJsonObject);
 		final Stream<JsonObject> objects = respOpt.map(arrayToObjects).orElse(Stream.empty());
@@ -418,9 +420,10 @@ public class GitHubFetcherV3 implements AutoCloseable {
 				: Optional.empty();
 	}
 
-	public ImmutableList<Event> getPushEvents(RepositoryCoordinates repositoryCoordinates) {
+	public ImmutableList<PushEvent> getPushEvents(RepositoryCoordinates repositoryCoordinates) {
 		final ImmutableList<Event> events = getEvents(repositoryCoordinates);
-		final ImmutableList<Event> pushEvents = events.stream().filter((e) -> e.getPushPayload().isPresent())
+		final ImmutableList<PushEvent> pushEvents = events.stream()
+				.filter((e) -> e.getType().equals(EventType.PUSH_EVENT)).map(Event::asPushEvent)
 				.collect(ImmutableList.toImmutableList());
 		LOGGER.debug("All: {}.",
 				pushEvents.stream().<String>map((e) -> PrintableJsonObjectFactory.wrapObject(e.getJson()).toString())
@@ -428,7 +431,7 @@ public class GitHubFetcherV3 implements AutoCloseable {
 		return pushEvents;
 	}
 
-	public ImmutableList<Event> getEvents(RepositoryCoordinates repositoryCoordinates) {
+	public ImmutableList<Event> getEvents(RepositoryCoordinates repositoryCoordinates) throws WebApplicationException {
 		final WebTarget target = client.target(EVENTS_URI).resolveTemplate("owner", repositoryCoordinates.getOwner())
 				.resolveTemplate("repo", repositoryCoordinates.getRepositoryName());
 		final ImmutableList<Event> events = getContentAsList(target, Event::from, false);

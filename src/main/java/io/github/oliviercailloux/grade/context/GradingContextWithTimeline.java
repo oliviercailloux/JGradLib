@@ -27,6 +27,12 @@ public class GradingContextWithTimeline {
 
 	private final Client client;
 
+	/**
+	 * @param commitsReceptionTime in case of uncertaintly, indicate the earlier
+	 *                             time that the commit may exist: before that, we
+	 *                             know it didn’t exist. This permits to ensure that
+	 *                             conclusions about lateness are certain.
+	 */
 	public static GradingContextWithTimeline given(Client client, Map<ObjectId, Instant> commitsReceptionTime) {
 		return new GradingContextWithTimeline(client, commitsReceptionTime);
 	}
@@ -52,7 +58,7 @@ public class GradingContextWithTimeline {
 		final ImmutableList<RevCommit> commitsOnTime = Streams.stream(children)
 				.filter((c) -> !commitsReceptionTime.get(c.getId()).isAfter(ignoreAfter))
 				.collect(ImmutableList.toImmutableList());
-		LOGGER.info("Commits: {}; on time: {}.", ImmutableList.copyOf(children), commitsOnTime);
+		LOGGER.debug("Commits: {}; on time: {}.", ImmutableList.copyOf(children), commitsOnTime);
 		final Comparator<RevCommit> comparingReceptionTime = Comparator
 				.comparing((c) -> commitsReceptionTime.get(c.getId()));
 		final Optional<RevCommit> amongLatest = commitsOnTime.stream().findFirst();

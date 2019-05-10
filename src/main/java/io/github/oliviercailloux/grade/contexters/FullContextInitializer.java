@@ -7,14 +7,16 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Instant;
-import java.util.Map;
 import java.util.Optional;
 
 import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.revwalk.RevCommit;
 
+import com.google.common.collect.ImmutableMap;
+
 import io.github.oliviercailloux.git.Client;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
+import io.github.oliviercailloux.git.git_hub.services.GitHubTimelineReader;
 import io.github.oliviercailloux.grade.GradingException;
 import io.github.oliviercailloux.grade.context.FilesSource;
 import io.github.oliviercailloux.grade.context.GitContext;
@@ -55,7 +57,9 @@ public class FullContextInitializer implements GitFullContext {
 		final Client client = getClient();
 		try {
 			if (client.hasContentCached()) {
-				final Map<ObjectId, Instant> receivedAt = new GitAndGitHub().check(client);
+				final GitHubTimelineReader gitHubReceptionTimer = new GitHubTimelineReader();
+				gitHubReceptionTimer.getReceptionRanges(client);
+				final ImmutableMap<ObjectId, Instant> receivedAt = gitHubReceptionTimer.getReceivedAtLowerBounds();
 				context = GradingContextWithTimeline.given(client, receivedAt);
 				lastCommitNotIgnored = context
 						.getLatestNotIgnoredChildOf(client.getCommit(client.resolve("origin/master")), ignoreAfter);
@@ -88,8 +92,12 @@ public class FullContextInitializer implements GitFullContext {
 		return context.getCommitsReceptionTime().get(lastCommitNotIgnored.get());
 	}
 
+	public ImmutableMap<ObjectId, Instant> getCommitsReceptionTime() {
+		return context.getCommitsReceptionTime();
+	}
+
 	@Override
-	public FilesSource getFilesReader(RevCommit sourceCommit) {
+	public FilesSource getFilesReader(Optional<RevCommit> sourceCommit) {
 		return delegate.getFilesReader(sourceCommit);
 	}
 

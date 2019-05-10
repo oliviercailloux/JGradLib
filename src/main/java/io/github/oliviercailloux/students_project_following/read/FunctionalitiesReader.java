@@ -133,7 +133,7 @@ public class FunctionalitiesReader {
 		doc = asciidoctor.load(source, ImmutableMap.of());
 		LOGGER.debug("Doc title: {}.", doc.getAttribute("doctitle"));
 
-		final List<StructuralNode> blocks = doc.blocks();
+		final List<StructuralNode> blocks = doc.getBlocks();
 		logTitles(blocks);
 
 		final Section section;

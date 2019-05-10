@@ -1,5 +1,6 @@
 package io.github.oliviercailloux.git.git_hub.model.v3;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;
@@ -29,8 +30,12 @@ public class PushPayload {
 
 	private PushPayload(JsonObject json) {
 		this.json = requireNonNull(json);
+		checkArgument(json.getJsonArray("commits").size() >= 1);
 	}
 
+	/**
+	 * @return at least one entry
+	 */
 	public List<PayloadCommitDescription> getCommits() {
 		return json.getJsonArray("commits").stream().map(JsonValue::asJsonObject).map(PayloadCommitDescription::from)
 				.collect(Collectors.toList());

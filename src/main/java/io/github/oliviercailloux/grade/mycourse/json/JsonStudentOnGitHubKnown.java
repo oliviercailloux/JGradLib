@@ -39,7 +39,7 @@ public class JsonStudentOnGitHubKnown {
 	}
 
 	public static JsonbAdapter<StudentOnGitHubKnown, JsonObject> asAdapter() {
-		return new JsonbAdapter<StudentOnGitHubKnown, JsonObject>() {
+		return new JsonbAdapter<>() {
 			@Override
 			public JsonObject adaptToJson(StudentOnGitHubKnown obj) throws Exception {
 				return asJson(obj);

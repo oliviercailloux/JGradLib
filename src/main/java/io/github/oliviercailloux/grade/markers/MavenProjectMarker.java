@@ -2,7 +2,7 @@ package io.github.oliviercailloux.grade.markers;
 
 import static java.util.Objects.requireNonNull;
 
-import com.google.common.base.Predicates;
+import java.nio.file.Path;
 
 import io.github.oliviercailloux.grade.Criterion;
 import io.github.oliviercailloux.grade.Mark;
@@ -11,34 +11,34 @@ import io.github.oliviercailloux.grade.context.GitFullContext;
 import io.github.oliviercailloux.grade.contexters.MavenManager;
 import io.github.oliviercailloux.grade.contexters.PomContexter;
 import io.github.oliviercailloux.grade.contexters.PomSupplier;
-import io.github.oliviercailloux.java_grade.testers.TestFileRecognizer;
+import io.github.oliviercailloux.java_grade.testers.MarkHelper;
 
 public class MavenProjectMarker {
 
-	private final GitFullContext context;
 	private final FilesSource filesReader;
 	private PomSupplier pomSupplier;
 	private PomContexter pomContexter;
 	private FilesSource testFiles;
 	private Boolean testsExistAndPass;
+	private Path projectDirectory;
 
-	public MavenProjectMarker(GitFullContext context) {
-		this.context = requireNonNull(context);
-		filesReader = context.getMainFilesReader();
+	private MavenProjectMarker(FilesSource filesSource, Path projectDirectory) {
+		this.projectDirectory = requireNonNull(projectDirectory);
+		filesReader = requireNonNull(filesSource);
 		pomSupplier = null;
 		pomContexter = null;
 		testFiles = null;
 		testsExistAndPass = null;
 	}
 
-	public static MavenProjectMarker given(GitFullContext context) {
-		final MavenProjectMarker marker = new MavenProjectMarker(context);
+	public static MavenProjectMarker given(FilesSource filesReader, Path projectDirectory) {
+		final MavenProjectMarker marker = new MavenProjectMarker(filesReader, projectDirectory);
 		return marker;
 	}
 
 	public FilesSource getTestFiles() {
 		if (testFiles == null) {
-			testFiles = TestFileRecognizer.getTestFiles(filesReader);
+			testFiles = MarkHelper.getTestFiles(filesReader);
 		}
 		return testFiles;
 	}
@@ -77,12 +77,17 @@ public class MavenProjectMarker {
 	public boolean doTestsExistAndPass() {
 		if (testsExistAndPass == null) {
 			final MavenManager mavenManager = new MavenManager();
-			testsExistAndPass = getTestFiles().getContents().keySet().stream()
-					.anyMatch(TestFileRecognizer::isSurefireTestFile) && pomSupplier.getMavenRelativeRoot().isPresent()
-					&& mavenManager.test(context.getClient().getProjectDirectory()
-							.resolve(pomSupplier.getMavenRelativeRoot().get().resolve("pom.xml")));
+			testsExistAndPass = getTestFiles().getContents().keySet().stream().anyMatch(MarkHelper::isSurefireTestFile)
+					&& pomSupplier.getMavenRelativeRoot().isPresent() && mavenManager.test(
+							projectDirectory.resolve(pomSupplier.getMavenRelativeRoot().get().resolve("pom.xml")));
 		}
 		return testsExistAndPass;
+	}
+
+	public static MavenProjectMarker given(GitFullContext context) {
+		final MavenProjectMarker marker = new MavenProjectMarker(context.getFilesReader(context.getMainCommit()),
+				context.getClient().getProjectDirectory());
+		return marker;
 	}
 
 }

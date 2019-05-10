@@ -31,8 +31,9 @@ public class GitHistory {
 
 	public Set<RevCommit> getRoots() {
 		/**
-		 * We could start from any given node and simply follow the parent relation, but
-		 * that finds only one root. Git allows for multiple roots.
+		 * We could start from any given node and simply follow the successor
+		 * (has-as-parent) relation, but that finds only one root. Git allows for
+		 * multiple roots.
 		 */
 		return graph.nodes().stream().filter((n) -> n.getParentCount() == 0).collect(Collectors.toSet());
 	}
@@ -41,7 +42,9 @@ public class GitHistory {
 	private static final Logger LOGGER = LoggerFactory.getLogger(GitHistory.class);
 
 	/**
-	 * @return a graph representing the parent of relation.
+	 * @return a graph representing the has-as-parent (child-of) relation: the
+	 *         successors of a node are its parents; following the successors
+	 *         relation (child-of) goes back in time.
 	 */
 	public ImmutableGraph<RevCommit> getGraph() {
 		return graph;

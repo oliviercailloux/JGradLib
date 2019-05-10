@@ -53,15 +53,21 @@ public class Mark {
 
 	public static Mark proportional(Criterion criterion, boolean firstTest, boolean... tests) {
 		final int nbTests = 1 + tests.length;
-		final int nbOk = firstTest ? 1 : 0 + Booleans.countTrue(tests);
+		final int nbOk = (firstTest ? 1 : 0) + Booleans.countTrue(tests);
 		return proportional(criterion, nbOk, nbTests);
 	}
 
 	public static Mark proportional(Criterion criterion, int nbOk, int nbTests) {
+		return proportional(criterion, nbOk, nbTests, "nbOk (" + nbOk + ") / nbTests (" + nbTests + ")");
+	}
+
+	public static Mark proportional(Criterion criterion, int nbOk, int nbTests, String comment) {
 		final double weightOk = (double) nbOk / (double) nbTests;
 		final double weightKo = 1d - weightOk;
-		return Mark.of(criterion, criterion.getMinPoints() * weightKo + criterion.getMaxPoints() * weightOk,
-				"nbOk / nbTests");
+		final double pts = criterion.getMinPoints() * weightKo + criterion.getMaxPoints() * weightOk;
+		LOGGER.debug("For {}, obtained proportion of {} right and {} wrong, points are {}.", criterion, weightOk,
+				weightKo, pts);
+		return Mark.of(criterion, pts, comment);
 	}
 
 	public static Mark min(Criterion criterion) {

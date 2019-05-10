@@ -5,6 +5,8 @@ import static io.github.oliviercailloux.grade.json.TestCriterion.ENC;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
@@ -15,7 +17,6 @@ import com.google.common.io.Resources;
 
 import io.github.oliviercailloux.grade.Grade;
 import io.github.oliviercailloux.grade.Mark;
-import io.github.oliviercailloux.grade.json.JsonGrade;
 import io.github.oliviercailloux.grade.mycourse.StudentOnGitHubKnown;
 import io.github.oliviercailloux.grade.mycourse.StudentOnMyCourse;
 
@@ -28,11 +29,9 @@ public class JsonGradeTest {
 		final String expected = Resources.toString(this.getClass().getResource("Grades.json"), StandardCharsets.UTF_8);
 
 		final Mark mark1 = Mark.max(ENC);
-		final Grade grade1 = Grade.of(getStudentOnGitHubKnown("g1", 1).asStudentOnGitHub(),
-				ImmutableSet.of(mark1));
+		final Grade grade1 = Grade.of(getStudentOnGitHubKnown("g1", 1).asStudentOnGitHub(), ImmutableSet.of(mark1));
 		final Mark mark2 = Mark.min(ANNOT);
-		final Grade grade2 = Grade.of(getStudentOnGitHubKnown("g2", 2).asStudentOnGitHub(),
-				ImmutableSet.of(mark2));
+		final Grade grade2 = Grade.of(getStudentOnGitHubKnown("g2", 2).asStudentOnGitHub(), ImmutableSet.of(mark2));
 		final ImmutableSet<Grade> grades = ImmutableSet.of(grade1, grade2);
 		final String written = JsonGrade.asJsonArray(grades).toString();
 		LOGGER.debug("Serialized pretty json: {}.", written);
@@ -42,17 +41,25 @@ public class JsonGradeTest {
 	@Test
 	public void gradesReadJson() throws Exception {
 		final Mark mark1 = Mark.max(ENC);
-		final Grade grade1 = Grade.of(getStudentOnGitHubKnown("g1", 1).asStudentOnGitHub(),
-				ImmutableSet.of(mark1));
+		final Grade grade1 = Grade.of(getStudentOnGitHubKnown("g1", 1).asStudentOnGitHub(), ImmutableSet.of(mark1));
 		final Mark mark2 = Mark.min(ANNOT);
-		final Grade grade2 = Grade.of(getStudentOnGitHubKnown("g2", 2).asStudentOnGitHub(),
-				ImmutableSet.of(mark2));
+		final Grade grade2 = Grade.of(getStudentOnGitHubKnown("g2", 2).asStudentOnGitHub(), ImmutableSet.of(mark2));
 		final ImmutableSet<Grade> expected = ImmutableSet.of(grade1, grade2);
 
-		final String json = Resources.toString(this.getClass().getResource("Grades.json"), StandardCharsets.UTF_8);
-		final ImmutableSet<Grade> read = JsonGrade.asGrades(json);
-		LOGGER.debug("Deserialized: {}.", read);
-		assertEquals(expected, read);
+		{
+			final String json = Resources.toString(this.getClass().getResource("Grades.json"), StandardCharsets.UTF_8);
+			final ImmutableSet<Grade> read = JsonGrade.asGrades(json);
+			LOGGER.debug("Deserialized: {}.", read);
+			assertEquals(expected, read);
+			assertEquals(expected.asList(), read.asList());
+		}
+
+		/** TODO is not always read in the right order! */
+		{
+			final String multJson = Files.readString(Paths.get("allgrades jpa.json"));
+			final ImmutableSet<Grade> read = JsonGrade.asGrades(multJson);
+			assertEquals("ArnCLAUDEL", read.iterator().next().getStudent().getGitHubUsername());
+		}
 	}
 
 	private StudentOnGitHubKnown getStudentOnGitHubKnown(String gitHubUsername, int id) {

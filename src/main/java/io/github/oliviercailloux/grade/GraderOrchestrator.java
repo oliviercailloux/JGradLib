@@ -1,20 +1,15 @@
 package io.github.oliviercailloux.grade;
 
-import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.text.NumberFormat;
-import java.util.Locale;
+import java.util.Collection;
 import java.util.Map;
-import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,9 +17,6 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Streams;
-import com.univocity.parsers.csv.CsvWriter;
-import com.univocity.parsers.csv.CsvWriterSettings;
 
 import io.github.oliviercailloux.git.git_hub.model.GitHubToken;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
@@ -32,9 +24,7 @@ import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherV3;
 import io.github.oliviercailloux.grade.json.JsonGrade;
 import io.github.oliviercailloux.grade.mycourse.StudentOnGitHub;
 import io.github.oliviercailloux.grade.mycourse.StudentOnGitHubKnown;
-import io.github.oliviercailloux.grade.mycourse.csv.MyCourseCsvWriter;
 import io.github.oliviercailloux.grade.mycourse.json.StudentsReaderFromJson;
-import io.github.oliviercailloux.java_grade.ex_jpa.ExJpaGrader;
 
 public class GraderOrchestrator {
 
@@ -42,20 +32,6 @@ public class GraderOrchestrator {
 		this.prefix = prefix;
 		usernames = new StudentsReaderFromJson();
 		repositoriesByStudent = null;
-	}
-
-	public void writeJson(Set<Grade> grades) throws IOException {
-		final String str = JsonGrade.asJsonArray(grades).toString();
-		try (BufferedWriter fileWriter = Files.newBufferedWriter(Paths.get("out.json"), StandardCharsets.UTF_8)) {
-			fileWriter.write(str);
-		}
-	}
-
-	public ImmutableSet<Grade> readJson() throws IOException {
-		final String filename = "manual - 12-08-23h.json";
-//		final String filename = "out.json";
-		final String jsonStr = new String(Files.readAllBytes(Paths.get(filename)), StandardCharsets.UTF_8);
-		return JsonGrade.asGrades(jsonStr);
 	}
 
 	public void setSingleRepo(String studentGitHubUsername) {
@@ -92,49 +68,9 @@ public class GraderOrchestrator {
 				.collect(ImmutableMap.toImmutableMap((e) -> e.getKey().asStudentOnGitHubKnown(), Map.Entry::getValue));
 	}
 
-	public void readUsernames() throws IOException {
-		try (InputStream inputStream = Files
-				.newInputStream(Paths.get("../../Java SITN, app, concept°/usernames.json"))) {
+	public void readUsernames(Path path) throws IOException {
+		try (InputStream inputStream = Files.newInputStream(path)) {
 			usernames.read(inputStream);
-		}
-	}
-
-	public void writeCsv(Set<Grade> grades) throws IOException {
-		final Path out = Paths.get("allgrades.csv");
-		final NumberFormat formatter = NumberFormat.getNumberInstance(Locale.FRENCH);
-		try (BufferedWriter fileWriter = Files.newBufferedWriter(out, StandardCharsets.UTF_8)) {
-			final CsvWriter writer = new CsvWriter(fileWriter, new CsvWriterSettings());
-			final ImmutableSet<Criterion> allKeys = grades.stream().flatMap((g) -> g.getMarks().keySet().stream())
-					.collect(ImmutableSet.toImmutableSet());
-			writer.writeHeaders(Streams.concat(Stream.of("Name", "GitHub username"),
-					allKeys.stream().map(Object::toString), Stream.of("Grade")).collect(Collectors.toList()));
-			for (Grade grade : grades) {
-				final StudentOnGitHub student = grade.getStudent();
-				LOGGER.info("Writing {}.", student);
-				writer.addValue("Name", student.getLastName().orElse("unknown"));
-				writer.addValue("GitHub username", student.getGitHubUsername());
-
-				for (Criterion criterion : grade.getMarks().keySet()) {
-					final double mark = grade.getMarks().get(criterion).getPoints();
-					writer.addValue(criterion.toString(), formatter.format(mark));
-				}
-
-				writer.addValue("Grade", formatter.format(grade.getGrade()));
-				writer.writeValuesToRow();
-			}
-
-			writer.addValue("Name", "Range");
-			writer.addValue("GitHub username", "Range");
-			for (Criterion criterion : allKeys) {
-				writer.addValue(criterion.toString(),
-						"[" + criterion.getMinPoints() + ", " + criterion.getMaxPoints() + "]");
-			}
-			final double minGrade = allKeys.stream().collect(Collectors.summingDouble(Criterion::getMinPoints));
-			final double maxGrade = allKeys.stream().collect(Collectors.summingDouble(Criterion::getMaxPoints));
-			writer.addValue("Grade", "[" + minGrade + "," + maxGrade + "]");
-			writer.writeValuesToRow();
-
-			writer.close();
 		}
 	}
 
@@ -149,48 +85,6 @@ public class GraderOrchestrator {
 
 	public ImmutableMap<StudentOnGitHub, RepositoryCoordinates> getRepositoriesByStudent() {
 		return repositoriesByStudent;
-	}
-
-	public ImmutableSet<Grade> gradeAll(ExJpaGrader grader,
-			ImmutableMap<StudentOnGitHub, RepositoryCoordinates> repositories) {
-		final ImmutableSet.Builder<Grade> gradesBuilder = ImmutableSet.builder();
-		for (Map.Entry<StudentOnGitHub, RepositoryCoordinates> entry : repositories.entrySet()) {
-			final StudentOnGitHub student = entry.getKey();
-			final RepositoryCoordinates repo = entry.getValue();
-			final Grade grade = Grade.of(student, grader.grade(repo));
-			gradesBuilder.add(grade);
-			LOGGER.debug("Student {}, grades {}.", student, grade.getMarks().values());
-			LOGGER.info("Evaluation: {}", grade.getAsMyCourseString());
-		}
-		return gradesBuilder.build();
-	}
-
-	public static void main(String[] args) throws Exception {
-		/**
-		 * TODO 1) no need of history. Repo is cloned locally and set at right commit.
-		 * Then, only need a path, no git client.
-		 *
-		 * 2) Need navigation through history. Use plumbing API, no work space is
-		 * necessary; a main commit and a plumbing client are required. Get everything
-		 * including the main commit from API. The main commit should be provided by a
-		 * distinct object as it is useful in both cases (author, date…)?
-		 */
-		final String prefix = "jpa";
-		final GraderOrchestrator orch = new GraderOrchestrator(prefix);
-		orch.readUsernames();
-
-		orch.readRepositories();
-		orch.setSingleRepo("edoreld");
-		final ImmutableMap<StudentOnGitHub, RepositoryCoordinates> repositories = orch.getRepositoriesByStudent();
-
-		final ExJpaGrader grader = new ExJpaGrader();
-
-		final ImmutableSet<Grade> grades = orch.gradeAll(grader, repositories);
-//		final ImmutableSet<StudentGrade> grades = orch.readJson();
-		orch.writeCsv(grades);
-		orch.writeJson(grades);
-
-		new MyCourseCsvWriter().writeCsv("Devoir " + prefix, 110774, grades);
 	}
 
 }

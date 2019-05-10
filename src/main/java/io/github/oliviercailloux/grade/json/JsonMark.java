@@ -30,7 +30,7 @@ public class JsonMark {
 	}
 
 	public static JsonbAdapter<Mark, JsonObject> asAdapter() {
-		return new JsonbAdapter<Mark, JsonObject>() {
+		return new JsonbAdapter<>() {
 			@Override
 			public JsonObject adaptToJson(Mark obj) throws Exception {
 				return asJson(obj);

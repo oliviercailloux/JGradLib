@@ -16,9 +16,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
 import io.github.oliviercailloux.git.FileContent;
-import io.github.oliviercailloux.grade.GradingException;
 import io.github.oliviercailloux.grade.context.FilesSource;
-import io.github.oliviercailloux.java_grade.testers.TestFileRecognizer;
+import io.github.oliviercailloux.java_grade.testers.MarkHelper;
 
 class GradingTest {
 
@@ -45,7 +44,7 @@ class GradingTest {
 		expected.remove(t1.getPath());
 		expected.remove(t2.getPath());
 
-		final FilesSource testFiles = TestFileRecognizer.getTestFiles(FilesSource.fromMemory(filesMap));
+		final FilesSource testFiles = MarkHelper.getTestFiles(FilesSource.fromMemory(filesMap));
 		final ImmutableMap<Path, String> contents = testFiles.getContents();
 
 		LOGGER.info("Expected: {}.", expected);
@@ -53,22 +52,12 @@ class GradingTest {
 		assertEquals(expected, contents);
 	}
 
+	private FileContent getFileContent(String path, String content) {
+		return FileContent.of(Paths.get(path), content);
+	}
+
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(GradingTest.class);
-
-	private FileContent getFileContent(String path, String content) {
-		return new FileContent() {
-			@Override
-			public Path getPath() {
-				return Paths.get(path);
-			}
-
-			@Override
-			public String getContent() throws GradingException {
-				return content;
-			}
-		};
-	}
 
 	@Test
 	void testGroupIdDiscovery() throws Exception {
