@@ -10,4 +10,9 @@ public interface AnonymousGrade {
 
 	public double getMaxGrade();
 
+	public Criterion getCriterion();
+
+	public double getPoints();
+
+	public String getComment();
 }
