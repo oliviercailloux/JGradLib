@@ -14,7 +14,7 @@ import org.slf4j.LoggerFactory;
 
 import io.github.oliviercailloux.git.Client;
 import io.github.oliviercailloux.grade.Criterion;
-import io.github.oliviercailloux.grade.Grade;
+import io.github.oliviercailloux.grade.Mark;
 import io.github.oliviercailloux.grade.context.GitFullContext;
 
 class TimeMarker {
@@ -30,11 +30,11 @@ class TimeMarker {
 		this.penalizer = requireNonNull(penalizer);
 	}
 
-	public Grade mark() {
+	public Mark mark() {
 		final Client client = context.getClient();
 
 		if (!client.hasContentCached() || !context.getMainCommit().isPresent()) {
-			return Grade.of(criterion, 0d, "");
+			return Mark.of(criterion, 0d, "");
 		}
 
 		final Instant submitted = context.getSubmittedTime();
@@ -43,15 +43,15 @@ class TimeMarker {
 		final Duration tardiness = Duration.between(tooLate, submitted);
 
 		LOGGER.debug("Last: {}, deadline: {}, tardiness: {}.", submitted, deadline, tardiness);
-		final Grade grade;
+		final Mark grade;
 		if (tardiness.compareTo(Duration.ZERO) > 0) {
 			LOGGER.warn("Last event after deadline: {}.", submitted);
 			final double penalty = penalizer.apply(tardiness);
 			checkState(penalty <= 0d);
-			grade = Grade.of(criterion, penalty, "Last event after deadline: "
+			grade = Mark.of(criterion, penalty, "Last event after deadline: "
 					+ ZonedDateTime.ofInstant(submitted, ZoneId.of("Europe/Paris")) + ", " + tardiness + " late.");
 		} else {
-			grade = Grade.max(criterion);
+			grade = Mark.max(criterion);
 		}
 		return grade;
 	}

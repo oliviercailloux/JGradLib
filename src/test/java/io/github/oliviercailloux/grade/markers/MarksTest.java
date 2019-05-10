@@ -14,7 +14,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
 import io.github.oliviercailloux.grade.Criterion;
-import io.github.oliviercailloux.grade.Grade;
+import io.github.oliviercailloux.grade.Mark;
 import io.github.oliviercailloux.grade.context.FilesSource;
 import io.github.oliviercailloux.grade.contexters.PomContexter;
 import io.github.oliviercailloux.grade.contexters.PomSupplier;
@@ -26,7 +26,7 @@ class MarksTest {
 		final String req = "";
 		final double min = 0d;
 		final double max = 1d;
-		final Grade mark = Marks.packageGroupId(newCriterion(req, min, max),
+		final Mark mark = Marks.packageGroupId(newCriterion(req, min, max),
 				FilesSource.fromMemory(ImmutableMap.of(Paths.get("src", "main", "java", "aa", "file.txt"), "content")),
 				getPomSupplier(), getPomContexter("aa", "b"));
 		assertEquals(min, mark.getPoints());
@@ -69,7 +69,7 @@ class MarksTest {
 		final String req = "";
 		final double min = 0d;
 		final double max = 1d;
-		final Grade mark = Marks.packageGroupId(newCriterion(req, min, max),
+		final Mark mark = Marks.packageGroupId(newCriterion(req, min, max),
 				FilesSource.fromMemory(ImmutableMap.of(Paths.get("src", "main", "java", "file.txt"), "content")),
 				getPomSupplier(), getPomContexter("aa"));
 		assertEquals(min, mark.getPoints());
@@ -80,7 +80,7 @@ class MarksTest {
 		final String req = "";
 		final double min = 0d;
 		final double max = 1d;
-		final Grade mark = Marks.packageGroupId(newCriterion(req, min, max),
+		final Mark mark = Marks.packageGroupId(newCriterion(req, min, max),
 				FilesSource.fromMemory(ImmutableMap.of(Paths.get("aa", "file.txt"), "content")), getPomSupplier(),
 				getPomContexter("aa"));
 		assertEquals(min, mark.getPoints());
@@ -94,7 +94,7 @@ class MarksTest {
 		final Path path = Paths.get("src", "main", "java", "aa", "b", "c", "file.txt");
 		final Path relativizedPath = Paths.get("aa", "b", "c", "file.txt");
 		final PomContexter pomContexter = getPomContexter("aa", "b");
-		final Grade mark = Marks.packageGroupId(newCriterion(req, min, max),
+		final Mark mark = Marks.packageGroupId(newCriterion(req, min, max),
 				FilesSource.fromMemory(ImmutableMap.of(path, "content")), getPomSupplier(), pomContexter);
 		assertTrue(PackageGroupIdMarker.hasPrefix(relativizedPath, pomContexter.getGroupIdElements()));
 		assertTrue(PackageGroupIdMarker.hasPrefix(relativizedPath, ImmutableList.of("aa")));
@@ -107,7 +107,7 @@ class MarksTest {
 		final String req = "";
 		final double min = 0d;
 		final double max = 1d;
-		final Grade mark = Marks.packageGroupId(newCriterion(req, min, max),
+		final Mark mark = Marks.packageGroupId(newCriterion(req, min, max),
 				FilesSource.fromMemory(ImmutableMap.of(Paths.get("src", "main", "java", "aa", "file.txt"), "content")),
 				getPomSupplier(), getPomContexter("aa"));
 		assertEquals(max, mark.getPoints());

@@ -6,7 +6,7 @@ public interface AnonymousGrade {
 
 	public double getGrade();
 
-	public ImmutableBiMap<Criterion, Grade> getMarks();
+	public ImmutableBiMap<Criterion, Mark> getMarks();
 
 	public double getMaxGrade();
 

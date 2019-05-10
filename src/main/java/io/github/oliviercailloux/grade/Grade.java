@@ -1,6 +1,5 @@
 package io.github.oliviercailloux.grade;
 
-import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
@@ -21,7 +20,6 @@ import org.slf4j.LoggerFactory;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
 import com.google.common.collect.ImmutableBiMap;
-import com.google.common.primitives.Booleans;
 
 import io.github.oliviercailloux.grade.mycourse.StudentOnGitHub;
 
@@ -41,102 +39,20 @@ import io.github.oliviercailloux.grade.mycourse.StudentOnGitHub;
  */
 @JsonbPropertyOrder({ "student", "marks" })
 public class Grade implements AnonymousGrade {
-	private Grade(StudentOnGitHub student, Set<Grade> marks) {
+	private Grade(StudentOnGitHub student, Set<Mark> marks) {
 		this.student = student;
 		LOGGER.debug("Building with {}, {}.", student, marks.iterator().next().getClass());
-		final Collector<Grade, ?, ImmutableBiMap<Criterion, Grade>> toI = ImmutableBiMap
+		final Collector<Mark, ?, ImmutableBiMap<Criterion, Mark>> toI = ImmutableBiMap
 				.toImmutableBiMap((g) -> g.getCriterion(), (g) -> g);
 		this.marks = marks.stream().collect(toI);
-		/** FIXME */
-		this.criterion = null;
-		this.points = getGrade();
-		this.comment = "";
-	}
-
-	private final Criterion criterion;
-
-	public Criterion getCriterion() {
-		return criterion;
-	}
-
-	public double getPoints() {
-		return points;
-	}
-
-	@Override
-	public int hashCode() {
-		return Objects.hash(criterion, points, comment, student, marks);
-	}
-
-	public String getComment() {
-		return comment;
-	}
-
-	public static Grade proportional(Criterion criterion, boolean firstTest, boolean... tests) {
-		final int nbTests = 1 + tests.length;
-		final int nbOk = (firstTest ? 1 : 0) + Booleans.countTrue(tests);
-		return proportional(criterion, nbOk, nbTests);
-	}
-
-	public static Grade proportional(Criterion criterion, int nbOk, int nbTests) {
-		return proportional(criterion, nbOk, nbTests, "nbOk (" + nbOk + ") / nbTests (" + nbTests + ")");
-	}
-
-	public static Grade proportional(Criterion criterion, int nbOk, int nbTests, String comment) {
-		final double weightOk = (double) nbOk / (double) nbTests;
-		final double weightKo = 1d - weightOk;
-		final double pts = criterion.getMinPoints() * weightKo + criterion.getMaxPoints() * weightOk;
-		LOGGER.debug("For {}, obtained proportion of {} right and {} wrong, points are {}.", criterion, weightOk,
-				weightKo, pts);
-		return Grade.of(criterion, pts, comment);
-	}
-
-	public static Grade min(Criterion criterion) {
-		return new Grade(criterion, criterion.getMinPoints(), "");
 	}
 
 	@JsonbCreator
-	public static Grade of(@JsonbProperty("criterion") Criterion criterion, @JsonbProperty("points") double points,
-			@JsonbProperty("comment") String comment) {
-		final Grade g = new Grade(criterion, points, comment);
-		return g;
-	}
-
-	public static Grade binary(Criterion criterion, boolean conditionForPoints) {
-		return new Grade(criterion, conditionForPoints ? criterion.getMaxPoints() : criterion.getMinPoints(), "");
-	}
-
-	/**
-	 * May be negative (penalty); may be greater than maxPoints of the corresponding
-	 * criterion (bonus).
-	 */
-	private final double points;
-	private final String comment;
-
-	private Grade(Criterion criterion, double points, String comment) {
-		this.criterion = requireNonNull(criterion);
-		checkArgument(Double.isFinite(points));
-		this.points = points;
-		this.comment = requireNonNull(comment);
-		this.student = null;
-		this.marks = ImmutableBiMap.of();
-	}
-
-	public static Grade min(Criterion criterion, String comment) {
-		return new Grade(criterion, criterion.getMinPoints(), comment);
-	}
-
-	public static Grade max(Criterion criterion) {
-		return new Grade(criterion, criterion.getMaxPoints(), "");
-	}
-
-	@JsonbCreator
-	public static Grade of(@JsonbProperty("student") StudentOnGitHub student,
-			@JsonbProperty("marks") Set<Grade> marks) {
+	public static Grade of(@JsonbProperty("student") StudentOnGitHub student, @JsonbProperty("marks") Set<Mark> marks) {
 		return new Grade(requireNonNull(student), marks);
 	}
 
-	public static AnonymousGrade anonymous(Set<Grade> marks) {
+	public static AnonymousGrade anonymous(Set<Mark> marks) {
 		return new Grade(null, marks);
 	}
 
@@ -150,7 +66,7 @@ public class Grade implements AnonymousGrade {
 	 * points ≤ maxPoints of the corresponding criterion.
 	 */
 	@JsonbTransient
-	private final ImmutableBiMap<Criterion, Grade> marks;
+	private final ImmutableBiMap<Criterion, Mark> marks;
 
 	@Override
 	public boolean equals(Object o2) {
@@ -158,8 +74,12 @@ public class Grade implements AnonymousGrade {
 			return false;
 		}
 		final Grade g2 = (Grade) o2;
-		return criterion.equals(g2.criterion) && points == g2.points && comment.equals(g2.comment)
-				&& Objects.equals(student, g2.student) && marks.equals(g2.marks);
+		return Objects.equals(student, g2.student) && marks.equals(g2.marks);
+	}
+
+	@Override
+	public int hashCode() {
+		return Objects.hash(student, marks);
 	}
 
 	@Override
@@ -168,8 +88,7 @@ public class Grade implements AnonymousGrade {
 		if (student != null) {
 			helper.add("student", student);
 		}
-		return helper.add("criterion", criterion).add("points", points).add("comment", comment).add("grades", marks)
-				.toString();
+		return helper.add("grades", marks).toString();
 	}
 
 	public StudentOnGitHub getStudent() {
@@ -179,13 +98,13 @@ public class Grade implements AnonymousGrade {
 
 	@Override
 	@JsonbTransient
-	public ImmutableBiMap<Criterion, Grade> getMarks() {
+	public ImmutableBiMap<Criterion, Mark> getMarks() {
 		return marks;
 	}
 
 	@JsonbTransient
 	public String getAsMyCourseString(double scaleMax) {
-		final Stream<String> evaluations = marks.values().stream().map(Grade::getEvaluation);
+		final Stream<String> evaluations = marks.values().stream().map(this::getEvaluation);
 		final String joined = evaluations.collect(Collectors.joining("</td></tr><tr><td>"));
 		return "<p><table><tbody><tr><td>" + joined + "</td></tr></tbody></table></p><p>" + "Grade: "
 				+ getScaledGrade(scaleMax) + "/" + scaleMax + ".</p>";
@@ -198,7 +117,7 @@ public class Grade implements AnonymousGrade {
 	@Override
 	@JsonbTransient
 	public double getGrade() {
-		return marks.values().stream().collect(Collectors.summingDouble(Grade::getPoints));
+		return marks.values().stream().collect(Collectors.summingDouble(Mark::getPoints));
 	}
 
 	@Override
@@ -207,7 +126,7 @@ public class Grade implements AnonymousGrade {
 		return marks.values().stream().collect(Collectors.summingDouble((g) -> g.getCriterion().getMaxPoints()));
 	}
 
-	private static String getEvaluation(Grade grade) {
+	private String getEvaluation(Mark grade) {
 		final Criterion criterion = grade.getCriterion();
 
 		final StringBuilder builder = new StringBuilder();
