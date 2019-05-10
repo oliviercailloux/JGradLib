@@ -73,7 +73,7 @@ import io.github.oliviercailloux.grade.CsvGrades;
 import io.github.oliviercailloux.grade.Grade;
 import io.github.oliviercailloux.grade.GraderOrchestrator;
 import io.github.oliviercailloux.grade.GradingException;
-import io.github.oliviercailloux.grade.Mark;
+import io.github.oliviercailloux.grade.Grade;
 import io.github.oliviercailloux.grade.context.FilesSource;
 import io.github.oliviercailloux.grade.context.GitFullContext;
 import io.github.oliviercailloux.grade.contexters.FullContextInitializer;
@@ -122,7 +122,7 @@ public class ExExtractorGrader {
 		commitsReceptionTime = null;
 	}
 
-	private Mark timeMark;
+	private Grade timeMark;
 	Path mavenAbsoluteRoot;
 	private GitFullContext fullContext;
 	private ImmutableMap<ObjectId, Instant> commitsReceptionTime;
@@ -130,7 +130,7 @@ public class ExExtractorGrader {
 	public AnonymousGrade grade(RepositoryCoordinates coord) {
 		mavenAbsoluteRoot = null;
 
-		final ImmutableSet.Builder<Mark> gradeBuilder = ImmutableSet.builder();
+		final ImmutableSet.Builder<Grade> gradeBuilder = ImmutableSet.builder();
 		final Path projectsBaseDir = Paths.get("/home/olivier/Professions/Enseignement/En cours/extractor");
 
 		final FullContextInitializer spec = (FullContextInitializer) FullContextInitializer.withPathAndIgnore(coord,
@@ -160,28 +160,28 @@ public class ExExtractorGrader {
 		mavenAbsoluteRoot = fullContext.getClient().getProjectDirectory()
 				.resolve(pomSupplier.getForcedMavenRelativeRoot());
 		final FilesSource pomMultiContent = pomSupplier.asMultiContent();
-		gradeBuilder.add(Mark.binary(UTF,
+		gradeBuilder.add(Grade.binary(UTF,
 				pomMultiContent.existsAndAllMatch(
 						MarkingPredicates.containsOnce(Pattern.compile("<properties>" + Utils.ANY_REG_EXP
 								+ "<project\\.build\\.sourceEncoding>UTF-8</project\\.build\\.sourceEncoding>"
 								+ Utils.ANY_REG_EXP + "</properties>")))));
 		gradeBuilder
-				.add(Mark.binary(SOURCE,
+				.add(Grade.binary(SOURCE,
 						pomMultiContent.existsAndAllMatch(MarkingPredicates.containsOnce(Pattern.compile("<properties>"
 								+ Utils.ANY_REG_EXP + "<maven\\.compiler\\.source>.*</maven\\.compiler\\.source>"
 								+ Utils.ANY_REG_EXP + "</properties>")))));
-		gradeBuilder.add(Mark.binary(NO_MISLEADING_URL,
+		gradeBuilder.add(Grade.binary(NO_MISLEADING_URL,
 				pomMultiContent.existsAndAllMatch(
 						Predicates.contains(Pattern.compile("<url>.*\\.apache\\.org.*</url>")).negate())
 						&& pomMultiContent.existsAndAllMatch(
 								Predicates.contains(Pattern.compile("<url>.*example.*</url>")).negate())));
-		gradeBuilder.add(Mark.binary(PDF_DEP,
+		gradeBuilder.add(Grade.binary(PDF_DEP,
 				pomMultiContent.existsAndAllMatch(MarkingPredicates
 						.containsOnce(Pattern.compile("<dependencies>" + Utils.ANY_REG_EXP + "<dependency>"
 								+ Utils.ANY_REG_EXP + "<groupId>org\\.apache\\.pdfbox</groupId>" + Utils.ANY_REG_EXP
 								+ "<artifactId>pdfbox</artifactId>" + Utils.ANY_REG_EXP + "<version>2\\.0\\.15"
 								+ Utils.ANY_REG_EXP + "</version>" + "[^<]*" + "</dependency>")))));
-		gradeBuilder.add(Mark.binary(SIMPLE_EXTRACTOR,
+		gradeBuilder.add(Grade.binary(SIMPLE_EXTRACTOR,
 				!filesReader
 						.filterOnPath(Predicate.isEqual(pomSupplier.getSrcMainJavaFolder()
 								.resolve("io/github/oliviercailloux/y2019/extractor/SimpleExtractor.java")))
@@ -191,17 +191,17 @@ public class ExExtractorGrader {
 						pomSupplier, mavenMarker.getPomContexter()));
 
 		final boolean compile = new MavenManager().compile(mavenAbsoluteRoot.resolve("pom.xml"));
-		gradeBuilder.add(Mark.binary(COMPILES, compile));
+		gradeBuilder.add(Grade.binary(COMPILES, compile));
 		gradeBuilder.add(writeMark());
 
-		final ImmutableSet<Mark> grade = gradeBuilder.build();
+		final ImmutableSet<Grade> grade = gradeBuilder.build();
 		final Set<Criterion> diff = Sets.symmetricDifference(ImmutableSet.copyOf(ExExtractorCriterion.values()),
-				grade.stream().map(Mark::getCriterion).collect(ImmutableSet.toImmutableSet())).immutableCopy();
+				grade.stream().map(Grade::getCriterion).collect(ImmutableSet.toImmutableSet())).immutableCopy();
 		assert diff.isEmpty() : diff;
 		return Grade.anonymous(grade);
 	}
 
-	Mark commitMark() {
+	Grade commitMark() {
 		final Client client = fullContext.getClient();
 		final Set<RevCommit> commits;
 		try {
@@ -229,7 +229,7 @@ public class ExExtractorGrader {
 						: "No commits using command line");
 		final double points = (!commitsEarly.isEmpty() && !commitsManual.isEmpty()) ? COMMIT.getMaxPoints()
 				: COMMIT.getMinPoints();
-		final Mark commitMark = Mark.of(COMMIT, points, comment);
+		final Grade commitMark = Grade.of(COMMIT, points, comment);
 		return commitMark;
 	}
 
@@ -237,11 +237,11 @@ public class ExExtractorGrader {
 		return commits.stream().map(RevCommit::getName).collect(ImmutableList.toImmutableList());
 	}
 
-	Mark writeMark() {
+	Grade writeMark() {
 		final ExExtractorCriterion criterion = IMPL;
 		final Optional<SimpleExtractor> inst = newInstance();
 		if (!inst.isPresent()) {
-			return Mark.min(criterion, "Could not instanciate SimpleExtractor implementation.");
+			return Grade.min(criterion, "Could not instanciate SimpleExtractor implementation.");
 		}
 		final SimpleExtractor instance = inst.get();
 		LOGGER.info("Instantiated: {}.", instance.getClass().getName());
@@ -419,7 +419,7 @@ public class ExExtractorGrader {
 		} else if (testExplicitStripper && testThrows && testClosesOwn) {
 			fracPoints += 1d / 8d;
 		}
-		final Mark mark = Mark.of(criterion,
+		final Grade mark = Grade.of(criterion,
 				criterion.getMinPoints() + (criterion.getMaxPoints() - criterion.getMinPoints()) * fracPoints,
 				commentBuilder.toString());
 		return mark;
@@ -507,10 +507,10 @@ public class ExExtractorGrader {
 		}
 	}
 
-	private Mark userWriteToFileMark() {
+	private Grade userWriteToFileMark() {
 		final Optional<Class<?>> namedClass = getNamedClass("ExtractorUser");
 		if (namedClass.isEmpty()) {
-			return Mark.min(ON_TIME);
+			return Grade.min(ON_TIME);
 		}
 
 		final String methodName = "writeTextToFile";
@@ -549,7 +549,7 @@ public class ExExtractorGrader {
 			comment = "Method ExtractorUser#" + methodName + " not found";
 		}
 
-		return Mark.proportional(ON_TIME, Booleans.countTrue(writtenOk, throwsIOE), 2, comment);
+		return Grade.proportional(ON_TIME, Booleans.countTrue(writtenOk, throwsIOE), 2, comment);
 
 	}
 

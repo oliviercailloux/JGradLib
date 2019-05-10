@@ -5,7 +5,7 @@ import static java.util.Objects.requireNonNull;
 import java.nio.file.Path;
 
 import io.github.oliviercailloux.grade.Criterion;
-import io.github.oliviercailloux.grade.Mark;
+import io.github.oliviercailloux.grade.Grade;
 import io.github.oliviercailloux.grade.context.FilesSource;
 import io.github.oliviercailloux.grade.context.GitFullContext;
 import io.github.oliviercailloux.grade.contexters.MavenManager;
@@ -50,8 +50,8 @@ public class MavenProjectMarker {
 		return pomSupplier;
 	}
 
-	public Mark atRootMark(Criterion criterion) {
-		return Mark.binary(criterion, getPomSupplier().isMavenProjectAtRoot());
+	public Grade atRootMark(Criterion criterion) {
+		return Grade.binary(criterion, getPomSupplier().isMavenProjectAtRoot());
 	}
 
 	public PomContexter getPomContexter() {
@@ -62,16 +62,16 @@ public class MavenProjectMarker {
 		return pomContexter;
 	}
 
-	public Mark groupIdMark(Criterion criterion) {
-		return Mark.binary(criterion, getPomContexter().isGroupIdValid());
+	public Grade groupIdMark(Criterion criterion) {
+		return Grade.binary(criterion, getPomContexter().isGroupIdValid());
 	}
 
 	/**
 	 * The project must be checked out at the version to be tested, at the path
 	 * indicated by the project directory of the client.
 	 */
-	public Mark testMark(Criterion criterion) {
-		return Mark.binary(criterion, testsExistAndPass);
+	public Grade testMark(Criterion criterion) {
+		return Grade.binary(criterion, testsExistAndPass);
 	}
 
 	public boolean doTestsExistAndPass() {

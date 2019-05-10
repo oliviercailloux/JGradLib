@@ -15,7 +15,7 @@ import javax.json.bind.adapter.JsonbAdapter;
 import com.google.common.collect.ImmutableSet;
 
 import io.github.oliviercailloux.grade.Grade;
-import io.github.oliviercailloux.grade.Mark;
+import io.github.oliviercailloux.grade.Grade;
 import io.github.oliviercailloux.grade.mycourse.StudentOnGitHub;
 import io.github.oliviercailloux.grade.mycourse.json.JsonStudentOnGitHub;
 import io.github.oliviercailloux.json.JsonbUtils;
@@ -29,8 +29,8 @@ public class JsonGrade {
 		builder.add("student", JsonStudentOnGitHub.asJson(grade.getStudent()));
 		final JsonArrayBuilder marksBuilder = Json.createArrayBuilder();
 		{
-			final ImmutableSet<Mark> marks = grade.getMarks().values();
-			for (Mark mark : marks) {
+			final ImmutableSet<Grade> marks = grade.getMarks().values();
+			for (Grade mark : marks) {
 				final PrintableJsonObject markJson = JsonMark.asJson(mark);
 				marksBuilder.add(Json.createObjectBuilder(markJson));
 			}
@@ -74,13 +74,13 @@ public class JsonGrade {
 	public static Grade asGrade(JsonObject json) {
 //		return asGrade(json.toString());
 		final StudentOnGitHub student = JsonStudentOnGitHub.asStudentOnGitHub(json.getJsonObject("student"));
-		final ImmutableSet<Mark> marks;
+		final ImmutableSet<Grade> marks;
 		{
-			final ImmutableSet.Builder<Mark> marksBuilder = ImmutableSet.builder();
+			final ImmutableSet.Builder<Grade> marksBuilder = ImmutableSet.builder();
 			final JsonArray jsonMarks = json.getJsonArray("marks");
 			for (JsonValue jsonMark : jsonMarks) {
 				final JsonObject jsonMarkObj = jsonMark.asJsonObject();
-				final Mark mark = JsonMark.asMark(jsonMarkObj);
+				final Grade mark = JsonMark.asMark(jsonMarkObj);
 				marksBuilder.add(mark);
 			}
 			marks = marksBuilder.build();

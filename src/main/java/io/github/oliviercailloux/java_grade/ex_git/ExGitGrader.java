@@ -55,7 +55,7 @@ import io.github.oliviercailloux.grade.CsvGrades;
 import io.github.oliviercailloux.grade.Grade;
 import io.github.oliviercailloux.grade.GraderOrchestrator;
 import io.github.oliviercailloux.grade.GradingException;
-import io.github.oliviercailloux.grade.Mark;
+import io.github.oliviercailloux.grade.Grade;
 import io.github.oliviercailloux.grade.context.FilesSource;
 import io.github.oliviercailloux.grade.context.GitFullContext;
 import io.github.oliviercailloux.grade.contexters.FullContextInitializer;
@@ -74,8 +74,8 @@ public class ExGitGrader {
 		history = null;
 	}
 
-	public ImmutableSet<Mark> grade(RepositoryCoordinates coord, StudentOnGitHub student) {
-		final ImmutableSet.Builder<Mark> gradeBuilder = ImmutableSet.builder();
+	public ImmutableSet<Grade> grade(RepositoryCoordinates coord, StudentOnGitHub student) {
+		final ImmutableSet.Builder<Grade> gradeBuilder = ImmutableSet.builder();
 		final Path projectsBaseDir = Paths.get("/home/olivier/Professions/Enseignement/En cours/git");
 		final Instant deadline = ZonedDateTime.parse("2019-03-20T23:59:59+01:00").toInstant();
 
@@ -93,17 +93,17 @@ public class ExGitGrader {
 		final Set<RevCommit> rootCommits = history.getRoots();
 		{
 			LOGGER.debug("First commits: {}.", rootCommits);
-			final Mark mark;
+			final Grade mark;
 			switch (rootCommits.size()) {
 			case 0:
-				mark = Mark.min(SINGLE_ROOT_COMMIT);
+				mark = Grade.min(SINGLE_ROOT_COMMIT);
 				break;
 			case 1:
-				mark = Mark.of(SINGLE_ROOT_COMMIT, SINGLE_ROOT_COMMIT.getMaxPoints(),
+				mark = Grade.of(SINGLE_ROOT_COMMIT, SINGLE_ROOT_COMMIT.getMaxPoints(),
 						String.format("Root commit: %s.", Iterables.getOnlyElement(rootCommits).getName()));
 				break;
 			default:
-				mark = Mark.min(SINGLE_ROOT_COMMIT, String.format("Root commits: %s.", toString(rootCommits)));
+				mark = Grade.min(SINGLE_ROOT_COMMIT, String.format("Root commits: %s.", toString(rootCommits)));
 				break;
 			}
 			gradeBuilder.add(mark);
@@ -116,47 +116,47 @@ public class ExGitGrader {
 		final ImmutableSet<RevCommit> byGitHub = history.getGraph().nodes().stream()
 				.filter(MarkHelper::committerIsGitHub).collect(ImmutableSet.toImmutableSet());
 		{
-			final Mark mark;
+			final Grade mark;
 			if (!byGitHub.isEmpty()) {
-				mark = Mark.min(GIT, String.format("Committed by GitHub: %s.", toString(byGitHub)));
+				mark = Grade.min(GIT, String.format("Committed by GitHub: %s.", toString(byGitHub)));
 			} else {
-				mark = Mark.max(GIT);
+				mark = Grade.max(GIT);
 			}
 			gradeBuilder.add(mark);
 		}
 
 		{
-			final Mark mark;
+			final Grade mark;
 			if (firstRootCommitOpt.isPresent()) {
 				final RevCommit firstRootCommit = firstRootCommitOpt.get();
 				final String contributerName = firstRootCommit.getAuthorIdent().getName();
 				final String gitHubUsername = student.getGitHubUsername();
 				if (contributerName.equals(gitHubUsername)) {
-					mark = Mark.max(USER_NAME);
+					mark = Grade.max(USER_NAME);
 				} else {
-					mark = Mark.min(USER_NAME,
+					mark = Grade.min(USER_NAME,
 							String.format("Wrong contributer name: %s, expected %s", contributerName, gitHubUsername));
 				}
 			} else {
-				mark = Mark.min(USER_NAME);
+				mark = Grade.min(USER_NAME);
 			}
 			gradeBuilder.add(mark);
 		}
 
 		final FilesSource startFiles = firstRootCommitReader.filterOnPath((p) -> p.equals(Paths.get("start.txt")));
-		gradeBuilder.add(Mark.binary(CONTAINS_START, !startFiles.asFileContents().isEmpty()));
-		gradeBuilder.add(Mark.binary(HELLO2, startFiles.existsAndAllMatch(Predicates.containsPattern("hello2"))));
+		gradeBuilder.add(Grade.binary(CONTAINS_START, !startFiles.asFileContents().isEmpty()));
+		gradeBuilder.add(Grade.binary(HELLO2, startFiles.existsAndAllMatch(Predicates.containsPattern("hello2"))));
 
 		final Optional<RevCommit> devOpt = tryParseSpec(client, "refs/remotes/origin/dev");
-		gradeBuilder.add(Mark.binary(DEV_EXISTS, devOpt.isPresent()));
+		gradeBuilder.add(Grade.binary(DEV_EXISTS, devOpt.isPresent()));
 
-		gradeBuilder.add(Mark.binary(DEV_CONTAINS_BOLD,
+		gradeBuilder.add(Grade.binary(DEV_CONTAINS_BOLD,
 				fullContext.getFilesReader(devOpt).filterOnPath((p) -> p.equals(Paths.get("bold.txt")))
 						.existsAndAllMatch(Predicates.containsPattern("try 1"))));
 
 		final Optional<RevCommit> dev2Opt = tryParseSpec(client, "refs/remotes/origin/dev2");
-		gradeBuilder.add(Mark.binary(DEV2_EXISTS, dev2Opt.isPresent()));
-		gradeBuilder.add(Mark.binary(ALTERNATIVE_APPROACH,
+		gradeBuilder.add(Grade.binary(DEV2_EXISTS, dev2Opt.isPresent()));
+		gradeBuilder.add(Grade.binary(ALTERNATIVE_APPROACH,
 				fullContext.getFilesReader(dev2Opt).filterOnPath((p) -> p.equals(Paths.get("bold.txt")))
 						.existsAndAllMatch(Predicates.containsPattern("alternative approach"))));
 
@@ -165,20 +165,20 @@ public class ExGitGrader {
 				.collect(ImmutableSet.toImmutableSet());
 		final Optional<RevCommit> mergeCommitOpt;
 		{
-			final Mark mark;
+			final Grade mark;
 			switch (mergeCommits.size()) {
 			case 0:
-				mark = Mark.min(MERGE1_COMMIT, "None found.");
+				mark = Grade.min(MERGE1_COMMIT, "None found.");
 				mergeCommitOpt = Optional.empty();
 				break;
 			case 1:
 				final RevCommit mergeCommit = Iterables.getOnlyElement(mergeCommits);
-				mark = Mark.of(MERGE1_COMMIT, MERGE1_COMMIT.getMaxPoints(),
+				mark = Grade.of(MERGE1_COMMIT, MERGE1_COMMIT.getMaxPoints(),
 						String.format("Merge commit found: %s.", mergeCommit.getName()));
 				mergeCommitOpt = Optional.of(mergeCommit);
 				break;
 			default:
-				mark = Mark.min(MERGE1_COMMIT,
+				mark = Grade.min(MERGE1_COMMIT,
 						String.format("Multiple merge commit found: %s.", toString(mergeCommits)));
 				mergeCommitOpt = Optional.empty();
 				break;
@@ -188,29 +188,29 @@ public class ExGitGrader {
 
 		final FilesSource mergedBoldFiles = fullContext.getFilesReader(mergeCommitOpt)
 				.filterOnPath((p) -> p.equals(Paths.get("bold.txt")));
-		gradeBuilder.add(Mark.binary(MERGE1_CONTAINS_BOLD, !mergedBoldFiles.asFileContents().isEmpty()));
+		gradeBuilder.add(Grade.binary(MERGE1_CONTAINS_BOLD, !mergedBoldFiles.asFileContents().isEmpty()));
 		gradeBuilder.add(
-				Mark.binary(MERGED1, mergedBoldFiles.existsAndNoneMatch(Predicates.containsPattern("<<<|===|>>>"))));
+				Grade.binary(MERGED1, mergedBoldFiles.existsAndNoneMatch(Predicates.containsPattern("<<<|===|>>>"))));
 
 		final Set<RevCommit> thenCommits = mergeCommitOpt.isPresent()
 				? history.getGraph().predecessors(mergeCommitOpt.get())
 				: ImmutableSet.of();
 		final Optional<RevCommit> thenCommitOpt;
 		{
-			final Mark mark;
+			final Grade mark;
 			switch (thenCommits.size()) {
 			case 0:
-				mark = Mark.min(AFTER_MERGE1, "None found.");
+				mark = Grade.min(AFTER_MERGE1, "None found.");
 				thenCommitOpt = Optional.empty();
 				break;
 			case 1:
 				final RevCommit thenCommit = Iterables.getOnlyElement(thenCommits);
-				mark = Mark.of(AFTER_MERGE1, AFTER_MERGE1.getMaxPoints(),
+				mark = Grade.of(AFTER_MERGE1, AFTER_MERGE1.getMaxPoints(),
 						String.format("Commit after merge1 found: %s.", thenCommit.getName()));
 				thenCommitOpt = Optional.of(thenCommit);
 				break;
 			default:
-				mark = Mark.min(AFTER_MERGE1,
+				mark = Grade.min(AFTER_MERGE1,
 						String.format("Multiple commits found having merged1 as parent: %s.", toString(thenCommits)));
 				thenCommitOpt = Optional.empty();
 				break;
@@ -220,7 +220,7 @@ public class ExGitGrader {
 		final FilesSource afterMergeBoldFiles = fullContext.getFilesReader(thenCommitOpt)
 				.filterOnPath((p) -> p.equals(Paths.get("bold.txt")));
 		LOGGER.debug("After merge bold files: {}.", afterMergeBoldFiles.getContents());
-		gradeBuilder.add(Mark.binary(AFTER_MERGE1_BOLD,
+		gradeBuilder.add(Grade.binary(AFTER_MERGE1_BOLD,
 				!mergedBoldFiles.asFileContents().isEmpty() && !mergedBoldFiles.equals(afterMergeBoldFiles)));
 
 		final Traverser<RevCommit> traverser = Traverser.forGraph(history.getGraph());
@@ -230,26 +230,26 @@ public class ExGitGrader {
 						.allMatch((p) -> isAwayFromAtLeast(traverser, p, 4, firstRootCommitOpt.get())))
 				.collect(ImmutableSet.toImmutableSet());
 		{
-			final Mark mark;
+			final Grade mark;
 			switch (mergeCommits2.size()) {
 			case 0:
-				mark = Mark.min(MERGE2_COMMIT, "None found.");
+				mark = Grade.min(MERGE2_COMMIT, "None found.");
 				break;
 			case 1:
-				mark = Mark.of(MERGE2_COMMIT, MERGE2_COMMIT.getMaxPoints(),
+				mark = Grade.of(MERGE2_COMMIT, MERGE2_COMMIT.getMaxPoints(),
 						String.format("Merge2 found: %s.", Iterables.getOnlyElement(mergeCommits2).getName()));
 				break;
 			default:
-				mark = Mark.min(MERGE2_COMMIT,
+				mark = Grade.min(MERGE2_COMMIT,
 						String.format("Multiple merge 2 commits found: %s.", toString(mergeCommits2)));
 				break;
 			}
 			gradeBuilder.add(mark);
 		}
 
-		final ImmutableSet<Mark> grade = gradeBuilder.build();
+		final ImmutableSet<Grade> grade = gradeBuilder.build();
 		final Set<Criterion> diff = Sets.symmetricDifference(ImmutableSet.copyOf(ExGitCriterion.values()),
-				grade.stream().map(Mark::getCriterion).collect(ImmutableSet.toImmutableSet()));
+				grade.stream().map(Grade::getCriterion).collect(ImmutableSet.toImmutableSet()));
 		assert diff.isEmpty() : diff;
 		return grade;
 	}

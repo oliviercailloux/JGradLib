@@ -34,7 +34,7 @@ import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherV3;
 import io.github.oliviercailloux.grade.Criterion;
 import io.github.oliviercailloux.grade.Grade;
-import io.github.oliviercailloux.grade.Mark;
+import io.github.oliviercailloux.grade.Grade;
 import io.github.oliviercailloux.grade.context.GitFullContext;
 import io.github.oliviercailloux.grade.contexters.FullContextInitializer;
 import io.github.oliviercailloux.grade.json.JsonGrade;
@@ -176,14 +176,14 @@ public class GraderEck {
 		final GitFullContext context = FullContextInitializer.withPath(coord,
 				Paths.get("/home/olivier/Professions/Enseignement/En cours", prefix));
 		final Client client = context.getClient();
-		final ImmutableSet.Builder<Mark> gradeBuilder = ImmutableSet.builder();
+		final ImmutableSet.Builder<Grade> gradeBuilder = ImmutableSet.builder();
 		final Instant deadline = ZonedDateTime.parse("2019-03-14T00:00:00+01:00").toInstant();
 
-		final Mark contents;
+		final Grade contents;
 		if (!client.existsCached()) {
-			contents = Mark.min(ExEckCriterion.CONTENTS, "Repository not found");
+			contents = Grade.min(ExEckCriterion.CONTENTS, "Repository not found");
 		} else if (!client.hasContentCached()) {
-			contents = Mark.min(ExEckCriterion.CONTENTS, "Repository found but is empty");
+			contents = Grade.min(ExEckCriterion.CONTENTS, "Repository found but is empty");
 		} else if (!context.getMainCommit().isPresent()) {
 			throw new IllegalStateException();
 		} else if (context.getFilesReader(context.getMainCommit()).filter(
@@ -191,16 +191,16 @@ public class GraderEck {
 				.asFileContents().isEmpty()) {
 			throw new IllegalStateException("Repo but no java");
 		} else {
-			contents = Mark.max(ExEckCriterion.CONTENTS);
+			contents = Grade.max(ExEckCriterion.CONTENTS);
 		}
 		gradeBuilder.add(contents);
 		gradeBuilder.add(Marks.timeMark(ExEckCriterion.ON_TIME, context, deadline, (d) -> 1d));
 
-		final Mark username;
+		final Grade username;
 		if (usernames.getIdsNotSubmitted().contains(student.getStudentId())) {
-			username = Mark.min(ExEckCriterion.USERNAME, "Username not properly submitted.");
+			username = Grade.min(ExEckCriterion.USERNAME, "Username not properly submitted.");
 		} else {
-			username = Mark.max(ExEckCriterion.USERNAME);
+			username = Grade.max(ExEckCriterion.USERNAME);
 		}
 		gradeBuilder.add(username);
 		return Grade.of(student.asStudentOnGitHub(), gradeBuilder.build());

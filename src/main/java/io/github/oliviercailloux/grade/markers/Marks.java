@@ -21,7 +21,7 @@ import com.google.common.primitives.Booleans;
 
 import io.github.oliviercailloux.git.Client;
 import io.github.oliviercailloux.grade.Criterion;
-import io.github.oliviercailloux.grade.Mark;
+import io.github.oliviercailloux.grade.Grade;
 import io.github.oliviercailloux.grade.context.FilesSource;
 import io.github.oliviercailloux.grade.context.GitContext;
 import io.github.oliviercailloux.grade.context.GitFullContext;
@@ -30,11 +30,11 @@ import io.github.oliviercailloux.grade.contexters.MavenManager;
 import io.github.oliviercailloux.grade.contexters.PomSupplier;
 
 public class Marks {
-	public static Mark packageGroupId(Criterion criterion, FilesSource wholeSource, PomSupplier pomSupplier,
+	public static Grade packageGroupId(Criterion criterion, FilesSource wholeSource, PomSupplier pomSupplier,
 			PomContext pomContext) {
 		final List<String> groupIdElements = pomContext.getGroupIdElements();
 		if (groupIdElements.isEmpty()) {
-			return Mark.min(criterion, "No group id.");
+			return Grade.min(criterion, "No group id.");
 		}
 		final ImmutableList<Path> pathsRelativeToMain = PackageGroupIdMarker.relativeTo(wholeSource,
 				pomSupplier.getSrcMainJavaFolder());
@@ -61,12 +61,12 @@ public class Marks {
 			pass = true;
 			comment = "";
 		}
-		return Mark.of(criterion, pass ? criterion.getMaxPoints() : criterion.getMinPoints(), comment);
+		return Grade.of(criterion, pass ? criterion.getMaxPoints() : criterion.getMinPoints(), comment);
 	}
 
-	public static Mark noDerivedFiles(Criterion criterion, FilesSource wholeSource) {
+	public static Grade noDerivedFiles(Criterion criterion, FilesSource wholeSource) {
 		if (wholeSource.asFileContents().isEmpty()) {
-			return Mark.min(criterion);
+			return Grade.min(criterion);
 		}
 
 		final List<String> comments = new ArrayList<>();
@@ -89,33 +89,33 @@ public class Marks {
 		if (!noTarget) {
 			comments.add("Found derived: target/.");
 		}
-		return Mark.proportional(criterion, Booleans.countTrue(noClasspath, noProject, noSettings, noTarget), 4,
+		return Grade.proportional(criterion, Booleans.countTrue(noClasspath, noProject, noSettings, noTarget), 4,
 				comments.stream().collect(Collectors.joining(" ")));
 	}
 
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(Marks.class);
 
-	public static Mark notEmpty(Criterion criterion, FilesSource multiSupplier) {
+	public static Grade notEmpty(Criterion criterion, FilesSource multiSupplier) {
 		return !multiSupplier.getContents().isEmpty()
-				? Mark.of(criterion, criterion.getMaxPoints(), "Found: " + multiSupplier.getContents().keySet() + ".")
-				: Mark.min(criterion);
+				? Grade.of(criterion, criterion.getMaxPoints(), "Found: " + multiSupplier.getContents().keySet() + ".")
+				: Grade.min(criterion);
 	}
 
 	/**
 	 * The project must be checked out at the version to be tested, at the path
 	 * indicated by the project directory of the client.
 	 */
-	public static Mark mavenCompile(Criterion criterion, GitContext context, PomSupplier pomSupplier) {
+	public static Grade mavenCompile(Criterion criterion, GitContext context, PomSupplier pomSupplier) {
 		final MavenManager mavenManager = new MavenManager();
 		final Optional<Path> projectRelativeRootOpt = pomSupplier.getMavenRelativeRoot();
-		return Mark.binary(criterion, projectRelativeRootOpt.isPresent() && mavenManager.compile(
+		return Grade.binary(criterion, projectRelativeRootOpt.isPresent() && mavenManager.compile(
 				context.getClient().getProjectDirectory().resolve(projectRelativeRootOpt.get().resolve("pom.xml"))));
 	}
 
-	public static Mark travisConfMark(Criterion criterion, String travisContent) {
+	public static Grade travisConfMark(Criterion criterion, String travisContent) {
 		if (travisContent.isEmpty()) {
-			return Mark.min(criterion, "Configuration not found or incorrectly named.");
+			return Grade.min(criterion, "Configuration not found or incorrectly named.");
 		}
 
 		final Predicate<CharSequence> lang = Predicates.contains(Pattern.compile("language: java"));
@@ -157,27 +157,27 @@ public class Marks {
 				comment = "Inappropriate script, why not default?";
 			}
 		}
-		return Mark.of(criterion, points, comment);
+		return Grade.of(criterion, points, comment);
 	}
 
-	public static Mark gitRepo(Criterion criterion, GitFullContext context) {
+	public static Grade gitRepo(Criterion criterion, GitFullContext context) {
 		final Client client = context.getClient();
 
-		final Mark grade;
+		final Grade grade;
 		if (!client.existsCached()) {
-			grade = Mark.min(criterion, "Repository not found");
+			grade = Grade.min(criterion, "Repository not found");
 		} else if (!client.hasContentCached()) {
-			grade = Mark.min(criterion, "Repository found but is empty");
+			grade = Grade.min(criterion, "Repository found but is empty");
 		} else if (!context.getMainCommit().isPresent()) {
-			grade = Mark.min(criterion, "Repository found with content but no suitable commit found");
+			grade = Grade.min(criterion, "Repository found with content but no suitable commit found");
 		} else {
-			grade = Mark.max(criterion);
+			grade = Grade.max(criterion);
 		}
 
 		return grade;
 	}
 
-	public static Mark timeMark(Criterion criterion, GitFullContext contextSupplier, Instant deadline,
+	public static Grade timeMark(Criterion criterion, GitFullContext contextSupplier, Instant deadline,
 			Function<Duration, Double> penalizer) {
 		return new TimeMarker(criterion, contextSupplier, deadline, penalizer).mark();
 	}

@@ -68,7 +68,7 @@ import io.github.oliviercailloux.grade.CsvGrades;
 import io.github.oliviercailloux.grade.Grade;
 import io.github.oliviercailloux.grade.GraderOrchestrator;
 import io.github.oliviercailloux.grade.GradingException;
-import io.github.oliviercailloux.grade.Mark;
+import io.github.oliviercailloux.grade.Grade;
 import io.github.oliviercailloux.grade.context.FilesSource;
 import io.github.oliviercailloux.grade.context.GitFullContext;
 import io.github.oliviercailloux.grade.contexters.FullContextInitializer;
@@ -88,23 +88,23 @@ public class ExJpaGrader {
 
 	private Instant deadline;
 
-	public ImmutableSet<Mark> grade(RepositoryCoordinates coord) {
+	public ImmutableSet<Grade> grade(RepositoryCoordinates coord) {
 		final AnonymousGrade usingLastCommit = grade(coord, Instant.MAX);
-		final ImmutableSet<Mark> realMarks;
+		final ImmutableSet<Grade> realMarks;
 		if (timeMark.getPoints() < 0d) {
 			final AnonymousGrade usingCommitOnTime = grade(coord, deadline);
 			final double lastCommitPoints = usingLastCommit.getGrade();
 			final double onTimePoints = usingCommitOnTime.getGrade();
 			if (onTimePoints > lastCommitPoints) {
-				final Mark originalMark = usingCommitOnTime.getMarks().get(ON_TIME);
-				final Mark commentedMark = Mark.of(ON_TIME, originalMark.getPoints(), originalMark.getComment()
+				final Grade originalMark = usingCommitOnTime.getMarks().get(ON_TIME);
+				final Grade commentedMark = Grade.of(ON_TIME, originalMark.getPoints(), originalMark.getComment()
 						+ " (Using commit on time rather than last commit because it brings more points.)");
 				realMarks = usingCommitOnTime.getMarks().values().stream()
 						.map((m) -> m.getCriterion() != ON_TIME ? m : commentedMark)
 						.collect(ImmutableSet.toImmutableSet());
 			} else {
-				final Mark originalMark = usingLastCommit.getMarks().get(ON_TIME);
-				final Mark commentedMark = Mark.of(ON_TIME, originalMark.getPoints(), originalMark.getComment()
+				final Grade originalMark = usingLastCommit.getMarks().get(ON_TIME);
+				final Grade commentedMark = Grade.of(ON_TIME, originalMark.getPoints(), originalMark.getComment()
 						+ " (Using last commit rather than commit on time because it brings at least as much points.)");
 				realMarks = usingLastCommit.getMarks().values().stream()
 						.map((m) -> m.getCriterion() != ON_TIME ? m : commentedMark)
@@ -117,7 +117,7 @@ public class ExJpaGrader {
 	}
 
 	public AnonymousGrade grade(RepositoryCoordinates coord, Instant ignoreAfter) {
-		final ImmutableSet.Builder<Mark> gradeBuilder = ImmutableSet.builder();
+		final ImmutableSet.Builder<Grade> gradeBuilder = ImmutableSet.builder();
 		final Path projectsBaseDir = Paths.get("/home/olivier/Professions/Enseignement/En cours/jpa");
 
 		final GitFullContext fullContext = FullContextInitializer.withPathAndIgnore(coord, projectsBaseDir,
@@ -153,18 +153,18 @@ public class ExJpaGrader {
 		final PomContexter pomContexter = mavenProjectMarker.getPomContexter();
 
 		gradeBuilder.add(mavenProjectMarker.groupIdMark(GROUP_ID));
-		gradeBuilder.add(Mark.binary(UTF,
+		gradeBuilder.add(Grade.binary(UTF,
 				MarkingPredicates.containsOnce(Pattern.compile("<properties>" + Utils.ANY_REG_EXP
 						+ "<project\\.build\\.sourceEncoding>UTF-8</project\\.build\\.sourceEncoding>"
 						+ Utils.ANY_REG_EXP + "</properties>")).test(pomContent)));
 		gradeBuilder
-				.add(Mark.binary(SOURCE,
+				.add(Grade.binary(SOURCE,
 						MarkingPredicates.containsOnce(Pattern.compile("<properties>" + Utils.ANY_REG_EXP
 								+ "<maven\\.compiler\\.source>.*</maven\\.compiler\\.source>" + Utils.ANY_REG_EXP
 								+ "</properties>")).test(pomContent)));
-		gradeBuilder.add(Mark.binary(NO_MISLEADING_URL,
+		gradeBuilder.add(Grade.binary(NO_MISLEADING_URL,
 				Predicates.contains(Pattern.compile("<url>.*\\.apache\\.org.*</url>")).negate().test(pomContent)));
-		gradeBuilder.add(Mark.binary(WAR,
+		gradeBuilder.add(Grade.binary(WAR,
 				MarkingPredicates.containsOnce(Pattern.compile("<packaging>war</packaging>")).test(pomContent)));
 		gradeBuilder.add(Marks.packageGroupId(PREFIX, filesReader, pomSupplier, pomContexter));
 		LOGGER.debug("Compiling");
@@ -176,33 +176,33 @@ public class ExJpaGrader {
 		final FilesSource addServletSourcer = mainSourcer
 				.filterOnPath((p) -> p.getFileName().equals(Paths.get("AddCommentServlet.java")));
 
-		gradeBuilder.add(Mark.binary(NO_JSP, JavaEEMarkers.getNoJsp(filesReader)));
-		gradeBuilder.add(Mark.binary(NO_WEB_XML, JavaEEMarkers.getNoWebXml(filesReader)));
+		gradeBuilder.add(Grade.binary(NO_JSP, JavaEEMarkers.getNoJsp(filesReader)));
+		gradeBuilder.add(Grade.binary(NO_WEB_XML, JavaEEMarkers.getNoWebXml(filesReader)));
 		final Predicate<CharSequence> containsGet = Predicates.containsPattern("@GET");
 		final Predicate<CharSequence> containsNoGet = containsGet.negate();
 		final Predicate<CharSequence> containsNoPut = Predicates.containsPattern("@PUT").negate();
 		final Predicate<CharSequence> containsPost = Predicates.containsPattern("@POST");
 		final Predicate<CharSequence> containsNoPost = containsPost.negate();
-		gradeBuilder.add(Mark.binary(GET,
+		gradeBuilder.add(Grade.binary(GET,
 				getServletSourcer.existsAndAllMatch(containsGet.and(containsNoPut).and(containsNoPost))));
-		gradeBuilder.add(Mark.binary(POST,
+		gradeBuilder.add(Grade.binary(POST,
 				addServletSourcer.existsAndAllMatch(containsNoGet.and(containsNoPut).and(containsPost))));
 
-		gradeBuilder.add(Mark.binary(NOT_POLLUTED,
+		gradeBuilder.add(Grade.binary(NOT_POLLUTED,
 				anySourcer.existsAndAllMatch(Predicates.contains(Pattern.compile("Auto-generated")).negate()
 						.and(Predicates.contains(Pattern.compile("@see HttpServlet#doGet")).negate()))));
-		gradeBuilder.add(Mark.binary(EXC, anySourcer.noneMatch(
+		gradeBuilder.add(Grade.binary(EXC, anySourcer.noneMatch(
 				Predicates.contains(Pattern.compile("printStackTrace")).or(Predicates.containsPattern("catch\\(")))));
 
 		/** TODO stream a handful of file sources! */
 		final ImmutableList<FilesSource> servletSourcers = ImmutableList.of(getServletSourcer, addServletSourcer);
-		gradeBuilder.add(Mark.proportional(MTYPE,
+		gradeBuilder.add(Grade.proportional(MTYPE,
 				(int) servletSourcers.stream()
 						.filter((mc) -> mc.existsAndAllMatch(
 								Predicates.containsPattern("@Produces\\(.*MediaType.TEXT_PLAIN.*\\)")))
 						.count(),
 				servletSourcers.size()));
-		gradeBuilder.add(Mark.proportional(PATH_ANNOT,
+		gradeBuilder.add(Grade.proportional(PATH_ANNOT,
 				(int) servletSourcers.stream().filter(
 						(mc) -> mc.existsAndAllMatch(Predicates.containsPattern("@Path.*\\(.*\"comments\".*\\)")))
 						.count(),
@@ -214,15 +214,15 @@ public class ExJpaGrader {
 
 		final FilesSource applicationClasses = mainSourcer.filter(
 				(f) -> f.getContent().contains("@ApplicationPath") && f.getContent().contains("extends Application"));
-		gradeBuilder.add(Mark.binary(JAX_RS_APP, applicationClasses.asFileContents().size() == 1));
+		gradeBuilder.add(Grade.binary(JAX_RS_APP, applicationClasses.asFileContents().size() == 1));
 		gradeBuilder.add(Marks.noDerivedFiles(ONLY_ORIG, filesReader));
 
 		final FilesSource multiPersistence = filesReader
 				.filterOnPath((p) -> p.getNameCount() <= 6 && p.getFileName().toString().equals("persistence.xml"));
-		gradeBuilder.add(Mark.binary(PERSISTENCE, multiPersistence.getContents()
+		gradeBuilder.add(Grade.binary(PERSISTENCE, multiPersistence.getContents()
 				.containsKey(mavenRelativeRoot.resolve(Paths.get("src/main/resources/META-INF/persistence.xml")))));
 
-		gradeBuilder.add(Mark.proportional(PERSISTENCE_CONTENTS,
+		gradeBuilder.add(Grade.proportional(PERSISTENCE_CONTENTS,
 				multiPersistence.existsAndAllMatch(Predicates.containsPattern("persistence version=\"2.1\"")),
 				multiPersistence.existsAndNoneMatch(Predicates.containsPattern("RESOURCE_LOCAL")),
 				multiPersistence.existsAndAllMatch(Predicates.containsPattern("drop-and-create")),
@@ -231,24 +231,24 @@ public class ExJpaGrader {
 				multiPersistence.existsAndNoneMatch(Predicates.containsPattern("jta-data-source")),
 				multiPersistence.existsAndNoneMatch(Predicates.containsPattern("jdbc.driver"))));
 
-		gradeBuilder.add(Mark.binary(USING_EM, !mainSourcer.asFileContents().isEmpty() && mainSourcer
+		gradeBuilder.add(Grade.binary(USING_EM, !mainSourcer.asFileContents().isEmpty() && mainSourcer
 				.anyMatch(Predicates.contains(Pattern.compile("@PersistenceContext" + "[^;]+" + "EntityManager ")))));
-		gradeBuilder.add(Mark.binary(TRANSACTIONS, anySourcer.anyMatch(Predicates.containsPattern("@Transactional"))));
-		gradeBuilder.add(Mark.binary(ADD_LIMIT,
+		gradeBuilder.add(Grade.binary(TRANSACTIONS, anySourcer.anyMatch(Predicates.containsPattern("@Transactional"))));
+		gradeBuilder.add(Grade.binary(ADD_LIMIT,
 				addServletSourcer.existsAndAllMatch(Predicates.containsPattern("getContentLength"))));
 
-		gradeBuilder.add(Mark.binary(TEST_EXISTS, testFiles.getContents().size() >= 1 && testFiles.getContents()
+		gradeBuilder.add(Grade.binary(TEST_EXISTS, testFiles.getContents().size() >= 1 && testFiles.getContents()
 				.keySet().stream().allMatch((p) -> p.startsWith(pomSupplier.getSrcTestJavaFolder()))));
 		gradeBuilder.add(generalTestMark(GENERAL_TEST, mavenProjectMarker));
 		final String travisContent = fullContext.getFilesReader(fullContext.getMainCommit())
 				.getContent(Paths.get(".travis.yml"));
-		gradeBuilder.add(Mark.binary(TRAVIS_CONF, !travisContent.isEmpty()));
+		gradeBuilder.add(Grade.binary(TRAVIS_CONF, !travisContent.isEmpty()));
 		gradeBuilder.add(Marks.travisConfMark(TRAVIS_OK, travisContent));
 		gradeBuilder.add(JavaMarks.travisBadgeMark(TRAVIS_BADGE, filesReader, coord.getRepositoryName()));
 		final String manifestContent = fullContext.getFilesReader(fullContext.getMainCommit())
 				.getContent(Paths.get("manifest.yml"));
 		gradeBuilder
-				.add(Mark.binary(IBM_MANIFEST,
+				.add(Grade.binary(IBM_MANIFEST,
 						Pattern.compile("- " + Utils.ANY_REG_EXP + "name: ").matcher(manifestContent).find() && Pattern
 								.compile("path: " + Utils.ANY_REG_EXP + "target/" + Utils.ANY_REG_EXP + "\\.war")
 								.matcher(manifestContent).find()));
@@ -256,27 +256,27 @@ public class ExJpaGrader {
 		 * −0,5 for incorrectly formatted but quite correct (e.g. puts id as well). Do
 		 * not penalize when incorrect file name because already considered elsewhere.
 		 */
-		gradeBuilder.add(Mark.binary(GET_COMMENTS, !getServletSourcer.asFileContents().isEmpty()));
-		gradeBuilder.add(Mark.binary(ADD_COMMENTS, !addServletSourcer.asFileContents().isEmpty()));
+		gradeBuilder.add(Grade.binary(GET_COMMENTS, !getServletSourcer.asFileContents().isEmpty()));
+		gradeBuilder.add(Grade.binary(ADD_COMMENTS, !addServletSourcer.asFileContents().isEmpty()));
 
-		final ImmutableSet<Mark> grade = gradeBuilder.build();
+		final ImmutableSet<Grade> grade = gradeBuilder.build();
 		final Set<Criterion> diff = Sets.symmetricDifference(ImmutableSet.copyOf(ExJpaCriterion.values()),
-				grade.stream().map(Mark::getCriterion).collect(ImmutableSet.toImmutableSet())).immutableCopy();
+				grade.stream().map(Grade::getCriterion).collect(ImmutableSet.toImmutableSet())).immutableCopy();
 		assert diff.isEmpty() : diff;
 		return Grade.anonymous(grade);
 	}
 
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(ExJpaGrader.class);
-	private Mark timeMark;
+	private Grade timeMark;
 
 	public void setDeadline(Instant deadline) {
 		this.deadline = requireNonNull(deadline);
 	}
 
-	private Mark generalTestMark(Criterion criterion, MavenProjectMarker mavenProjectMarker) {
+	private Grade generalTestMark(Criterion criterion, MavenProjectMarker mavenProjectMarker) {
 		if (mavenProjectMarker.getPomSupplier().asMultiContent().asFileContents().isEmpty()) {
-			return Mark.min(criterion, "No POM");
+			return Grade.min(criterion, "No POM");
 		}
 
 		final boolean containsJUnit5 = mavenProjectMarker.getPomSupplier().hasJunit5();
@@ -312,7 +312,7 @@ public class ExJpaGrader {
 			}
 		}
 		LOGGER.info("General test mark comment {}.", comment);
-		return Mark.of(criterion,
+		return Grade.of(criterion,
 				mavenProjectMarker.doTestsExistAndPass() && assertEquals && (containsJUnit5 || arquillian)
 						? criterion.getMaxPoints()
 						: criterion.getMinPoints(),
