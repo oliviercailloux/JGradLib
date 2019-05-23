@@ -20,10 +20,12 @@ public class GitHistory {
 
 	private GitHistory(Iterable<RevCommit> commits) {
 		MutableGraph<RevCommit> mutableGraph = GraphBuilder.directed().build();
-		for (RevCommit revCommit : commits) {
-			mutableGraph.addNode(revCommit);
-			for (RevCommit parent : revCommit.getParents()) {
-				mutableGraph.putEdge(revCommit, parent);
+		for (RevCommit child : commits) {
+			mutableGraph.addNode(child);
+			final RevCommit[] parents = child.getParents();
+			LOGGER.debug("Parents of {}: {}.", child.getName(), parents);
+			for (RevCommit parent : parents) {
+				mutableGraph.putEdge(child, parent);
 			}
 		}
 		this.graph = ImmutableGraph.copyOf(mutableGraph);
@@ -44,7 +46,8 @@ public class GitHistory {
 	/**
 	 * @return a graph representing the has-as-parent (child-of) relation: the
 	 *         successors of a node are its parents; following the successors
-	 *         relation (child-of) goes back in time.
+	 *         relation (child-of) goes back in time; a pair (a, b) represents a
+	 *         child a and its parent b.
 	 */
 	public ImmutableGraph<RevCommit> getGraph() {
 		return graph;

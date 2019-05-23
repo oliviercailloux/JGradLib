@@ -127,7 +127,7 @@ public class GraderEck {
 					writer.addValue(criterion.toString(), formatter.format(mark));
 				}
 
-				writer.addValue("Grade", formatter.format(grade.getGrade()));
+				writer.addValue("Grade", formatter.format(grade.getPoints()));
 				writer.writeValuesToRow();
 			}
 

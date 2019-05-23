@@ -62,17 +62,17 @@ public class ExTwoSetsGrader {
 
 	private Instant deadline;
 
-	public ImmutableSet<Mark> grade(RepositoryCoordinates coord) {
+	public ImmutableSet<Grade> grade(RepositoryCoordinates coord) {
 		final AnonymousGrade usingLastCommit = grade(coord, Instant.MAX);
 		final Optional<ObjectId> lastCommit = mainCommit.map(RevCommit::copy);
-		final ImmutableSet<Mark> realMarks;
+		final ImmutableSet<Grade> realMarks;
 		if (timeMark.getPoints() < 0d) {
 			final AnonymousGrade usingCommitOnTime = grade(coord, deadline);
 			final Optional<ObjectId> commitOnTime = mainCommit.map(RevCommit::copy);
-			final double lastCommitPoints = usingLastCommit.getGrade();
-			final double onTimePoints = usingCommitOnTime.getGrade();
+			final double lastCommitPoints = usingLastCommit.getPoints();
+			final double onTimePoints = usingCommitOnTime.getPoints();
 			if (onTimePoints > lastCommitPoints && onTimePoints > 0d) {
-				final Mark originalMark = usingCommitOnTime.getMarks().get(ON_TIME);
+				final Grade originalMark = usingCommitOnTime.getMarks().get(ON_TIME);
 				final Mark commentedMark = Mark.of(ON_TIME, originalMark.getPoints(),
 						originalMark.getComment() + String.format(
 								" (Using commit '%s' on time rather than last commit '%s' because it brings more points.)",
@@ -81,7 +81,7 @@ public class ExTwoSetsGrader {
 						.map((m) -> m.getCriterion() != ON_TIME ? m : commentedMark)
 						.collect(ImmutableSet.toImmutableSet());
 			} else {
-				final Mark originalMark = usingLastCommit.getMarks().get(ON_TIME);
+				final Grade originalMark = usingLastCommit.getMarks().get(ON_TIME);
 				final Mark commentedMark = Mark.of(ON_TIME, originalMark.getPoints(),
 						originalMark.getComment() + String.format(
 								" (Using last commit '%s' rather than commit '%s' on time because it brings at least as much points.)",

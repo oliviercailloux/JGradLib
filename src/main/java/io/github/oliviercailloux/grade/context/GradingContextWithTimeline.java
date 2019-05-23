@@ -53,6 +53,7 @@ public class GradingContextWithTimeline {
 	}
 
 	public Optional<RevCommit> getLatestNotIgnoredChildOf(RevCommit startCommit, Instant ignoreAfter) {
+		requireNonNull(ignoreAfter);
 		final ImmutableGraph<RevCommit> graph = client.getAllHistoryCached().getGraph();
 		final Iterable<RevCommit> children = Traverser.forGraph(graph).breadthFirst(startCommit);
 		final ImmutableList<RevCommit> commitsOnTime = Streams.stream(children)

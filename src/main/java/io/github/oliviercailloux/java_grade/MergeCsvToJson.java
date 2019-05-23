@@ -14,7 +14,6 @@ import com.google.common.collect.ImmutableSet;
 import io.github.oliviercailloux.grade.Criterion;
 import io.github.oliviercailloux.grade.CsvGrades;
 import io.github.oliviercailloux.grade.Grade;
-import io.github.oliviercailloux.grade.Mark;
 import io.github.oliviercailloux.grade.json.JsonGrade;
 import io.github.oliviercailloux.java_grade.ex_jpa.ExJpaCriterion;
 
@@ -48,9 +47,9 @@ public class MergeCsvToJson {
 	}
 
 	public static Grade merge(Grade grade, Grade patchGrade) {
-		final ImmutableBiMap<Criterion, Mark> marksStart = grade.getMarks();
-		final ImmutableBiMap<Criterion, Mark> marksOverride = patchGrade.getMarks();
-		final ImmutableBiMap<Criterion, Mark> mergedMarks = marksStart.values().stream()
+		final ImmutableBiMap<Criterion, Grade> marksStart = grade.getMarks();
+		final ImmutableBiMap<Criterion, Grade> marksOverride = patchGrade.getMarks();
+		final ImmutableBiMap<Criterion, Grade> mergedMarks = marksStart.values().stream()
 				.collect(ImmutableBiMap.toImmutableBiMap((m) -> m.getCriterion(),
 						(m) -> Optional.ofNullable(marksOverride.get(m.getCriterion())).orElse(m)));
 		return Grade.of(grade.getStudent(), mergedMarks.values());

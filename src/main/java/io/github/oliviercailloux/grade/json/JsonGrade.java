@@ -29,9 +29,9 @@ public class JsonGrade {
 		builder.add("student", JsonStudentOnGitHub.asJson(grade.getStudent()));
 		final JsonArrayBuilder marksBuilder = Json.createArrayBuilder();
 		{
-			final ImmutableSet<Mark> marks = grade.getMarks().values();
-			for (Mark mark : marks) {
-				final PrintableJsonObject markJson = JsonMark.asJson(mark);
+			final ImmutableSet<Grade> marks = grade.getMarks().values();
+			for (Grade mark : marks) {
+				final PrintableJsonObject markJson = JsonMark.asJson((Mark) mark);
 				marksBuilder.add(Json.createObjectBuilder(markJson));
 			}
 		}

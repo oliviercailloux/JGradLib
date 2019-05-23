@@ -6,6 +6,7 @@ import static com.google.common.base.Preconditions.checkState;
 import java.io.IOException;
 import java.time.Instant;
 import java.time.Period;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -29,7 +30,12 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Range;
+import com.google.common.collect.Sets;
+import com.google.common.graph.EndpointPair;
+import com.google.common.graph.Graph;
+import com.google.common.graph.GraphBuilder;
 import com.google.common.graph.Graphs;
+import com.google.common.graph.MutableGraph;
 
 import io.github.oliviercailloux.git.Client;
 import io.github.oliviercailloux.git.GitHistory;
@@ -73,15 +79,22 @@ public class GitHubTimelineReader {
 
 		firstPushEvent = events.stream().filter((e) -> e.getType() == EventType.PUSH_EVENT).map(Event::asPushEvent)
 				.findFirst();
-		Optional<ObjectId> firstPushedOIdKnown = null;
+		final Optional<ObjectId> firstPushedOIdKnown;
+		final ImmutableList<ObjectId> suspectCommits;
 		if (firstPushEvent.isPresent()) {
 			final PushEvent push = firstPushEvent.get();
 			final PushPayload pushPayload = push.getPushPayload();
 			final List<PayloadCommitDescription> pushedCommits = pushPayload.getCommits();
-			firstPushedOIdKnown = Optional.of(pushedCommits.get(pushedCommits.size() - 1).getSha());
+			firstPushedOIdKnown = Optional.of(pushedCommits.get(0).getSha());
+			/** Because of possible bug in GitHub, see below. */
+			suspectCommits = pushedCommits.subList(0, pushedCommits.size() - 1).stream()
+					.map(PayloadCommitDescription::getSha).collect(ImmutableList.toImmutableList());
+			LOGGER.info("Suspects: {}.", suspectCommits);
 		} else {
 			firstPushedOIdKnown = Optional.empty();
+			suspectCommits = ImmutableList.of();
 		}
+
 		final Optional<RevCommit> firstPushedCommitKnown;
 		if (firstPushedOIdKnown.isPresent()) {
 			try {
@@ -108,17 +121,20 @@ public class GitHubTimelineReader {
 			}
 		}
 
-		final Set<RevCommit> commitsBeforeFirstPushBuilt;
-		if (firstPushedCommitKnown.isPresent()) {
-			commitsBeforeFirstPushBuilt = new LinkedHashSet<>(
-					Graphs.reachableNodes(history.getGraph(), firstPushedCommitKnown.get()));
-			commitsBeforeFirstPushBuilt.remove(firstPushedCommitKnown.get());
-		} else {
-			commitsBeforeFirstPushBuilt = history.getGraph().nodes();
+		{
+			final Set<RevCommit> commitsBeforeFirstPushBuilt;
+			if (firstPushedCommitKnown.isPresent()) {
+				commitsBeforeFirstPushBuilt = new LinkedHashSet<>(
+						Graphs.reachableNodes(history.getGraph(), firstPushedCommitKnown.get()));
+				commitsBeforeFirstPushBuilt.remove(firstPushedCommitKnown.get());
+			} else {
+				commitsBeforeFirstPushBuilt = history.getGraph().nodes();
+			}
+			commitsBeforeFirstPush = ImmutableSet.copyOf(commitsBeforeFirstPushBuilt);
 		}
-		commitsBeforeFirstPush = ImmutableSet.copyOf(commitsBeforeFirstPushBuilt);
+		LOGGER.debug("Commits before first push: {}.", commitsBeforeFirstPush);
 
-		for (RevCommit unknownCommit : commitsBeforeFirstPushBuilt) {
+		for (RevCommit unknownCommit : commitsBeforeFirstPush) {
 			receivedAt.put(unknownCommit, rangeFirstCommits);
 		}
 
@@ -131,11 +147,88 @@ public class GitHubTimelineReader {
 			final List<PayloadCommitDescription> commits = pushEvent.getPushPayload().getCommits();
 			for (PayloadCommitDescription descr : commits) {
 				final ObjectId sha = descr.getSha();
-				receivedAt.put(sha, reception);
+				final Range<Instant> previous = receivedAt.put(sha, reception);
+				checkState(previous == null, String.format("Sha: %s, previous: %s", sha, previous));
 			}
 		}
 
+		/**
+		 * The logic above marks all the ancestors of the first commit referenced in the
+		 * first push as unknown. This is incorrect: another branch could exist,
+		 * containing commits not ancestors of the first push and not referenced in any
+		 * push. Note also that a possible bug in GitHub makes it possible that such an
+		 * unknown commit have an ancestor that indeed has been seen (see
+		 * #computeFirstBranchEvent()).
+		 */
+		final Set<RevCommit> allCommits = history.getGraph().nodes();
+		final Set<ObjectId> idsKnown = receivedAt.keySet();
+		final ImmutableSet<RevCommit> unknown = Sets.difference(allCommits, idsKnown).immutableCopy();
+		for (RevCommit unknownCommit : unknown) {
+			final Range<Instant> previous = receivedAt.put(unknownCommit, rangeFirstCommits);
+			checkState(previous == null, String.format("Sha: %s, previous: %s", unknownCommit, previous));
+		}
+
+		for (EndpointPair<RevCommit> edge : history.getGraph().edges()) {
+			final RevCommit child = edge.source();
+			final RevCommit parent = edge.target();
+			final Range<Instant> childTime = receivedAt.get(child);
+			final Range<Instant> parentTime = receivedAt.get(parent);
+			if (!suspectCommits.contains(child) && !suspectCommits.contains(parent)) {
+				checkState(leq(parentTime, childTime), String.format("Parent %s after child %s: %s > %s",
+						parent.getName(), child.getName(), parentTime, childTime));
+			}
+		}
+
+		MutableGraph<ObjectId> oGraph = GraphBuilder.directed().build();
+		for (EndpointPair<RevCommit> edge : history.getGraph().edges()) {
+			oGraph.putEdge(edge.source(), edge.target());
+		}
+		final Graph<ObjectId> transitiveClosure = Graphs.transitiveClosure(oGraph);
+
+		final Comparator<ObjectId> comparingReceptionTimeLower = Comparator
+				.comparing((o) -> receivedAt.get(o).lowerEndpoint());
+		final Comparator<ObjectId> comparingReceptionTimeUpper = Comparator
+				.comparing((o) -> receivedAt.get(o).upperEndpoint());
+		for (ObjectId suspectCommit : suspectCommits) {
+			final Range<Instant> suspectInterval = receivedAt.get(suspectCommit);
+
+			final ImmutableSet<ObjectId> children = transitiveClosure.predecessors(suspectCommit).stream()
+					.filter((c) -> !suspectCommits.contains(c)).collect(ImmutableSet.toImmutableSet());
+//			final ImmutableSet<Range<Instant>> nextIntervals = children.stream().map((o) -> receivedAt.get(o))
+//					.collect(ImmutableSet.toImmutableSet());
+//			final ImmutableSet<Instant> nextLowerEndpoints = nextIntervals.stream().map(Range::lowerEndpoint)
+//					.collect(ImmutableSet.toImmutableSet());
+//			final Instant minLower = Collections.min(nextLowerEndpoints);
+			if (children.isEmpty()) {
+				continue;
+			}
+			final ObjectId minLower = Collections.min(children, comparingReceptionTimeLower);
+			final ObjectId minUpper = Collections.min(children, comparingReceptionTimeUpper);
+			final Range<Instant> minRange = receivedAt.get(minLower);
+			/**
+			 * This should follow from the children being ordered correctly, as checked
+			 * above.
+			 */
+			assert minRange.equals(receivedAt.get(minUpper));
+			if (!leq(suspectInterval, minRange)) {
+				LOGGER.warn("Rectifying suspect commit: {}, from {} to {}.", suspectCommit, suspectInterval, minRange);
+				receivedAt.put(suspectCommit, minRange);
+			}
+		}
+
+		final ImmutableSet<ObjectId> diff = Sets.symmetricDifference(allCommits, idsKnown).immutableCopy();
+
+		checkState(diff.isEmpty(),
+				String.format("All commits: %s; known times: %s; unknown: %s.", allCommits, receivedAt, unknown));
 		return receivedAt;
+	}
+
+	/**
+	 * [1, 3] ≤ [2, 4]
+	 */
+	private boolean leq(Range<Instant> i1, Range<Instant> i2) {
+		return (i1.lowerEndpoint().compareTo(i2.lowerEndpoint()) <= 0)
+				&& (i1.upperEndpoint().compareTo(i2.upperEndpoint()) <= 0);
 	}
 
 	public ImmutableSet<RevCommit> getCommitsBeforeFirstPush() {
@@ -156,15 +249,25 @@ public class GitHubTimelineReader {
 		 * (same or next second) by a member event which adds the owner of the
 		 * repository. Then followed (can be much later) by a create event, ref
 		 * "master", ref_type "branch", which happens when the branch master is created.
-		 * Then followed by a push event (which I have seen to happen seven minutes
-		 * later), which references as "before" the first commit in branch master. I
-		 * suppose that the creation of branch master corresponds to the first user
-		 * push, and the first push event corresponds to the second one. In summary, the
-		 * important stuff here is: create event, with its ref_type and ref; member
-		 * event, with the name of the person added (in "payload": "action" = "added"
-		 * and "member"/"login"); and push event, with before and commits (in payload).
-		 * The create event of the master branch may hide several commits, not just the
-		 * one that can be retrieved using the next "before".
+		 * May be followed, in case of a repository created through GitHub Classroom
+		 * starting from another repository (or, I suppose, in case of a fork), by other
+		 * tag and branch events. Then followed by a push event (which I have seen to
+		 * happen seven minutes later), which references as "before" the first commit in
+		 * the branch designated in "payload/ref" (e.g. "refs/heads/my-branch"). I
+		 * suppose that the creation of branch corresponds to the first user push, and
+		 * the first push event corresponds to the second one. In summary, the important
+		 * stuff here is: create event, with its ref_type and ref; member event, with
+		 * the name of the person added (in "payload": "action" = "added" and
+		 * "member"/"login"); and push event, with before and commits (in payload). The
+		 * create event of the master branch may hide several commits, not just the one
+		 * that can be retrieved using the next "before".
+		 *
+		 * I have seen a case where a PushEvent listed two commits, the first one of
+		 * which was not actually pushed and existed long before in the repository, the
+		 * second one being effectively the (only) really pushed commit. The pushed
+		 * commit was a merge and the first one listed was one of its parent. Maybe it’s
+		 * a GitHub bug. In this case, the received times deduced by this class are
+		 * incorrect. I don’t think it’s possible to avoid this consequence.
 		 */
 
 		/** If there is a create event, must be among the first two. */
@@ -193,8 +296,8 @@ public class GitHubTimelineReader {
 
 		/**
 		 * We want to find the first create branch event after the create repository
-		 * event. Given our checks so far, this is equivalent to finding the first
-		 * create branch event.
+		 * event or happening simultaneously to it. Given our checks so far, this is
+		 * equivalent to finding the first create branch event.
 		 */
 		final Optional<Event> found = events.stream().filter((e) -> e.getType() == EventType.CREATE_BRANCH_EVENT)
 				.findFirst();
@@ -205,6 +308,12 @@ public class GitHubTimelineReader {
 				events.stream().map(Event::getType).takeWhile(Predicate.isEqual(EventType.CREATE_BRANCH_EVENT).negate())
 						.noneMatch(Predicate.isEqual(EventType.PUSH_EVENT)));
 
+		/**
+		 * We should associate to each branch its time of creation, rather than just
+		 * remember the time of creation of the very first branch (which is master, I
+		 * suppose). Because push events may have a before that refers to a different
+		 * branch than master.
+		 */
 		veryFirstBranchEvent = found;
 		createdButNoContent = found.isEmpty();
 	}

@@ -88,22 +88,22 @@ public class ExObjectsGrader {
 
 	private Mark timeMark;
 
-	public ImmutableSet<Mark> grade(RepositoryCoordinates coord) {
+	public ImmutableSet<Grade> grade(RepositoryCoordinates coord) {
 		final AnonymousGrade usingLastCommit = grade(coord, Instant.MAX);
-		final ImmutableSet<Mark> realMarks;
+		final ImmutableSet<Grade> realMarks;
 		if (timeMark.getPoints() < 0d) {
 			final AnonymousGrade usingCommitOnTime = grade(coord, DEADLINE);
-			final double lastCommitPoints = usingLastCommit.getGrade();
-			final double onTimePoints = usingCommitOnTime.getGrade();
+			final double lastCommitPoints = usingLastCommit.getPoints();
+			final double onTimePoints = usingCommitOnTime.getPoints();
 			if (onTimePoints > lastCommitPoints) {
-				final Mark originalMark = usingCommitOnTime.getMarks().get(ON_TIME);
+				final Grade originalMark = usingCommitOnTime.getMarks().get(ON_TIME);
 				final Mark commentedMark = Mark.of(ON_TIME, originalMark.getPoints(), originalMark.getComment()
 						+ " (Using commit on time rather than last commit because it brings more points.)");
 				realMarks = usingCommitOnTime.getMarks().values().stream()
 						.map((m) -> m.getCriterion() != ON_TIME ? m : commentedMark)
 						.collect(ImmutableSet.toImmutableSet());
 			} else {
-				final Mark originalMark = usingLastCommit.getMarks().get(ON_TIME);
+				final Grade originalMark = usingLastCommit.getMarks().get(ON_TIME);
 				final Mark commentedMark = Mark.of(ON_TIME, originalMark.getPoints(), originalMark.getComment()
 						+ " (Using last commit rather than commit on time because it brings at least as much points.)");
 				realMarks = usingLastCommit.getMarks().values().stream()

@@ -84,6 +84,7 @@ import io.github.oliviercailloux.grade.markers.MarkingPredicates;
 import io.github.oliviercailloux.grade.markers.Marks;
 import io.github.oliviercailloux.grade.markers.MavenProjectMarker;
 import io.github.oliviercailloux.grade.mycourse.StudentOnGitHub;
+import io.github.oliviercailloux.java_grade.ex_dep_git.ExDepGitCriterion;
 import io.github.oliviercailloux.java_grade.testers.MarkHelper;
 import io.github.oliviercailloux.utils.Utils;
 import io.github.oliviercailloux.y2019.extractor.SimpleExtractor;
@@ -238,7 +239,7 @@ public class ExExtractorGrader {
 	}
 
 	Mark writeMark() {
-		final ExExtractorCriterion criterion = IMPL;
+		final ExDepGitCriterion criterion = IMPL;
 		final Optional<SimpleExtractor> inst = newInstance();
 		if (!inst.isPresent()) {
 			return Mark.min(criterion, "Could not instanciate SimpleExtractor implementation.");
@@ -452,7 +453,7 @@ public class ExExtractorGrader {
 	}
 
 	double getPenalty(Duration tardiness) {
-		final double maxGrade = Stream.of(ExExtractorCriterion.values())
+		final double maxGrade = Stream.of(ExDepGitCriterion.values())
 				.collect(Collectors.summingDouble(Criterion::getMaxPoints));
 
 		LOGGER.debug("Tardiness: {}.", tardiness);

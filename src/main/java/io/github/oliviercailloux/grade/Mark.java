@@ -9,6 +9,13 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.primitives.Booleans;
 
+/**
+ *
+ * A special kind of Grade: one that has no sub-grades.
+ *
+ * @author Olivier Cailloux
+ *
+ */
 @JsonbPropertyOrder({ "criterion", "points", "comment" })
 public class Mark extends Grade {
 	private Mark(Criterion criterion, double points, String comment) {
