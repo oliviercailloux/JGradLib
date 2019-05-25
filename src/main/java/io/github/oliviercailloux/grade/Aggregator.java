@@ -15,7 +15,7 @@ public interface Aggregator {
 	 * Provides the criteria that this aggregator knows in advance will intervene
 	 * when aggregating.
 	 *
-	 * @return empty set if unknown (useful with an anonymous aggregator, for
+	 * @return empty set if unknown (useful with an anonymous aggregator; for
 	 *         example, one using a non-weighted average).
 	 */
 	public ImmutableSet<Criterion> getAggregatedCriteria();

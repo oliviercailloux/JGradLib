@@ -38,7 +38,8 @@ import io.github.oliviercailloux.grade.mycourse.StudentOnGitHub;
  * A grade is aggregated iff it contains sub-grades. Otherwise, it is also
  * called a mark. Comment on an aggregated grade serves typically to explain how
  * a grade has been obtained from its sub-grades (may be empty if obvious), and
- * is typically not a concatenation of underlying comments.
+ * is not supposed to be a concatenation of underlying comments: this comment is
+ * not supposed to be redundant with sub-comments.
  *
  * @author Olivier Cailloux
  *
