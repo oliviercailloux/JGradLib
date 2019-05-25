@@ -239,7 +239,7 @@ public class ExExtractorGrader {
 	}
 
 	Mark writeMark() {
-		final ExDepGitCriterion criterion = IMPL;
+		final ExExtractorCriterion criterion = IMPL;
 		final Optional<SimpleExtractor> inst = newInstance();
 		if (!inst.isPresent()) {
 			return Mark.min(criterion, "Could not instanciate SimpleExtractor implementation.");
