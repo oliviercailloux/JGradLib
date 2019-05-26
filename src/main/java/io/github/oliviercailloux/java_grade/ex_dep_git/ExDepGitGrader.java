@@ -1,7 +1,10 @@
 package io.github.oliviercailloux.java_grade.ex_dep_git;
 
-import static io.github.oliviercailloux.java_grade.ex_extractor.ExExtractorCriterion.COMMIT;
-import static io.github.oliviercailloux.java_grade.ex_extractor.ExExtractorCriterion.ON_TIME;
+import static io.github.oliviercailloux.java_grade.ex_dep_git.ExDepGitCriterion.COMMIT;
+import static io.github.oliviercailloux.java_grade.ex_dep_git.ExDepGitCriterion.DEP;
+import static io.github.oliviercailloux.java_grade.ex_dep_git.ExDepGitCriterion.FIRST_COMMIT;
+import static io.github.oliviercailloux.java_grade.ex_dep_git.ExDepGitCriterion.MERGE_COMMIT;
+import static io.github.oliviercailloux.java_grade.ex_dep_git.ExDepGitCriterion.ON_TIME;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -10,11 +13,11 @@ import java.nio.file.Paths;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZonedDateTime;
-import java.time.temporal.ChronoUnit;
 import java.util.Collection;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Predicate;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -24,10 +27,14 @@ import org.eclipse.jgit.revwalk.RevCommit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.diffplug.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
+import com.google.common.graph.Graph;
+import com.google.common.graph.Graphs;
+import com.google.common.graph.ImmutableGraph;
 
 import io.github.oliviercailloux.git.Checkouter;
 import io.github.oliviercailloux.git.Client;
@@ -44,18 +51,18 @@ import io.github.oliviercailloux.grade.context.FilesSource;
 import io.github.oliviercailloux.grade.context.GitFullContext;
 import io.github.oliviercailloux.grade.contexters.FullContextInitializer;
 import io.github.oliviercailloux.grade.json.JsonGrade;
+import io.github.oliviercailloux.grade.markers.MarkingPredicates;
 import io.github.oliviercailloux.grade.markers.Marks;
-import io.github.oliviercailloux.grade.markers.MavenProjectMarker;
 import io.github.oliviercailloux.grade.mycourse.StudentOnGitHub;
 import io.github.oliviercailloux.java_grade.ex_extractor.ExExtractorCriterion;
 import io.github.oliviercailloux.java_grade.testers.MarkHelper;
+import io.github.oliviercailloux.utils.Utils;
 
 public class ExDepGitGrader {
 
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(ExDepGitGrader.class);
 	private static final Instant DEADLINE = ZonedDateTime.parse("2019-05-20T16:07:00+02:00").toInstant();
-	private static final Instant START = DEADLINE.minus(40, ChronoUnit.MINUTES);
 
 	public static void main(String[] args) throws Exception {
 		final String prefix = "dep-git";
@@ -64,7 +71,7 @@ public class ExDepGitGrader {
 		orch.readUsernames(srcDir.resolve("usernamesGH-manual.json"));
 
 		orch.readRepositories();
-		orch.setSingleRepo("elbaylot");
+//		orch.setSingleRepo("BoBeauf");
 
 		final ImmutableMap<StudentOnGitHub, RepositoryCoordinates> repositories = orch.getRepositoriesByStudent();
 
@@ -82,27 +89,27 @@ public class ExDepGitGrader {
 
 	public ExDepGitGrader() {
 		timeMark = null;
-		mavenAbsoluteRoot = null;
 		fullContext = null;
 		commitsReceptionTime = null;
+		commitsManual = null;
 	}
 
 	private Mark timeMark;
-	private Path mavenAbsoluteRoot;
 	private GitFullContext fullContext;
 	private ImmutableMap<ObjectId, Instant> commitsReceptionTime;
+	private ImmutableList<RevCommit> commitsManual;
 
 	public AnonymousGrade grade(RepositoryCoordinates coord) {
-		mavenAbsoluteRoot = null;
-
 		final ImmutableSet.Builder<Mark> gradeBuilder = ImmutableSet.builder();
 		final Path projectsBaseDir = Paths.get("/home/olivier/Professions/Enseignement/En cours/dep-git");
 
-		final FullContextInitializer spec = (FullContextInitializer) FullContextInitializer.withPathAndIgnore(coord,
-				projectsBaseDir, DEADLINE.plusSeconds(60));
+		final FullContextInitializer spec = (FullContextInitializer) FullContextInitializer.withPath(coord,
+				projectsBaseDir);
 		commitsReceptionTime = spec.getCommitsReceptionTime();
 		fullContext = spec;
+		final Client client = fullContext.getClient();
 		final Optional<RevCommit> mainCommit = fullContext.getMainCommit();
+		LOGGER.info("Main commit: {}.", mainCommit);
 		if (mainCommit.isPresent()) {
 			final Checkouter co = Checkouter.aboutAndUsing(coord, projectsBaseDir);
 			try {
@@ -112,17 +119,114 @@ public class ExDepGitGrader {
 			}
 		}
 
-		final FilesSource filesReader = fullContext.getFilesReader(fullContext.getMainCommit());
-		final MavenProjectMarker mavenMarker = MavenProjectMarker.given(fullContext);
-
 		timeMark = Marks.timeMark(ON_TIME, fullContext, DEADLINE, this::getPenalty);
 		gradeBuilder.add(timeMark);
 		gradeBuilder.add(commitMark());
 
+		final RevCommit startingCommit;
+		final RevCommit followingCommit;
+		try {
+			startingCommit = client.getCommit(ObjectId.fromString("38da901544294bf2b5784e4de1456905a306a341"));
+			followingCommit = client.getCommit(ObjectId.fromString("bba2a8b6fce54999474702b733237c07070ef308"));
+		} catch (IOException e) {
+			throw new IllegalStateException(e);
+		}
+
+//		try {
+//			fullContext.getClient().getAllBranches().stream().filter((r)->r.getName().equals("refs/remotes/origin/my-branch"));
+//		} catch (IOException | GitAPIException e) {
+//			throw new IllegalStateException(e);
+//		}
+		final ImmutableGraph<RevCommit> graph = client.getAllHistoryCached().getGraph();
+		final Graph<RevCommit> closure = Graphs.transitiveClosure(graph);
+
+		final Optional<RevCommit> myBranchOpt = tryParseSpec(client, "refs/remotes/origin/my-branch");
+		{
+			Mark firstCommitMark = Mark.min(FIRST_COMMIT);
+			for (RevCommit commit : commitsManual) {
+				final boolean childOfStarting = closure.hasEdgeConnecting(commit, startingCommit);
+				final boolean parentOfMyBranch;
+				if (myBranchOpt.isPresent()) {
+					final RevCommit myBranch = myBranchOpt.get();
+					parentOfMyBranch = closure.hasEdgeConnecting(myBranch, commit);
+				} else {
+					parentOfMyBranch = false;
+				}
+				final Mark newMark = Mark.proportional(FIRST_COMMIT, childOfStarting, parentOfMyBranch);
+				if (newMark.getPoints() > firstCommitMark.getPoints()) {
+					firstCommitMark = newMark;
+				}
+			}
+			gradeBuilder.add(firstCommitMark);
+		}
+
+		{
+			Mark mergeCommitMark = Mark.min(MERGE_COMMIT);
+			for (RevCommit commit : commitsManual) {
+				final Set<RevCommit> successors = graph.successors(commit);
+				final ImmutableSet<RevCommit> manualParents = successors.stream().filter(Predicates.in(commitsManual))
+						.collect(ImmutableSet.toImmutableSet());
+				final boolean goodStart = successors.size() == 2 && manualParents.size() == 1;
+
+				final boolean hasExpectedParents;
+				if (goodStart) {
+					final RevCommit manualParent = manualParents.iterator().next();
+					hasExpectedParents = successors.contains(followingCommit)
+							&& graph.successors(manualParent).equals(ImmutableSet.of(startingCommit));
+				} else {
+					hasExpectedParents = false;
+				}
+				final boolean childOfStarting = closure.hasEdgeConnecting(commit, startingCommit);
+				assert Utils.implies(hasExpectedParents, childOfStarting);
+				final double points = (goodStart && !hasExpectedParents) ? MERGE_COMMIT.getMaxPoints() * 1d / 4d
+						: (hasExpectedParents ? MERGE_COMMIT.getMaxPoints() : 0d);
+				final Mark newMark = Mark.of(MERGE_COMMIT, points, "");
+				if (newMark.getPoints() > mergeCommitMark.getPoints()) {
+					mergeCommitMark = newMark;
+				}
+			}
+			gradeBuilder.add(mergeCommitMark);
+		}
+
+		{
+			Mark depMark = Mark.min(DEP, "No dependency to jgit found");
+			Instant latestFound = Instant.MIN;
+			for (RevCommit commit : commitsManual) {
+				final String pom;
+				final FilesSource filesReader = fullContext.getFilesReader(Optional.of(commit));
+				pom = filesReader.getContent(Path.of("pom.xml"));
+				final Predicate<CharSequence> lastVersion = MarkingPredicates
+						.containsOnce(Pattern.compile("<dependencies>" + Utils.ANY_REG_EXP + "<dependency>"
+								+ Utils.ANY_REG_EXP + "<groupId>org\\.eclipse\\.jgit</groupId>" + Utils.ANY_REG_EXP
+								+ "<artifactId>org\\.eclipse\\.jgit</artifactId>" + Utils.ANY_REG_EXP
+								+ "<version>5\\.3\\.1\\.201904271842-r</version>" + "[\\h\\s]*" + "</dependency>"));
+				final Predicate<CharSequence> wrongVersion = MarkingPredicates
+						.containsOnce(Pattern.compile("<dependencies>" + Utils.ANY_REG_EXP + "<dependency>"
+								+ Utils.ANY_REG_EXP + "<groupId>org\\.eclipse\\.jgit</groupId>" + Utils.ANY_REG_EXP
+								+ "<artifactId>org\\.eclipse\\.jgit</artifactId>" + Utils.ANY_REG_EXP
+								+ "<version>5\\.3\\.0\\.201903130848-r</version>" + "[\\h\\s]*" + "</dependency>"));
+				final boolean hasLast = lastVersion.test(pom);
+				final boolean hasWrong = wrongVersion.test(pom);
+				if (hasLast || hasWrong) {
+					final Instant thisTime = commitsReceptionTime.get(commit);
+					if (thisTime.compareTo(latestFound) > 0) {
+						latestFound = thisTime;
+						if (hasLast) {
+							depMark = Mark.max(DEP);
+						} else {
+							depMark = Mark.of(DEP, DEP.getMaxPoints() * 1d / 2d,
+									"Expected last version 5.3.1.201904271842-r");
+						}
+					}
+				}
+			}
+			gradeBuilder.add(depMark);
+		}
+
 		final ImmutableSet<Mark> grade = gradeBuilder.build();
-		final Set<Criterion> diff = Sets.symmetricDifference(ImmutableSet.copyOf(ExExtractorCriterion.values()),
+		final Set<Criterion> diff = Sets.symmetricDifference(ImmutableSet.copyOf(ExDepGitCriterion.values()),
 				grade.stream().map(Mark::getCriterion).collect(ImmutableSet.toImmutableSet())).immutableCopy();
-//		assert diff.isEmpty() : diff;
+		assert diff.isEmpty() : diff;
 		return Grade.anonymous(grade);
 	}
 
@@ -143,11 +247,10 @@ public class ExDepGitGrader {
 				.collect(ImmutableList.toImmutableList());
 		LOGGER.info("All: {}; own: {}.", toOIds(commits), toOIds(commitsOwn));
 		final Predicate<? super RevCommit> byGH = MarkHelper::committerIsGitHub;
-		final ImmutableList<RevCommit> commitsManual = commitsOwn.stream().filter(byGH.negate())
-				.collect(ImmutableList.toImmutableList());
-		final String comment = (!commitsManual.isEmpty()
-				? "Using command line: " + commitsManual.iterator().next().getName()
-				: "No commits using command line");
+		LOGGER.info("GH: {}.", toOIds(commits.stream().filter(byGH).collect(ImmutableList.toImmutableList())));
+		commitsManual = commitsOwn.stream().filter(byGH.negate()).collect(ImmutableList.toImmutableList());
+		final String comment = (!commitsOwn.isEmpty() ? "Own: " + toOIds(commitsOwn) + ". " : "")
+				+ (!commitsManual.isEmpty() ? "Using git: " + toOIds(commitsManual) : "No commits using git");
 		final double points = (!commitsManual.isEmpty()) ? COMMIT.getMaxPoints() : COMMIT.getMinPoints();
 		final Mark commitMark = Mark.of(COMMIT, points, comment);
 		return commitMark;
@@ -164,5 +267,21 @@ public class ExDepGitGrader {
 
 	private ImmutableList<String> toOIds(Collection<RevCommit> commits) {
 		return commits.stream().map(RevCommit::getName).collect(ImmutableList.toImmutableList());
+	}
+
+	private Optional<RevCommit> tryParseSpec(Client client, String revSpec) {
+		final Optional<RevCommit> devOpt;
+		try {
+			devOpt = client.tryResolve(revSpec).map(t -> {
+				try {
+					return client.getCommit(t);
+				} catch (IOException e) {
+					throw new IllegalStateException(e);
+				}
+			});
+		} catch (IOException e) {
+			throw new GradingException(e);
+		}
+		return devOpt;
 	}
 }

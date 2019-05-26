@@ -3,6 +3,8 @@ package io.github.oliviercailloux.grade.json;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 
 import javax.json.Json;
 import javax.json.JsonArray;
@@ -14,19 +16,23 @@ import javax.json.bind.adapter.JsonbAdapter;
 
 import com.google.common.collect.ImmutableSet;
 
+import io.github.oliviercailloux.grade.AnonymousGrade;
 import io.github.oliviercailloux.grade.Grade;
 import io.github.oliviercailloux.grade.Mark;
 import io.github.oliviercailloux.grade.mycourse.StudentOnGitHub;
+import io.github.oliviercailloux.grade.mycourse.StudentOnGitHubKnown;
 import io.github.oliviercailloux.grade.mycourse.json.JsonStudentOnGitHub;
+import io.github.oliviercailloux.grade.mycourse.json.JsonStudentOnGitHubKnown;
 import io.github.oliviercailloux.json.JsonbUtils;
 import io.github.oliviercailloux.json.PrintableJsonObject;
 import io.github.oliviercailloux.json.PrintableJsonObjectFactory;
 import io.github.oliviercailloux.json.PrintableJsonValue;
+import io.github.oliviercailloux.json.PrintableJsonValueFactory;
 
 public class JsonGrade {
-	public static PrintableJsonObject asJson(Grade grade) {
+	public static PrintableJsonObject asJson(StudentOnGitHubKnown student, AnonymousGrade grade) {
 		final JsonObjectBuilder builder = Json.createObjectBuilder();
-		builder.add("student", JsonStudentOnGitHub.asJson(grade.getStudent()));
+		builder.add("student", JsonStudentOnGitHubKnown.asJson(student));
 		final JsonArrayBuilder marksBuilder = Json.createArrayBuilder();
 		{
 			final ImmutableSet<Grade> marks = grade.getMarks().values();
@@ -40,8 +46,14 @@ public class JsonGrade {
 //		return JsonUtils.serializeWithJsonB(grade, JsonStudentOnGitHub.asAdapter(), JsonCriterion.asAdapter());
 	}
 
-	public static PrintableJsonValue asJsonArray(Collection<Grade> grades) {
-		return JsonbUtils.toJsonValue(grades, JsonGrade.asAdapter());
+	public static PrintableJsonValue asJsonArrayWithStudents(Map<StudentOnGitHubKnown, AnonymousGrade> grades) {
+		final JsonArrayBuilder builder = Json.createArrayBuilder();
+		for (Entry<StudentOnGitHubKnown, AnonymousGrade> entry : grades.entrySet()) {
+			final StudentOnGitHubKnown student = entry.getKey();
+			final AnonymousGrade grade = entry.getValue();
+			builder.add(asJson(student, grade));
+		}
+		return PrintableJsonValueFactory.wrapValue(builder.build());
 	}
 
 	public static Grade asGrade(String json) {
@@ -100,5 +112,26 @@ public class JsonGrade {
 				return asGrade(obj);
 			}
 		};
+	}
+
+	public static PrintableJsonObject asJson(Grade grade) {
+		final JsonObjectBuilder builder = Json.createObjectBuilder();
+		builder.add("student", JsonStudentOnGitHub.asJson(grade.getStudent()));
+		final JsonArrayBuilder marksBuilder = Json.createArrayBuilder();
+		{
+			final ImmutableSet<Grade> marks = grade.getMarks().values();
+			for (Grade mark : marks) {
+				final PrintableJsonObject markJson = JsonMark.asJson((Mark) mark);
+				marksBuilder.add(Json.createObjectBuilder(markJson));
+			}
+		}
+		builder.add("marks", marksBuilder);
+		return PrintableJsonObjectFactory.wrapObject(builder.build());
+		// return JsonUtils.serializeWithJsonB(grade, JsonStudentOnGitHub.asAdapter(),
+		// JsonCriterion.asAdapter());
+	}
+
+	public static PrintableJsonValue asJsonArray(Collection<Grade> grades) {
+		return JsonbUtils.toJsonValue(grades, JsonGrade.asAdapter());
 	}
 }

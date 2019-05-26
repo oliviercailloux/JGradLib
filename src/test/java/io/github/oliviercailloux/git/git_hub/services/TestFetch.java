@@ -46,7 +46,13 @@ public class TestFetch {
 	public void testFetchFiles() throws Exception {
 		final RepositoryCoordinates coord = RepositoryCoordinates.from("oliviercailloux", "projets");
 		try (GitHubFetcherQL fetcher = GitHubFetcherQL.using(GitHubToken.getRealInstance())) {
-			final Optional<RepositoryWithFiles> found = fetcher.getRepositoryWithFiles(coord, Paths.get("EE/"));
+			/**
+			 * TODO oddly enough, it sees only one file among the two files living in this
+			 * sub-folder.
+			 */
+//			final Optional<RepositoryWithFiles> found = fetcher.getRepositoryWithFiles(coord, Paths.get("Licences/"));
+			final Optional<RepositoryWithFiles> found = fetcher.getRepositoryWithFiles(coord,
+					Paths.get("Autres énoncés/"));
 			final RepositoryWithFiles repo = found.get();
 			assertEquals(7, repo.getContentFromFileNames().size());
 		}

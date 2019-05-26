@@ -1,5 +1,6 @@
 package io.github.oliviercailloux.git.git_hub.model.graph_ql;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
@@ -11,6 +12,7 @@ import java.util.Optional;
 
 import javax.json.JsonObject;
 import javax.json.JsonValue;
+import javax.json.JsonValue.ValueType;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,6 +38,7 @@ public class RepositoryWithFiles {
 	private RepositoryWithFiles(JsonObject json, Path path) {
 		this.path = requireNonNull(path);
 		repository = Repository.from(json);
+		checkArgument(json.get("refTree").getValueType() != ValueType.NULL);
 		{
 			contentFromFileNames = json.getJsonObject("refTree").getJsonArray("entries").stream()
 					.map(JsonValue::asJsonObject).filter((e) -> e.getString("type").equals("blob"))

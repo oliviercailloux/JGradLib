@@ -19,14 +19,16 @@ public class JsonToCsvs {
 	private static final Logger LOGGER = LoggerFactory.getLogger(JsonToCsvs.class);
 
 	public static void main(String[] args) throws Exception {
-		final String workName = "extractor";
-		final int myCourseId = 112539;
+		final String workName = "dep-git";
+		final int myCourseId = 112711;
 //		final Path srcDir = Paths.get("../../Java SITN, app, concept°/");
 		final Path srcDir = Paths.get("../../Java L3/");
 		final String namePrefix = "all grades ";
 //		final String namePrefix = "patched grades ";
+//		final String suffix = " manual";
+		final String suffix = "";
 
-		final String jsonStr = Files.readString(srcDir.resolve(namePrefix + workName + " manual.json"));
+		final String jsonStr = Files.readString(srcDir.resolve(namePrefix + workName + suffix + ".json"));
 		final ImmutableSet<Grade> grades = JsonGrade.asGrades(jsonStr);
 		LOGGER.info("First grade: {}.", grades.stream().findFirst());
 		Files.writeString(srcDir.resolve("MyCourse.csv"),

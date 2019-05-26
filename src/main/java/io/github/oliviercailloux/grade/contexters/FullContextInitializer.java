@@ -3,7 +3,6 @@ package io.github.oliviercailloux.grade.contexters;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
-import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Instant;
@@ -55,19 +54,16 @@ public class FullContextInitializer implements GitFullContext {
 
 	public void init() throws GradingException {
 		final Client client = getClient();
-		try {
-			if (client.hasContentCached()) {
-				final GitHubTimelineReader gitHubReceptionTimer = new GitHubTimelineReader();
-				gitHubReceptionTimer.getReceptionRanges(client);
-				final ImmutableMap<ObjectId, Instant> receivedAt = gitHubReceptionTimer.getReceivedAtLowerBounds();
-				context = GradingContextWithTimeline.given(client, receivedAt);
-				lastCommitNotIgnored = context
-						.getLatestNotIgnoredChildOf(client.getCommit(client.resolve("origin/master")), ignoreAfter);
-			} else {
-				lastCommitNotIgnored = Optional.empty();
-			}
-		} catch (IOException e) {
-			throw new GradingException(e);
+		if (client.hasContentCached()) {
+			final GitHubTimelineReader gitHubReceptionTimer = new GitHubTimelineReader();
+			gitHubReceptionTimer.getReceptionRanges(client);
+			final ImmutableMap<ObjectId, Instant> receivedAt = gitHubReceptionTimer.getReceivedAtLowerBounds();
+			context = GradingContextWithTimeline.given(client, receivedAt);
+//				lastCommitNotIgnored = context
+//						.getLatestNotIgnoredChildOf(client.getCommit(client.resolve("origin/master")), ignoreAfter);
+			lastCommitNotIgnored = context.getLatestNotIgnored(ignoreAfter);
+		} else {
+			lastCommitNotIgnored = Optional.empty();
 		}
 	}
 

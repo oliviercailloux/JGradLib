@@ -164,7 +164,13 @@ public class GitHubTimelineReader {
 		final Set<ObjectId> idsKnown = receivedAt.keySet();
 		final ImmutableSet<RevCommit> unknown = Sets.difference(allCommits, idsKnown).immutableCopy();
 		for (RevCommit unknownCommit : unknown) {
+			/**
+			 * Sometimes GitHub would send no event at all about a recent commit, apparently
+			 * when it is the sole commit in its branch. So an unknown commit might be
+			 * recent.
+			 */
 			final Range<Instant> previous = receivedAt.put(unknownCommit, rangeFirstCommits);
+//			final Range<Instant> previous = receivedAt.put(unknownCommit, Range.closed(Instant.MIN, Instant.MAX));
 			checkState(previous == null, String.format("Sha: %s, previous: %s", unknownCommit, previous));
 		}
 
@@ -174,6 +180,11 @@ public class GitHubTimelineReader {
 			final Range<Instant> childTime = receivedAt.get(child);
 			final Range<Instant> parentTime = receivedAt.get(parent);
 			if (!suspectCommits.contains(child) && !suspectCommits.contains(parent)) {
+				/**
+				 * This check is not perfect (it should check just leq), but accounts for
+				 * simplification using the complete range in case of unknown commits.
+				 */
+//				checkState(leq(parentTime, childTime) || childTime.equals(Range.closed(Instant.MIN, Instant.MAX)),
 				checkState(leq(parentTime, childTime), String.format("Parent %s after child %s: %s > %s",
 						parent.getName(), child.getName(), parentTime, childTime));
 			}

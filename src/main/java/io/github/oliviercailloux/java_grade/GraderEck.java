@@ -41,7 +41,6 @@ import io.github.oliviercailloux.grade.json.JsonGrade;
 import io.github.oliviercailloux.grade.markers.Marks;
 import io.github.oliviercailloux.grade.mycourse.StudentOnGitHub;
 import io.github.oliviercailloux.grade.mycourse.StudentOnGitHubKnown;
-import io.github.oliviercailloux.grade.mycourse.csv.MyCourseCsvWriter;
 import io.github.oliviercailloux.grade.mycourse.json.StudentsReaderFromJson;
 import io.github.oliviercailloux.java_grade.ex_eck.ExEckCriterion;
 
@@ -229,8 +228,8 @@ public class GraderEck {
 		orch.writeCsv(grades);
 		orch.writeJson(grades);
 
-		Files.writeString(Paths.get("MyCourse.csv"),
-				new MyCourseCsvWriter().asMyCourseCsv(prefix, 112144, grades, 10d));
+//		Files.writeString(Paths.get("MyCourse.csv"),
+//				new MyCourseCsvWriter().asMyCourseCsv(prefix, 112144, grades, 10d));
 	}
 
 }
