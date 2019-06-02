@@ -87,7 +87,6 @@ import io.github.oliviercailloux.grade.mycourse.StudentOnGitHub;
 import io.github.oliviercailloux.java_grade.ex_dep_git.ExDepGitCriterion;
 import io.github.oliviercailloux.java_grade.testers.MarkHelper;
 import io.github.oliviercailloux.utils.Utils;
-import io.github.oliviercailloux.y2019.extractor.SimpleExtractor;
 
 public class ExExtractorGrader {
 
@@ -508,6 +507,7 @@ public class ExExtractorGrader {
 		}
 	}
 
+	@SuppressWarnings("unused")
 	private Mark userWriteToFileMark() {
 		final Optional<Class<?>> namedClass = getNamedClass("ExtractorUser");
 		if (namedClass.isEmpty()) {
