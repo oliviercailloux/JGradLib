@@ -26,10 +26,12 @@ import io.github.oliviercailloux.grade.mycourse.StudentOnGitHub;
 
 /**
  *
- * TODO correct grades, as follows. A grade knows the criteria and sub-grades
- * that it is composed of. But it does not know which fraction it should
- * preferably use for its own display: this is known by the user of the grade at
- * display time. It relates to display and not to grade information per se.
+ * TODO correct grades, as follows.
+ *
+ * A grade knows the criteria and sub-grades that it is composed of. But it does
+ * not know which fraction it should preferably use for its own display: this is
+ * known by the user of the grade at display time. It relates to display and not
+ * to grade information per se.
  *
  * I should get rid of student and of {@link AnonymousGrade}: use Map<Student,
  * Grade> or Map<URL, Grade> and so on.

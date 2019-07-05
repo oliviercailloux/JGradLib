@@ -63,7 +63,7 @@ public class JsonGrade {
 		 */
 //		return JsonUtils.deserializeWithJsonB(json, StudentGrade.class, JsonStudentOnGitHub.asAdapter(),
 //				JsonCriterion.asAdapter());
-		return asGrade(PrintableJsonObjectFactory.wrapUnknownStringForm(json));
+		return asGrade(PrintableJsonObjectFactory.wrapString(json));
 	}
 
 	public static ImmutableSet<Grade> asGrades(String json) {

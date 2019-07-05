@@ -185,6 +185,12 @@ public class GitHubTimelineReader {
 				 * simplification using the complete range in case of unknown commits.
 				 */
 //				checkState(leq(parentTime, childTime) || childTime.equals(Range.closed(Instant.MIN, Instant.MAX)),
+				/**
+				 * This check sometimes fails: a branch master got "created" but its create time
+				 * indicates in fact the creation time of the fork, the branch existed before.
+				 * This apparently perturbates the check. (The story is more complicated, but
+				 * anyway…)
+				 */
 				checkState(leq(parentTime, childTime), String.format("Parent %s after child %s: %s > %s",
 						parent.getName(), child.getName(), parentTime, childTime));
 			}

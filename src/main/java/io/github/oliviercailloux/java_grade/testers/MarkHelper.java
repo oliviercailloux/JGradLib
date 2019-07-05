@@ -60,12 +60,20 @@ public class MarkHelper {
 	}
 
 	public static boolean committerIsGitHub(RevCommit commit) {
+		return committerIsKnown(commit, "GitHub");
+	}
+
+	public static boolean committerIsCailloux(RevCommit commit) {
+		return committerIsKnown(commit, "oliviercailloux");
+	}
+
+	private static boolean committerIsKnown(RevCommit commit, String name) {
 		final PersonIdent author = commit.getAuthorIdent();
 		final PersonIdent committer = commit.getCommitterIdent();
-		final boolean committerIsGitHub = committer.getName().equals("GitHub");
-		if (!committerIsGitHub && !author.getName().equals(committer.getName())) {
+		final boolean committerIsKnown = committer.getName().equals(name);
+		if (!committerIsKnown && !author.getName().equals(committer.getName())) {
 			throw new GradingException(String.format("Author: %s; Committer: %s.", author, committer));
 		}
-		return committerIsGitHub;
+		return committerIsKnown;
 	}
 }
