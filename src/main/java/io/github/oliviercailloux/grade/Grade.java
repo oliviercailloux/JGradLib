@@ -36,29 +36,15 @@ import io.github.oliviercailloux.grade.mycourse.StudentOnGitHub;
  * I should get rid of student and of {@link AnonymousGrade}: use Map<Student,
  * Grade> or Map<URL, Grade> and so on.
  *
- * Grade (interface): {points generally in [0, 1], comment, subGrades:
- * ImmutableMap<Criterion, Grade> which may be empty}. A mark is a grade that
- * has no sub-grades. A composite grade is a grade that has at least one
- * sub-grade. Interfaces to distinguish marks from composite grades do not
- * exist: it would raise complexity and not bring much benefit. Class
- * AdditiveGrade: {weights: Map<Criterion, Grade>}, this implementation has only
- * the weights and the marks, and generates the comment (a string repr of the
- * weights and saying that it is a weighted average) and the points. Get rid of
- * criterion ROOT. A grader essentially serves to produce AdditiveGrade objects
- * and returns a Map<SomeKindOfStudent, Grade>. [To start with, perhaps I could
- * permit negative points in the weighted sum and stick to AdditiveGrade objects
- * only, but later I’d need a different kind of aggregator for time penalty.]
+ * Get rid of criterion ROOT. A grader essentially serves to produce
+ * AdditiveGrade objects and returns a Map<SomeKindOfStudent, Grade>. [To start
+ * with, perhaps I could permit negative points in the weighted sum and stick to
+ * AdditiveGrade objects only, but later I’d need a different kind of aggregator
+ * for time penalty.]
  *
  * Transform json format: additive grade. {type: "additive", points: , comment:
  * , marks: [{criterion: , weight: , grade: {points: , comment: , marks: []}},
  * …]}. Grades: [{student: {…}, grade: {…}}, …].
- *
- * Comment on a composite grade serves to explain how a grade has been obtained
- * from its sub-grades (may be empty if obvious), and is not supposed to be a
- * concatenation of sub-comments: this comment is not supposed to be redundant
- * with sub-comments. It is not mandatory that the points on a composite grade
- * be a determininstic function of the points on the sub-grades: manual
- * correction may intervene in between.
  *
  * Export as MyCourse CSV: exports a Map<StudentOnMyCourse, Grade>, exports the
  * student then its total points (/20) and an HTML comment. Think about how to

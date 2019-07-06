@@ -1,20 +1,44 @@
 package io.github.oliviercailloux.grade;
 
-import java.util.Map;
+import com.google.common.collect.ImmutableMap;
 
 /**
  *
+ * Grade (interface): {points generally in [0, 1], comment, subGrades:
+ * ImmutableMap<Criterion, Grade> which may be empty}. A mark is a grade that
+ * has no sub-grades. A composite grade is a grade that has at least one
+ * sub-grade. Interfaces to distinguish marks from composite grades do not
+ * exist: it would raise complexity and not bring much benefit.
  *
  * @author Olivier Cailloux
  *
  */
 public interface IGrade {
+	/**
+	 * Returns the points. It is not mandatory that the points on a composite grade
+	 * be a deterministic function of the points on the sub-grades: manual
+	 * correction may intervene in between.
+	 *
+	 * @return the points.
+	 */
 	public double getPoints();
 
+	/**
+	 * Returns the comment about the points. Comment on a composite grade serves to
+	 * explain how a grade has been obtained from its sub-grades (may be empty if
+	 * obvious), and is not supposed to be a concatenation of sub-comments: this
+	 * comment is not supposed to be redundant with sub-comments.
+	 *
+	 * @return the comment.
+	 */
 	public String getComment();
 
 	/**
-	 * Returns the sub grades, empty iff this grade is a mark.
+	 * Returns the sub grades, empty iff this grade is a mark, non-empty iff this
+	 * grade is a composite grade.
+	 *
+	 * @return the sub grades.
 	 */
-	public Map<Criterion, Grade> getSubGrades();
+	public ImmutableMap<Criterion, IGrade> getSubGrades();
+
 }
