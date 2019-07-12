@@ -45,7 +45,7 @@ import io.github.oliviercailloux.grade.CsvGrades;
 import io.github.oliviercailloux.grade.Grade;
 import io.github.oliviercailloux.grade.GraderOrchestrator;
 import io.github.oliviercailloux.grade.GradingException;
-import io.github.oliviercailloux.grade.Mark;
+import io.github.oliviercailloux.grade.CriterionAndMark;
 import io.github.oliviercailloux.grade.context.FilesSource;
 import io.github.oliviercailloux.grade.context.GitContext;
 import io.github.oliviercailloux.grade.context.GitFullContext;
@@ -64,8 +64,8 @@ public class ExJUnitGrader {
 		history = null;
 	}
 
-	public ImmutableSet<Mark> grade(RepositoryCoordinates coord, @SuppressWarnings("unused") StudentOnGitHub student) {
-		final ImmutableSet.Builder<Mark> gradeBuilder = ImmutableSet.builder();
+	public ImmutableSet<CriterionAndMark> grade(RepositoryCoordinates coord, @SuppressWarnings("unused") StudentOnGitHub student) {
+		final ImmutableSet.Builder<CriterionAndMark> gradeBuilder = ImmutableSet.builder();
 		final Path projectsBaseDir = Paths.get("/home/olivier/Professions/Enseignement/En cours/junit");
 		final Instant deadline = ZonedDateTime.parse("2019-06-04T17:42:00+02:00").toInstant();
 
@@ -116,8 +116,8 @@ public class ExJUnitGrader {
 			gradeBuilder.add(Marks.timeMark(ON_TIME, fullContext, deadline, this::getPenalty));
 			gradeBuilder.add(Marks.gitRepo(REPO_EXISTS, fullContext));
 		} else {
-			gradeBuilder.add(Mark.max(ON_TIME));
-			gradeBuilder.add(Mark.binary(REPO_EXISTS, lastCommitOpt.isPresent()));
+			gradeBuilder.add(CriterionAndMark.max(ON_TIME));
+			gradeBuilder.add(CriterionAndMark.binary(REPO_EXISTS, lastCommitOpt.isPresent()));
 		}
 
 		final FilesSource filesReader = context.getFilesReader(lastCommitOpt);
@@ -137,17 +137,17 @@ public class ExJUnitGrader {
 		final ImmutableSet<RevCommit> byOwn = history.getGraph().nodes().stream().filter(gitHub.or(cail).negate())
 				.collect(ImmutableSet.toImmutableSet());
 		{
-			final Mark mark;
+			final CriterionAndMark mark;
 			if (!byOwn.isEmpty()) {
-				mark = Mark.of(GIT, GIT.getMaxPoints(), String.format("Own commits: %s.", toString(byOwn)));
+				mark = CriterionAndMark.of(GIT, GIT.getMaxPoints(), String.format("Own commits: %s.", toString(byOwn)));
 			} else {
-				mark = Mark.min(GIT);
+				mark = CriterionAndMark.min(GIT);
 			}
 			gradeBuilder.add(mark);
 		}
 
 		final Optional<RevCommit> devOpt = tryParseSpec(client, "refs/remotes/origin/testing");
-		gradeBuilder.add(Mark.binary(BRANCH, devOpt.isPresent()));
+		gradeBuilder.add(CriterionAndMark.binary(BRANCH, devOpt.isPresent()));
 
 		final Path srcMainJavaFolder = mavenMarker.getPomSupplier().getSrcMainJavaFolder();
 		final Path srcTestJavaFolder = mavenMarker.getPomSupplier().getSrcTestJavaFolder();
@@ -156,25 +156,25 @@ public class ExJUnitGrader {
 
 		LOGGER.info("ETF: {}.", extractorTestsFiles.getContents().keySet());
 
-		gradeBuilder.add(Mark.binary(CLASS_EXISTS, !extractorTestsFiles.asFileContents().isEmpty()));
+		gradeBuilder.add(CriterionAndMark.binary(CLASS_EXISTS, !extractorTestsFiles.asFileContents().isEmpty()));
 		final Path expectedName = Paths.get("io/github/oliviercailloux/extractor/ExtractorTests.java");
 		final Path expectedPdfName = mavenMarker.getPomSupplier().getSrcFolder()
 				.resolve("test/resources/io/github/oliviercailloux/extractor/hello-world.pdf");
-		gradeBuilder.add(Mark.binary(CLASS_NAME,
+		gradeBuilder.add(CriterionAndMark.binary(CLASS_NAME,
 				!extractorTestsFiles.asFileContents().isEmpty() && extractorTestsFiles.asFileContents().stream()
 						.allMatch((fc) -> fc.getPath().equals(srcMainJavaFolder.resolve(expectedName))
 								|| fc.getPath().equals(srcTestJavaFolder.resolve(expectedName)))));
 
-		gradeBuilder.add(Mark.binary(CLASS_IN_TEST,
+		gradeBuilder.add(CriterionAndMark.binary(CLASS_IN_TEST,
 				!extractorTestsFiles.asFileContents().isEmpty() && extractorTestsFiles.asFileContents().stream()
 						.allMatch((fc) -> fc.getPath().equals(srcTestJavaFolder.resolve(expectedName)))));
-		gradeBuilder.add(Mark.binary(PDF_IN_TEST,
+		gradeBuilder.add(CriterionAndMark.binary(PDF_IN_TEST,
 				filesReader.asFileContents().stream().anyMatch((fc) -> fc.getPath().equals(expectedPdfName))));
-		gradeBuilder.add(Mark.min(TEST_TESTS));
+		gradeBuilder.add(CriterionAndMark.min(TEST_TESTS));
 
-		final ImmutableSet<Mark> grade = gradeBuilder.build();
+		final ImmutableSet<CriterionAndMark> grade = gradeBuilder.build();
 		final Set<Criterion> diff = Sets.symmetricDifference(ImmutableSet.copyOf(ExJUnitCriterion.values()),
-				grade.stream().map(Mark::getCriterion).collect(ImmutableSet.toImmutableSet()));
+				grade.stream().map(CriterionAndMark::getCriterion).collect(ImmutableSet.toImmutableSet()));
 		assert diff.isEmpty() : diff;
 		return grade;
 	}

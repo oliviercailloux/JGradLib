@@ -18,7 +18,7 @@ import com.google.common.collect.ImmutableSet;
 
 import io.github.oliviercailloux.grade.AnonymousGrade;
 import io.github.oliviercailloux.grade.Grade;
-import io.github.oliviercailloux.grade.Mark;
+import io.github.oliviercailloux.grade.CriterionAndMark;
 import io.github.oliviercailloux.grade.mycourse.StudentOnGitHub;
 import io.github.oliviercailloux.grade.mycourse.StudentOnGitHubKnown;
 import io.github.oliviercailloux.grade.mycourse.json.JsonStudentOnGitHub;
@@ -37,7 +37,7 @@ public class JsonGrade {
 		{
 			final ImmutableSet<Grade> marks = grade.getMarks().values();
 			for (Grade mark : marks) {
-				final PrintableJsonObject markJson = JsonMark.asJson((Mark) mark);
+				final PrintableJsonObject markJson = JsonMark.asJson((CriterionAndMark) mark);
 				marksBuilder.add(Json.createObjectBuilder(markJson));
 			}
 		}
@@ -86,13 +86,13 @@ public class JsonGrade {
 	public static Grade asGrade(JsonObject json) {
 //		return asGrade(json.toString());
 		final StudentOnGitHub student = JsonStudentOnGitHub.asStudentOnGitHub(json.getJsonObject("student"));
-		final ImmutableSet<Mark> marks;
+		final ImmutableSet<CriterionAndMark> marks;
 		{
-			final ImmutableSet.Builder<Mark> marksBuilder = ImmutableSet.builder();
+			final ImmutableSet.Builder<CriterionAndMark> marksBuilder = ImmutableSet.builder();
 			final JsonArray jsonMarks = json.getJsonArray("marks");
 			for (JsonValue jsonMark : jsonMarks) {
 				final JsonObject jsonMarkObj = jsonMark.asJsonObject();
-				final Mark mark = JsonMark.asMark(jsonMarkObj);
+				final CriterionAndMark mark = JsonMark.asMark(jsonMarkObj);
 				marksBuilder.add(mark);
 			}
 			marks = marksBuilder.build();
@@ -121,7 +121,7 @@ public class JsonGrade {
 		{
 			final ImmutableSet<Grade> marks = grade.getMarks().values();
 			for (Grade mark : marks) {
-				final PrintableJsonObject markJson = JsonMark.asJson((Mark) mark);
+				final PrintableJsonObject markJson = JsonMark.asJson((CriterionAndMark) mark);
 				marksBuilder.add(Json.createObjectBuilder(markJson));
 			}
 		}

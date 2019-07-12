@@ -11,7 +11,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.io.Resources;
 
-import io.github.oliviercailloux.grade.Mark;
+import io.github.oliviercailloux.grade.CriterionAndMark;
 import io.github.oliviercailloux.grade.json.JsonMark;
 
 public class JsonMarkTest {
@@ -22,7 +22,7 @@ public class JsonMarkTest {
 	public void markWriteJson() throws Exception {
 		final String expected = Resources.toString(this.getClass().getResource("Mark.json"), StandardCharsets.UTF_8);
 
-		final Mark grade = Mark.max(ENC);
+		final CriterionAndMark grade = CriterionAndMark.max(ENC);
 		final String written = JsonMark.asJson(grade).toString();
 		LOGGER.info("Serialized pretty json: {}.", written);
 		assertEquals(expected, written);
@@ -30,9 +30,9 @@ public class JsonMarkTest {
 
 	@Test
 	public void markReadJson() throws Exception {
-		final Mark expected = Mark.max(ENC);
+		final CriterionAndMark expected = CriterionAndMark.max(ENC);
 		final String json = Resources.toString(this.getClass().getResource("Mark.json"), StandardCharsets.UTF_8);
-		final Mark read = JsonMark.asMark(json);
+		final CriterionAndMark read = JsonMark.asMark(json);
 		LOGGER.info("Deserialized: {}.", read);
 		assertEquals(expected, read);
 	}

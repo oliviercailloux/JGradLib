@@ -12,11 +12,11 @@ import com.google.common.collect.MoreCollectors;
 
 import io.github.oliviercailloux.git.FileContent;
 import io.github.oliviercailloux.grade.Criterion;
-import io.github.oliviercailloux.grade.Mark;
+import io.github.oliviercailloux.grade.CriterionAndMark;
 import io.github.oliviercailloux.grade.context.FilesSource;
 
 public class JavaMarks {
-	public static Mark travisBadgeMark(Criterion criterion, FilesSource source, String repositoryName) {
+	public static CriterionAndMark travisBadgeMark(Criterion criterion, FilesSource source, String repositoryName) {
 		/**
 		 * Note that we want the readme to be at the root of the repository, to check
 		 * for the badge.
@@ -26,7 +26,7 @@ public class JavaMarks {
 
 		switch (readmeFcs.size()) {
 		case 0:
-			return Mark.min(criterion, "No README.adoc file found.");
+			return CriterionAndMark.min(criterion, "No README.adoc file found.");
 		case 1:
 			final boolean badgeUrl = readmes.existsAndAllMatch(Predicates.contains(Pattern.compile(
 					"image:https://(?:api\\.)?travis-ci\\.com/oliviercailloux-org/" + repositoryName + "\\.svg")));
@@ -42,12 +42,12 @@ public class JavaMarks {
 			 * conditioned on badge url failing, the casing does not bring points.
 			 */
 			if (badgeUrl) {
-				return Mark.proportional(criterion, badgeUrl, rightCase);
+				return CriterionAndMark.proportional(criterion, badgeUrl, rightCase);
 			}
 			assert !badgeUrl;
-			return Mark.min(criterion, "Did not find correct badge url in readme.");
+			return CriterionAndMark.min(criterion, "Did not find correct badge url in readme.");
 		default:
-			return Mark.min(criterion, "More than one README.adoc file found (with various cases).");
+			return CriterionAndMark.min(criterion, "More than one README.adoc file found (with various cases).");
 		}
 	}
 

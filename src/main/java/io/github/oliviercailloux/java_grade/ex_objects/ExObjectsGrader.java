@@ -48,7 +48,7 @@ import io.github.oliviercailloux.grade.CsvGrades;
 import io.github.oliviercailloux.grade.Grade;
 import io.github.oliviercailloux.grade.GraderOrchestrator;
 import io.github.oliviercailloux.grade.GradingException;
-import io.github.oliviercailloux.grade.Mark;
+import io.github.oliviercailloux.grade.CriterionAndMark;
 import io.github.oliviercailloux.grade.context.FilesSource;
 import io.github.oliviercailloux.grade.context.GitFullContext;
 import io.github.oliviercailloux.grade.contexters.FilesSourceUtils;
@@ -86,7 +86,7 @@ public class ExObjectsGrader {
 		timeMark = null;
 	}
 
-	private Mark timeMark;
+	private CriterionAndMark timeMark;
 
 	public ImmutableSet<Grade> grade(RepositoryCoordinates coord) {
 		final AnonymousGrade usingLastCommit = grade(coord, Instant.MAX);
@@ -97,14 +97,14 @@ public class ExObjectsGrader {
 			final double onTimePoints = usingCommitOnTime.getPoints();
 			if (onTimePoints > lastCommitPoints) {
 				final Grade originalMark = usingCommitOnTime.getMarks().get(ON_TIME);
-				final Mark commentedMark = Mark.of(ON_TIME, originalMark.getPoints(), originalMark.getComment()
+				final CriterionAndMark commentedMark = CriterionAndMark.of(ON_TIME, originalMark.getPoints(), originalMark.getComment()
 						+ " (Using commit on time rather than last commit because it brings more points.)");
 				realMarks = usingCommitOnTime.getMarks().values().stream()
 						.map((m) -> m.getCriterion() != ON_TIME ? m : commentedMark)
 						.collect(ImmutableSet.toImmutableSet());
 			} else {
 				final Grade originalMark = usingLastCommit.getMarks().get(ON_TIME);
-				final Mark commentedMark = Mark.of(ON_TIME, originalMark.getPoints(), originalMark.getComment()
+				final CriterionAndMark commentedMark = CriterionAndMark.of(ON_TIME, originalMark.getPoints(), originalMark.getComment()
 						+ " (Using last commit rather than commit on time because it brings at least as much points.)");
 				realMarks = usingLastCommit.getMarks().values().stream()
 						.map((m) -> m.getCriterion() != ON_TIME ? m : commentedMark)
@@ -117,7 +117,7 @@ public class ExObjectsGrader {
 	}
 
 	public AnonymousGrade grade(RepositoryCoordinates coord, Instant ignoreAfter) {
-		final ImmutableSet.Builder<Mark> gradeBuilder = ImmutableSet.builder();
+		final ImmutableSet.Builder<CriterionAndMark> gradeBuilder = ImmutableSet.builder();
 		final Path projectsBaseDir = Paths.get("/home/olivier/Professions/Enseignement/En cours/objects");
 
 		final GitFullContext fullContext = FullContextInitializer.withPathAndIgnore(coord, projectsBaseDir,
@@ -142,11 +142,11 @@ public class ExObjectsGrader {
 		final Predicate<Path> project43src = (p) -> p.startsWith(Paths.get("project43", "src"));
 		final Predicate<Path> projet43src = (p) -> p.startsWith(Paths.get("projet43", "src"));
 		final FilesSource p43sources = filesReader.filterOnPath(project43src.or(projet43src));
-		gradeBuilder.add(Mark.binary(P43, !p43sources.asFileContents().isEmpty()));
+		gradeBuilder.add(CriterionAndMark.binary(P43, !p43sources.asFileContents().isEmpty()));
 		final Predicate<Path> project47src = (p) -> p.startsWith(Paths.get("project47", "src"));
 		final Predicate<Path> projet47src = (p) -> p.startsWith(Paths.get("projet47", "src"));
 		final FilesSource p47sources = filesReader.filterOnPath(project47src.or(projet47src));
-		gradeBuilder.add(Mark.binary(P47, !p47sources.asFileContents().isEmpty()));
+		gradeBuilder.add(CriterionAndMark.binary(P47, !p47sources.asFileContents().isEmpty()));
 		final Predicate<Path> project53srcPairOfDice = (p) -> p.startsWith(Paths.get("project53utils", "src"))
 				&& p.endsWith("PairOfDice.java");
 		final Predicate<Path> projet53srcPairOfDice = (p) -> p.startsWith(Paths.get("projet53utils", "src"))
@@ -157,15 +157,15 @@ public class ExObjectsGrader {
 				&& p.endsWith("StatCalc.java");
 		final FilesSource p53PairOfDices = filesReader.filterOnPath(project53srcPairOfDice.or(projet53srcPairOfDice));
 		final FilesSource p53StatCalcs = filesReader.filterOnPath(project53srcStatCalc.or(projet53srcStatCalc));
-		gradeBuilder.add(Mark.proportional(P53UTILS, !p53PairOfDices.asFileContents().isEmpty(),
+		gradeBuilder.add(CriterionAndMark.proportional(P53UTILS, !p53PairOfDices.asFileContents().isEmpty(),
 				!p53StatCalcs.asFileContents().isEmpty()));
 
 		final FilesSource p53jars = filesReader.filterOnPath(Predicates.equalTo(Paths.get("project53utils/utils.jar"))
 				.or(Predicates.equalTo(Paths.get("projet53utils/utils.jar"))));
 		final Path p53jarPath = FilesSourceUtils.getSinglePath(p53jars);
-		final Mark jarMark;
+		final CriterionAndMark jarMark;
 		if (p53jarPath.getNameCount() == 0 || p53jarPath.equals(Paths.get(""))) {
-			jarMark = Mark.min(P53JAR, "utils.jar not found");
+			jarMark = CriterionAndMark.min(P53JAR, "utils.jar not found");
 		} else {
 			try (JarFile jar = new JarFile(projectPath.resolve(p53jarPath).toFile())) {
 				final ImmutableSet<JarEntry> entries = ImmutableSet.copyOf(jar.entries().asIterator());
@@ -179,7 +179,7 @@ public class ExObjectsGrader {
 //			try (InputStream input = jar.getInputStream(pairOfDiceEntries.get(0))) {
 //				final byte[] pairOfDice = input.readAllBytes();
 //			}
-				jarMark = Mark.proportional(P53JAR, jarContainsPairOfDice, jarContainsStatCalc);
+				jarMark = CriterionAndMark.proportional(P53JAR, jarContainsPairOfDice, jarContainsStatCalc);
 			} catch (IOException e) {
 				LOGGER.warn("p53jarPath: {} ({} components).", p53jarPath, p53jarPath.getNameCount());
 				throw new IllegalStateException(e);
@@ -211,9 +211,9 @@ public class ExObjectsGrader {
 				.filterOnPath((p) -> p.getName(p.getNameCount() - 1).toString().endsWith(".java")).asFileContents()
 				.stream().map((fc) -> SimpleCompiler.asJavaSource(p53MainSrcPath, fc))
 				.collect(ImmutableList.toImmutableList());
-		final Mark jarRequiredMark;
+		final CriterionAndMark jarRequiredMark;
 		if (jarMark.getPoints() != P53JAR.getMaxPoints() || srcToCompile.isEmpty()) {
-			jarRequiredMark = Mark.min(JAR_REQUIRED);
+			jarRequiredMark = CriterionAndMark.min(JAR_REQUIRED);
 		} else {
 //				final Path cp = projectPath.resolve(p53MainSrcPath);
 			final Path cp = projectPath.resolve(p53jarPath);
@@ -222,41 +222,41 @@ public class ExObjectsGrader {
 			final List<Diagnostic<? extends JavaFileObject>> diagnosticsWithJar = SimpleCompiler.compile(srcToCompile,
 					ImmutableList.of(cp));
 			if (!diagnosticsNaked.isEmpty() && diagnosticsWithJar.isEmpty()) {
-				jarRequiredMark = Mark.max(JAR_REQUIRED);
+				jarRequiredMark = CriterionAndMark.max(JAR_REQUIRED);
 			} else {
-				jarRequiredMark = Mark.min(JAR_REQUIRED,
+				jarRequiredMark = CriterionAndMark.min(JAR_REQUIRED,
 						"No jar: " + diagnosticsNaked.toString() + " — With jar: " + diagnosticsWithJar.toString());
 			}
 		}
 		gradeBuilder.add(jarRequiredMark);
 
-		final ImmutableSet<Mark> grade = gradeBuilder.build();
+		final ImmutableSet<CriterionAndMark> grade = gradeBuilder.build();
 		final Set<Criterion> diff = Sets.symmetricDifference(ImmutableSet.copyOf(ExObjectsCriterion.values()),
-				grade.stream().map(Mark::getCriterion).collect(ImmutableSet.toImmutableSet())).immutableCopy();
+				grade.stream().map(CriterionAndMark::getCriterion).collect(ImmutableSet.toImmutableSet())).immutableCopy();
 		assert diff.isEmpty() : diff;
 		return Grade.anonymous(grade);
 	}
 
-	private Mark prefixMark(Path p53MainSrcPath, FilesSource p53MainSources) {
+	private CriterionAndMark prefixMark(Path p53MainSrcPath, FilesSource p53MainSources) {
 		if (p53MainSources.asFileContents().isEmpty()) {
-			return Mark.min(PREFIX);
+			return CriterionAndMark.min(PREFIX);
 		}
 		final ImmutableList<Path> prefixes = p53MainSources.getContents().keySet().stream()
 				.map((p) -> p53MainSrcPath.relativize(p)).map(ExObjectsGrader::prefixThree)
 				.collect(ImmutableList.toImmutableList());
 		assert prefixes.size() >= 1;
-		final Mark mark;
+		final CriterionAndMark mark;
 		switch (prefixes.size()) {
 		case 1:
 			final Path prefix = prefixes.stream().collect(MoreCollectors.onlyElement());
 			if (prefix.getNameCount() >= 3) {
-				mark = Mark.max(PREFIX);
+				mark = CriterionAndMark.max(PREFIX);
 			} else {
-				mark = Mark.min(PREFIX, String.format("Common prefix is too short: '%s'.", prefix));
+				mark = CriterionAndMark.min(PREFIX, String.format("Common prefix is too short: '%s'.", prefix));
 			}
 			break;
 		default:
-			mark = Mark.min(PREFIX, String.format("Found multiple prefixes: %s.", prefixes));
+			mark = CriterionAndMark.min(PREFIX, String.format("Found multiple prefixes: %s.", prefixes));
 			break;
 		}
 		return mark;

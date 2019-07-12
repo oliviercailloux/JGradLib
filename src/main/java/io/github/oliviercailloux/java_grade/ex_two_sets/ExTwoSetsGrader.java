@@ -48,7 +48,7 @@ import io.github.oliviercailloux.grade.CsvGrades;
 import io.github.oliviercailloux.grade.Grade;
 import io.github.oliviercailloux.grade.GraderOrchestrator;
 import io.github.oliviercailloux.grade.GradingException;
-import io.github.oliviercailloux.grade.Mark;
+import io.github.oliviercailloux.grade.CriterionAndMark;
 import io.github.oliviercailloux.grade.context.FilesSource;
 import io.github.oliviercailloux.grade.context.GitFullContext;
 import io.github.oliviercailloux.grade.contexters.FullContextInitializer;
@@ -73,7 +73,7 @@ public class ExTwoSetsGrader {
 			final double onTimePoints = usingCommitOnTime.getPoints();
 			if (onTimePoints > lastCommitPoints && onTimePoints > 0d) {
 				final Grade originalMark = usingCommitOnTime.getMarks().get(ON_TIME);
-				final Mark commentedMark = Mark.of(ON_TIME, originalMark.getPoints(),
+				final CriterionAndMark commentedMark = CriterionAndMark.of(ON_TIME, originalMark.getPoints(),
 						originalMark.getComment() + String.format(
 								" (Using commit '%s' on time rather than last commit '%s' because it brings more points.)",
 								toString(commitOnTime), toString(lastCommit)));
@@ -82,7 +82,7 @@ public class ExTwoSetsGrader {
 						.collect(ImmutableSet.toImmutableSet());
 			} else {
 				final Grade originalMark = usingLastCommit.getMarks().get(ON_TIME);
-				final Mark commentedMark = Mark.of(ON_TIME, originalMark.getPoints(),
+				final CriterionAndMark commentedMark = CriterionAndMark.of(ON_TIME, originalMark.getPoints(),
 						originalMark.getComment() + String.format(
 								" (Using last commit '%s' rather than commit '%s' on time because it brings at least as much points.)",
 								toString(lastCommit), toString(commitOnTime)));
@@ -102,7 +102,7 @@ public class ExTwoSetsGrader {
 	}
 
 	public AnonymousGrade grade(RepositoryCoordinates coord, Instant ignoreAfter) {
-		final ImmutableSet.Builder<Mark> gradeBuilder = ImmutableSet.builder();
+		final ImmutableSet.Builder<CriterionAndMark> gradeBuilder = ImmutableSet.builder();
 		final Path projectsBaseDir = Paths.get("/home/olivier/Professions/Enseignement/En cours/interfaces");
 
 		final GitFullContext fullContext = FullContextInitializer.withPathAndIgnore(coord, projectsBaseDir,
@@ -132,7 +132,7 @@ public class ExTwoSetsGrader {
 		if (!foundEe57Src && foundQSrc) {
 			LOGGER.warn("Only embedded!");
 		}
-		gradeBuilder.add(Mark.binary(EX_57, foundEe57Src || foundQSrc));
+		gradeBuilder.add(CriterionAndMark.binary(EX_57, foundEe57Src || foundQSrc));
 
 		final FilesSource e1src = filesReader.filterOnPath((p) -> p.endsWith("E1.java"));
 		checkArgument(e1src.asFileContents().size() <= 1);
@@ -150,11 +150,11 @@ public class ExTwoSetsGrader {
 
 		final FilesSource srcSet = filesReader.filterOnContent(Predicates.containsPattern("[\t ]Set<Integer> "));
 		final String typeSetCmt = compiles ? "" : "Does not compile";
-		gradeBuilder.add(Mark.of(TYPE_SET,
+		gradeBuilder.add(CriterionAndMark.of(TYPE_SET,
 				compiles && srcSet.asFileContents().size() >= 1 ? TYPE_SET.getMaxPoints() : TYPE_SET.getMinPoints(),
 				typeSetCmt));
 
-		gradeBuilder.add(Mark.binary(THROWS, compiles && filesReader.anyMatch(Predicates.containsPattern("[\t ]throw ")
+		gradeBuilder.add(CriterionAndMark.binary(THROWS, compiles && filesReader.anyMatch(Predicates.containsPattern("[\t ]throw ")
 				.and(Predicates.containsPattern("(IllegalArgumentException)|(Error)|(NullPointerException)")))));
 
 		/**
@@ -167,22 +167,22 @@ public class ExTwoSetsGrader {
 //				filesReader.filterOnContent(Predicates.containsPattern("Auto-generated")).asFileContents());
 //		LOGGER.info("TO DO: {}.", filesReader.filterOnContent(Predicates.containsPattern("TO DO")).asFileContents());
 //		LOGGER.info("No auto gen: {}.", noAutoGen);
-		gradeBuilder.add(Mark.binary(JAVADOC,
+		gradeBuilder.add(CriterionAndMark.binary(JAVADOC,
 				compiles && noAutoGen && filesReader.anyMatch(Predicates.containsPattern("/\\*\\*"))));
 
 		gradeBuilder.add(
-				Mark.binary(CONCATENATES, compiles && filesReader.anyMatch(Predicates.containsPattern("\\.addAll"))));
+				CriterionAndMark.binary(CONCATENATES, compiles && filesReader.anyMatch(Predicates.containsPattern("\\.addAll"))));
 
-		final ImmutableSet<Mark> grade = gradeBuilder.build();
+		final ImmutableSet<CriterionAndMark> grade = gradeBuilder.build();
 		final Set<Criterion> diff = Sets.symmetricDifference(ImmutableSet.copyOf(ExTwoSetsCriterion.values()),
-				grade.stream().map(Mark::getCriterion).collect(ImmutableSet.toImmutableSet())).immutableCopy();
+				grade.stream().map(CriterionAndMark::getCriterion).collect(ImmutableSet.toImmutableSet())).immutableCopy();
 		assert diff.isEmpty() : diff;
 		return Grade.anonymous(grade);
 	}
 
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(ExTwoSetsGrader.class);
-	private Mark timeMark;
+	private CriterionAndMark timeMark;
 	private Optional<RevCommit> mainCommit;
 
 	public void setDeadline(Instant deadline) {

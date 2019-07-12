@@ -8,13 +8,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.github.oliviercailloux.grade.Criterion;
-import io.github.oliviercailloux.grade.Mark;
+import io.github.oliviercailloux.grade.CriterionAndMark;
 import io.github.oliviercailloux.json.JsonbUtils;
 import io.github.oliviercailloux.json.PrintableJsonObject;
 import io.github.oliviercailloux.json.PrintableJsonObjectFactory;
 
 public class JsonMark {
-	public static PrintableJsonObject asJson(Mark mark) {
+	public static PrintableJsonObject asJson(CriterionAndMark mark) {
 		final JsonbAdapter<Criterion, JsonObject> crit = JsonCriterion.asAdapter();
 		/**
 		 * TODO this is now much too subtle for JSON-B because of the current f-up state
@@ -30,27 +30,27 @@ public class JsonMark {
 		}
 	}
 
-	public static Mark asMark(String json) {
+	public static CriterionAndMark asMark(String json) {
 		LOGGER.debug("Deser: {}.", json);
-		return JsonbUtils.fromJson(json, Mark.class, JsonCriterion.asAdapter());
+		return JsonbUtils.fromJson(json, CriterionAndMark.class, JsonCriterion.asAdapter());
 	}
 
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(JsonMark.class);
 
-	public static Mark asMark(JsonObject json) {
+	public static CriterionAndMark asMark(JsonObject json) {
 		return asMark(json.toString());
 	}
 
-	public static JsonbAdapter<Mark, JsonObject> asAdapter() {
+	public static JsonbAdapter<CriterionAndMark, JsonObject> asAdapter() {
 		return new JsonbAdapter<>() {
 			@Override
-			public JsonObject adaptToJson(Mark obj) throws Exception {
+			public JsonObject adaptToJson(CriterionAndMark obj) throws Exception {
 				return asJson(obj);
 			}
 
 			@Override
-			public Mark adaptFromJson(JsonObject obj) throws Exception {
+			public CriterionAndMark adaptFromJson(JsonObject obj) throws Exception {
 				return asMark(obj);
 			}
 		};

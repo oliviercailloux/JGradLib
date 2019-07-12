@@ -44,7 +44,7 @@ import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableSet;
 
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
-import io.github.oliviercailloux.grade.Mark;
+import io.github.oliviercailloux.grade.CriterionAndMark;
 import io.github.oliviercailloux.grade.context.FilesSource;
 import io.github.oliviercailloux.grade.context.GitFullContext;
 import io.github.oliviercailloux.grade.contexters.FullContextInitializer;
@@ -61,8 +61,8 @@ public class Ex3Grader {
 	private Instant deadline;
 	private Instant ignoreAfter;
 
-	public ImmutableSet<Mark> grade(RepositoryCoordinates coord) {
-		final ImmutableSet.Builder<Mark> gradesBuilder = ImmutableSet.builder();
+	public ImmutableSet<CriterionAndMark> grade(RepositoryCoordinates coord) {
+		final ImmutableSet.Builder<CriterionAndMark> gradesBuilder = ImmutableSet.builder();
 
 		final GitFullContext fullContext = FullContextInitializer.withPathAndIgnore(coord,
 				Paths.get("/home/olivier/Professions/Enseignement/En cours/ci"), ignoreAfter);
@@ -86,30 +86,30 @@ public class Ex3Grader {
 		final Path projectRelativeRoot = pomSupplier.getMavenRelativeRoot().orElse(Paths.get(""));
 		final String pomContent = pomSupplier.getContent();
 
-		gradesBuilder.add(Mark.binary(AT_ROOT, pomSupplier.isMavenProjectAtRoot()));
+		gradesBuilder.add(CriterionAndMark.binary(AT_ROOT, pomSupplier.isMavenProjectAtRoot()));
 
 		final PomContexter pomContexter = new PomContexter(pomContent);
 		pomContexter.init();
 
-		gradesBuilder.add(Mark.binary(GROUP_ID, pomContexter.isGroupIdValid()));
-		gradesBuilder.add(Mark.binary(JUNIT5_DEP,
+		gradesBuilder.add(CriterionAndMark.binary(GROUP_ID, pomContexter.isGroupIdValid()));
+		gradesBuilder.add(CriterionAndMark.binary(JUNIT5_DEP,
 				MarkingPredicates.containsOnce(Pattern.compile("<dependencies>" + Utils.ANY_REG_EXP + "<dependency>"
 						+ Utils.ANY_REG_EXP + "<groupId>org\\.junit\\.jupiter</groupId>" + Utils.ANY_REG_EXP
 						+ "<artifactId>junit-jupiter-engine</artifactId>" + Utils.ANY_REG_EXP + "<version>5\\.[23]\\."
 						+ Utils.ANY_REG_EXP + "</version>" + Utils.ANY_REG_EXP + "<scope>test</scope>"))
 						.test(pomContent)));
-		gradesBuilder.add(Mark.binary(UTF,
+		gradesBuilder.add(CriterionAndMark.binary(UTF,
 				MarkingPredicates.containsOnce(Pattern.compile("<properties>" + Utils.ANY_REG_EXP
 						+ "<project\\.build\\.sourceEncoding>UTF-8</project\\.build\\.sourceEncoding>"
 						+ Utils.ANY_REG_EXP + "</properties>")).test(pomContent)));
 		gradesBuilder
-				.add(Mark.binary(SOURCE,
+				.add(CriterionAndMark.binary(SOURCE,
 						MarkingPredicates.containsOnce(Pattern.compile("<properties>" + Utils.ANY_REG_EXP
 								+ "<maven\\.compiler\\.source>.*</maven\\.compiler\\.source>" + Utils.ANY_REG_EXP
 								+ "</properties>")).test(pomContent)));
-		gradesBuilder.add(Mark.binary(NO_MISLEADING_URL,
+		gradesBuilder.add(CriterionAndMark.binary(NO_MISLEADING_URL,
 				Predicates.contains(Pattern.compile("<url>.*\\.apache\\.org.*</url>")).negate().test(pomContent)));
-		gradesBuilder.add(Mark.binary(WAR,
+		gradesBuilder.add(CriterionAndMark.binary(WAR,
 				MarkingPredicates.containsOnce(Pattern.compile("<packaging>war</packaging>")).test(pomContent)));
 		gradesBuilder.add(Marks.packageGroupId(PREFIX, filesReader, pomSupplier, pomContexter));
 		gradesBuilder.add(Marks.mavenCompile(COMPILE, fullContext, pomSupplier));
@@ -118,50 +118,50 @@ public class Ex3Grader {
 				.startsWithPathRelativeTo(pomSupplier.getMavenRelativeRoot(), Paths.get("src/main/java"))
 				.and((p) -> p.getFileName().equals(Paths.get("HelloServlet.java"))));
 
-		gradesBuilder.add(Mark.binary(NO_JSP, JavaEEMarkers.getNoJsp(filesReader)));
-		gradesBuilder.add(Mark.binary(NO_WEB_XML, JavaEEMarkers.getNoWebXml(filesReader)));
-		gradesBuilder.add(Mark.binary(DO_GET, servletSourcer.existsAndAllMatch(MarkingPredicates
+		gradesBuilder.add(CriterionAndMark.binary(NO_JSP, JavaEEMarkers.getNoJsp(filesReader)));
+		gradesBuilder.add(CriterionAndMark.binary(NO_WEB_XML, JavaEEMarkers.getNoWebXml(filesReader)));
+		gradesBuilder.add(CriterionAndMark.binary(DO_GET, servletSourcer.existsAndAllMatch(MarkingPredicates
 				.containsOnce(Pattern.compile("void\\s*doGet\\s*\\(\\s*(final)?\\s*HttpServletRequest .*\\)")))));
-		gradesBuilder.add(Mark.binary(NO_DO_POST,
+		gradesBuilder.add(CriterionAndMark.binary(NO_DO_POST,
 				servletSourcer.existsAndAllMatch(MarkingPredicates
 						.containsOnce(Pattern.compile("void\\s*doPost\\s*\\(\\s*(final)?\\s*HttpServletRequest .*\\)"))
 						.negate())));
 		final FilesSource testSourcer = MarkHelper
 				.getTestFiles(fullContext.getFilesReader(fullContext.getMainCommit()));
-		gradesBuilder.add(Mark.binary(NOT_POLLUTED,
+		gradesBuilder.add(CriterionAndMark.binary(NOT_POLLUTED,
 				servletSourcer.existsAndAllMatch(Predicates.contains(Pattern.compile("Auto-generated")).negate()
 						.and(Predicates.contains(Pattern.compile("@see HttpServlet#doGet")).negate()
 								.and((c) -> testSourcer.getContents().size() <= 1)))));
-		gradesBuilder.add(Mark.binary(EXC,
+		gradesBuilder.add(CriterionAndMark.binary(EXC,
 				servletSourcer.existsAndAllMatch(Predicates.contains(Pattern.compile("printStackTrace")).negate())));
-		gradesBuilder.add(Mark.binary(LOC,
+		gradesBuilder.add(CriterionAndMark.binary(LOC,
 				servletSourcer.existsAndAllMatch(Predicates.contains(Pattern.compile("setLocale.+ENGLISH")))));
-		gradesBuilder.add(Mark.binary(MTYPE,
+		gradesBuilder.add(CriterionAndMark.binary(MTYPE,
 				servletSourcer.existsAndAllMatch(Predicates.contains(Pattern.compile("setContentType.+PLAIN")))));
-		gradesBuilder.add(Mark.binary(ANNOT, servletSourcer
+		gradesBuilder.add(CriterionAndMark.binary(ANNOT, servletSourcer
 				.existsAndAllMatch(Predicates.contains(Pattern.compile("@WebServlet.*\\(.*/hello\".*\\)")))));
 		gradesBuilder
-				.add(Mark.binary(FINAL_NAME,
+				.add(CriterionAndMark.binary(FINAL_NAME,
 						MarkingPredicates
 								.containsOnce(Pattern.compile("<build>" + Utils.ANY_REG_EXP
 										+ "<finalName>myapp</finalName>" + Utils.ANY_REG_EXP + "</build>"))
 								.test(pomContent)));
 		gradesBuilder.add(Marks.noDerivedFiles(ONLY_ORIG, filesReader));
-		gradesBuilder.add(Mark.binary(GET_HELLO,
+		gradesBuilder.add(CriterionAndMark.binary(GET_HELLO,
 				servletSourcer.existsAndAllMatch(Predicates.contains(Pattern.compile("\"Hello,? world\\.?\"")))));
 		gradesBuilder.add(Marks.notEmpty(TEST_EXISTS, testSourcer));
 		gradesBuilder
-				.add(Mark.binary(TEST_LOCATION, testSourcer.getContents().keySet().stream().allMatch(MarkingPredicates
+				.add(CriterionAndMark.binary(TEST_LOCATION, testSourcer.getContents().keySet().stream().allMatch(MarkingPredicates
 						.startsWithPathRelativeTo(pomSupplier.getMavenRelativeRoot(), Paths.get("src/test/java")))));
 //		gradesBuilder.add(Marks.mavenTest(TEST_GREEN, fullContext, testSourcer, pomSupplier));
-		gradesBuilder.add(Mark.binary(ASSERT_EQUALS, testSourcer.anyMatch(Predicates
+		gradesBuilder.add(CriterionAndMark.binary(ASSERT_EQUALS, testSourcer.anyMatch(Predicates
 				.contains(Pattern.compile("assertEquals")).and(Predicates.contains(Pattern.compile("sayHello()"))))));
 		final String travisContent = fullContext.getFilesReader(fullContext.getMainCommit())
 				.getContent(Paths.get(".travis.yml"));
-		gradesBuilder.add(Mark.binary(TRAVIS_CONF, !travisContent.isEmpty()));
+		gradesBuilder.add(CriterionAndMark.binary(TRAVIS_CONF, !travisContent.isEmpty()));
 		final String readmeContent = fullContext.getFilesReader(fullContext.getMainCommit())
 				.getContent(projectRelativeRoot.resolve("README.adoc"));
-		gradesBuilder.add(Mark.binary(TRAVIS_BADGE, Pattern.compile(
+		gradesBuilder.add(CriterionAndMark.binary(TRAVIS_BADGE, Pattern.compile(
 				"image:https://(?:api\\.)?travis-ci\\.com/oliviercailloux-org/" + coord.getRepositoryName() + "\\.svg")
 				.matcher(readmeContent).find()));
 		gradesBuilder.add(Marks.travisConfMark(TRAVIS_OK, travisContent));

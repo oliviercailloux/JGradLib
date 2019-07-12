@@ -6,7 +6,7 @@ public interface AnonymousGrade {
 
 	/**
 	 * @return no criterion are a root criterion. Empty map iff this grade is a
-	 *         {@link Mark}.
+	 *         {@link CriterionAndMark}.
 	 */
 	public ImmutableBiMap<Criterion, Grade> getMarks();
 

@@ -46,7 +46,7 @@ import io.github.oliviercailloux.grade.CsvGrades;
 import io.github.oliviercailloux.grade.Grade;
 import io.github.oliviercailloux.grade.GraderOrchestrator;
 import io.github.oliviercailloux.grade.GradingException;
-import io.github.oliviercailloux.grade.Mark;
+import io.github.oliviercailloux.grade.CriterionAndMark;
 import io.github.oliviercailloux.grade.context.FilesSource;
 import io.github.oliviercailloux.grade.context.GitFullContext;
 import io.github.oliviercailloux.grade.contexters.FullContextInitializer;
@@ -94,13 +94,13 @@ public class ExDepGitGrader {
 		commitsManual = null;
 	}
 
-	private Mark timeMark;
+	private CriterionAndMark timeMark;
 	private GitFullContext fullContext;
 	private ImmutableMap<ObjectId, Instant> commitsReceptionTime;
 	private ImmutableList<RevCommit> commitsManual;
 
 	public AnonymousGrade grade(RepositoryCoordinates coord) {
-		final ImmutableSet.Builder<Mark> gradeBuilder = ImmutableSet.builder();
+		final ImmutableSet.Builder<CriterionAndMark> gradeBuilder = ImmutableSet.builder();
 		final Path projectsBaseDir = Paths.get("/home/olivier/Professions/Enseignement/En cours/dep-git");
 
 		final FullContextInitializer spec = (FullContextInitializer) FullContextInitializer.withPath(coord,
@@ -142,7 +142,7 @@ public class ExDepGitGrader {
 
 		final Optional<RevCommit> myBranchOpt = tryParseSpec(client, "refs/remotes/origin/my-branch");
 		{
-			Mark firstCommitMark = Mark.min(FIRST_COMMIT);
+			CriterionAndMark firstCommitMark = CriterionAndMark.min(FIRST_COMMIT);
 			for (RevCommit commit : commitsManual) {
 				final boolean childOfStarting = closure.hasEdgeConnecting(commit, startingCommit);
 				final boolean parentOfMyBranch;
@@ -152,7 +152,7 @@ public class ExDepGitGrader {
 				} else {
 					parentOfMyBranch = false;
 				}
-				final Mark newMark = Mark.proportional(FIRST_COMMIT, childOfStarting, parentOfMyBranch);
+				final CriterionAndMark newMark = CriterionAndMark.proportional(FIRST_COMMIT, childOfStarting, parentOfMyBranch);
 				if (newMark.getPoints() > firstCommitMark.getPoints()) {
 					firstCommitMark = newMark;
 				}
@@ -161,7 +161,7 @@ public class ExDepGitGrader {
 		}
 
 		{
-			Mark mergeCommitMark = Mark.min(MERGE_COMMIT);
+			CriterionAndMark mergeCommitMark = CriterionAndMark.min(MERGE_COMMIT);
 			for (RevCommit commit : commitsManual) {
 				final Set<RevCommit> successors = graph.successors(commit);
 				final ImmutableSet<RevCommit> manualParents = successors.stream().filter(Predicates.in(commitsManual))
@@ -180,7 +180,7 @@ public class ExDepGitGrader {
 				assert Utils.implies(hasExpectedParents, childOfStarting);
 				final double points = (goodStart && !hasExpectedParents) ? MERGE_COMMIT.getMaxPoints() * 1d / 4d
 						: (hasExpectedParents ? MERGE_COMMIT.getMaxPoints() : 0d);
-				final Mark newMark = Mark.of(MERGE_COMMIT, points, "");
+				final CriterionAndMark newMark = CriterionAndMark.of(MERGE_COMMIT, points, "");
 				if (newMark.getPoints() > mergeCommitMark.getPoints()) {
 					mergeCommitMark = newMark;
 				}
@@ -189,7 +189,7 @@ public class ExDepGitGrader {
 		}
 
 		{
-			Mark depMark = Mark.min(DEP, "No dependency to jgit found");
+			CriterionAndMark depMark = CriterionAndMark.min(DEP, "No dependency to jgit found");
 			Instant latestFound = Instant.MIN;
 			for (RevCommit commit : commitsManual) {
 				final String pom;
@@ -212,9 +212,9 @@ public class ExDepGitGrader {
 					if (thisTime.compareTo(latestFound) > 0) {
 						latestFound = thisTime;
 						if (hasLast) {
-							depMark = Mark.max(DEP);
+							depMark = CriterionAndMark.max(DEP);
 						} else {
-							depMark = Mark.of(DEP, DEP.getMaxPoints() * 1d / 2d,
+							depMark = CriterionAndMark.of(DEP, DEP.getMaxPoints() * 1d / 2d,
 									"Expected last version 5.3.1.201904271842-r");
 						}
 					}
@@ -223,14 +223,14 @@ public class ExDepGitGrader {
 			gradeBuilder.add(depMark);
 		}
 
-		final ImmutableSet<Mark> grade = gradeBuilder.build();
+		final ImmutableSet<CriterionAndMark> grade = gradeBuilder.build();
 		final Set<Criterion> diff = Sets.symmetricDifference(ImmutableSet.copyOf(ExDepGitCriterion.values()),
-				grade.stream().map(Mark::getCriterion).collect(ImmutableSet.toImmutableSet())).immutableCopy();
+				grade.stream().map(CriterionAndMark::getCriterion).collect(ImmutableSet.toImmutableSet())).immutableCopy();
 		assert diff.isEmpty() : diff;
 		return Grade.anonymous(grade);
 	}
 
-	Mark commitMark() {
+	CriterionAndMark commitMark() {
 		final Client client = fullContext.getClient();
 		final Set<RevCommit> commits;
 		try {
@@ -252,7 +252,7 @@ public class ExDepGitGrader {
 		final String comment = (!commitsOwn.isEmpty() ? "Own: " + toOIds(commitsOwn) + ". " : "")
 				+ (!commitsManual.isEmpty() ? "Using git: " + toOIds(commitsManual) : "No commits using git");
 		final double points = (!commitsManual.isEmpty()) ? COMMIT.getMaxPoints() : COMMIT.getMinPoints();
-		final Mark commitMark = Mark.of(COMMIT, points, comment);
+		final CriterionAndMark commitMark = CriterionAndMark.of(COMMIT, points, comment);
 		return commitMark;
 	}
 

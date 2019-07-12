@@ -88,7 +88,7 @@ public class CsvGrades {
 		while (record != null) {
 			final String name = record.getString("Name");
 			final String username = record.getString("GitHub username");
-			final Set<Mark> marks = new LinkedHashSet<>();
+			final Set<CriterionAndMark> marks = new LinkedHashSet<>();
 			for (String criterionName : criteria) {
 				final String pointsStr = record.getString(criterionName);
 				if (Strings.isNullOrEmpty(pointsStr)) {
@@ -101,7 +101,7 @@ public class CsvGrades {
 					throw new IllegalStateException(e);
 				}
 				final Criterion criterion = toCriterion.apply(criterionName);
-				final Mark mark = Mark.of(criterion, points, "");
+				final CriterionAndMark mark = CriterionAndMark.of(criterion, points, "");
 				marks.add(mark);
 			}
 			if (!marks.isEmpty()) {
