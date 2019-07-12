@@ -43,7 +43,7 @@ import com.google.common.collect.Sets;
 import io.github.oliviercailloux.git.Checkouter;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.grade.AnonymousGrade;
-import io.github.oliviercailloux.grade.Criterion;
+import io.github.oliviercailloux.grade.CriterionAndPoints;
 import io.github.oliviercailloux.grade.CsvGrades;
 import io.github.oliviercailloux.grade.GradeWithStudentAndCriterion;
 import io.github.oliviercailloux.grade.GraderOrchestrator;
@@ -231,7 +231,7 @@ public class ExObjectsGrader {
 		gradeBuilder.add(jarRequiredMark);
 
 		final ImmutableSet<CriterionAndMark> grade = gradeBuilder.build();
-		final Set<Criterion> diff = Sets.symmetricDifference(ImmutableSet.copyOf(ExObjectsCriterion.values()),
+		final Set<CriterionAndPoints> diff = Sets.symmetricDifference(ImmutableSet.copyOf(ExObjectsCriterion.values()),
 				grade.stream().map(CriterionAndMark::getCriterion).collect(ImmutableSet.toImmutableSet())).immutableCopy();
 		assert diff.isEmpty() : diff;
 		return GradeWithStudentAndCriterion.anonymous(grade);
@@ -274,7 +274,7 @@ public class ExObjectsGrader {
 
 	double getPenalty(Duration tardiness) {
 		final double maxGrade = Stream.of(ExObjectsCriterion.values())
-				.collect(Collectors.summingDouble(Criterion::getMaxPoints));
+				.collect(Collectors.summingDouble(CriterionAndPoints::getMaxPoints));
 
 		final long hoursLate = tardiness.toHours() + 1;
 		return -3d / 20d * maxGrade * hoursLate;

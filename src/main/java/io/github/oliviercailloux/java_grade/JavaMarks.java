@@ -11,12 +11,12 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.MoreCollectors;
 
 import io.github.oliviercailloux.git.FileContent;
-import io.github.oliviercailloux.grade.Criterion;
+import io.github.oliviercailloux.grade.CriterionAndPoints;
 import io.github.oliviercailloux.grade.CriterionAndMark;
 import io.github.oliviercailloux.grade.context.FilesSource;
 
 public class JavaMarks {
-	public static CriterionAndMark travisBadgeMark(Criterion criterion, FilesSource source, String repositoryName) {
+	public static CriterionAndMark travisBadgeMark(CriterionAndPoints criterion, FilesSource source, String repositoryName) {
 		/**
 		 * Note that we want the readme to be at the root of the repository, to check
 		 * for the badge.

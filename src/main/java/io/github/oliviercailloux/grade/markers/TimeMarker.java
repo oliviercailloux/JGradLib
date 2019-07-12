@@ -13,16 +13,16 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.github.oliviercailloux.git.Client;
-import io.github.oliviercailloux.grade.Criterion;
+import io.github.oliviercailloux.grade.CriterionAndPoints;
 import io.github.oliviercailloux.grade.CriterionAndMark;
 import io.github.oliviercailloux.grade.context.GitFullContext;
 
 class TimeMarker {
 	private final GitFullContext context;
 	private Instant deadline;
-	private Criterion criterion;
+	private CriterionAndPoints criterion;
 
-	public TimeMarker(Criterion criterion, GitFullContext contextSupplier, Instant deadline,
+	public TimeMarker(CriterionAndPoints criterion, GitFullContext contextSupplier, Instant deadline,
 			Function<Duration, Double> penalizer) {
 		this.criterion = requireNonNull(criterion);
 		this.context = requireNonNull(contextSupplier);

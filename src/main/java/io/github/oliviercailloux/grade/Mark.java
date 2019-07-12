@@ -33,7 +33,7 @@ public class Mark implements IGrade {
 	}
 
 	@Override
-	public ImmutableMap<Criterion, IGrade> getSubGrades() {
+	public ImmutableMap<CriterionAndPoints, IGrade> getSubGrades() {
 		return ImmutableMap.of();
 	}
 

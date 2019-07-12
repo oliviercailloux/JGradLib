@@ -38,7 +38,7 @@ public class CsvGrades {
 		final StringWriter stringWriter = new StringWriter();
 		final CsvWriter writer = new CsvWriter(stringWriter, new CsvWriterSettings());
 
-		final ImmutableSet<Criterion> allKeys = grades.stream().flatMap((g) -> g.getMarks().keySet().stream())
+		final ImmutableSet<CriterionAndPoints> allKeys = grades.stream().flatMap((g) -> g.getMarks().keySet().stream())
 				.collect(ImmutableSet.toImmutableSet());
 		writer.writeHeaders(Streams.concat(Stream.of("Name", "GitHub username"), allKeys.stream().map(Object::toString),
 				Stream.of("Grade")).collect(Collectors.toList()));
@@ -48,7 +48,7 @@ public class CsvGrades {
 			writer.addValue("Name", student.getLastName().orElse("unknown"));
 			writer.addValue("GitHub username", student.getGitHubUsername());
 
-			for (Criterion criterion : grade.getMarks().keySet()) {
+			for (CriterionAndPoints criterion : grade.getMarks().keySet()) {
 				final double mark = grade.getMarks().get(criterion).getPoints();
 				writer.addValue(criterion.toString(), formatter.format(mark));
 			}
@@ -59,12 +59,12 @@ public class CsvGrades {
 
 		writer.addValue("Name", "Range");
 		writer.addValue("GitHub username", "Range");
-		for (Criterion criterion : allKeys) {
+		for (CriterionAndPoints criterion : allKeys) {
 			writer.addValue(criterion.toString(),
 					"[" + criterion.getMinPoints() + ", " + criterion.getMaxPoints() + "]");
 		}
-		final double minGrade = allKeys.stream().collect(Collectors.summingDouble(Criterion::getMinPoints));
-		final double maxGrade = allKeys.stream().collect(Collectors.summingDouble(Criterion::getMaxPoints));
+		final double minGrade = allKeys.stream().collect(Collectors.summingDouble(CriterionAndPoints::getMinPoints));
+		final double maxGrade = allKeys.stream().collect(Collectors.summingDouble(CriterionAndPoints::getMaxPoints));
 		writer.addValue("Grade", "[" + minGrade + "," + maxGrade + "]");
 		writer.writeValuesToRow();
 
@@ -73,7 +73,7 @@ public class CsvGrades {
 		return stringWriter.toString();
 	}
 
-	public static ImmutableSet<GradeWithStudentAndCriterion> fromCsv(InputStream input, Function<String, Criterion> toCriterion) {
+	public static ImmutableSet<GradeWithStudentAndCriterion> fromCsv(InputStream input, Function<String, CriterionAndPoints> toCriterion) {
 		final NumberFormat formatter = NumberFormat.getNumberInstance(Locale.FRENCH);
 		final CsvParserSettings settings = new CsvParserSettings();
 		settings.setHeaderExtractionEnabled(true);
@@ -100,7 +100,7 @@ public class CsvGrades {
 				} catch (ParseException e) {
 					throw new IllegalStateException(e);
 				}
-				final Criterion criterion = toCriterion.apply(criterionName);
+				final CriterionAndPoints criterion = toCriterion.apply(criterionName);
 				final CriterionAndMark mark = CriterionAndMark.of(criterion, points, "");
 				marks.add(mark);
 			}

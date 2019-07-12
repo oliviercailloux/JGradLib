@@ -50,7 +50,7 @@ import com.google.common.graph.Traverser;
 import io.github.oliviercailloux.git.Client;
 import io.github.oliviercailloux.git.GitHistory;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
-import io.github.oliviercailloux.grade.Criterion;
+import io.github.oliviercailloux.grade.CriterionAndPoints;
 import io.github.oliviercailloux.grade.CsvGrades;
 import io.github.oliviercailloux.grade.GradeWithStudentAndCriterion;
 import io.github.oliviercailloux.grade.GraderOrchestrator;
@@ -80,7 +80,7 @@ public class ExGitGrader {
 
 		final GitFullContext fullContext = FullContextInitializer.withPath(coord, projectsBaseDir);
 		final Client client = fullContext.getClient();
-		maxGrade = Stream.of(ExGitCriterion.values()).collect(Collectors.summingDouble(Criterion::getMaxPoints));
+		maxGrade = Stream.of(ExGitCriterion.values()).collect(Collectors.summingDouble(CriterionAndPoints::getMaxPoints));
 		try {
 			history = client.getWholeHistory();
 		} catch (IOException | GitAPIException e) {
@@ -247,7 +247,7 @@ public class ExGitGrader {
 		}
 
 		final ImmutableSet<CriterionAndMark> grade = gradeBuilder.build();
-		final Set<Criterion> diff = Sets.symmetricDifference(ImmutableSet.copyOf(ExGitCriterion.values()),
+		final Set<CriterionAndPoints> diff = Sets.symmetricDifference(ImmutableSet.copyOf(ExGitCriterion.values()),
 				grade.stream().map(CriterionAndMark::getCriterion).collect(ImmutableSet.toImmutableSet()));
 		assert diff.isEmpty() : diff;
 		return grade;

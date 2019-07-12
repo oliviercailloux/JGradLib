@@ -4,7 +4,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.nio.file.Path;
 
-import io.github.oliviercailloux.grade.Criterion;
+import io.github.oliviercailloux.grade.CriterionAndPoints;
 import io.github.oliviercailloux.grade.CriterionAndMark;
 import io.github.oliviercailloux.grade.context.FilesSource;
 import io.github.oliviercailloux.grade.context.GitFullContext;
@@ -50,7 +50,7 @@ public class MavenProjectMarker {
 		return pomSupplier;
 	}
 
-	public CriterionAndMark atRootMark(Criterion criterion) {
+	public CriterionAndMark atRootMark(CriterionAndPoints criterion) {
 		return CriterionAndMark.binary(criterion, getPomSupplier().isMavenProjectAtRoot());
 	}
 
@@ -62,7 +62,7 @@ public class MavenProjectMarker {
 		return pomContexter;
 	}
 
-	public CriterionAndMark groupIdMark(Criterion criterion) {
+	public CriterionAndMark groupIdMark(CriterionAndPoints criterion) {
 		return CriterionAndMark.binary(criterion, getPomContexter().isGroupIdValid());
 	}
 
@@ -70,7 +70,7 @@ public class MavenProjectMarker {
 	 * The project must be checked out at the version to be tested, at the path
 	 * indicated by the project directory of the client.
 	 */
-	public CriterionAndMark testMark(Criterion criterion) {
+	public CriterionAndMark testMark(CriterionAndPoints criterion) {
 		return CriterionAndMark.binary(criterion, testsExistAndPass);
 	}
 

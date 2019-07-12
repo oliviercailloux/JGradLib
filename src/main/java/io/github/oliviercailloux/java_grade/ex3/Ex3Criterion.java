@@ -3,9 +3,9 @@ package io.github.oliviercailloux.java_grade.ex3;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
-import io.github.oliviercailloux.grade.Criterion;
+import io.github.oliviercailloux.grade.CriterionAndPoints;
 
-public enum Ex3Criterion implements Criterion {
+public enum Ex3Criterion implements CriterionAndPoints {
 	REPO_EXISTS("Repository exists", 0.5d, 0d), ON_TIME("Delivered on time", 0d, -30d),
 	AT_ROOT("Project is at root of repository", 0d, -1d), GROUP_ID("Group id follows Maven best practices", 0d, -2d),
 	JUNIT5_DEP("JUnit 5 (recent and correct) dependency", 1d, 0d), UTF("Encoding property", 0d, -1d),

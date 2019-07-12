@@ -3,9 +3,9 @@ package io.github.oliviercailloux.java_grade.ex_extractor;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
-import io.github.oliviercailloux.grade.Criterion;
+import io.github.oliviercailloux.grade.CriterionAndPoints;
 
-public enum ExExtractorCriterion implements Criterion {
+public enum ExExtractorCriterion implements CriterionAndPoints {
 	ON_TIME("Delivered on time", 0d, Double.NEGATIVE_INFINITY), AT_ROOT("Pom is at root of repository", 0.5d),
 	COMMIT("Commit done before 3/4 time using git", 2d), GROUP_ID("Group id has the right form", 0.5d),
 	UTF("Encoding property", 0.5d, 0d), SOURCE("Maven compiler source property", 0.5d, 0d),

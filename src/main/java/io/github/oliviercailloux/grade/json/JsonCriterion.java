@@ -7,12 +7,12 @@ import javax.json.JsonObject;
 import javax.json.JsonObjectBuilder;
 import javax.json.bind.adapter.JsonbAdapter;
 
-import io.github.oliviercailloux.grade.Criterion;
+import io.github.oliviercailloux.grade.CriterionAndPoints;
 import io.github.oliviercailloux.json.PrintableJsonObject;
 import io.github.oliviercailloux.json.PrintableJsonObjectFactory;
 
 public class JsonCriterion {
-	public static PrintableJsonObject asJson(Criterion criterion) {
+	public static PrintableJsonObject asJson(CriterionAndPoints criterion) {
 		checkArgument(criterion instanceof Enum<?>);
 		final Enum<?> cEnum = (Enum<?>) criterion;
 		final JsonObjectBuilder builder = Json.createObjectBuilder();
@@ -21,7 +21,7 @@ public class JsonCriterion {
 		return PrintableJsonObjectFactory.wrapObject(builder.build());
 	}
 
-	public static Criterion asCriterion(JsonObject json) {
+	public static CriterionAndPoints asCriterion(JsonObject json) {
 		final String enumClassName = json.getString("class");
 		final String enumInstanceName = json.getString("name");
 		final Class<?> enumTentativeClass;
@@ -34,19 +34,19 @@ public class JsonCriterion {
 		final Class<? extends Enum> enumCl = enumTentativeClass.asSubclass(Enum.class);
 		@SuppressWarnings({ "unchecked", "rawtypes" })
 		final Enum s = Enum.valueOf(enumCl, enumInstanceName);
-		return (Criterion) s;
+		return (CriterionAndPoints) s;
 	}
 
-	public static JsonbAdapter<Criterion, JsonObject> asAdapter() {
+	public static JsonbAdapter<CriterionAndPoints, JsonObject> asAdapter() {
 //		return JsonUtils.getAdapter(JsonCriterion::asCriterion, JsonCriterion::asJson);
 		return new JsonbAdapter<>() {
 			@Override
-			public JsonObject adaptToJson(Criterion obj) throws Exception {
+			public JsonObject adaptToJson(CriterionAndPoints obj) throws Exception {
 				return asJson(obj);
 			}
 
 			@Override
-			public Criterion adaptFromJson(JsonObject obj) throws Exception {
+			public CriterionAndPoints adaptFromJson(JsonObject obj) throws Exception {
 				return asCriterion(obj);
 			}
 		};

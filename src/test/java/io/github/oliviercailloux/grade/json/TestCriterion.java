@@ -3,9 +3,9 @@ package io.github.oliviercailloux.grade.json;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
-import io.github.oliviercailloux.grade.Criterion;
+import io.github.oliviercailloux.grade.CriterionAndPoints;
 
-public enum TestCriterion implements Criterion {
+public enum TestCriterion implements CriterionAndPoints {
 	REPO_EXISTS("Repository exists", 0.5d), ON_TIME("Delivered on time", 0d, -10d),
 	GROUP_ID("Group id follows Maven best practices", 0.5d), ICAL("Ical dependency", 1d),
 	UTF("Encoding property", 0.5d), SOURCE("Maven compiler source property", 0.5d),

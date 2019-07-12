@@ -32,7 +32,7 @@ import io.github.oliviercailloux.git.Client;
 import io.github.oliviercailloux.git.git_hub.model.GitHubToken;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherV3;
-import io.github.oliviercailloux.grade.Criterion;
+import io.github.oliviercailloux.grade.CriterionAndPoints;
 import io.github.oliviercailloux.grade.GradeWithStudentAndCriterion;
 import io.github.oliviercailloux.grade.CriterionAndMark;
 import io.github.oliviercailloux.grade.context.GitFullContext;
@@ -111,7 +111,7 @@ public class GraderEck {
 		final NumberFormat formatter = NumberFormat.getNumberInstance(Locale.FRENCH);
 		try (BufferedWriter fileWriter = Files.newBufferedWriter(out, StandardCharsets.UTF_8)) {
 			final CsvWriter writer = new CsvWriter(fileWriter, new CsvWriterSettings());
-			final ImmutableSet<Criterion> allKeys = grades.stream().flatMap((g) -> g.getMarks().keySet().stream())
+			final ImmutableSet<CriterionAndPoints> allKeys = grades.stream().flatMap((g) -> g.getMarks().keySet().stream())
 					.collect(ImmutableSet.toImmutableSet());
 			writer.writeHeaders(Streams.concat(Stream.of("Name", "GitHub username"),
 					allKeys.stream().map(Object::toString), Stream.of("Grade")).collect(Collectors.toList()));
@@ -121,7 +121,7 @@ public class GraderEck {
 				writer.addValue("Name", student.getLastName().orElse("unknown"));
 				writer.addValue("GitHub username", student.getGitHubUsername());
 
-				for (Criterion criterion : grade.getMarks().keySet()) {
+				for (CriterionAndPoints criterion : grade.getMarks().keySet()) {
 					final double mark = grade.getMarks().get(criterion).getPoints();
 					writer.addValue(criterion.toString(), formatter.format(mark));
 				}
@@ -132,12 +132,12 @@ public class GraderEck {
 
 			writer.addValue("Name", "Range");
 			writer.addValue("GitHub username", "Range");
-			for (Criterion criterion : allKeys) {
+			for (CriterionAndPoints criterion : allKeys) {
 				writer.addValue(criterion.toString(),
 						"[" + criterion.getMinPoints() + ", " + criterion.getMaxPoints() + "]");
 			}
-			final double minGrade = allKeys.stream().collect(Collectors.summingDouble(Criterion::getMinPoints));
-			final double maxGrade = allKeys.stream().collect(Collectors.summingDouble(Criterion::getMaxPoints));
+			final double minGrade = allKeys.stream().collect(Collectors.summingDouble(CriterionAndPoints::getMinPoints));
+			final double maxGrade = allKeys.stream().collect(Collectors.summingDouble(CriterionAndPoints::getMaxPoints));
 			writer.addValue("Grade", "[" + minGrade + "," + maxGrade + "]");
 			writer.writeValuesToRow();
 

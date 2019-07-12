@@ -3,9 +3,9 @@ package io.github.oliviercailloux.java_grade.ex_dep_git;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
-import io.github.oliviercailloux.grade.Criterion;
+import io.github.oliviercailloux.grade.CriterionAndPoints;
 
-public enum ExDepGitCriterion implements Criterion {
+public enum ExDepGitCriterion implements CriterionAndPoints {
 	ON_TIME("Delivered on time", 0d, Double.NEGATIVE_INFINITY), COMMIT("Own commit created (using git)", 1d),
 	FIRST_COMMIT("Commit created child of starting commit and ancestor of my-branch", 2d),
 	MERGE_COMMIT("Commit created with two parents as requested (among which 'bba2a8')", 2d),

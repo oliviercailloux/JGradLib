@@ -14,7 +14,7 @@ import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
-import io.github.oliviercailloux.grade.Criterion;
+import io.github.oliviercailloux.grade.CriterionAndPoints;
 import io.github.oliviercailloux.grade.GradeWithStudentAndCriterion;
 import io.github.oliviercailloux.grade.json.JsonGrade;
 import io.github.oliviercailloux.grade.mycourse.StudentOnGitHub;
@@ -45,10 +45,10 @@ public class MergeJson {
 
 	private static GradeWithStudentAndCriterion merged(GradeWithStudentAndCriterion gradeBase, GradeWithStudentAndCriterion gradeOverride) {
 		checkArgument(gradeBase.getStudent().equals(gradeOverride.getStudent()));
-		final ImmutableBiMap<Criterion, GradeWithStudentAndCriterion> baseMarks = gradeBase.getMarks().values().stream()
+		final ImmutableBiMap<CriterionAndPoints, GradeWithStudentAndCriterion> baseMarks = gradeBase.getMarks().values().stream()
 				.filter((g) -> !gradeOverride.getMarks().keySet().contains(g.getCriterion()))
 				.collect(ImmutableBiMap.toImmutableBiMap(GradeWithStudentAndCriterion::getCriterion, Functions.identity()));
-		return GradeWithStudentAndCriterion.of(gradeBase.getStudent(), ImmutableBiMap.<Criterion, GradeWithStudentAndCriterion>builder().putAll(baseMarks)
+		return GradeWithStudentAndCriterion.of(gradeBase.getStudent(), ImmutableBiMap.<CriterionAndPoints, GradeWithStudentAndCriterion>builder().putAll(baseMarks)
 				.putAll(gradeOverride.getMarks()).build().values());
 	}
 

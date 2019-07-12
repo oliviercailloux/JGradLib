@@ -13,7 +13,7 @@ import org.mockito.Mockito;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
-import io.github.oliviercailloux.grade.Criterion;
+import io.github.oliviercailloux.grade.CriterionAndPoints;
 import io.github.oliviercailloux.grade.CriterionAndMark;
 import io.github.oliviercailloux.grade.context.FilesSource;
 import io.github.oliviercailloux.grade.contexters.PomContexter;
@@ -45,8 +45,8 @@ class MarksTest {
 		return mocked;
 	}
 
-	public Criterion newCriterion(String req, double min, double max) {
-		return new Criterion() {
+	public CriterionAndPoints newCriterion(String req, double min, double max) {
+		return new CriterionAndPoints() {
 			@Override
 			public String getRequirement() {
 				return req;

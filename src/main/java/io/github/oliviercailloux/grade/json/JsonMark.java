@@ -7,7 +7,7 @@ import javax.json.bind.adapter.JsonbAdapter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.github.oliviercailloux.grade.Criterion;
+import io.github.oliviercailloux.grade.CriterionAndPoints;
 import io.github.oliviercailloux.grade.CriterionAndMark;
 import io.github.oliviercailloux.json.JsonbUtils;
 import io.github.oliviercailloux.json.PrintableJsonObject;
@@ -15,7 +15,7 @@ import io.github.oliviercailloux.json.PrintableJsonObjectFactory;
 
 public class JsonMark {
 	public static PrintableJsonObject asJson(CriterionAndMark mark) {
-		final JsonbAdapter<Criterion, JsonObject> crit = JsonCriterion.asAdapter();
+		final JsonbAdapter<CriterionAndPoints, JsonObject> crit = JsonCriterion.asAdapter();
 		/**
 		 * TODO this is now much too subtle for JSON-B because of the current f-up state
 		 * of the grade.

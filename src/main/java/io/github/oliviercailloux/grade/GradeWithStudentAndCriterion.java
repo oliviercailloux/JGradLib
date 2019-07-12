@@ -61,12 +61,12 @@ public class GradeWithStudentAndCriterion implements AnonymousGrade {
 	/**
 	 * Constructs a Grade which is not a Mark.
 	 */
-	private GradeWithStudentAndCriterion(StudentOnGitHub student, Criterion parent, double points, String comment,
+	private GradeWithStudentAndCriterion(StudentOnGitHub student, CriterionAndPoints parent, double points, String comment,
 			Set<? extends GradeWithStudentAndCriterion> marks) {
 		checkArgument(!marks.isEmpty());
 		this.student = student;
 		LOGGER.debug("Building with {}, {}.", student, marks.iterator().next().getClass());
-		final Collector<GradeWithStudentAndCriterion, ?, ImmutableBiMap<Criterion, GradeWithStudentAndCriterion>> toI = ImmutableBiMap
+		final Collector<GradeWithStudentAndCriterion, ?, ImmutableBiMap<CriterionAndPoints, GradeWithStudentAndCriterion>> toI = ImmutableBiMap
 				.toImmutableBiMap((g) -> g.getCriterion(), (g) -> g);
 		this.marks = marks.stream().collect(toI);
 		this.criterion = parent;
@@ -74,10 +74,10 @@ public class GradeWithStudentAndCriterion implements AnonymousGrade {
 		this.comment = comment;
 	}
 
-	private final Criterion criterion;
+	private final CriterionAndPoints criterion;
 
 	@Override
-	public Criterion getCriterion() {
+	public CriterionAndPoints getCriterion() {
 		return criterion;
 	}
 
@@ -107,7 +107,7 @@ public class GradeWithStudentAndCriterion implements AnonymousGrade {
 	/**
 	 * Constructs a Mark.
 	 */
-	protected GradeWithStudentAndCriterion(Criterion criterion, double points, String comment) {
+	protected GradeWithStudentAndCriterion(CriterionAndPoints criterion, double points, String comment) {
 		this.criterion = requireNonNull(criterion);
 		checkArgument(Double.isFinite(points));
 		this.points = points;
@@ -119,11 +119,11 @@ public class GradeWithStudentAndCriterion implements AnonymousGrade {
 	@JsonbCreator
 	public static GradeWithStudentAndCriterion of(@JsonbProperty("student") StudentOnGitHub student,
 			@JsonbProperty("marks") Set<? extends GradeWithStudentAndCriterion> marks) {
-		return new GradeWithStudentAndCriterion(requireNonNull(student), Criterion.ROOT_CRITERION,
+		return new GradeWithStudentAndCriterion(requireNonNull(student), CriterionAndPoints.ROOT_CRITERION,
 				marks.stream().collect(Collectors.summingDouble(GradeWithStudentAndCriterion::getPoints)), "", marks);
 	}
 
-	public static AnonymousGrade anonymous(Criterion parent, double points, String comment,
+	public static AnonymousGrade anonymous(CriterionAndPoints parent, double points, String comment,
 			Set<? extends GradeWithStudentAndCriterion> subGrades) {
 		return new GradeWithStudentAndCriterion(null, parent, points, comment, subGrades);
 	}
@@ -138,7 +138,7 @@ public class GradeWithStudentAndCriterion implements AnonymousGrade {
 	 * points ≤ maxPoints of the corresponding criterion.
 	 */
 	@JsonbTransient
-	private final ImmutableBiMap<Criterion, GradeWithStudentAndCriterion> marks;
+	private final ImmutableBiMap<CriterionAndPoints, GradeWithStudentAndCriterion> marks;
 
 	@Override
 	public boolean equals(Object o2) {
@@ -167,7 +167,7 @@ public class GradeWithStudentAndCriterion implements AnonymousGrade {
 
 	@Override
 	@JsonbTransient
-	public ImmutableBiMap<Criterion, GradeWithStudentAndCriterion> getMarks() {
+	public ImmutableBiMap<CriterionAndPoints, GradeWithStudentAndCriterion> getMarks() {
 		return marks;
 	}
 
@@ -190,12 +190,12 @@ public class GradeWithStudentAndCriterion implements AnonymousGrade {
 	}
 
 	public static AnonymousGrade anonymous(Set<? extends GradeWithStudentAndCriterion> marks) {
-		return new GradeWithStudentAndCriterion(null, Criterion.ROOT_CRITERION,
+		return new GradeWithStudentAndCriterion(null, CriterionAndPoints.ROOT_CRITERION,
 				marks.stream().collect(Collectors.summingDouble(GradeWithStudentAndCriterion::getPoints)), "", marks);
 	}
 
 	private static String getEvaluation(GradeWithStudentAndCriterion grade) {
-		final Criterion criterion = grade.getCriterion();
+		final CriterionAndPoints criterion = grade.getCriterion();
 
 		final StringBuilder builder = new StringBuilder();
 		builder.append(criterion.toString());

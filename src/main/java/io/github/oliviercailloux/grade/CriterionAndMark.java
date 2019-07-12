@@ -18,21 +18,21 @@ import com.google.common.primitives.Booleans;
  */
 @JsonbPropertyOrder({ "criterion", "points", "comment" })
 public class CriterionAndMark extends GradeWithStudentAndCriterion {
-	private CriterionAndMark(Criterion criterion, double points, String comment) {
+	private CriterionAndMark(CriterionAndPoints criterion, double points, String comment) {
 		super(criterion, points, comment);
 	}
 
-	public static CriterionAndMark proportional(Criterion criterion, boolean firstTest, boolean... tests) {
+	public static CriterionAndMark proportional(CriterionAndPoints criterion, boolean firstTest, boolean... tests) {
 		final int nbTests = 1 + tests.length;
 		final int nbOk = (firstTest ? 1 : 0) + Booleans.countTrue(tests);
 		return proportional(criterion, nbOk, nbTests);
 	}
 
-	public static CriterionAndMark proportional(Criterion criterion, int nbOk, int nbTests) {
+	public static CriterionAndMark proportional(CriterionAndPoints criterion, int nbOk, int nbTests) {
 		return proportional(criterion, nbOk, nbTests, "nbOk (" + nbOk + ") / nbTests (" + nbTests + ")");
 	}
 
-	public static CriterionAndMark proportional(Criterion criterion, int nbOk, int nbTests, String comment) {
+	public static CriterionAndMark proportional(CriterionAndPoints criterion, int nbOk, int nbTests, String comment) {
 		final double weightOk = (double) nbOk / (double) nbTests;
 		final double weightKo = 1d - weightOk;
 		final double pts = criterion.getMinPoints() * weightKo + criterion.getMaxPoints() * weightOk;
@@ -41,18 +41,18 @@ public class CriterionAndMark extends GradeWithStudentAndCriterion {
 		return CriterionAndMark.of(criterion, pts, comment);
 	}
 
-	public static CriterionAndMark min(Criterion criterion) {
+	public static CriterionAndMark min(CriterionAndPoints criterion) {
 		return new CriterionAndMark(criterion, criterion.getMinPoints(), "");
 	}
 
 	@JsonbCreator
-	public static CriterionAndMark of(@JsonbProperty("criterion") Criterion criterion,
+	public static CriterionAndMark of(@JsonbProperty("criterion") CriterionAndPoints criterion,
 			@JsonbProperty("points") double points, @JsonbProperty("comment") String comment) {
 		final CriterionAndMark g = new CriterionAndMark(criterion, points, comment);
 		return g;
 	}
 
-	public static CriterionAndMark binary(Criterion criterion, boolean conditionForPoints) {
+	public static CriterionAndMark binary(CriterionAndPoints criterion, boolean conditionForPoints) {
 		return new CriterionAndMark(criterion, conditionForPoints ? criterion.getMaxPoints() : criterion.getMinPoints(),
 				"");
 	}
@@ -60,11 +60,11 @@ public class CriterionAndMark extends GradeWithStudentAndCriterion {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(CriterionAndMark.class);
 
-	public static CriterionAndMark min(Criterion criterion, String comment) {
+	public static CriterionAndMark min(CriterionAndPoints criterion, String comment) {
 		return new CriterionAndMark(criterion, criterion.getMinPoints(), comment);
 	}
 
-	public static CriterionAndMark max(Criterion criterion) {
+	public static CriterionAndMark max(CriterionAndPoints criterion) {
 		return new CriterionAndMark(criterion, criterion.getMaxPoints(), "");
 	}
 }

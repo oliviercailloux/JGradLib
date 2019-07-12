@@ -20,7 +20,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.primitives.Booleans;
 
 import io.github.oliviercailloux.git.Client;
-import io.github.oliviercailloux.grade.Criterion;
+import io.github.oliviercailloux.grade.CriterionAndPoints;
 import io.github.oliviercailloux.grade.CriterionAndMark;
 import io.github.oliviercailloux.grade.context.FilesSource;
 import io.github.oliviercailloux.grade.context.GitContext;
@@ -30,7 +30,7 @@ import io.github.oliviercailloux.grade.contexters.MavenManager;
 import io.github.oliviercailloux.grade.contexters.PomSupplier;
 
 public class Marks {
-	public static CriterionAndMark packageGroupId(Criterion criterion, FilesSource wholeSource, PomSupplier pomSupplier,
+	public static CriterionAndMark packageGroupId(CriterionAndPoints criterion, FilesSource wholeSource, PomSupplier pomSupplier,
 			PomContext pomContext) {
 		final List<String> groupIdElements = pomContext.getGroupIdElements();
 		if (groupIdElements.isEmpty()) {
@@ -64,7 +64,7 @@ public class Marks {
 		return CriterionAndMark.of(criterion, pass ? criterion.getMaxPoints() : criterion.getMinPoints(), comment);
 	}
 
-	public static CriterionAndMark noDerivedFiles(Criterion criterion, FilesSource wholeSource) {
+	public static CriterionAndMark noDerivedFiles(CriterionAndPoints criterion, FilesSource wholeSource) {
 		if (wholeSource.asFileContents().isEmpty()) {
 			return CriterionAndMark.min(criterion);
 		}
@@ -96,7 +96,7 @@ public class Marks {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(Marks.class);
 
-	public static CriterionAndMark notEmpty(Criterion criterion, FilesSource multiSupplier) {
+	public static CriterionAndMark notEmpty(CriterionAndPoints criterion, FilesSource multiSupplier) {
 		return !multiSupplier.getContents().isEmpty()
 				? CriterionAndMark.of(criterion, criterion.getMaxPoints(), "Found: " + multiSupplier.getContents().keySet() + ".")
 				: CriterionAndMark.min(criterion);
@@ -106,14 +106,14 @@ public class Marks {
 	 * The project must be checked out at the version to be tested, at the path
 	 * indicated by the project directory of the client.
 	 */
-	public static CriterionAndMark mavenCompile(Criterion criterion, GitContext context, PomSupplier pomSupplier) {
+	public static CriterionAndMark mavenCompile(CriterionAndPoints criterion, GitContext context, PomSupplier pomSupplier) {
 		final MavenManager mavenManager = new MavenManager();
 		final Optional<Path> projectRelativeRootOpt = pomSupplier.getMavenRelativeRoot();
 		return CriterionAndMark.binary(criterion, projectRelativeRootOpt.isPresent() && mavenManager.compile(
 				context.getClient().getProjectDirectory().resolve(projectRelativeRootOpt.get().resolve("pom.xml"))));
 	}
 
-	public static CriterionAndMark travisConfMark(Criterion criterion, String travisContent) {
+	public static CriterionAndMark travisConfMark(CriterionAndPoints criterion, String travisContent) {
 		if (travisContent.isEmpty()) {
 			return CriterionAndMark.min(criterion, "Configuration not found or incorrectly named.");
 		}
@@ -160,7 +160,7 @@ public class Marks {
 		return CriterionAndMark.of(criterion, points, comment);
 	}
 
-	public static CriterionAndMark gitRepo(Criterion criterion, GitFullContext context) {
+	public static CriterionAndMark gitRepo(CriterionAndPoints criterion, GitFullContext context) {
 		final Client client = context.getClient();
 
 		final CriterionAndMark grade;
@@ -177,7 +177,7 @@ public class Marks {
 		return grade;
 	}
 
-	public static CriterionAndMark timeMark(Criterion criterion, GitFullContext contextSupplier, Instant deadline,
+	public static CriterionAndMark timeMark(CriterionAndPoints criterion, GitFullContext contextSupplier, Instant deadline,
 			Function<Duration, Double> penalizer) {
 		return new TimeMarker(criterion, contextSupplier, deadline, penalizer).mark();
 	}

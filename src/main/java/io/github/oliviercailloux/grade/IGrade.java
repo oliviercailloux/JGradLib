@@ -5,7 +5,7 @@ import com.google.common.collect.ImmutableMap;
 /**
  *
  * Grade (interface): {points generally in [0, 1], comment, subGrades:
- * ImmutableMap<Criterion, Grade> which may be empty}. A mark is a grade that
+ * ImmutableMap<CriterionAndPoints, Grade> which may be empty}. A mark is a grade that
  * has no sub-grades. A composite grade is a grade that has at least one
  * sub-grade. Interfaces to distinguish marks from composite grades do not
  * exist: it would raise complexity and not bring much benefit.
@@ -39,7 +39,7 @@ public interface IGrade {
 	 *
 	 * @return the sub grades.
 	 */
-	public ImmutableMap<Criterion, IGrade> getSubGrades();
+	public ImmutableMap<CriterionAndPoints, IGrade> getSubGrades();
 
 	/**
 	 * Two {@link IGrade} objects are equal iff they have the same points, comment,

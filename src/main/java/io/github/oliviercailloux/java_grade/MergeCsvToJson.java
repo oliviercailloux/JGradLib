@@ -11,7 +11,7 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.ImmutableSet;
 
-import io.github.oliviercailloux.grade.Criterion;
+import io.github.oliviercailloux.grade.CriterionAndPoints;
 import io.github.oliviercailloux.grade.CsvGrades;
 import io.github.oliviercailloux.grade.GradeWithStudentAndCriterion;
 import io.github.oliviercailloux.grade.json.JsonGrade;
@@ -47,9 +47,9 @@ public class MergeCsvToJson {
 	}
 
 	public static GradeWithStudentAndCriterion merge(GradeWithStudentAndCriterion grade, GradeWithStudentAndCriterion patchGrade) {
-		final ImmutableBiMap<Criterion, GradeWithStudentAndCriterion> marksStart = grade.getMarks();
-		final ImmutableBiMap<Criterion, GradeWithStudentAndCriterion> marksOverride = patchGrade.getMarks();
-		final ImmutableBiMap<Criterion, GradeWithStudentAndCriterion> mergedMarks = marksStart.values().stream()
+		final ImmutableBiMap<CriterionAndPoints, GradeWithStudentAndCriterion> marksStart = grade.getMarks();
+		final ImmutableBiMap<CriterionAndPoints, GradeWithStudentAndCriterion> marksOverride = patchGrade.getMarks();
+		final ImmutableBiMap<CriterionAndPoints, GradeWithStudentAndCriterion> mergedMarks = marksStart.values().stream()
 				.collect(ImmutableBiMap.toImmutableBiMap((m) -> m.getCriterion(),
 						(m) -> Optional.ofNullable(marksOverride.get(m.getCriterion())).orElse(m)));
 		return GradeWithStudentAndCriterion.of(grade.getStudent(), mergedMarks.values());

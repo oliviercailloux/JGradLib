@@ -1,13 +1,13 @@
 package io.github.oliviercailloux.grade;
 
-public interface Criterion {
+public interface CriterionAndPoints {
 	public String getRequirement();
 
 	public double getMaxPoints();
 
 	public double getMinPoints();
 
-	public static final Criterion ROOT_CRITERION = new Criterion() {
+	public static final CriterionAndPoints ROOT_CRITERION = new CriterionAndPoints() {
 
 		@Override
 		public String getRequirement() {

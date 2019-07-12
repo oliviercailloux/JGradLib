@@ -3,9 +3,9 @@ package io.github.oliviercailloux.java_grade.ex_eck;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
-import io.github.oliviercailloux.grade.Criterion;
+import io.github.oliviercailloux.grade.CriterionAndPoints;
 
-public enum ExEckCriterion implements Criterion {
+public enum ExEckCriterion implements CriterionAndPoints {
 	CONTENTS("Repository exists with expected content", 1d), ON_TIME("Submitted on time", 0d, -1d),
 	USERNAME("GitHub username submitted on MyCourse", 0d, -0.2d);
 

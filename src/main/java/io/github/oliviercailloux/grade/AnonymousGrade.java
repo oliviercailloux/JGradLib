@@ -8,11 +8,11 @@ public interface AnonymousGrade {
 	 * @return no criterion are a root criterion. Empty map iff this grade is a
 	 *         {@link CriterionAndMark}.
 	 */
-	public ImmutableBiMap<Criterion, GradeWithStudentAndCriterion> getMarks();
+	public ImmutableBiMap<CriterionAndPoints, GradeWithStudentAndCriterion> getMarks();
 
 	public double getMaxGrade();
 
-	public Criterion getCriterion();
+	public CriterionAndPoints getCriterion();
 
 	/**
 	 * @return unscaled: typically, a number between 0 and 1, but it’s not

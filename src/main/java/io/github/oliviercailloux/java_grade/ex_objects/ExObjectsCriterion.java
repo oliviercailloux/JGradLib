@@ -3,9 +3,9 @@ package io.github.oliviercailloux.java_grade.ex_objects;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
-import io.github.oliviercailloux.grade.Criterion;
+import io.github.oliviercailloux.grade.CriterionAndPoints;
 
-public enum ExObjectsCriterion implements Criterion {
+public enum ExObjectsCriterion implements CriterionAndPoints {
 	REPO_EXISTS("Repository exists", 0.5d, 0d), ON_TIME("Delivered on time", 0d, -30d),
 	P43("Some source code in project43/src (or projet43/src)", 1d, 0d),
 	P47("Some source code in project47/src (or projet47/src)", 1d, 0d),

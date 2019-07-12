@@ -68,7 +68,7 @@ public class Ex3Grader {
 				Paths.get("/home/olivier/Professions/Enseignement/En cours/ci"), ignoreAfter);
 		final FilesSource filesReader = fullContext.getFilesReader(fullContext.getMainCommit());
 //		final double maxGrade = Stream.of(Ex3Criterion.values())
-//				.collect(Collectors.summingDouble(Criterion::getMaxPoints));
+//				.collect(Collectors.summingDouble(CriterionAndPoints::getMaxPoints));
 
 		/**
 		 * Not up to date.

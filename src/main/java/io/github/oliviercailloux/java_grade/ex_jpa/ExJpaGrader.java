@@ -63,7 +63,7 @@ import com.google.common.collect.Sets;
 import io.github.oliviercailloux.git.Checkouter;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.grade.AnonymousGrade;
-import io.github.oliviercailloux.grade.Criterion;
+import io.github.oliviercailloux.grade.CriterionAndPoints;
 import io.github.oliviercailloux.grade.CsvGrades;
 import io.github.oliviercailloux.grade.GradeWithStudentAndCriterion;
 import io.github.oliviercailloux.grade.GraderOrchestrator;
@@ -260,7 +260,7 @@ public class ExJpaGrader {
 		gradeBuilder.add(CriterionAndMark.binary(ADD_COMMENTS, !addServletSourcer.asFileContents().isEmpty()));
 
 		final ImmutableSet<CriterionAndMark> grade = gradeBuilder.build();
-		final Set<Criterion> diff = Sets.symmetricDifference(ImmutableSet.copyOf(ExJpaCriterion.values()),
+		final Set<CriterionAndPoints> diff = Sets.symmetricDifference(ImmutableSet.copyOf(ExJpaCriterion.values()),
 				grade.stream().map(CriterionAndMark::getCriterion).collect(ImmutableSet.toImmutableSet())).immutableCopy();
 		assert diff.isEmpty() : diff;
 		return GradeWithStudentAndCriterion.anonymous(grade);
@@ -274,7 +274,7 @@ public class ExJpaGrader {
 		this.deadline = requireNonNull(deadline);
 	}
 
-	private CriterionAndMark generalTestMark(Criterion criterion, MavenProjectMarker mavenProjectMarker) {
+	private CriterionAndMark generalTestMark(CriterionAndPoints criterion, MavenProjectMarker mavenProjectMarker) {
 		if (mavenProjectMarker.getPomSupplier().asMultiContent().asFileContents().isEmpty()) {
 			return CriterionAndMark.min(criterion, "No POM");
 		}
@@ -321,7 +321,7 @@ public class ExJpaGrader {
 
 	double getPenalty(Duration tardiness) {
 		final double maxGrade = Stream.of(ExJpaCriterion.values())
-				.collect(Collectors.summingDouble(Criterion::getMaxPoints));
+				.collect(Collectors.summingDouble(CriterionAndPoints::getMaxPoints));
 
 		final long hoursLate = tardiness.toHours() + 1;
 		return -3d / 20d * maxGrade * hoursLate;
