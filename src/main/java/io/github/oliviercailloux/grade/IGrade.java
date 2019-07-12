@@ -41,4 +41,10 @@ public interface IGrade {
 	 */
 	public ImmutableMap<Criterion, IGrade> getSubGrades();
 
+	/**
+	 * Two {@link IGrade} objects are equal iff they have the same points, comment,
+	 * and sub grades.
+	 */
+	@Override
+	public boolean equals(Object o2);
 }

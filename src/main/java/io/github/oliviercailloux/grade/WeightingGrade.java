@@ -10,19 +10,22 @@ import java.util.stream.Collectors;
 import com.google.common.collect.ImmutableMap;
 
 /**
- * Class AdditiveGrade: {weights: Map<Criterion, Double>} (non empty, all
- * strictly positive), this implementation has only the weights and the marks,
- * and generates the comment (a string repr of the weights and saying that it is
- * a weighted average) and the points.
+ * {weights: Map<Criterion, Double>} (non empty, all non null), this
+ * implementation has only the (normalized) weights and the marks, and generates
+ * the comment (a string repr of the weights and saying that it is a weighted
+ * average) and the points.
  *
  * @author Olivier Cailloux
  *
  */
-public class AdditiveGrade implements IGrade {
-	public static AdditiveGrade from(Map<Criterion, IGrade> grades, Map<Criterion, Double> weights) {
-		return new AdditiveGrade(grades, weights);
+public class WeightingGrade implements IGrade {
+	public static WeightingGrade from(Map<Criterion, IGrade> grades, Map<Criterion, Double> weights) {
+		return new WeightingGrade(grades, weights);
 	}
 
+	/**
+	 * The positive ones sum to one.
+	 */
 	private final ImmutableMap<Criterion, Double> weights;
 
 	/**
@@ -30,12 +33,15 @@ public class AdditiveGrade implements IGrade {
 	 */
 	private final ImmutableMap<Criterion, IGrade> subGrades;
 
-	private AdditiveGrade(Map<Criterion, IGrade> subGrades, Map<Criterion, Double> weights) {
-		this.weights = ImmutableMap.copyOf(checkNotNull(weights));
+	private WeightingGrade(Map<Criterion, IGrade> subGrades, Map<Criterion, Double> weights) {
+		checkArgument(weights.values().stream().allMatch((d) -> d != 0d && Double.isFinite(d)));
+		final double sumPosWeights = weights.values().stream().filter((d) -> d > 0d)
+				.collect(Collectors.summingDouble((d) -> d));
+		this.weights = weights.entrySet().stream().collect(ImmutableMap.toImmutableMap((e) -> e.getKey(),
+				(e) -> e.getValue() > 0d ? e.getValue() / sumPosWeights : e.getValue()));
 		this.subGrades = ImmutableMap.copyOf(checkNotNull(subGrades));
 		checkArgument(weights.keySet().equals(subGrades.keySet()));
 		checkArgument(!weights.isEmpty());
-		checkArgument(weights.values().stream().allMatch((d) -> d > 0d));
 	}
 
 	@Override
@@ -52,6 +58,14 @@ public class AdditiveGrade implements IGrade {
 	@Override
 	public ImmutableMap<Criterion, IGrade> getSubGrades() {
 		return subGrades;
+	}
+
+	/**
+	 * @return the weights, such that the positive weights sum to one, with no zero
+	 *         weights, and not empty.
+	 */
+	public ImmutableMap<Criterion, Double> getWeights() {
+		return weights;
 	}
 
 	@Override
