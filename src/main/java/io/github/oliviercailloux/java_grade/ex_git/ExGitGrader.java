@@ -59,7 +59,7 @@ import io.github.oliviercailloux.grade.CriterionAndMark;
 import io.github.oliviercailloux.grade.context.FilesSource;
 import io.github.oliviercailloux.grade.context.GitFullContext;
 import io.github.oliviercailloux.grade.contexters.FullContextInitializer;
-import io.github.oliviercailloux.grade.json.JsonGrade;
+import io.github.oliviercailloux.grade.json.JsonGradeWithStudentAndCriterion;
 import io.github.oliviercailloux.grade.markers.Marks;
 import io.github.oliviercailloux.grade.mycourse.StudentOnGitHub;
 import io.github.oliviercailloux.java_grade.testers.MarkHelper;
@@ -348,7 +348,7 @@ public class ExGitGrader {
 				.map((e) -> GradeWithStudentAndCriterion.of(e.getKey(), grader.grade(e.getValue(), e.getKey())))
 				.collect(ImmutableSet.toImmutableSet());
 
-		Files.writeString(Paths.get("allgrades " + prefix + ".json"), JsonGrade.asJsonArray(grades).toString());
+		Files.writeString(Paths.get("allgrades " + prefix + ".json"), JsonGradeWithStudentAndCriterion.asJsonArray(grades).toString());
 		Files.writeString(Paths.get("allgrades " + prefix + ".csv"), CsvGrades.asCsv(grades));
 //		new MyCourseCsvWriter().asMyCourseCsv("Devoir " + prefix, 112226, grades, 10d);
 	}

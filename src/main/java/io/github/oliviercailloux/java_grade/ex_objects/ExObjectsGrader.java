@@ -53,7 +53,7 @@ import io.github.oliviercailloux.grade.context.FilesSource;
 import io.github.oliviercailloux.grade.context.GitFullContext;
 import io.github.oliviercailloux.grade.contexters.FilesSourceUtils;
 import io.github.oliviercailloux.grade.contexters.FullContextInitializer;
-import io.github.oliviercailloux.grade.json.JsonGrade;
+import io.github.oliviercailloux.grade.json.JsonGradeWithStudentAndCriterion;
 import io.github.oliviercailloux.grade.markers.Marks;
 import io.github.oliviercailloux.grade.mycourse.StudentOnGitHub;
 import io.github.oliviercailloux.java_grade.compiler.SimpleCompiler;
@@ -78,7 +78,7 @@ public class ExObjectsGrader {
 		final ImmutableSet<GradeWithStudentAndCriterion> grades = repositories.entrySet().stream()
 				.map((e) -> GradeWithStudentAndCriterion.of(e.getKey(), grader.grade(e.getValue()))).collect(ImmutableSet.toImmutableSet());
 
-		Files.writeString(srcDir.resolve("all grades " + prefix + ".json"), JsonGrade.asJsonArray(grades).toString());
+		Files.writeString(srcDir.resolve("all grades " + prefix + ".json"), JsonGradeWithStudentAndCriterion.asJsonArray(grades).toString());
 		Files.writeString(srcDir.resolve("all grades " + prefix + ".csv"), CsvGrades.asCsv(grades));
 	}
 

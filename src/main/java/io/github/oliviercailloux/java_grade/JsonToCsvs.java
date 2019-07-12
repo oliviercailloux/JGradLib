@@ -11,7 +11,7 @@ import com.google.common.collect.ImmutableSet;
 
 import io.github.oliviercailloux.grade.CsvGrades;
 import io.github.oliviercailloux.grade.GradeWithStudentAndCriterion;
-import io.github.oliviercailloux.grade.json.JsonGrade;
+import io.github.oliviercailloux.grade.json.JsonGradeWithStudentAndCriterion;
 import io.github.oliviercailloux.grade.mycourse.csv.MyCourseCsvWriter;
 
 public class JsonToCsvs {
@@ -29,7 +29,7 @@ public class JsonToCsvs {
 		final String suffix = " manual merged";
 
 		final String jsonStr = Files.readString(srcDir.resolve(namePrefix + workName + suffix + ".json"));
-		final ImmutableSet<GradeWithStudentAndCriterion> grades = JsonGrade.asGrades(jsonStr);
+		final ImmutableSet<GradeWithStudentAndCriterion> grades = JsonGradeWithStudentAndCriterion.asGrades(jsonStr);
 		LOGGER.info("First grade: {}.", grades.stream().findFirst());
 		Files.writeString(srcDir.resolve("MyCourse.csv"),
 				new MyCourseCsvWriter().asMyCourseCsv("Devoir " + workName, myCourseId, grades, 20));

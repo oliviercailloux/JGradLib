@@ -11,7 +11,7 @@ import io.github.oliviercailloux.grade.CriterionAndPoints;
 import io.github.oliviercailloux.json.PrintableJsonObject;
 import io.github.oliviercailloux.json.PrintableJsonObjectFactory;
 
-public class JsonCriterion {
+public class JsonCriterionAndPoints {
 	public static PrintableJsonObject asJson(CriterionAndPoints criterion) {
 		checkArgument(criterion instanceof Enum<?>);
 		final Enum<?> cEnum = (Enum<?>) criterion;

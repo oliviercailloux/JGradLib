@@ -50,7 +50,7 @@ import io.github.oliviercailloux.grade.CriterionAndMark;
 import io.github.oliviercailloux.grade.context.FilesSource;
 import io.github.oliviercailloux.grade.context.GitFullContext;
 import io.github.oliviercailloux.grade.contexters.FullContextInitializer;
-import io.github.oliviercailloux.grade.json.JsonGrade;
+import io.github.oliviercailloux.grade.json.JsonGradeWithStudentAndCriterion;
 import io.github.oliviercailloux.grade.markers.MarkingPredicates;
 import io.github.oliviercailloux.grade.markers.Marks;
 import io.github.oliviercailloux.grade.mycourse.StudentOnGitHub;
@@ -83,7 +83,7 @@ public class ExDepGitGrader {
 
 		LOGGER.info("Grades: {}.", grades);
 
-		Files.writeString(srcDir.resolve("all grades " + prefix + ".json"), JsonGrade.asJsonArray(grades).toString());
+		Files.writeString(srcDir.resolve("all grades " + prefix + ".json"), JsonGradeWithStudentAndCriterion.asJsonArray(grades).toString());
 		Files.writeString(srcDir.resolve("all grades " + prefix + ".csv"), CsvGrades.asCsv(grades));
 	}
 

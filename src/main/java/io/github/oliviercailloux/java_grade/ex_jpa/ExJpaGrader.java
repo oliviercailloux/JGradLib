@@ -74,7 +74,7 @@ import io.github.oliviercailloux.grade.context.GitFullContext;
 import io.github.oliviercailloux.grade.contexters.FullContextInitializer;
 import io.github.oliviercailloux.grade.contexters.PomContexter;
 import io.github.oliviercailloux.grade.contexters.PomSupplier;
-import io.github.oliviercailloux.grade.json.JsonGrade;
+import io.github.oliviercailloux.grade.json.JsonGradeWithStudentAndCriterion;
 import io.github.oliviercailloux.grade.markers.JavaEEMarkers;
 import io.github.oliviercailloux.grade.markers.MarkingPredicates;
 import io.github.oliviercailloux.grade.markers.Marks;
@@ -351,7 +351,7 @@ public class ExJpaGrader {
 				.map((e) -> GradeWithStudentAndCriterion.of(e.getKey(), grader.grade(e.getValue()))).collect(ImmutableSet.toImmutableSet());
 
 		/** TODO make it flush after each line. */
-		Files.writeString(srcDir.resolve("grades again " + prefix + ".json"), JsonGrade.asJsonArray(grades).toString());
+		Files.writeString(srcDir.resolve("grades again " + prefix + ".json"), JsonGradeWithStudentAndCriterion.asJsonArray(grades).toString());
 		Files.writeString(srcDir.resolve("grades again " + prefix + ".csv"), CsvGrades.asCsv(grades));
 	}
 

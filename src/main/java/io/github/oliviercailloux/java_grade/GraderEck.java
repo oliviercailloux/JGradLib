@@ -37,7 +37,7 @@ import io.github.oliviercailloux.grade.GradeWithStudentAndCriterion;
 import io.github.oliviercailloux.grade.CriterionAndMark;
 import io.github.oliviercailloux.grade.context.GitFullContext;
 import io.github.oliviercailloux.grade.contexters.FullContextInitializer;
-import io.github.oliviercailloux.grade.json.JsonGrade;
+import io.github.oliviercailloux.grade.json.JsonGradeWithStudentAndCriterion;
 import io.github.oliviercailloux.grade.markers.Marks;
 import io.github.oliviercailloux.grade.mycourse.StudentOnGitHub;
 import io.github.oliviercailloux.grade.mycourse.StudentOnGitHubKnown;
@@ -53,7 +53,7 @@ public class GraderEck {
 	}
 
 	public void writeJson(Set<GradeWithStudentAndCriterion> grades) throws IOException {
-		final String str = JsonGrade.asJsonArray(grades).toString();
+		final String str = JsonGradeWithStudentAndCriterion.asJsonArray(grades).toString();
 		try (BufferedWriter fileWriter = Files.newBufferedWriter(Paths.get("out.json"), StandardCharsets.UTF_8)) {
 			fileWriter.write(str);
 		}
@@ -63,7 +63,7 @@ public class GraderEck {
 		final String filename = "manual - 12-08-23h.json";
 //		final String filename = "out.json";
 		final String jsonStr = new String(Files.readAllBytes(Paths.get(filename)), StandardCharsets.UTF_8);
-		return JsonGrade.asGrades(jsonStr);
+		return JsonGradeWithStudentAndCriterion.asGrades(jsonStr);
 	}
 
 	public void setSingleRepo(String studentGitHubUsername) {

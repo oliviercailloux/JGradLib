@@ -17,8 +17,8 @@ import javax.json.bind.adapter.JsonbAdapter;
 import com.google.common.collect.ImmutableSet;
 
 import io.github.oliviercailloux.grade.AnonymousGrade;
-import io.github.oliviercailloux.grade.GradeWithStudentAndCriterion;
 import io.github.oliviercailloux.grade.CriterionAndMark;
+import io.github.oliviercailloux.grade.GradeWithStudentAndCriterion;
 import io.github.oliviercailloux.grade.mycourse.StudentOnGitHub;
 import io.github.oliviercailloux.grade.mycourse.StudentOnGitHubKnown;
 import io.github.oliviercailloux.grade.mycourse.json.JsonStudentOnGitHub;
@@ -29,7 +29,7 @@ import io.github.oliviercailloux.json.PrintableJsonObjectFactory;
 import io.github.oliviercailloux.json.PrintableJsonValue;
 import io.github.oliviercailloux.json.PrintableJsonValueFactory;
 
-public class JsonGrade {
+public class JsonGradeWithStudentAndCriterion {
 	public static PrintableJsonObject asJson(StudentOnGitHubKnown student, AnonymousGrade grade) {
 		final JsonObjectBuilder builder = Json.createObjectBuilder();
 		builder.add("student", JsonStudentOnGitHubKnown.asJson(student));
@@ -37,7 +37,7 @@ public class JsonGrade {
 		{
 			final ImmutableSet<GradeWithStudentAndCriterion> marks = grade.getMarks().values();
 			for (GradeWithStudentAndCriterion mark : marks) {
-				final PrintableJsonObject markJson = JsonMark.asJson((CriterionAndMark) mark);
+				final PrintableJsonObject markJson = JsonMarkWithCriterion.asJson((CriterionAndMark) mark);
 				marksBuilder.add(Json.createObjectBuilder(markJson));
 			}
 		}
@@ -78,8 +78,8 @@ public class JsonGrade {
 		 * Need to read into a list then only copy into a set: if read directly into a
 		 * set, Json does not maintain the ordering.
 		 */
-		final List<GradeWithStudentAndCriterion> read = JsonbUtils.fromJson(json, targetType.getClass().getGenericSuperclass(),
-				JsonGrade.asAdapter());
+		final List<GradeWithStudentAndCriterion> read = JsonbUtils.fromJson(json,
+				targetType.getClass().getGenericSuperclass(), JsonGradeWithStudentAndCriterion.asAdapter());
 		return ImmutableSet.copyOf(read);
 	}
 
@@ -92,7 +92,7 @@ public class JsonGrade {
 			final JsonArray jsonMarks = json.getJsonArray("marks");
 			for (JsonValue jsonMark : jsonMarks) {
 				final JsonObject jsonMarkObj = jsonMark.asJsonObject();
-				final CriterionAndMark mark = JsonMark.asMark(jsonMarkObj);
+				final CriterionAndMark mark = JsonMarkWithCriterion.asMark(jsonMarkObj);
 				marksBuilder.add(mark);
 			}
 			marks = marksBuilder.build();
@@ -121,7 +121,7 @@ public class JsonGrade {
 		{
 			final ImmutableSet<GradeWithStudentAndCriterion> marks = grade.getMarks().values();
 			for (GradeWithStudentAndCriterion mark : marks) {
-				final PrintableJsonObject markJson = JsonMark.asJson((CriterionAndMark) mark);
+				final PrintableJsonObject markJson = JsonMarkWithCriterion.asJson((CriterionAndMark) mark);
 				marksBuilder.add(Json.createObjectBuilder(markJson));
 			}
 		}
@@ -132,6 +132,6 @@ public class JsonGrade {
 	}
 
 	public static PrintableJsonValue asJsonArray(Collection<GradeWithStudentAndCriterion> grades) {
-		return JsonbUtils.toJsonValue(grades, JsonGrade.asAdapter());
+		return JsonbUtils.toJsonValue(grades, JsonGradeWithStudentAndCriterion.asAdapter());
 	}
 }

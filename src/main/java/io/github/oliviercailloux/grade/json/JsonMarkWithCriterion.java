@@ -7,15 +7,15 @@ import javax.json.bind.adapter.JsonbAdapter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.github.oliviercailloux.grade.CriterionAndPoints;
 import io.github.oliviercailloux.grade.CriterionAndMark;
+import io.github.oliviercailloux.grade.CriterionAndPoints;
 import io.github.oliviercailloux.json.JsonbUtils;
 import io.github.oliviercailloux.json.PrintableJsonObject;
 import io.github.oliviercailloux.json.PrintableJsonObjectFactory;
 
-public class JsonMark {
+public class JsonMarkWithCriterion {
 	public static PrintableJsonObject asJson(CriterionAndMark mark) {
-		final JsonbAdapter<CriterionAndPoints, JsonObject> crit = JsonCriterion.asAdapter();
+		final JsonbAdapter<CriterionAndPoints, JsonObject> crit = JsonCriterionAndPoints.asAdapter();
 		/**
 		 * TODO this is now much too subtle for JSON-B because of the current f-up state
 		 * of the grade.
@@ -32,11 +32,11 @@ public class JsonMark {
 
 	public static CriterionAndMark asMark(String json) {
 		LOGGER.debug("Deser: {}.", json);
-		return JsonbUtils.fromJson(json, CriterionAndMark.class, JsonCriterion.asAdapter());
+		return JsonbUtils.fromJson(json, CriterionAndMark.class, JsonCriterionAndPoints.asAdapter());
 	}
 
 	@SuppressWarnings("unused")
-	private static final Logger LOGGER = LoggerFactory.getLogger(JsonMark.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(JsonMarkWithCriterion.class);
 
 	public static CriterionAndMark asMark(JsonObject json) {
 		return asMark(json.toString());
