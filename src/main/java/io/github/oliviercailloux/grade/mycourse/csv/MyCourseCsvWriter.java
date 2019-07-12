@@ -14,7 +14,7 @@ import org.slf4j.LoggerFactory;
 import com.univocity.parsers.csv.CsvWriter;
 import com.univocity.parsers.csv.CsvWriterSettings;
 
-import io.github.oliviercailloux.grade.Grade;
+import io.github.oliviercailloux.grade.GradeWithStudentAndCriterion;
 import io.github.oliviercailloux.grade.mycourse.StudentOnMyCourse;
 
 public class MyCourseCsvWriter {
@@ -37,7 +37,7 @@ public class MyCourseCsvWriter {
 		cSVWriter.addValue(FEEDBACK_FORMAT_COLUMN, "SMART_TEXT");
 	}
 
-	public String asMyCourseCsv(String gradeName, int gradeId, Collection<Grade> grades, double scaleMax) {
+	public String asMyCourseCsv(String gradeName, int gradeId, Collection<GradeWithStudentAndCriterion> grades, double scaleMax) {
 		final String gradeC = gradeName + " |" + gradeId;
 		final NumberFormat formatter = NumberFormat.getNumberInstance(Locale.FRENCH);
 		final StringWriter stringWriter = new StringWriter();
@@ -46,7 +46,7 @@ public class MyCourseCsvWriter {
 		cSVWriter = new CsvWriter(stringWriter, new CsvWriterSettings());
 		cSVWriter.writeHeaders(LAST_NAME_COLUMN, USERNAME_COLUMN, gradeC, NOTES_COLUMN, NOTES_FORMAT_COLUMN,
 				FEEDBACK_COLUMN, FEEDBACK_FORMAT_COLUMN);
-		for (Grade grade : grades) {
+		for (GradeWithStudentAndCriterion grade : grades) {
 			final StudentOnMyCourse student = grade.getStudent().asStudentOnGitHubKnown().asStudentOnMyCourse();
 			LOGGER.info("Writing {}.", student);
 			cSVWriter.addValue(LAST_NAME_COLUMN, student.getLastName());

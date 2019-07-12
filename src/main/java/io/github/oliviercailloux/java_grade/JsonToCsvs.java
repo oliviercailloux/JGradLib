@@ -10,7 +10,7 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.ImmutableSet;
 
 import io.github.oliviercailloux.grade.CsvGrades;
-import io.github.oliviercailloux.grade.Grade;
+import io.github.oliviercailloux.grade.GradeWithStudentAndCriterion;
 import io.github.oliviercailloux.grade.json.JsonGrade;
 import io.github.oliviercailloux.grade.mycourse.csv.MyCourseCsvWriter;
 
@@ -29,7 +29,7 @@ public class JsonToCsvs {
 		final String suffix = " manual merged";
 
 		final String jsonStr = Files.readString(srcDir.resolve(namePrefix + workName + suffix + ".json"));
-		final ImmutableSet<Grade> grades = JsonGrade.asGrades(jsonStr);
+		final ImmutableSet<GradeWithStudentAndCriterion> grades = JsonGrade.asGrades(jsonStr);
 		LOGGER.info("First grade: {}.", grades.stream().findFirst());
 		Files.writeString(srcDir.resolve("MyCourse.csv"),
 				new MyCourseCsvWriter().asMyCourseCsv("Devoir " + workName, myCourseId, grades, 20));

@@ -17,7 +17,7 @@ import javax.json.bind.adapter.JsonbAdapter;
 import com.google.common.collect.ImmutableSet;
 
 import io.github.oliviercailloux.grade.AnonymousGrade;
-import io.github.oliviercailloux.grade.Grade;
+import io.github.oliviercailloux.grade.GradeWithStudentAndCriterion;
 import io.github.oliviercailloux.grade.CriterionAndMark;
 import io.github.oliviercailloux.grade.mycourse.StudentOnGitHub;
 import io.github.oliviercailloux.grade.mycourse.StudentOnGitHubKnown;
@@ -35,8 +35,8 @@ public class JsonGrade {
 		builder.add("student", JsonStudentOnGitHubKnown.asJson(student));
 		final JsonArrayBuilder marksBuilder = Json.createArrayBuilder();
 		{
-			final ImmutableSet<Grade> marks = grade.getMarks().values();
-			for (Grade mark : marks) {
+			final ImmutableSet<GradeWithStudentAndCriterion> marks = grade.getMarks().values();
+			for (GradeWithStudentAndCriterion mark : marks) {
 				final PrintableJsonObject markJson = JsonMark.asJson((CriterionAndMark) mark);
 				marksBuilder.add(Json.createObjectBuilder(markJson));
 			}
@@ -56,7 +56,7 @@ public class JsonGrade {
 		return PrintableJsonValueFactory.wrapValue(builder.build());
 	}
 
-	public static Grade asGrade(String json) {
+	public static GradeWithStudentAndCriterion asGrade(String json) {
 		/**
 		 * We proceed manually for now: the below code <a
 		 * href=https://github.com/eclipse-ee4j/yasson/issues/201>bugs</a>.
@@ -66,24 +66,24 @@ public class JsonGrade {
 		return asGrade(PrintableJsonObjectFactory.wrapString(json));
 	}
 
-	public static ImmutableSet<Grade> asGrades(String json) {
+	public static ImmutableSet<GradeWithStudentAndCriterion> asGrades(String json) {
 		@SuppressWarnings("serial")
 //		final Set<Grade> targetType = new HashSet<>() {
 //			/** Just for type! */
 //		};
-		final List<Grade> targetType = new ArrayList<>() {
+		final List<GradeWithStudentAndCriterion> targetType = new ArrayList<>() {
 			/** Just for type! */
 		};
 		/**
 		 * Need to read into a list then only copy into a set: if read directly into a
 		 * set, Json does not maintain the ordering.
 		 */
-		final List<Grade> read = JsonbUtils.fromJson(json, targetType.getClass().getGenericSuperclass(),
+		final List<GradeWithStudentAndCriterion> read = JsonbUtils.fromJson(json, targetType.getClass().getGenericSuperclass(),
 				JsonGrade.asAdapter());
 		return ImmutableSet.copyOf(read);
 	}
 
-	public static Grade asGrade(JsonObject json) {
+	public static GradeWithStudentAndCriterion asGrade(JsonObject json) {
 //		return asGrade(json.toString());
 		final StudentOnGitHub student = JsonStudentOnGitHub.asStudentOnGitHub(json.getJsonObject("student"));
 		final ImmutableSet<CriterionAndMark> marks;
@@ -97,30 +97,30 @@ public class JsonGrade {
 			}
 			marks = marksBuilder.build();
 		}
-		return Grade.of(student, marks);
+		return GradeWithStudentAndCriterion.of(student, marks);
 	}
 
-	public static JsonbAdapter<Grade, JsonObject> asAdapter() {
+	public static JsonbAdapter<GradeWithStudentAndCriterion, JsonObject> asAdapter() {
 		return new JsonbAdapter<>() {
 			@Override
-			public JsonObject adaptToJson(Grade obj) throws Exception {
+			public JsonObject adaptToJson(GradeWithStudentAndCriterion obj) throws Exception {
 				return asJson(obj);
 			}
 
 			@Override
-			public Grade adaptFromJson(JsonObject obj) throws Exception {
+			public GradeWithStudentAndCriterion adaptFromJson(JsonObject obj) throws Exception {
 				return asGrade(obj);
 			}
 		};
 	}
 
-	public static PrintableJsonObject asJson(Grade grade) {
+	public static PrintableJsonObject asJson(GradeWithStudentAndCriterion grade) {
 		final JsonObjectBuilder builder = Json.createObjectBuilder();
 		builder.add("student", JsonStudentOnGitHub.asJson(grade.getStudent()));
 		final JsonArrayBuilder marksBuilder = Json.createArrayBuilder();
 		{
-			final ImmutableSet<Grade> marks = grade.getMarks().values();
-			for (Grade mark : marks) {
+			final ImmutableSet<GradeWithStudentAndCriterion> marks = grade.getMarks().values();
+			for (GradeWithStudentAndCriterion mark : marks) {
 				final PrintableJsonObject markJson = JsonMark.asJson((CriterionAndMark) mark);
 				marksBuilder.add(Json.createObjectBuilder(markJson));
 			}
@@ -131,7 +131,7 @@ public class JsonGrade {
 		// JsonCriterion.asAdapter());
 	}
 
-	public static PrintableJsonValue asJsonArray(Collection<Grade> grades) {
+	public static PrintableJsonValue asJsonArray(Collection<GradeWithStudentAndCriterion> grades) {
 		return JsonbUtils.toJsonValue(grades, JsonGrade.asAdapter());
 	}
 }

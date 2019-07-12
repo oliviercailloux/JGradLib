@@ -45,7 +45,7 @@ import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.grade.AnonymousGrade;
 import io.github.oliviercailloux.grade.Criterion;
 import io.github.oliviercailloux.grade.CsvGrades;
-import io.github.oliviercailloux.grade.Grade;
+import io.github.oliviercailloux.grade.GradeWithStudentAndCriterion;
 import io.github.oliviercailloux.grade.GraderOrchestrator;
 import io.github.oliviercailloux.grade.GradingException;
 import io.github.oliviercailloux.grade.CriterionAndMark;
@@ -62,17 +62,17 @@ public class ExTwoSetsGrader {
 
 	private Instant deadline;
 
-	public ImmutableSet<Grade> grade(RepositoryCoordinates coord) {
+	public ImmutableSet<GradeWithStudentAndCriterion> grade(RepositoryCoordinates coord) {
 		final AnonymousGrade usingLastCommit = grade(coord, Instant.MAX);
 		final Optional<ObjectId> lastCommit = mainCommit.map(RevCommit::copy);
-		final ImmutableSet<Grade> realMarks;
+		final ImmutableSet<GradeWithStudentAndCriterion> realMarks;
 		if (timeMark.getPoints() < 0d) {
 			final AnonymousGrade usingCommitOnTime = grade(coord, deadline);
 			final Optional<ObjectId> commitOnTime = mainCommit.map(RevCommit::copy);
 			final double lastCommitPoints = usingLastCommit.getPoints();
 			final double onTimePoints = usingCommitOnTime.getPoints();
 			if (onTimePoints > lastCommitPoints && onTimePoints > 0d) {
-				final Grade originalMark = usingCommitOnTime.getMarks().get(ON_TIME);
+				final GradeWithStudentAndCriterion originalMark = usingCommitOnTime.getMarks().get(ON_TIME);
 				final CriterionAndMark commentedMark = CriterionAndMark.of(ON_TIME, originalMark.getPoints(),
 						originalMark.getComment() + String.format(
 								" (Using commit '%s' on time rather than last commit '%s' because it brings more points.)",
@@ -81,7 +81,7 @@ public class ExTwoSetsGrader {
 						.map((m) -> m.getCriterion() != ON_TIME ? m : commentedMark)
 						.collect(ImmutableSet.toImmutableSet());
 			} else {
-				final Grade originalMark = usingLastCommit.getMarks().get(ON_TIME);
+				final GradeWithStudentAndCriterion originalMark = usingLastCommit.getMarks().get(ON_TIME);
 				final CriterionAndMark commentedMark = CriterionAndMark.of(ON_TIME, originalMark.getPoints(),
 						originalMark.getComment() + String.format(
 								" (Using last commit '%s' rather than commit '%s' on time because it brings at least as much points.)",
@@ -177,7 +177,7 @@ public class ExTwoSetsGrader {
 		final Set<Criterion> diff = Sets.symmetricDifference(ImmutableSet.copyOf(ExTwoSetsCriterion.values()),
 				grade.stream().map(CriterionAndMark::getCriterion).collect(ImmutableSet.toImmutableSet())).immutableCopy();
 		assert diff.isEmpty() : diff;
-		return Grade.anonymous(grade);
+		return GradeWithStudentAndCriterion.anonymous(grade);
 	}
 
 	@SuppressWarnings("unused")
@@ -208,8 +208,8 @@ public class ExTwoSetsGrader {
 
 		final ExTwoSetsGrader grader = new ExTwoSetsGrader();
 
-		final ImmutableSet<Grade> grades = repositories.entrySet().stream()
-				.map((e) -> Grade.of(e.getKey(), grader.grade(e.getValue()))).collect(ImmutableSet.toImmutableSet());
+		final ImmutableSet<GradeWithStudentAndCriterion> grades = repositories.entrySet().stream()
+				.map((e) -> GradeWithStudentAndCriterion.of(e.getKey(), grader.grade(e.getValue()))).collect(ImmutableSet.toImmutableSet());
 
 		Files.writeString(srcDir.resolve("all grades " + prefix + ".json"), JsonGrade.asJsonArray(grades).toString());
 		Files.writeString(srcDir.resolve("all grades " + prefix + ".csv"), CsvGrades.asCsv(grades));

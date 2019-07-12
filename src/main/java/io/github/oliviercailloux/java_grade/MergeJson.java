@@ -15,7 +15,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
 import io.github.oliviercailloux.grade.Criterion;
-import io.github.oliviercailloux.grade.Grade;
+import io.github.oliviercailloux.grade.GradeWithStudentAndCriterion;
 import io.github.oliviercailloux.grade.json.JsonGrade;
 import io.github.oliviercailloux.grade.mycourse.StudentOnGitHub;
 import io.github.oliviercailloux.java_grade.ex_junit.ExJUnitCriterion;
@@ -28,14 +28,14 @@ public class MergeJson {
 		final String workName = "junit";
 		final Path srcDir = Paths.get("../../Java L3/");
 		final String namePrefix = "all grades ";
-		final ImmutableSet<Grade> grades = JsonGrade
+		final ImmutableSet<GradeWithStudentAndCriterion> grades = JsonGrade
 				.asGrades(Files.readString(srcDir.resolve(namePrefix + workName + ".json")));
-		final ImmutableSet<Grade> gradesOverride = JsonGrade
+		final ImmutableSet<GradeWithStudentAndCriterion> gradesOverride = JsonGrade
 				.asGrades(Files.readString(srcDir.resolve(namePrefix + workName + " override" + ".json")));
-		final ImmutableMap<StudentOnGitHub, Grade> gradesOverrideByStudent = gradesOverride.stream()
-				.collect(ImmutableMap.toImmutableMap(Grade::getStudent, Functions.identity()));
+		final ImmutableMap<StudentOnGitHub, GradeWithStudentAndCriterion> gradesOverrideByStudent = gradesOverride.stream()
+				.collect(ImmutableMap.toImmutableMap(GradeWithStudentAndCriterion::getStudent, Functions.identity()));
 
-		final ImmutableSet<Grade> gradesMerged = grades.stream()
+		final ImmutableSet<GradeWithStudentAndCriterion> gradesMerged = grades.stream()
 				.map((g) -> merged(g, gradesOverrideByStudent.get(g.getStudent())))
 				.collect(ImmutableSet.toImmutableSet());
 		Files.writeString(srcDir.resolve(namePrefix + workName + " manual merged.json"),
@@ -43,21 +43,21 @@ public class MergeJson {
 //		LOGGER.info("First grade: {}.", grades.stream().findFirst());
 	}
 
-	private static Grade merged(Grade gradeBase, Grade gradeOverride) {
+	private static GradeWithStudentAndCriterion merged(GradeWithStudentAndCriterion gradeBase, GradeWithStudentAndCriterion gradeOverride) {
 		checkArgument(gradeBase.getStudent().equals(gradeOverride.getStudent()));
-		final ImmutableBiMap<Criterion, Grade> baseMarks = gradeBase.getMarks().values().stream()
+		final ImmutableBiMap<Criterion, GradeWithStudentAndCriterion> baseMarks = gradeBase.getMarks().values().stream()
 				.filter((g) -> !gradeOverride.getMarks().keySet().contains(g.getCriterion()))
-				.collect(ImmutableBiMap.toImmutableBiMap(Grade::getCriterion, Functions.identity()));
-		return Grade.of(gradeBase.getStudent(), ImmutableBiMap.<Criterion, Grade>builder().putAll(baseMarks)
+				.collect(ImmutableBiMap.toImmutableBiMap(GradeWithStudentAndCriterion::getCriterion, Functions.identity()));
+		return GradeWithStudentAndCriterion.of(gradeBase.getStudent(), ImmutableBiMap.<Criterion, GradeWithStudentAndCriterion>builder().putAll(baseMarks)
 				.putAll(gradeOverride.getMarks()).build().values());
 	}
 
-	static Grade asFiltered(Grade grade) {
-		final ImmutableSet<Grade> startValues = grade.getMarks().values();
-		final ImmutableSet<Grade> subMarks = startValues.stream()
+	static GradeWithStudentAndCriterion asFiltered(GradeWithStudentAndCriterion grade) {
+		final ImmutableSet<GradeWithStudentAndCriterion> startValues = grade.getMarks().values();
+		final ImmutableSet<GradeWithStudentAndCriterion> subMarks = startValues.stream()
 				.filter((m) -> m.getCriterion().equals(ExJUnitCriterion.TEST_TESTS))
 				.collect(ImmutableSet.toImmutableSet());
 		LOGGER.info("Start values: {}, then: {}.", startValues, subMarks);
-		return Grade.of(grade.getStudent(), subMarks);
+		return GradeWithStudentAndCriterion.of(grade.getStudent(), subMarks);
 	}
 }

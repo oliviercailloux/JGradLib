@@ -13,7 +13,7 @@ import com.google.common.collect.ImmutableSet;
 
 import io.github.oliviercailloux.grade.Criterion;
 import io.github.oliviercailloux.grade.CsvGrades;
-import io.github.oliviercailloux.grade.Grade;
+import io.github.oliviercailloux.grade.GradeWithStudentAndCriterion;
 import io.github.oliviercailloux.grade.json.JsonGrade;
 import io.github.oliviercailloux.java_grade.ex_jpa.ExJpaCriterion;
 
@@ -26,15 +26,15 @@ public class MergeCsvToJson {
 		final Path srcDir = Paths.get("../../Java SITN, app, concept°/");
 
 		final String jsonStr = Files.readString(srcDir.resolve("all grades " + prefix + ".json"));
-		final ImmutableSet<Grade> gradesStart = JsonGrade.asGrades(jsonStr);
+		final ImmutableSet<GradeWithStudentAndCriterion> gradesStart = JsonGrade.asGrades(jsonStr);
 		LOGGER.info("First grade: {}.", gradesStart.stream().findFirst());
-		final ImmutableSet<Grade> patchGrades = CsvGrades.fromCsv(
+		final ImmutableSet<GradeWithStudentAndCriterion> patchGrades = CsvGrades.fromCsv(
 				Files.newInputStream(srcDir.resolve("patch grades " + prefix + ".csv")),
 				(s) -> ExJpaCriterion.valueOf(s));
 		LOGGER.info("First patch: {}.", patchGrades.stream().findFirst());
-		final ImmutableBiMap<String, Grade> patchGradesByStudent = patchGrades.stream()
+		final ImmutableBiMap<String, GradeWithStudentAndCriterion> patchGradesByStudent = patchGrades.stream()
 				.collect(ImmutableBiMap.toImmutableBiMap((g) -> g.getStudent().getGitHubUsername(), (g) -> g));
-		final ImmutableBiMap<String, Grade> patchedGradesByStudent = gradesStart.stream()
+		final ImmutableBiMap<String, GradeWithStudentAndCriterion> patchedGradesByStudent = gradesStart.stream()
 				.collect(ImmutableBiMap.toImmutableBiMap((g) -> g.getStudent().getGitHubUsername(),
 						(startGrade) -> Optional
 								.ofNullable(patchGradesByStudent.get(startGrade.getStudent().getGitHubUsername()))
@@ -46,12 +46,12 @@ public class MergeCsvToJson {
 				JsonGrade.asJsonArray(patchedGradesByStudent.values()).toString());
 	}
 
-	public static Grade merge(Grade grade, Grade patchGrade) {
-		final ImmutableBiMap<Criterion, Grade> marksStart = grade.getMarks();
-		final ImmutableBiMap<Criterion, Grade> marksOverride = patchGrade.getMarks();
-		final ImmutableBiMap<Criterion, Grade> mergedMarks = marksStart.values().stream()
+	public static GradeWithStudentAndCriterion merge(GradeWithStudentAndCriterion grade, GradeWithStudentAndCriterion patchGrade) {
+		final ImmutableBiMap<Criterion, GradeWithStudentAndCriterion> marksStart = grade.getMarks();
+		final ImmutableBiMap<Criterion, GradeWithStudentAndCriterion> marksOverride = patchGrade.getMarks();
+		final ImmutableBiMap<Criterion, GradeWithStudentAndCriterion> mergedMarks = marksStart.values().stream()
 				.collect(ImmutableBiMap.toImmutableBiMap((m) -> m.getCriterion(),
 						(m) -> Optional.ofNullable(marksOverride.get(m.getCriterion())).orElse(m)));
-		return Grade.of(grade.getStudent(), mergedMarks.values());
+		return GradeWithStudentAndCriterion.of(grade.getStudent(), mergedMarks.values());
 	}
 }

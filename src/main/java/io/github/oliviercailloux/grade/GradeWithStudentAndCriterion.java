@@ -57,16 +57,16 @@ import io.github.oliviercailloux.grade.mycourse.StudentOnGitHub;
  *
  */
 @JsonbPropertyOrder({ "student", "marks" })
-public class Grade implements AnonymousGrade {
+public class GradeWithStudentAndCriterion implements AnonymousGrade {
 	/**
 	 * Constructs a Grade which is not a Mark.
 	 */
-	private Grade(StudentOnGitHub student, Criterion parent, double points, String comment,
-			Set<? extends Grade> marks) {
+	private GradeWithStudentAndCriterion(StudentOnGitHub student, Criterion parent, double points, String comment,
+			Set<? extends GradeWithStudentAndCriterion> marks) {
 		checkArgument(!marks.isEmpty());
 		this.student = student;
 		LOGGER.debug("Building with {}, {}.", student, marks.iterator().next().getClass());
-		final Collector<Grade, ?, ImmutableBiMap<Criterion, Grade>> toI = ImmutableBiMap
+		final Collector<GradeWithStudentAndCriterion, ?, ImmutableBiMap<Criterion, GradeWithStudentAndCriterion>> toI = ImmutableBiMap
 				.toImmutableBiMap((g) -> g.getCriterion(), (g) -> g);
 		this.marks = marks.stream().collect(toI);
 		this.criterion = parent;
@@ -107,7 +107,7 @@ public class Grade implements AnonymousGrade {
 	/**
 	 * Constructs a Mark.
 	 */
-	protected Grade(Criterion criterion, double points, String comment) {
+	protected GradeWithStudentAndCriterion(Criterion criterion, double points, String comment) {
 		this.criterion = requireNonNull(criterion);
 		checkArgument(Double.isFinite(points));
 		this.points = points;
@@ -117,19 +117,19 @@ public class Grade implements AnonymousGrade {
 	}
 
 	@JsonbCreator
-	public static Grade of(@JsonbProperty("student") StudentOnGitHub student,
-			@JsonbProperty("marks") Set<? extends Grade> marks) {
-		return new Grade(requireNonNull(student), Criterion.ROOT_CRITERION,
-				marks.stream().collect(Collectors.summingDouble(Grade::getPoints)), "", marks);
+	public static GradeWithStudentAndCriterion of(@JsonbProperty("student") StudentOnGitHub student,
+			@JsonbProperty("marks") Set<? extends GradeWithStudentAndCriterion> marks) {
+		return new GradeWithStudentAndCriterion(requireNonNull(student), Criterion.ROOT_CRITERION,
+				marks.stream().collect(Collectors.summingDouble(GradeWithStudentAndCriterion::getPoints)), "", marks);
 	}
 
 	public static AnonymousGrade anonymous(Criterion parent, double points, String comment,
-			Set<? extends Grade> subGrades) {
-		return new Grade(null, parent, points, comment, subGrades);
+			Set<? extends GradeWithStudentAndCriterion> subGrades) {
+		return new GradeWithStudentAndCriterion(null, parent, points, comment, subGrades);
 	}
 
 	@SuppressWarnings("unused")
-	private static final Logger LOGGER = LoggerFactory.getLogger(Grade.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(GradeWithStudentAndCriterion.class);
 	/**
 	 * <code>null</code> iff this object is an {@link AnonymousGrade}.
 	 */
@@ -138,14 +138,14 @@ public class Grade implements AnonymousGrade {
 	 * points ≤ maxPoints of the corresponding criterion.
 	 */
 	@JsonbTransient
-	private final ImmutableBiMap<Criterion, Grade> marks;
+	private final ImmutableBiMap<Criterion, GradeWithStudentAndCriterion> marks;
 
 	@Override
 	public boolean equals(Object o2) {
-		if (!(o2 instanceof Grade)) {
+		if (!(o2 instanceof GradeWithStudentAndCriterion)) {
 			return false;
 		}
-		final Grade g2 = (Grade) o2;
+		final GradeWithStudentAndCriterion g2 = (GradeWithStudentAndCriterion) o2;
 		return criterion.equals(g2.criterion) && points == g2.points && comment.equals(g2.comment)
 				&& Objects.equals(student, g2.student) && marks.equals(g2.marks);
 	}
@@ -167,13 +167,13 @@ public class Grade implements AnonymousGrade {
 
 	@Override
 	@JsonbTransient
-	public ImmutableBiMap<Criterion, Grade> getMarks() {
+	public ImmutableBiMap<Criterion, GradeWithStudentAndCriterion> getMarks() {
 		return marks;
 	}
 
 	@JsonbTransient
 	public String getAsMyCourseString(double scaleMax) {
-		final Stream<String> evaluations = marks.values().stream().map(Grade::getEvaluation);
+		final Stream<String> evaluations = marks.values().stream().map(GradeWithStudentAndCriterion::getEvaluation);
 		final String joined = evaluations.collect(Collectors.joining("</td></tr><tr><td>"));
 		return "<p><table><tbody><tr><td>" + joined + "</td></tr></tbody></table></p><p>" + "Grade: "
 				+ getScaledGrade(scaleMax) + "/" + scaleMax + ".</p>";
@@ -189,12 +189,12 @@ public class Grade implements AnonymousGrade {
 		return marks.values().stream().collect(Collectors.summingDouble((g) -> g.getCriterion().getMaxPoints()));
 	}
 
-	public static AnonymousGrade anonymous(Set<? extends Grade> marks) {
-		return new Grade(null, Criterion.ROOT_CRITERION,
-				marks.stream().collect(Collectors.summingDouble(Grade::getPoints)), "", marks);
+	public static AnonymousGrade anonymous(Set<? extends GradeWithStudentAndCriterion> marks) {
+		return new GradeWithStudentAndCriterion(null, Criterion.ROOT_CRITERION,
+				marks.stream().collect(Collectors.summingDouble(GradeWithStudentAndCriterion::getPoints)), "", marks);
 	}
 
-	private static String getEvaluation(Grade grade) {
+	private static String getEvaluation(GradeWithStudentAndCriterion grade) {
 		final Criterion criterion = grade.getCriterion();
 
 		final StringBuilder builder = new StringBuilder();

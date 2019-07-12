@@ -17,7 +17,7 @@ import com.google.common.primitives.Booleans;
  *
  */
 @JsonbPropertyOrder({ "criterion", "points", "comment" })
-public class CriterionAndMark extends Grade {
+public class CriterionAndMark extends GradeWithStudentAndCriterion {
 	private CriterionAndMark(Criterion criterion, double points, String comment) {
 		super(criterion, points, comment);
 	}
@@ -46,14 +46,15 @@ public class CriterionAndMark extends Grade {
 	}
 
 	@JsonbCreator
-	public static CriterionAndMark of(@JsonbProperty("criterion") Criterion criterion, @JsonbProperty("points") double points,
-			@JsonbProperty("comment") String comment) {
+	public static CriterionAndMark of(@JsonbProperty("criterion") Criterion criterion,
+			@JsonbProperty("points") double points, @JsonbProperty("comment") String comment) {
 		final CriterionAndMark g = new CriterionAndMark(criterion, points, comment);
 		return g;
 	}
 
 	public static CriterionAndMark binary(Criterion criterion, boolean conditionForPoints) {
-		return new CriterionAndMark(criterion, conditionForPoints ? criterion.getMaxPoints() : criterion.getMinPoints(), "");
+		return new CriterionAndMark(criterion, conditionForPoints ? criterion.getMaxPoints() : criterion.getMinPoints(),
+				"");
 	}
 
 	@SuppressWarnings("unused")

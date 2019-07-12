@@ -70,7 +70,7 @@ import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.grade.AnonymousGrade;
 import io.github.oliviercailloux.grade.Criterion;
 import io.github.oliviercailloux.grade.CsvGrades;
-import io.github.oliviercailloux.grade.Grade;
+import io.github.oliviercailloux.grade.GradeWithStudentAndCriterion;
 import io.github.oliviercailloux.grade.GraderOrchestrator;
 import io.github.oliviercailloux.grade.GradingException;
 import io.github.oliviercailloux.grade.CriterionAndMark;
@@ -107,8 +107,8 @@ public class ExExtractorGrader {
 
 		final ExExtractorGrader grader = new ExExtractorGrader();
 
-		final ImmutableSet<Grade> grades = repositories.entrySet().stream()
-				.map((e) -> Grade.of(e.getKey(), grader.grade(e.getValue()).getMarks().values()))
+		final ImmutableSet<GradeWithStudentAndCriterion> grades = repositories.entrySet().stream()
+				.map((e) -> GradeWithStudentAndCriterion.of(e.getKey(), grader.grade(e.getValue()).getMarks().values()))
 				.collect(ImmutableSet.toImmutableSet());
 
 		Files.writeString(srcDir.resolve("all grades " + prefix + ".json"), JsonGrade.asJsonArray(grades).toString());
@@ -198,7 +198,7 @@ public class ExExtractorGrader {
 		final Set<Criterion> diff = Sets.symmetricDifference(ImmutableSet.copyOf(ExExtractorCriterion.values()),
 				grade.stream().map(CriterionAndMark::getCriterion).collect(ImmutableSet.toImmutableSet())).immutableCopy();
 		assert diff.isEmpty() : diff;
-		return Grade.anonymous(grade);
+		return GradeWithStudentAndCriterion.anonymous(grade);
 	}
 
 	CriterionAndMark commitMark() {

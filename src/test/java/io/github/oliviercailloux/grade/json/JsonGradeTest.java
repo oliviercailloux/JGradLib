@@ -15,7 +15,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.io.Resources;
 
 import io.github.oliviercailloux.grade.AnonymousGrade;
-import io.github.oliviercailloux.grade.Grade;
+import io.github.oliviercailloux.grade.GradeWithStudentAndCriterion;
 import io.github.oliviercailloux.grade.CriterionAndMark;
 import io.github.oliviercailloux.grade.mycourse.StudentOnGitHubKnown;
 import io.github.oliviercailloux.grade.mycourse.StudentOnMyCourse;
@@ -30,10 +30,10 @@ public class JsonGradeTest {
 
 		final CriterionAndMark mark1 = CriterionAndMark.max(ENC);
 		final StudentOnGitHubKnown student1 = getStudentOnGitHubKnown("g1", 1);
-		final AnonymousGrade grade1 = Grade.anonymous(ImmutableSet.of(mark1));
+		final AnonymousGrade grade1 = GradeWithStudentAndCriterion.anonymous(ImmutableSet.of(mark1));
 		final CriterionAndMark mark2 = CriterionAndMark.min(ANNOT);
 		final StudentOnGitHubKnown student2 = getStudentOnGitHubKnown("g2", 2);
-		final AnonymousGrade grade2 = Grade.anonymous(ImmutableSet.of(mark2));
+		final AnonymousGrade grade2 = GradeWithStudentAndCriterion.anonymous(ImmutableSet.of(mark2));
 		final ImmutableMap<StudentOnGitHubKnown, AnonymousGrade> grades = ImmutableMap.of(student1, grade1, student2,
 				grade2);
 		final String written = JsonGrade.asJsonArrayWithStudents(grades).toString();
@@ -44,14 +44,14 @@ public class JsonGradeTest {
 	@Test
 	public void gradesReadJson() throws Exception {
 		final CriterionAndMark mark1 = CriterionAndMark.max(ENC);
-		final Grade grade1 = Grade.of(getStudentOnGitHubKnown("g1", 1).asStudentOnGitHub(), ImmutableSet.of(mark1));
+		final GradeWithStudentAndCriterion grade1 = GradeWithStudentAndCriterion.of(getStudentOnGitHubKnown("g1", 1).asStudentOnGitHub(), ImmutableSet.of(mark1));
 		final CriterionAndMark mark2 = CriterionAndMark.min(ANNOT);
-		final Grade grade2 = Grade.of(getStudentOnGitHubKnown("g2", 2).asStudentOnGitHub(), ImmutableSet.of(mark2));
-		final ImmutableSet<Grade> expected = ImmutableSet.of(grade1, grade2);
+		final GradeWithStudentAndCriterion grade2 = GradeWithStudentAndCriterion.of(getStudentOnGitHubKnown("g2", 2).asStudentOnGitHub(), ImmutableSet.of(mark2));
+		final ImmutableSet<GradeWithStudentAndCriterion> expected = ImmutableSet.of(grade1, grade2);
 
 		{
 			final String json = Resources.toString(this.getClass().getResource("Grades.json"), StandardCharsets.UTF_8);
-			final ImmutableSet<Grade> read = JsonGrade.asGrades(json);
+			final ImmutableSet<GradeWithStudentAndCriterion> read = JsonGrade.asGrades(json);
 			LOGGER.debug("Deserialized: {}.", read);
 			assertEquals(expected, read);
 			assertEquals(expected.asList(), read.asList());
@@ -83,7 +83,7 @@ public class JsonGradeTest {
 		final CriterionAndMark grade1 = CriterionAndMark.max(ENC);
 		final CriterionAndMark grade2 = CriterionAndMark.min(ANNOT);
 		final StudentOnGitHubKnown student = getStudentOnGitHubKnown("g", 1);
-		final AnonymousGrade grade = Grade.anonymous(ImmutableSet.of(grade1, grade2));
+		final AnonymousGrade grade = GradeWithStudentAndCriterion.anonymous(ImmutableSet.of(grade1, grade2));
 		final String written = JsonGrade.asJson(student, grade).toString();
 		LOGGER.debug("Serialized pretty json: {}.", written);
 		assertEquals(expected, written);
@@ -93,10 +93,10 @@ public class JsonGradeTest {
 	public void gradeReadJson() throws Exception {
 		final CriterionAndMark grade1 = CriterionAndMark.max(ENC);
 		final CriterionAndMark grade2 = CriterionAndMark.min(ANNOT);
-		final Grade expected = Grade.of(getStudentOnGitHubKnown("g", 1).asStudentOnGitHub(),
+		final GradeWithStudentAndCriterion expected = GradeWithStudentAndCriterion.of(getStudentOnGitHubKnown("g", 1).asStudentOnGitHub(),
 				ImmutableSet.of(grade1, grade2));
 		final String json = Resources.toString(this.getClass().getResource("Grade.json"), StandardCharsets.UTF_8);
-		final Grade read = JsonGrade.asGrade(json);
+		final GradeWithStudentAndCriterion read = JsonGrade.asGrade(json);
 		LOGGER.debug("Deserialized: {}.", read);
 		assertEquals(expected, read);
 	}
@@ -107,7 +107,7 @@ public class JsonGradeTest {
 
 		final CriterionAndMark grade1 = CriterionAndMark.max(ENC);
 		final CriterionAndMark grade2 = CriterionAndMark.min(ANNOT);
-		final Grade grade = Grade.of(getStudentOnGitHubKnown("g", 1).asStudentOnGitHub(),
+		final GradeWithStudentAndCriterion grade = GradeWithStudentAndCriterion.of(getStudentOnGitHubKnown("g", 1).asStudentOnGitHub(),
 				ImmutableSet.of(grade1, grade2));
 		final String written = JsonGrade.asJson(grade).toString();
 		LOGGER.debug("Serialized pretty json: {}.", written);
@@ -119,10 +119,10 @@ public class JsonGradeTest {
 		final String expected = Resources.toString(this.getClass().getResource("Grades.json"), StandardCharsets.UTF_8);
 
 		final CriterionAndMark mark1 = CriterionAndMark.max(ENC);
-		final Grade grade1 = Grade.of(getStudentOnGitHubKnown("g1", 1).asStudentOnGitHub(), ImmutableSet.of(mark1));
+		final GradeWithStudentAndCriterion grade1 = GradeWithStudentAndCriterion.of(getStudentOnGitHubKnown("g1", 1).asStudentOnGitHub(), ImmutableSet.of(mark1));
 		final CriterionAndMark mark2 = CriterionAndMark.min(ANNOT);
-		final Grade grade2 = Grade.of(getStudentOnGitHubKnown("g2", 2).asStudentOnGitHub(), ImmutableSet.of(mark2));
-		final ImmutableSet<Grade> grades = ImmutableSet.of(grade1, grade2);
+		final GradeWithStudentAndCriterion grade2 = GradeWithStudentAndCriterion.of(getStudentOnGitHubKnown("g2", 2).asStudentOnGitHub(), ImmutableSet.of(mark2));
+		final ImmutableSet<GradeWithStudentAndCriterion> grades = ImmutableSet.of(grade1, grade2);
 		final String written = JsonGrade.asJsonArray(grades).toString();
 		LOGGER.debug("Serialized pretty json: {}.", written);
 		assertEquals(expected, written);

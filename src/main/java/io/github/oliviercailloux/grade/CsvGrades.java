@@ -33,7 +33,7 @@ public class CsvGrades {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(CsvGrades.class);
 
-	public static String asCsv(Collection<Grade> grades) {
+	public static String asCsv(Collection<GradeWithStudentAndCriterion> grades) {
 		final NumberFormat formatter = NumberFormat.getNumberInstance(Locale.FRENCH);
 		final StringWriter stringWriter = new StringWriter();
 		final CsvWriter writer = new CsvWriter(stringWriter, new CsvWriterSettings());
@@ -42,7 +42,7 @@ public class CsvGrades {
 				.collect(ImmutableSet.toImmutableSet());
 		writer.writeHeaders(Streams.concat(Stream.of("Name", "GitHub username"), allKeys.stream().map(Object::toString),
 				Stream.of("Grade")).collect(Collectors.toList()));
-		for (Grade grade : grades) {
+		for (GradeWithStudentAndCriterion grade : grades) {
 			final StudentOnGitHub student = grade.getStudent();
 			LOGGER.info("Writing {}.", student);
 			writer.addValue("Name", student.getLastName().orElse("unknown"));
@@ -73,7 +73,7 @@ public class CsvGrades {
 		return stringWriter.toString();
 	}
 
-	public static ImmutableSet<Grade> fromCsv(InputStream input, Function<String, Criterion> toCriterion) {
+	public static ImmutableSet<GradeWithStudentAndCriterion> fromCsv(InputStream input, Function<String, Criterion> toCriterion) {
 		final NumberFormat formatter = NumberFormat.getNumberInstance(Locale.FRENCH);
 		final CsvParserSettings settings = new CsvParserSettings();
 		settings.setHeaderExtractionEnabled(true);
@@ -84,7 +84,7 @@ public class CsvGrades {
 		final ImmutableSet<String> expected = ImmutableSet.of("Name", "GitHub username", "Grade");
 		checkArgument(allHeaders.containsAll(expected));
 		final ImmutableSet<String> criteria = Sets.difference(allHeaders, expected).immutableCopy();
-		final ImmutableSet.Builder<Grade> gradesBuilder = ImmutableSet.builder();
+		final ImmutableSet.Builder<GradeWithStudentAndCriterion> gradesBuilder = ImmutableSet.builder();
 		while (record != null) {
 			final String name = record.getString("Name");
 			final String username = record.getString("GitHub username");
@@ -105,7 +105,7 @@ public class CsvGrades {
 				marks.add(mark);
 			}
 			if (!marks.isEmpty()) {
-				final Grade grade = Grade.of(StudentOnGitHub.with(username), marks);
+				final GradeWithStudentAndCriterion grade = GradeWithStudentAndCriterion.of(StudentOnGitHub.with(username), marks);
 				LOGGER.debug("Grade built for {}: {}.", name, grade);
 				gradesBuilder.add(grade);
 			}

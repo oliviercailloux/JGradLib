@@ -33,7 +33,7 @@ import io.github.oliviercailloux.git.git_hub.model.GitHubToken;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherV3;
 import io.github.oliviercailloux.grade.Criterion;
-import io.github.oliviercailloux.grade.Grade;
+import io.github.oliviercailloux.grade.GradeWithStudentAndCriterion;
 import io.github.oliviercailloux.grade.CriterionAndMark;
 import io.github.oliviercailloux.grade.context.GitFullContext;
 import io.github.oliviercailloux.grade.contexters.FullContextInitializer;
@@ -52,14 +52,14 @@ public class GraderEck {
 		repositoriesByStudent = null;
 	}
 
-	public void writeJson(Set<Grade> grades) throws IOException {
+	public void writeJson(Set<GradeWithStudentAndCriterion> grades) throws IOException {
 		final String str = JsonGrade.asJsonArray(grades).toString();
 		try (BufferedWriter fileWriter = Files.newBufferedWriter(Paths.get("out.json"), StandardCharsets.UTF_8)) {
 			fileWriter.write(str);
 		}
 	}
 
-	public ImmutableSet<Grade> readJson() throws IOException {
+	public ImmutableSet<GradeWithStudentAndCriterion> readJson() throws IOException {
 		final String filename = "manual - 12-08-23h.json";
 //		final String filename = "out.json";
 		final String jsonStr = new String(Files.readAllBytes(Paths.get(filename)), StandardCharsets.UTF_8);
@@ -106,7 +106,7 @@ public class GraderEck {
 		}
 	}
 
-	public void writeCsv(Set<Grade> grades) throws IOException {
+	public void writeCsv(Set<GradeWithStudentAndCriterion> grades) throws IOException {
 		final Path out = Paths.get("allgrades.csv");
 		final NumberFormat formatter = NumberFormat.getNumberInstance(Locale.FRENCH);
 		try (BufferedWriter fileWriter = Files.newBufferedWriter(out, StandardCharsets.UTF_8)) {
@@ -115,7 +115,7 @@ public class GraderEck {
 					.collect(ImmutableSet.toImmutableSet());
 			writer.writeHeaders(Streams.concat(Stream.of("Name", "GitHub username"),
 					allKeys.stream().map(Object::toString), Stream.of("Grade")).collect(Collectors.toList()));
-			for (Grade grade : grades) {
+			for (GradeWithStudentAndCriterion grade : grades) {
 				final StudentOnGitHub student = grade.getStudent();
 				LOGGER.info("Writing {}.", student);
 				writer.addValue("Name", student.getLastName().orElse("unknown"));
@@ -158,12 +158,12 @@ public class GraderEck {
 		return repositoriesByStudent;
 	}
 
-	public ImmutableSet<Grade> gradeAll(ImmutableMap<StudentOnGitHubKnown, RepositoryCoordinates> repositories) {
-		final ImmutableSet.Builder<Grade> gradesBuilder = ImmutableSet.builder();
+	public ImmutableSet<GradeWithStudentAndCriterion> gradeAll(ImmutableMap<StudentOnGitHubKnown, RepositoryCoordinates> repositories) {
+		final ImmutableSet.Builder<GradeWithStudentAndCriterion> gradesBuilder = ImmutableSet.builder();
 		for (Map.Entry<StudentOnGitHubKnown, RepositoryCoordinates> entry : repositories.entrySet()) {
 			final StudentOnGitHubKnown student = entry.getKey();
 			final RepositoryCoordinates repo = entry.getValue();
-			final Grade grade = grade(student, repo);
+			final GradeWithStudentAndCriterion grade = grade(student, repo);
 			gradesBuilder.add(grade);
 			LOGGER.debug("Student {}, grades {}.", student, grade.getMarks().values());
 			LOGGER.info("Evaluation: {}", grade.getAsMyCourseString(10d));
@@ -171,7 +171,7 @@ public class GraderEck {
 		return gradesBuilder.build();
 	}
 
-	private Grade grade(StudentOnGitHubKnown student, RepositoryCoordinates coord) {
+	private GradeWithStudentAndCriterion grade(StudentOnGitHubKnown student, RepositoryCoordinates coord) {
 		final GitFullContext context = FullContextInitializer.withPath(coord,
 				Paths.get("/home/olivier/Professions/Enseignement/En cours", prefix));
 		final Client client = context.getClient();
@@ -202,7 +202,7 @@ public class GraderEck {
 			username = CriterionAndMark.max(ExEckCriterion.USERNAME);
 		}
 		gradeBuilder.add(username);
-		return Grade.of(student.asStudentOnGitHub(), gradeBuilder.build());
+		return GradeWithStudentAndCriterion.of(student.asStudentOnGitHub(), gradeBuilder.build());
 	}
 
 	public static void main(String[] args) throws Exception {
@@ -224,7 +224,7 @@ public class GraderEck {
 //				.stream()
 //				.collect(ImmutableMap.toImmutableMap((e) -> e.getKey().asStudentOnGitHubKnown(), (e) -> e.getValue()));
 
-		final ImmutableSet<Grade> grades = orch.gradeAll(repositoriesByKnown);
+		final ImmutableSet<GradeWithStudentAndCriterion> grades = orch.gradeAll(repositoriesByKnown);
 		orch.writeCsv(grades);
 		orch.writeJson(grades);
 

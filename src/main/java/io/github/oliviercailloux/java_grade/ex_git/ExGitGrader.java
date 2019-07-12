@@ -52,7 +52,7 @@ import io.github.oliviercailloux.git.GitHistory;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.grade.Criterion;
 import io.github.oliviercailloux.grade.CsvGrades;
-import io.github.oliviercailloux.grade.Grade;
+import io.github.oliviercailloux.grade.GradeWithStudentAndCriterion;
 import io.github.oliviercailloux.grade.GraderOrchestrator;
 import io.github.oliviercailloux.grade.GradingException;
 import io.github.oliviercailloux.grade.CriterionAndMark;
@@ -344,8 +344,8 @@ public class ExGitGrader {
 
 		final ExGitGrader grader = new ExGitGrader();
 
-		final ImmutableSet<Grade> grades = repositories.entrySet().stream()
-				.map((e) -> Grade.of(e.getKey(), grader.grade(e.getValue(), e.getKey())))
+		final ImmutableSet<GradeWithStudentAndCriterion> grades = repositories.entrySet().stream()
+				.map((e) -> GradeWithStudentAndCriterion.of(e.getKey(), grader.grade(e.getValue(), e.getKey())))
 				.collect(ImmutableSet.toImmutableSet());
 
 		Files.writeString(Paths.get("allgrades " + prefix + ".json"), JsonGrade.asJsonArray(grades).toString());
