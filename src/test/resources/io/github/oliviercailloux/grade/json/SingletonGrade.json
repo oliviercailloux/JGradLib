@@ -1,0 +1,16 @@
+{
+    "points": 1.0,
+    "comment": "Weighted average using weights {criterion=1.0} with penalties using weights {}.",
+    "subGrades": [
+        {
+            "criterion": {
+                "name": "criterion"
+            },
+            "grade": {
+                "points": 1.0,
+                "comment": ""
+            },
+            "weight": 1.0
+        }
+    ]
+}

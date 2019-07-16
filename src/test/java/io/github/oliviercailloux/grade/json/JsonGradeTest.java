@@ -15,8 +15,8 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.io.Resources;
 
 import io.github.oliviercailloux.grade.AnonymousGrade;
-import io.github.oliviercailloux.grade.GradeWithStudentAndCriterion;
 import io.github.oliviercailloux.grade.CriterionAndMark;
+import io.github.oliviercailloux.grade.GradeWithStudentAndCriterion;
 import io.github.oliviercailloux.grade.mycourse.StudentOnGitHubKnown;
 import io.github.oliviercailloux.grade.mycourse.StudentOnMyCourse;
 
@@ -44,9 +44,11 @@ public class JsonGradeTest {
 	@Test
 	public void gradesReadJson() throws Exception {
 		final CriterionAndMark mark1 = CriterionAndMark.max(ENC);
-		final GradeWithStudentAndCriterion grade1 = GradeWithStudentAndCriterion.of(getStudentOnGitHubKnown("g1", 1).asStudentOnGitHub(), ImmutableSet.of(mark1));
+		final GradeWithStudentAndCriterion grade1 = GradeWithStudentAndCriterion
+				.of(getStudentOnGitHubKnown("g1", 1).asStudentOnGitHub(), ImmutableSet.of(mark1));
 		final CriterionAndMark mark2 = CriterionAndMark.min(ANNOT);
-		final GradeWithStudentAndCriterion grade2 = GradeWithStudentAndCriterion.of(getStudentOnGitHubKnown("g2", 2).asStudentOnGitHub(), ImmutableSet.of(mark2));
+		final GradeWithStudentAndCriterion grade2 = GradeWithStudentAndCriterion
+				.of(getStudentOnGitHubKnown("g2", 2).asStudentOnGitHub(), ImmutableSet.of(mark2));
 		final ImmutableSet<GradeWithStudentAndCriterion> expected = ImmutableSet.of(grade1, grade2);
 
 		{
@@ -93,8 +95,8 @@ public class JsonGradeTest {
 	public void gradeReadJson() throws Exception {
 		final CriterionAndMark grade1 = CriterionAndMark.max(ENC);
 		final CriterionAndMark grade2 = CriterionAndMark.min(ANNOT);
-		final GradeWithStudentAndCriterion expected = GradeWithStudentAndCriterion.of(getStudentOnGitHubKnown("g", 1).asStudentOnGitHub(),
-				ImmutableSet.of(grade1, grade2));
+		final GradeWithStudentAndCriterion expected = GradeWithStudentAndCriterion
+				.of(getStudentOnGitHubKnown("g", 1).asStudentOnGitHub(), ImmutableSet.of(grade1, grade2));
 		final String json = Resources.toString(this.getClass().getResource("Grade.json"), StandardCharsets.UTF_8);
 		final GradeWithStudentAndCriterion read = JsonGradeWithStudentAndCriterion.asGrade(json);
 		LOGGER.debug("Deserialized: {}.", read);
@@ -107,8 +109,8 @@ public class JsonGradeTest {
 
 		final CriterionAndMark grade1 = CriterionAndMark.max(ENC);
 		final CriterionAndMark grade2 = CriterionAndMark.min(ANNOT);
-		final GradeWithStudentAndCriterion grade = GradeWithStudentAndCriterion.of(getStudentOnGitHubKnown("g", 1).asStudentOnGitHub(),
-				ImmutableSet.of(grade1, grade2));
+		final GradeWithStudentAndCriterion grade = GradeWithStudentAndCriterion
+				.of(getStudentOnGitHubKnown("g", 1).asStudentOnGitHub(), ImmutableSet.of(grade1, grade2));
 		final String written = JsonGradeWithStudentAndCriterion.asJson(grade).toString();
 		LOGGER.debug("Serialized pretty json: {}.", written);
 		assertEquals(expected, written);
@@ -119,9 +121,11 @@ public class JsonGradeTest {
 		final String expected = Resources.toString(this.getClass().getResource("Grades.json"), StandardCharsets.UTF_8);
 
 		final CriterionAndMark mark1 = CriterionAndMark.max(ENC);
-		final GradeWithStudentAndCriterion grade1 = GradeWithStudentAndCriterion.of(getStudentOnGitHubKnown("g1", 1).asStudentOnGitHub(), ImmutableSet.of(mark1));
+		final GradeWithStudentAndCriterion grade1 = GradeWithStudentAndCriterion
+				.of(getStudentOnGitHubKnown("g1", 1).asStudentOnGitHub(), ImmutableSet.of(mark1));
 		final CriterionAndMark mark2 = CriterionAndMark.min(ANNOT);
-		final GradeWithStudentAndCriterion grade2 = GradeWithStudentAndCriterion.of(getStudentOnGitHubKnown("g2", 2).asStudentOnGitHub(), ImmutableSet.of(mark2));
+		final GradeWithStudentAndCriterion grade2 = GradeWithStudentAndCriterion
+				.of(getStudentOnGitHubKnown("g2", 2).asStudentOnGitHub(), ImmutableSet.of(mark2));
 		final ImmutableSet<GradeWithStudentAndCriterion> grades = ImmutableSet.of(grade1, grade2);
 		final String written = JsonGradeWithStudentAndCriterion.asJsonArray(grades).toString();
 		LOGGER.debug("Serialized pretty json: {}.", written);

@@ -5,11 +5,19 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 import java.util.Objects;
 
+import javax.json.bind.annotation.JsonbCreator;
+import javax.json.bind.annotation.JsonbProperty;
+import javax.json.bind.annotation.JsonbPropertyOrder;
+import javax.json.bind.annotation.JsonbTransient;
+
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableMap;
 
+@JsonbPropertyOrder({ "points", "comments" })
 public class Mark implements IGrade {
 
-	public static Mark of(double points, String comment) {
+	@JsonbCreator
+	public static Mark given(@JsonbProperty("points") double points, @JsonbProperty("comment") String comment) {
 		return new Mark(points, comment);
 	}
 
@@ -32,8 +40,12 @@ public class Mark implements IGrade {
 		return comment;
 	}
 
+	/**
+	 * Returns the empty map.
+	 */
+	@JsonbTransient
 	@Override
-	public ImmutableMap<CriterionAndPoints, IGrade> getSubGrades() {
+	public ImmutableMap<Criterion, IGrade> getSubGrades() {
 		return ImmutableMap.of();
 	}
 
@@ -50,6 +62,11 @@ public class Mark implements IGrade {
 	@Override
 	public int hashCode() {
 		return Objects.hash(getPoints(), getComment(), getSubGrades());
+	}
+
+	@Override
+	public String toString() {
+		return MoreObjects.toStringHelper(this).add("points", points).add("comment", comment).toString();
 	}
 
 }
