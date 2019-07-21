@@ -18,6 +18,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.MoreObjects;
+import com.google.common.base.Verify;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
@@ -82,10 +83,12 @@ public class WeightingGrade implements IGrade {
 	@Override
 	public double getPoints() {
 		final double positivePoints = weights.entrySet().stream().filter((e) -> e.getValue() > 0d).map(Entry::getKey)
-				.collect(Collectors.averagingDouble((c) -> subGrades.get(c).getPoints() * weights.get(c)));
+				.collect(Collectors.summingDouble((c) -> subGrades.get(c).getPoints() * weights.get(c)));
 		final double negativePoints = weights.entrySet().stream().filter((e) -> e.getValue() < 0d).map(Entry::getKey)
-				.collect(Collectors.averagingDouble((c) -> (MAX_MARK - subGrades.get(c).getPoints()) * weights.get(c)));
-		return positivePoints - negativePoints;
+				.collect(Collectors.summingDouble((c) -> (MAX_MARK - subGrades.get(c).getPoints()) * weights.get(c)));
+		final double totalPoints = Math.max(0d, positivePoints - negativePoints);
+		Verify.verify(0d <= totalPoints && totalPoints <= 1d);
+		return totalPoints;
 	}
 
 	@Override

@@ -84,7 +84,7 @@ import io.github.oliviercailloux.grade.markers.MarkingPredicates;
 import io.github.oliviercailloux.grade.markers.Marks;
 import io.github.oliviercailloux.grade.markers.MavenProjectMarker;
 import io.github.oliviercailloux.grade.mycourse.StudentOnGitHub;
-import io.github.oliviercailloux.java_grade.ex_dep_git.ExDepGitCriterion;
+import io.github.oliviercailloux.java_grade.ex_dep_git.ExDepGitCriterionAndPoints;
 import io.github.oliviercailloux.java_grade.testers.MarkHelper;
 import io.github.oliviercailloux.utils.Utils;
 
@@ -452,7 +452,7 @@ public class ExExtractorGrader {
 	}
 
 	double getPenalty(Duration tardiness) {
-		final double maxGrade = Stream.of(ExDepGitCriterion.values())
+		final double maxGrade = Stream.of(ExDepGitCriterionAndPoints.values())
 				.collect(Collectors.summingDouble(CriterionAndPoints::getMaxPoints));
 
 		LOGGER.debug("Tardiness: {}.", tardiness);

@@ -1,10 +1,10 @@
 package io.github.oliviercailloux.java_grade.ex_dep_git;
 
-import static io.github.oliviercailloux.java_grade.ex_dep_git.ExDepGitCriterion.COMMIT;
-import static io.github.oliviercailloux.java_grade.ex_dep_git.ExDepGitCriterion.DEP;
-import static io.github.oliviercailloux.java_grade.ex_dep_git.ExDepGitCriterion.FIRST_COMMIT;
-import static io.github.oliviercailloux.java_grade.ex_dep_git.ExDepGitCriterion.MERGE_COMMIT;
-import static io.github.oliviercailloux.java_grade.ex_dep_git.ExDepGitCriterion.ON_TIME;
+import static io.github.oliviercailloux.java_grade.ex_dep_git.ExDepGitCriterionAndPoints.COMMIT;
+import static io.github.oliviercailloux.java_grade.ex_dep_git.ExDepGitCriterionAndPoints.DEP;
+import static io.github.oliviercailloux.java_grade.ex_dep_git.ExDepGitCriterionAndPoints.FIRST_COMMIT;
+import static io.github.oliviercailloux.java_grade.ex_dep_git.ExDepGitCriterionAndPoints.MERGE_COMMIT;
+import static io.github.oliviercailloux.java_grade.ex_dep_git.ExDepGitCriterionAndPoints.ON_TIME;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -41,12 +41,12 @@ import io.github.oliviercailloux.git.Client;
 import io.github.oliviercailloux.git.GitUtils;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.grade.AnonymousGrade;
+import io.github.oliviercailloux.grade.CriterionAndMark;
 import io.github.oliviercailloux.grade.CriterionAndPoints;
 import io.github.oliviercailloux.grade.CsvGrades;
 import io.github.oliviercailloux.grade.GradeWithStudentAndCriterion;
 import io.github.oliviercailloux.grade.GraderOrchestrator;
 import io.github.oliviercailloux.grade.GradingException;
-import io.github.oliviercailloux.grade.CriterionAndMark;
 import io.github.oliviercailloux.grade.context.FilesSource;
 import io.github.oliviercailloux.grade.context.GitFullContext;
 import io.github.oliviercailloux.grade.contexters.FullContextInitializer;
@@ -83,7 +83,8 @@ public class ExDepGitGrader {
 
 		LOGGER.info("Grades: {}.", grades);
 
-		Files.writeString(srcDir.resolve("all grades " + prefix + ".json"), JsonGradeWithStudentAndCriterion.asJsonArray(grades).toString());
+		Files.writeString(srcDir.resolve("all grades " + prefix + ".json"),
+				JsonGradeWithStudentAndCriterion.asJsonArray(grades).toString());
 		Files.writeString(srcDir.resolve("all grades " + prefix + ".csv"), CsvGrades.asCsv(grades));
 	}
 
@@ -152,7 +153,8 @@ public class ExDepGitGrader {
 				} else {
 					parentOfMyBranch = false;
 				}
-				final CriterionAndMark newMark = CriterionAndMark.proportional(FIRST_COMMIT, childOfStarting, parentOfMyBranch);
+				final CriterionAndMark newMark = CriterionAndMark.proportional(FIRST_COMMIT, childOfStarting,
+						parentOfMyBranch);
 				if (newMark.getPoints() > firstCommitMark.getPoints()) {
 					firstCommitMark = newMark;
 				}
@@ -224,8 +226,10 @@ public class ExDepGitGrader {
 		}
 
 		final ImmutableSet<CriterionAndMark> grade = gradeBuilder.build();
-		final Set<CriterionAndPoints> diff = Sets.symmetricDifference(ImmutableSet.copyOf(ExDepGitCriterion.values()),
-				grade.stream().map(CriterionAndMark::getCriterion).collect(ImmutableSet.toImmutableSet())).immutableCopy();
+		final Set<CriterionAndPoints> diff = Sets
+				.symmetricDifference(ImmutableSet.copyOf(ExDepGitCriterionAndPoints.values()),
+						grade.stream().map(CriterionAndMark::getCriterion).collect(ImmutableSet.toImmutableSet()))
+				.immutableCopy();
 		assert diff.isEmpty() : diff;
 		return GradeWithStudentAndCriterion.anonymous(grade);
 	}

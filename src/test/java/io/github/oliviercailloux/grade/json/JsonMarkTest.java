@@ -5,6 +5,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.nio.charset.StandardCharsets;
 
+import javax.json.Json;
+import javax.json.JsonObject;
+
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,10 +18,12 @@ import com.google.common.io.Resources;
 import io.github.oliviercailloux.grade.Criterion;
 import io.github.oliviercailloux.grade.CriterionAndMark;
 import io.github.oliviercailloux.grade.CriterionGradeWeight;
+import io.github.oliviercailloux.grade.GradeTestsHelper;
 import io.github.oliviercailloux.grade.IGrade;
 import io.github.oliviercailloux.grade.Mark;
 import io.github.oliviercailloux.grade.WeightingGrade;
-import io.github.oliviercailloux.json.JsonbUtils;
+import io.github.oliviercailloux.json.PrintableJsonObject;
+import io.github.oliviercailloux.json.PrintableJsonObjectFactory;
 
 public class JsonMarkTest {
 	@SuppressWarnings("unused")
@@ -40,7 +45,7 @@ public class JsonMarkTest {
 		final String expected = Resources.toString(this.getClass().getResource("Mark.json"), StandardCharsets.UTF_8);
 
 		final Mark mark = Mark.given(1d, "");
-		final String written = JsonbUtils.toJsonObject(mark).toString();
+		final String written = JsonGrade.asJson(mark).toString();
 		LOGGER.info("Serialized pretty json: {}.", written);
 		assertEquals(expected, written);
 	}
@@ -49,7 +54,7 @@ public class JsonMarkTest {
 	void markReadJson() throws Exception {
 		final Mark expected = Mark.given(1d, "");
 		final String json = Resources.toString(this.getClass().getResource("Mark.json"), StandardCharsets.UTF_8);
-		final Mark read = JsonbUtils.fromJson(json, Mark.class);
+		final Mark read = JsonGrade.asMark(PrintableJsonObjectFactory.wrapPrettyPrintedString(json));
 		LOGGER.info("Deserialized: {}.", read);
 		assertEquals(expected, read);
 	}
@@ -66,12 +71,9 @@ public class JsonMarkTest {
 
 	@Test
 	void gradeSingletonWrite() throws Exception {
-		final Criterion criterion = Criterion.given("criterion");
-		final ImmutableMap<Criterion, IGrade> subMarks = ImmutableMap.of(criterion, Mark.given(1d, ""));
-		final ImmutableMap<Criterion, Double> weights = ImmutableMap.of(criterion, 1d);
-		final WeightingGrade grade = WeightingGrade.from(subMarks, weights);
+		final WeightingGrade grade = GradeTestsHelper.getSingletonWeightingGrade();
 
-		final String written = JsonbUtils.toJsonObject(grade, JsonCriterion.asAdapter()).toString();
+		final String written = JsonGrade.asJson(grade).toString();
 		assertEquals(Resources.toString(getClass().getResource("SingletonGrade.json"), StandardCharsets.UTF_8),
 				written);
 	}
@@ -85,8 +87,8 @@ public class JsonMarkTest {
 
 		final String json = Resources.toString(this.getClass().getResource("SingletonGrade.json"),
 				StandardCharsets.UTF_8);
-		final WeightingGrade read = JsonbUtils.fromJson(json, WeightingGrade.class, JsonCriterion.asAdapter(),
-				JsonGrade.asAdapter());
+		final WeightingGrade read = JsonGrade
+				.asWeightingGrade(PrintableJsonObjectFactory.wrapPrettyPrintedString(json));
 		assertEquals(expected, read);
 	}
 
@@ -97,8 +99,31 @@ public class JsonMarkTest {
 
 		final String json = Resources.toString(this.getClass().getResource("CriterionGradeWeight.json"),
 				StandardCharsets.UTF_8);
-		final CriterionGradeWeight read = JsonbUtils.fromJson(json, CriterionGradeWeight.class,
-				JsonCriterion.asAdapter());
+		final CriterionGradeWeight read = JsonGrade.toCriterionGradeWeightAdapter()
+				.adaptFromJson(PrintableJsonObjectFactory.wrapPrettyPrintedString(json));
+		assertEquals(expected, read);
+	}
+
+	@Test
+	void gradeComplexWrite() throws Exception {
+		final WeightingGrade composite = GradeTestsHelper.getComplexGrade();
+		final PrintableJsonObject writtenJson = JsonGrade.asJson(composite);
+		final JsonObject writtenJsonNoPoints = Json.createObjectBuilder(writtenJson).remove("points").build();
+
+		final PrintableJsonObject jsonComplexGrade = PrintableJsonObjectFactory.wrapPrettyPrintedString(
+				Resources.toString(getClass().getResource("ComplexGrade.json"), StandardCharsets.UTF_8));
+		final JsonObject jsonComplexGradeNoPoints = Json.createObjectBuilder(jsonComplexGrade).remove("points").build();
+
+		assertEquals(jsonComplexGradeNoPoints, writtenJsonNoPoints);
+	}
+
+	@Test
+	void gradeComplexRead() throws Exception {
+		final WeightingGrade expected = GradeTestsHelper.getComplexGrade();
+
+		final PrintableJsonObject jsonComplexGrade = PrintableJsonObjectFactory.wrapPrettyPrintedString(
+				Resources.toString(getClass().getResource("ComplexGrade.json"), StandardCharsets.UTF_8));
+		final IGrade read = JsonGrade.asGrade(jsonComplexGrade);
 		assertEquals(expected, read);
 	}
 }

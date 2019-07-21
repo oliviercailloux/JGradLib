@@ -1,0 +1,38 @@
+{
+    "points": 0.58,
+    "comment": "Weighted average using weights {C1=0.4, C2=0.6} with penalties using weights {}.",
+    "subGrades": [
+        {
+            "criterion": {
+                "name": "C1"
+            },
+            "grade": {
+                "points": 1.0,
+                "comment": "Weighted average using weights {criterion=1.0} with penalties using weights {}.",
+                "subGrades": [
+                    {
+                        "criterion": {
+                            "name": "criterion"
+                        },
+                        "grade": {
+                            "points": 1.0,
+                            "comment": ""
+                        },
+                        "weight": 1.0
+                    }
+                ]
+            },
+            "weight": 0.4
+        },
+        {
+            "criterion": {
+                "name": "C2"
+            },
+            "grade": {
+                "points": 0.3,
+                "comment": "comment"
+            },
+            "weight": 0.6
+        }
+    ]
+}

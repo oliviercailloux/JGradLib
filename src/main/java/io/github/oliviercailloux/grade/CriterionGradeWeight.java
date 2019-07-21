@@ -7,27 +7,19 @@ import java.util.Objects;
 import javax.json.bind.annotation.JsonbCreator;
 import javax.json.bind.annotation.JsonbProperty;
 import javax.json.bind.annotation.JsonbPropertyOrder;
-import javax.json.bind.annotation.JsonbTypeAdapter;
 
 import com.google.common.base.MoreObjects;
 
-import io.github.oliviercailloux.grade.json.JsonGradeAdapter;
-
 @JsonbPropertyOrder({ "criterion", "grade", "weight" })
 public class CriterionGradeWeight {
-	public static CriterionGradeWeight from(Criterion criterion, IGrade grade, double weight) {
+	@JsonbCreator
+	public static CriterionGradeWeight from(@JsonbProperty("criterion") Criterion criterion,
+			@JsonbProperty("grade") IGrade grade, @JsonbProperty("weight") double weight) {
 		return new CriterionGradeWeight(criterion, grade, weight);
 	}
 
-	@JsonbCreator
-	public static CriterionGradeWeight fromJson(@JsonbProperty("criterion") Criterion criterion,
-			@JsonbProperty("weight") double weight) {
-		return new CriterionGradeWeight(criterion, Mark.given(1d, ""), weight);
-	}
-
 	private final Criterion criterion;
-	@JsonbTypeAdapter(JsonGradeAdapter.class)
-	public final IGrade grade;
+	private final IGrade grade;
 	private final double weight;
 
 	private CriterionGradeWeight(Criterion criterion, IGrade grade, double weight) {

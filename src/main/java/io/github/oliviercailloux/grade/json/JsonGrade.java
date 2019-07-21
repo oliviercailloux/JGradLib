@@ -7,6 +7,7 @@ import javax.json.bind.adapter.JsonbAdapter;
 
 import com.google.common.math.DoubleMath;
 
+import io.github.oliviercailloux.grade.CriterionGradeWeight;
 import io.github.oliviercailloux.grade.IGrade;
 import io.github.oliviercailloux.grade.Mark;
 import io.github.oliviercailloux.grade.WeightingGrade;
@@ -25,10 +26,25 @@ public class JsonGrade {
 
 	public static WeightingGrade asWeightingGrade(JsonObject json) {
 		final WeightingGrade grade = JsonbUtils.fromJson(json.toString(), WeightingGrade.class,
-				JsonCriterion.asAdapter());
+				JsonCriterion.asAdapter(), toCriterionGradeWeightAdapter());
 		final double sourcePoints = json.getJsonNumber("points").doubleValue();
 		checkArgument(DoubleMath.fuzzyEquals(sourcePoints, grade.getPoints(), 1e-4));
 		return grade;
+	}
+
+	static JsonbAdapter<CriterionGradeWeight, JsonObject> toCriterionGradeWeightAdapter() {
+		return new JsonbAdapter<>() {
+			@Override
+			public JsonObject adaptToJson(CriterionGradeWeight obj) throws Exception {
+				return JsonbUtils.toJsonObject(obj, JsonCriterion.asAdapter(), JsonGrade.asAdapter());
+			}
+
+			@Override
+			public CriterionGradeWeight adaptFromJson(JsonObject obj) throws Exception {
+				return JsonbUtils.fromJson(obj.toString(), CriterionGradeWeight.class, JsonCriterion.asAdapter(),
+						JsonGrade.asAdapter());
+			}
+		};
 	}
 
 	public static IGrade asGrade(JsonObject json) {
@@ -39,6 +55,16 @@ public class JsonGrade {
 	}
 
 	public static JsonbAdapter<IGrade, JsonObject> asAdapter() {
-		return new JsonGradeAdapter();
+		return new JsonbAdapter<>() {
+			@Override
+			public JsonObject adaptToJson(IGrade obj) throws Exception {
+				return JsonGrade.asJson(obj);
+			}
+
+			@Override
+			public IGrade adaptFromJson(JsonObject obj) throws Exception {
+				return JsonGrade.asGrade(obj);
+			}
+		};
 	}
 }
