@@ -100,6 +100,7 @@ public class ExJpaGrader {
 		final ImmutableSet<CriterionGradeWeight> realMarks;
 		if (timeMark.getPoints() < 0d) {
 			final WeightingGrade usingCommitOnTime = grade(coord, deadline);
+//			final Optional<ObjectId> commitOnTime = mainCommit.map(RevCommit::copy);
 			final double lastCommitPoints = usingLastCommit.getPoints();
 			final double onTimePoints = usingCommitOnTime.getPoints();
 			final WeightingGrade gradeToUse;
