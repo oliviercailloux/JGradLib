@@ -21,8 +21,8 @@ import com.google.common.collect.MoreCollectors;
 import com.google.common.collect.Sets;
 
 import io.github.oliviercailloux.grade.GradingException;
-import io.github.oliviercailloux.grade.mycourse.StudentOnGitHubKnown;
-import io.github.oliviercailloux.grade.mycourse.StudentOnMyCourse;
+import io.github.oliviercailloux.grade.comm.StudentOnGitHubKnown;
+import io.github.oliviercailloux.grade.comm.StudentOnMyCourse;
 
 public class MyCourseHomeworkReader {
 	private String homeworkName;

@@ -15,7 +15,7 @@ import com.univocity.parsers.csv.CsvWriter;
 import com.univocity.parsers.csv.CsvWriterSettings;
 
 import io.github.oliviercailloux.grade.GradeWithStudentAndCriterion;
-import io.github.oliviercailloux.grade.mycourse.StudentOnMyCourse;
+import io.github.oliviercailloux.grade.comm.StudentOnMyCourse;
 
 public class MyCourseCsvWriter {
 

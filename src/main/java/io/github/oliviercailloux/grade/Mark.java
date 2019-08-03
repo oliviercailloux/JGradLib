@@ -16,6 +16,22 @@ import com.google.common.collect.ImmutableMap;
 @JsonbPropertyOrder({ "points", "comments" })
 public class Mark implements IGrade {
 
+	public static Mark zero() {
+		return new Mark(0d, "");
+	}
+
+	public static Mark zero(String comment) {
+		return new Mark(0d, comment);
+	}
+
+	public static Mark one() {
+		return new Mark(1d, "");
+	}
+
+	public static Mark ifPasses(boolean passes) {
+		return passes ? one() : zero();
+	}
+
 	@JsonbCreator
 	public static Mark given(@JsonbProperty("points") double points, @JsonbProperty("comment") String comment) {
 		return new Mark(points, comment);

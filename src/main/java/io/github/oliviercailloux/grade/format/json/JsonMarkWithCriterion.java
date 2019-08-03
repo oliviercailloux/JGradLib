@@ -1,4 +1,4 @@
-package io.github.oliviercailloux.grade.json;
+package io.github.oliviercailloux.grade.format.json;
 
 import javax.json.Json;
 import javax.json.JsonObject;

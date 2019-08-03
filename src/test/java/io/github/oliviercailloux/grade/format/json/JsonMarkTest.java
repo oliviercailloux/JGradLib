@@ -1,6 +1,6 @@
-package io.github.oliviercailloux.grade.json;
+package io.github.oliviercailloux.grade.format.json;
 
-import static io.github.oliviercailloux.grade.json.TestCriterion.ENC;
+import static io.github.oliviercailloux.grade.format.json.TestCriterion.ENC;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.nio.charset.StandardCharsets;
@@ -22,6 +22,8 @@ import io.github.oliviercailloux.grade.GradeTestsHelper;
 import io.github.oliviercailloux.grade.IGrade;
 import io.github.oliviercailloux.grade.Mark;
 import io.github.oliviercailloux.grade.WeightingGrade;
+import io.github.oliviercailloux.grade.format.json.JsonGrade;
+import io.github.oliviercailloux.grade.format.json.JsonMarkWithCriterion;
 import io.github.oliviercailloux.json.PrintableJsonObject;
 import io.github.oliviercailloux.json.PrintableJsonObjectFactory;
 

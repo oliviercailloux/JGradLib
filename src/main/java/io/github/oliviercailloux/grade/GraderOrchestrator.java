@@ -17,8 +17,8 @@ import com.google.common.collect.ImmutableMap;
 import io.github.oliviercailloux.git.git_hub.model.GitHubToken;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherV3;
-import io.github.oliviercailloux.grade.mycourse.StudentOnGitHub;
-import io.github.oliviercailloux.grade.mycourse.StudentOnGitHubKnown;
+import io.github.oliviercailloux.grade.comm.StudentOnGitHub;
+import io.github.oliviercailloux.grade.comm.StudentOnGitHubKnown;
 import io.github.oliviercailloux.grade.mycourse.json.StudentsReaderFromJson;
 
 public class GraderOrchestrator {

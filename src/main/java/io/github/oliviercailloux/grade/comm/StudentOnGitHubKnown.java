@@ -1,4 +1,4 @@
-package io.github.oliviercailloux.grade.mycourse;
+package io.github.oliviercailloux.grade.comm;
 
 import static java.util.Objects.requireNonNull;
 

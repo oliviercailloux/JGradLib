@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Test;
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.Resources;
 
-import io.github.oliviercailloux.grade.mycourse.StudentOnMyCourse;
+import io.github.oliviercailloux.grade.comm.StudentOnMyCourse;
 
 class CsvStudentsTest {
 

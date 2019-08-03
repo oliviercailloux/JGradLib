@@ -22,7 +22,7 @@ import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
 import com.google.common.collect.ImmutableBiMap;
 
-import io.github.oliviercailloux.grade.mycourse.StudentOnGitHub;
+import io.github.oliviercailloux.grade.comm.StudentOnGitHub;
 
 /**
  *

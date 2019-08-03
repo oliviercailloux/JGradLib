@@ -9,9 +9,9 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableSet;
 
-import io.github.oliviercailloux.grade.CsvGrades;
 import io.github.oliviercailloux.grade.GradeWithStudentAndCriterion;
-import io.github.oliviercailloux.grade.json.JsonGradeWithStudentAndCriterion;
+import io.github.oliviercailloux.grade.format.CsvGrades;
+import io.github.oliviercailloux.grade.format.json.JsonGradeWithStudentAndCriterion;
 import io.github.oliviercailloux.grade.mycourse.csv.MyCourseCsvWriter;
 
 public class JsonToCsvs {

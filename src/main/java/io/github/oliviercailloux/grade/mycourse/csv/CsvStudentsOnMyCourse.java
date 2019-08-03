@@ -9,7 +9,7 @@ import com.univocity.parsers.common.record.Record;
 import com.univocity.parsers.csv.CsvParser;
 import com.univocity.parsers.csv.CsvParserSettings;
 
-import io.github.oliviercailloux.grade.mycourse.StudentOnMyCourse;
+import io.github.oliviercailloux.grade.comm.StudentOnMyCourse;
 
 /**
  * The declaration order of the fields here is the order in which MyCourse

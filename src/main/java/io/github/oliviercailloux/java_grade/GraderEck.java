@@ -34,13 +34,13 @@ import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherV3;
 import io.github.oliviercailloux.grade.CriterionAndPoints;
 import io.github.oliviercailloux.grade.GradeWithStudentAndCriterion;
+import io.github.oliviercailloux.grade.comm.StudentOnGitHub;
+import io.github.oliviercailloux.grade.comm.StudentOnGitHubKnown;
 import io.github.oliviercailloux.grade.CriterionAndMark;
 import io.github.oliviercailloux.grade.context.GitFullContext;
 import io.github.oliviercailloux.grade.contexters.FullContextInitializer;
-import io.github.oliviercailloux.grade.json.JsonGradeWithStudentAndCriterion;
+import io.github.oliviercailloux.grade.format.json.JsonGradeWithStudentAndCriterion;
 import io.github.oliviercailloux.grade.markers.Marks;
-import io.github.oliviercailloux.grade.mycourse.StudentOnGitHub;
-import io.github.oliviercailloux.grade.mycourse.StudentOnGitHubKnown;
 import io.github.oliviercailloux.grade.mycourse.json.StudentsReaderFromJson;
 import io.github.oliviercailloux.java_grade.ex_eck.ExEckCriterion;
 

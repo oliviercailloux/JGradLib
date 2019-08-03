@@ -7,8 +7,8 @@ import javax.json.bind.adapter.JsonbAdapter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.github.oliviercailloux.grade.mycourse.StudentOnGitHub;
-import io.github.oliviercailloux.grade.mycourse.StudentOnGitHubKnown;
+import io.github.oliviercailloux.grade.comm.StudentOnGitHub;
+import io.github.oliviercailloux.grade.comm.StudentOnGitHubKnown;
 import io.github.oliviercailloux.json.PrintableJsonObject;
 import io.github.oliviercailloux.json.PrintableJsonObjectFactory;
 

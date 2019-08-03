@@ -1,5 +1,6 @@
 package io.github.oliviercailloux.grade;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import java.util.Objects;
@@ -26,6 +27,7 @@ public class CriterionGradeWeight {
 		this.criterion = checkNotNull(criterion);
 		this.grade = checkNotNull(grade);
 		this.weight = checkNotNull(weight);
+		checkArgument(weight != 0d);
 	}
 
 	public Criterion getCriterion() {

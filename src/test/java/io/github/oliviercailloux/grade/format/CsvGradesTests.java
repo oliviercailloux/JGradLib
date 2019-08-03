@@ -1,4 +1,4 @@
-package io.github.oliviercailloux.grade;
+package io.github.oliviercailloux.grade.format;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -11,8 +11,11 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.Resources;
 
-import io.github.oliviercailloux.grade.mycourse.StudentOnGitHub;
-import io.github.oliviercailloux.grade.mycourse.StudentOnMyCourse;
+import io.github.oliviercailloux.grade.GradeTestsHelper;
+import io.github.oliviercailloux.grade.WeightingGrade;
+import io.github.oliviercailloux.grade.comm.StudentOnGitHub;
+import io.github.oliviercailloux.grade.comm.StudentOnMyCourse;
+import io.github.oliviercailloux.grade.format.CsvGrades;
 
 class CsvGradesTests {
 	@SuppressWarnings("unused")

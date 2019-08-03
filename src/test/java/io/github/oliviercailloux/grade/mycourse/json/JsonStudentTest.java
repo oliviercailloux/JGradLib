@@ -12,8 +12,8 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.Resources;
 
-import io.github.oliviercailloux.grade.mycourse.StudentOnGitHubKnown;
-import io.github.oliviercailloux.grade.mycourse.StudentOnMyCourse;
+import io.github.oliviercailloux.grade.comm.StudentOnGitHubKnown;
+import io.github.oliviercailloux.grade.comm.StudentOnMyCourse;
 import io.github.oliviercailloux.json.PrintableJsonObject;
 import io.github.oliviercailloux.json.PrintableJsonObjectFactory;
 

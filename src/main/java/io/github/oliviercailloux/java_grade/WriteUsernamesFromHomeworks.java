@@ -13,8 +13,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 
-import io.github.oliviercailloux.grade.mycourse.StudentOnGitHubKnown;
-import io.github.oliviercailloux.grade.mycourse.StudentOnMyCourse;
+import io.github.oliviercailloux.grade.comm.StudentOnGitHubKnown;
+import io.github.oliviercailloux.grade.comm.StudentOnMyCourse;
 import io.github.oliviercailloux.grade.mycourse.csv.CsvStudentsOnMyCourse;
 import io.github.oliviercailloux.grade.mycourse.json.JsonStudentOnGitHubKnown;
 import io.github.oliviercailloux.grade.mycourse.json.JsonStudentOnMyCourse;

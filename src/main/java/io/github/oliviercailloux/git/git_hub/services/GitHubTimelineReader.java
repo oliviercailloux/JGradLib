@@ -114,7 +114,7 @@ public class GitHubTimelineReader {
 			rangeFirstCommits = Range.singleton(veryFirstBranchEvent.get().getCreatedAt());
 		} else {
 			if (events.isEmpty()) {
-				rangeFirstCommits = Range.open(Instant.MIN, Instant.now().minus(Period.ofMonths(1)));
+				rangeFirstCommits = Range.open(Instant.MIN, Instant.now().minus(Period.ofDays(30)));
 			} else {
 				final Event firstEvent = events.stream().findFirst().get();
 				rangeFirstCommits = Range.open(Instant.MIN, firstEvent.getCreatedAt());

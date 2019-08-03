@@ -1,4 +1,4 @@
-package io.github.oliviercailloux.grade.json;
+package io.github.oliviercailloux.grade.format.json;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;

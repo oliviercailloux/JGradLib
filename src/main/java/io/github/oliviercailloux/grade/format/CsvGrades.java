@@ -1,4 +1,4 @@
-package io.github.oliviercailloux.grade;
+package io.github.oliviercailloux.grade.format;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
@@ -35,15 +35,26 @@ import com.univocity.parsers.csv.CsvParserSettings;
 import com.univocity.parsers.csv.CsvWriter;
 import com.univocity.parsers.csv.CsvWriterSettings;
 
-import io.github.oliviercailloux.grade.mycourse.StudentOnGitHub;
+import io.github.oliviercailloux.grade.Criterion;
+import io.github.oliviercailloux.grade.CriterionAndMark;
+import io.github.oliviercailloux.grade.CriterionAndPoints;
+import io.github.oliviercailloux.grade.CriterionGradeWeight;
+import io.github.oliviercailloux.grade.GradeWithStudentAndCriterion;
+import io.github.oliviercailloux.grade.IGrade;
+import io.github.oliviercailloux.grade.WeightingGrade;
+import io.github.oliviercailloux.grade.comm.StudentOnGitHub;
 
 public class CsvGrades {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(CsvGrades.class);
 
-	private static final double DENOMINATOR = 20d;
+	private static final double DEFAULT_DENOMINATOR = 20d;
 
 	public static String asCsv(Map<StudentOnGitHub, WeightingGrade> grades) {
+		return asCsv(grades, DEFAULT_DENOMINATOR);
+	}
+
+	public static String asCsv(Map<StudentOnGitHub, WeightingGrade> grades, double denominator) {
 		final NumberFormat formatter = NumberFormat.getNumberInstance(Locale.FRENCH);
 		final StringWriter stringWriter = new StringWriter();
 		final CsvWriter writer = new CsvWriter(stringWriter, new CsvWriterSettings());
@@ -74,12 +85,13 @@ public class CsvGrades {
 				final Criterion criterion = cgw.getCriterion();
 				Verify.verify(allCriteria.contains(criterion));
 				final IGrade mark = cgw.getGrade();
-				final double points01 = mark.getPoints();
-				final double pointsDenom = points01 * cgw.getWeight() * DENOMINATOR;
-				writer.addValue(criterion.getName(), formatter.format(pointsDenom));
+				final double points = mark.getPoints();
+				final double pointsSigned = cgw.getWeight() > 0d ? points : 1d - points;
+				final double pointsScaled = pointsSigned * cgw.getWeight() * denominator;
+				writer.addValue(criterion.getName(), formatter.format(pointsScaled));
 			}
 
-			writer.addValue("Points", formatter.format(grade.getPoints() * DENOMINATOR));
+			writer.addValue("Points", formatter.format(grade.getPoints() * denominator));
 			writer.writeValuesToRow();
 		}
 
@@ -89,9 +101,9 @@ public class CsvGrades {
 		for (Criterion criterion : allCriteria) {
 			final double weight = asTable.column(criterion).values().stream().map(CriterionGradeWeight::getWeight)
 					.distinct().collect(MoreCollectors.onlyElement());
-			writer.addValue(criterion.getName(), "[0, " + formatter.format(weight * DENOMINATOR) + "]");
+			writer.addValue(criterion.getName(), "[0, " + formatter.format(weight * denominator) + "]");
 		}
-		writer.addValue("Points", "[0," + formatter.format(DENOMINATOR) + "]");
+		writer.addValue("Points", "[0," + formatter.format(denominator) + "]");
 		writer.writeValuesToRow();
 
 		writer.close();

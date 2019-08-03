@@ -1,7 +1,7 @@
-package io.github.oliviercailloux.grade.json;
+package io.github.oliviercailloux.grade.format.json;
 
-import static io.github.oliviercailloux.grade.json.TestCriterion.ANNOT;
-import static io.github.oliviercailloux.grade.json.TestCriterion.ENC;
+import static io.github.oliviercailloux.grade.format.json.TestCriterion.ANNOT;
+import static io.github.oliviercailloux.grade.format.json.TestCriterion.ENC;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.nio.charset.StandardCharsets;
@@ -17,8 +17,9 @@ import com.google.common.io.Resources;
 import io.github.oliviercailloux.grade.AnonymousGrade;
 import io.github.oliviercailloux.grade.CriterionAndMark;
 import io.github.oliviercailloux.grade.GradeWithStudentAndCriterion;
-import io.github.oliviercailloux.grade.mycourse.StudentOnGitHubKnown;
-import io.github.oliviercailloux.grade.mycourse.StudentOnMyCourse;
+import io.github.oliviercailloux.grade.comm.StudentOnGitHubKnown;
+import io.github.oliviercailloux.grade.comm.StudentOnMyCourse;
+import io.github.oliviercailloux.grade.format.json.JsonGradeWithStudentAndCriterion;
 
 public class JsonGradeTest {
 	@SuppressWarnings("unused")

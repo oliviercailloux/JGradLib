@@ -16,8 +16,8 @@ import com.google.common.collect.ImmutableSet;
 
 import io.github.oliviercailloux.grade.CriterionAndPoints;
 import io.github.oliviercailloux.grade.GradeWithStudentAndCriterion;
-import io.github.oliviercailloux.grade.json.JsonGradeWithStudentAndCriterion;
-import io.github.oliviercailloux.grade.mycourse.StudentOnGitHub;
+import io.github.oliviercailloux.grade.comm.StudentOnGitHub;
+import io.github.oliviercailloux.grade.format.json.JsonGradeWithStudentAndCriterion;
 import io.github.oliviercailloux.java_grade.ex_junit.ExJUnitCriterion;
 
 public class MergeJson {

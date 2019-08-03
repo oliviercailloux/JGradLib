@@ -1,10 +1,12 @@
 package io.github.oliviercailloux.java_grade.ex_dep_git;
 
-import static io.github.oliviercailloux.java_grade.ex_dep_git.ExDepGitCriterionAndPoints.COMMIT;
-import static io.github.oliviercailloux.java_grade.ex_dep_git.ExDepGitCriterionAndPoints.DEP;
-import static io.github.oliviercailloux.java_grade.ex_dep_git.ExDepGitCriterionAndPoints.FIRST_COMMIT;
-import static io.github.oliviercailloux.java_grade.ex_dep_git.ExDepGitCriterionAndPoints.MERGE_COMMIT;
-import static io.github.oliviercailloux.java_grade.ex_dep_git.ExDepGitCriterionAndPoints.ON_TIME;
+import static io.github.oliviercailloux.java_grade.ex_dep_git.ExDepGitCriterion.CHILD_OF_STARTING;
+import static io.github.oliviercailloux.java_grade.ex_dep_git.ExDepGitCriterion.COMMIT;
+import static io.github.oliviercailloux.java_grade.ex_dep_git.ExDepGitCriterion.DEP;
+import static io.github.oliviercailloux.java_grade.ex_dep_git.ExDepGitCriterion.FIRST_COMMIT;
+import static io.github.oliviercailloux.java_grade.ex_dep_git.ExDepGitCriterion.MERGE_COMMIT;
+import static io.github.oliviercailloux.java_grade.ex_dep_git.ExDepGitCriterion.ON_TIME;
+import static io.github.oliviercailloux.java_grade.ex_dep_git.ExDepGitCriterion.PARENT_OF_MY_BRANCH;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -14,12 +16,11 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.ZonedDateTime;
 import java.util.Collection;
+import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.lib.ObjectId;
@@ -27,11 +28,10 @@ import org.eclipse.jgit.revwalk.RevCommit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.diffplug.common.base.Predicates;
+import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Sets;
 import com.google.common.graph.Graph;
 import com.google.common.graph.Graphs;
 import com.google.common.graph.ImmutableGraph;
@@ -40,22 +40,22 @@ import io.github.oliviercailloux.git.Checkouter;
 import io.github.oliviercailloux.git.Client;
 import io.github.oliviercailloux.git.GitUtils;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
-import io.github.oliviercailloux.grade.AnonymousGrade;
-import io.github.oliviercailloux.grade.CriterionAndMark;
-import io.github.oliviercailloux.grade.CriterionAndPoints;
-import io.github.oliviercailloux.grade.CsvGrades;
-import io.github.oliviercailloux.grade.GradeWithStudentAndCriterion;
+import io.github.oliviercailloux.grade.Criterion;
 import io.github.oliviercailloux.grade.GraderOrchestrator;
 import io.github.oliviercailloux.grade.GradingException;
+import io.github.oliviercailloux.grade.IGrade;
+import io.github.oliviercailloux.grade.Mark;
+import io.github.oliviercailloux.grade.WeightingGrade;
+import io.github.oliviercailloux.grade.comm.StudentOnGitHub;
 import io.github.oliviercailloux.grade.context.FilesSource;
 import io.github.oliviercailloux.grade.context.GitFullContext;
 import io.github.oliviercailloux.grade.contexters.FullContextInitializer;
-import io.github.oliviercailloux.grade.json.JsonGradeWithStudentAndCriterion;
+import io.github.oliviercailloux.grade.format.CsvGrades;
+import io.github.oliviercailloux.grade.format.json.JsonGrade;
 import io.github.oliviercailloux.grade.markers.MarkingPredicates;
 import io.github.oliviercailloux.grade.markers.Marks;
-import io.github.oliviercailloux.grade.mycourse.StudentOnGitHub;
-import io.github.oliviercailloux.java_grade.ex_extractor.ExExtractorCriterion;
 import io.github.oliviercailloux.java_grade.testers.MarkHelper;
+import io.github.oliviercailloux.json.JsonbUtils;
 import io.github.oliviercailloux.utils.Utils;
 
 public class ExDepGitGrader {
@@ -68,24 +68,24 @@ public class ExDepGitGrader {
 		final String prefix = "dep-git";
 		final GraderOrchestrator orch = new GraderOrchestrator(prefix);
 		final Path srcDir = Paths.get("../../Java L3/");
+		final Path outDir = Paths.get("");
 		orch.readUsernames(srcDir.resolve("usernamesGH-manual.json"));
 
 		orch.readRepositories();
-//		orch.setSingleRepo("BoBeauf");
+		orch.setSingleRepo("BoBeauf");
 
 		final ImmutableMap<StudentOnGitHub, RepositoryCoordinates> repositories = orch.getRepositoriesByStudent();
 
 		final ExDepGitGrader grader = new ExDepGitGrader();
 
-		final ImmutableSet<GradeWithStudentAndCriterion> grades = repositories.entrySet().stream()
-				.map((e) -> GradeWithStudentAndCriterion.of(e.getKey(), grader.grade(e.getValue()).getMarks().values()))
-				.collect(ImmutableSet.toImmutableSet());
+		final ImmutableMap<StudentOnGitHub, WeightingGrade> grades = repositories.entrySet().stream()
+				.collect(ImmutableMap.toImmutableMap(Entry::getKey, (e) -> grader.grade(e.getValue())));
 
 		LOGGER.info("Grades: {}.", grades);
 
-		Files.writeString(srcDir.resolve("all grades " + prefix + ".json"),
-				JsonGradeWithStudentAndCriterion.asJsonArray(grades).toString());
-		Files.writeString(srcDir.resolve("all grades " + prefix + ".csv"), CsvGrades.asCsv(grades));
+		Files.writeString(outDir.resolve("all grades " + prefix + ".json"),
+				JsonbUtils.toJsonObject(grades, JsonGrade.asAdapter()).toString());
+		Files.writeString(outDir.resolve("all grades " + prefix + ".csv"), CsvGrades.asCsv(grades, 7d));
 	}
 
 	public ExDepGitGrader() {
@@ -95,13 +95,13 @@ public class ExDepGitGrader {
 		commitsManual = null;
 	}
 
-	private CriterionAndMark timeMark;
+	private IGrade timeMark;
 	private GitFullContext fullContext;
 	private ImmutableMap<ObjectId, Instant> commitsReceptionTime;
 	private ImmutableList<RevCommit> commitsManual;
 
-	public AnonymousGrade grade(RepositoryCoordinates coord) {
-		final ImmutableSet.Builder<CriterionAndMark> gradeBuilder = ImmutableSet.builder();
+	public WeightingGrade grade(RepositoryCoordinates coord) {
+		final ImmutableMap.Builder<Criterion, IGrade> gradeBuilder = ImmutableMap.builder();
 		final Path projectsBaseDir = Paths.get("/home/olivier/Professions/Enseignement/En cours/dep-git");
 
 		final FullContextInitializer spec = (FullContextInitializer) FullContextInitializer.withPath(coord,
@@ -120,9 +120,9 @@ public class ExDepGitGrader {
 			}
 		}
 
-		timeMark = Marks.timeMark(ON_TIME, fullContext, DEADLINE, this::getPenalty);
-		gradeBuilder.add(timeMark);
-		gradeBuilder.add(commitMark());
+		timeMark = Marks.timeGrade(fullContext, DEADLINE, this::getTimeScore);
+		gradeBuilder.put(ON_TIME, timeMark);
+		gradeBuilder.put(COMMIT, commitMark());
 
 		final RevCommit startingCommit;
 		final RevCommit followingCommit;
@@ -143,7 +143,7 @@ public class ExDepGitGrader {
 
 		final Optional<RevCommit> myBranchOpt = tryParseSpec(client, "refs/remotes/origin/my-branch");
 		{
-			CriterionAndMark firstCommitMark = CriterionAndMark.min(FIRST_COMMIT);
+			IGrade firstCommitMark = Mark.zero();
 			for (RevCommit commit : commitsManual) {
 				final boolean childOfStarting = closure.hasEdgeConnecting(commit, startingCommit);
 				final boolean parentOfMyBranch;
@@ -153,17 +153,17 @@ public class ExDepGitGrader {
 				} else {
 					parentOfMyBranch = false;
 				}
-				final CriterionAndMark newMark = CriterionAndMark.proportional(FIRST_COMMIT, childOfStarting,
-						parentOfMyBranch);
+				final WeightingGrade newMark = WeightingGrade.proportional(CHILD_OF_STARTING,
+						Mark.ifPasses(childOfStarting), PARENT_OF_MY_BRANCH, Mark.ifPasses(parentOfMyBranch));
 				if (newMark.getPoints() > firstCommitMark.getPoints()) {
 					firstCommitMark = newMark;
 				}
 			}
-			gradeBuilder.add(firstCommitMark);
+			gradeBuilder.put(FIRST_COMMIT, firstCommitMark);
 		}
 
 		{
-			CriterionAndMark mergeCommitMark = CriterionAndMark.min(MERGE_COMMIT);
+			Mark mergeCommitMark = Mark.zero();
 			for (RevCommit commit : commitsManual) {
 				final Set<RevCommit> successors = graph.successors(commit);
 				final ImmutableSet<RevCommit> manualParents = successors.stream().filter(Predicates.in(commitsManual))
@@ -180,18 +180,17 @@ public class ExDepGitGrader {
 				}
 				final boolean childOfStarting = closure.hasEdgeConnecting(commit, startingCommit);
 				assert Utils.implies(hasExpectedParents, childOfStarting);
-				final double points = (goodStart && !hasExpectedParents) ? MERGE_COMMIT.getMaxPoints() * 1d / 4d
-						: (hasExpectedParents ? MERGE_COMMIT.getMaxPoints() : 0d);
-				final CriterionAndMark newMark = CriterionAndMark.of(MERGE_COMMIT, points, "");
+				final double points = (goodStart && !hasExpectedParents) ? 1d / 4d : (hasExpectedParents ? 1d : 0d);
+				final Mark newMark = Mark.given(points, "");
 				if (newMark.getPoints() > mergeCommitMark.getPoints()) {
 					mergeCommitMark = newMark;
 				}
 			}
-			gradeBuilder.add(mergeCommitMark);
+			gradeBuilder.put(MERGE_COMMIT, mergeCommitMark);
 		}
 
 		{
-			CriterionAndMark depMark = CriterionAndMark.min(DEP, "No dependency to jgit found");
+			Mark depMark = Mark.zero("No dependency to jgit found");
 			Instant latestFound = Instant.MIN;
 			for (RevCommit commit : commitsManual) {
 				final String pom;
@@ -214,27 +213,22 @@ public class ExDepGitGrader {
 					if (thisTime.compareTo(latestFound) > 0) {
 						latestFound = thisTime;
 						if (hasLast) {
-							depMark = CriterionAndMark.max(DEP);
+							depMark = Mark.one();
 						} else {
-							depMark = CriterionAndMark.of(DEP, DEP.getMaxPoints() * 1d / 2d,
-									"Expected last version 5.3.1.201904271842-r");
+							depMark = Mark.given(1d / 2d, "Expected last version 5.3.1.201904271842-r");
 						}
 					}
 				}
 			}
-			gradeBuilder.add(depMark);
+			gradeBuilder.put(DEP, depMark);
 		}
 
-		final ImmutableSet<CriterionAndMark> grade = gradeBuilder.build();
-		final Set<CriterionAndPoints> diff = Sets
-				.symmetricDifference(ImmutableSet.copyOf(ExDepGitCriterionAndPoints.values()),
-						grade.stream().map(CriterionAndMark::getCriterion).collect(ImmutableSet.toImmutableSet()))
-				.immutableCopy();
-		assert diff.isEmpty() : diff;
-		return GradeWithStudentAndCriterion.anonymous(grade);
+		final ImmutableMap<Criterion, IGrade> subGrades = gradeBuilder.build();
+		return WeightingGrade.from(subGrades,
+				ImmutableMap.of(ON_TIME, -1d, COMMIT, 1d, FIRST_COMMIT, 2d, MERGE_COMMIT, 2d, DEP, 2d));
 	}
 
-	CriterionAndMark commitMark() {
+	IGrade commitMark() {
 		final Client client = fullContext.getClient();
 		final Set<RevCommit> commits;
 		try {
@@ -255,18 +249,16 @@ public class ExDepGitGrader {
 		commitsManual = commitsOwn.stream().filter(byGH.negate()).collect(ImmutableList.toImmutableList());
 		final String comment = (!commitsOwn.isEmpty() ? "Own: " + toOIds(commitsOwn) + ". " : "")
 				+ (!commitsManual.isEmpty() ? "Using git: " + toOIds(commitsManual) : "No commits using git");
-		final double points = (!commitsManual.isEmpty()) ? COMMIT.getMaxPoints() : COMMIT.getMinPoints();
-		final CriterionAndMark commitMark = CriterionAndMark.of(COMMIT, points, comment);
+		final double points = (!commitsManual.isEmpty()) ? 1d : 0d;
+		final Mark commitMark = Mark.given(points, comment);
 		return commitMark;
 	}
 
-	double getPenalty(Duration tardiness) {
-		final double maxGrade = Stream.of(ExExtractorCriterion.values())
-				.collect(Collectors.summingDouble(CriterionAndPoints::getMaxPoints));
-
+	double getTimeScore(Duration tardiness) {
 		LOGGER.debug("Tardiness: {}.", tardiness);
 		final long secondsLate = tardiness.toSeconds();
-		return -0.05d / 20d * maxGrade * secondsLate;
+		final double penalty = Math.min(1d, 0.05d / 20d * secondsLate);
+		return 1d - penalty;
 	}
 
 	private ImmutableList<String> toOIds(Collection<RevCommit> commits) {

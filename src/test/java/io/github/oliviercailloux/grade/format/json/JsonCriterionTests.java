@@ -1,4 +1,4 @@
-package io.github.oliviercailloux.grade.json;
+package io.github.oliviercailloux.grade.format.json;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -12,6 +12,7 @@ import org.slf4j.LoggerFactory;
 import com.google.common.io.Resources;
 
 import io.github.oliviercailloux.grade.Criterion;
+import io.github.oliviercailloux.grade.format.json.JsonCriterion;
 import io.github.oliviercailloux.java_grade.JavaCriterion;
 import io.github.oliviercailloux.json.JsonbUtils;
 import io.github.oliviercailloux.json.PrintableJsonObjectFactory;

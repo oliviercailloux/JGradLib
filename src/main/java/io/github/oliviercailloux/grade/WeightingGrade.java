@@ -64,15 +64,16 @@ public class WeightingGrade implements IGrade {
 	private final ImmutableMap<Criterion, IGrade> subGrades;
 
 	/**
-	 * The positive ones sum to one.
+	 * The positive ones sum to one. No zero values.
 	 */
 	private final ImmutableMap<Criterion, Double> weights;
 
 	private WeightingGrade(Map<Criterion, ? extends IGrade> subGrades, Map<Criterion, Double> weights) {
 		checkArgument(weights.values().stream().allMatch((d) -> d != 0d && Double.isFinite(d)));
-		checkArgument(weights.keySet().equals(subGrades.keySet()));
 		checkArgument(weights.values().stream().anyMatch((d) -> d > 0d));
 		checkArgument(subGrades.values().stream().allMatch((g) -> 0d <= g.getPoints() && g.getPoints() <= 1d));
+		checkArgument(subGrades.keySet().equals(weights.keySet()),
+				String.format("Sub grades have keys: %s, weights have keys: %s", subGrades.keySet(), weights.keySet()));
 		final double sumPosWeights = weights.values().stream().filter((d) -> d > 0d)
 				.collect(Collectors.summingDouble((d) -> d));
 		this.weights = weights.entrySet().stream().collect(ImmutableMap.toImmutableMap((e) -> e.getKey(),
@@ -86,7 +87,8 @@ public class WeightingGrade implements IGrade {
 				.collect(Collectors.summingDouble((c) -> subGrades.get(c).getPoints() * weights.get(c)));
 		final double negativePoints = weights.entrySet().stream().filter((e) -> e.getValue() < 0d).map(Entry::getKey)
 				.collect(Collectors.summingDouble((c) -> (MAX_MARK - subGrades.get(c).getPoints()) * weights.get(c)));
-		final double totalPoints = Math.max(0d, positivePoints - negativePoints);
+		Verify.verify(negativePoints <= 0d);
+		final double totalPoints = Math.max(0d, positivePoints + negativePoints);
 		Verify.verify(0d <= totalPoints && totalPoints <= 1d);
 		return totalPoints;
 	}
@@ -107,7 +109,7 @@ public class WeightingGrade implements IGrade {
 	}
 
 	@JsonbProperty("subGrades")
-	ImmutableSet<CriterionGradeWeight> getSubGradesAsSet() {
+	public ImmutableSet<CriterionGradeWeight> getSubGradesAsSet() {
 		return subGrades.keySet().stream().map((c) -> CriterionGradeWeight.from(c, subGrades.get(c), weights.get(c)))
 				.collect(ImmutableSet.toImmutableSet());
 	}
@@ -140,6 +142,10 @@ public class WeightingGrade implements IGrade {
 	public String toString() {
 		return MoreObjects.toStringHelper(this).add("points", getPoints()).add("comment", getComment())
 				.add("subGrades", getSubGradesAsSet()).toString();
+	}
+
+	public static WeightingGrade proportional(Criterion c1, IGrade g1, Criterion c2, IGrade g2) {
+		return WeightingGrade.from(ImmutableMap.of(c1, g1, c2, g2), ImmutableMap.of(c1, 0.5d, c2, 0.5d));
 	}
 
 }

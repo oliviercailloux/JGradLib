@@ -4,8 +4,10 @@ import static java.util.Objects.requireNonNull;
 
 import java.nio.file.Path;
 
-import io.github.oliviercailloux.grade.CriterionAndPoints;
 import io.github.oliviercailloux.grade.CriterionAndMark;
+import io.github.oliviercailloux.grade.CriterionAndPoints;
+import io.github.oliviercailloux.grade.IGrade;
+import io.github.oliviercailloux.grade.Mark;
 import io.github.oliviercailloux.grade.context.FilesSource;
 import io.github.oliviercailloux.grade.context.GitFullContext;
 import io.github.oliviercailloux.grade.contexters.MavenManager;
@@ -50,8 +52,8 @@ public class MavenProjectMarker {
 		return pomSupplier;
 	}
 
-	public CriterionAndMark atRootMark(CriterionAndPoints criterion) {
-		return CriterionAndMark.binary(criterion, getPomSupplier().isMavenProjectAtRoot());
+	public IGrade atRootGrade() {
+		return Mark.ifPasses(getPomSupplier().isMavenProjectAtRoot());
 	}
 
 	public PomContexter getPomContexter() {
@@ -62,8 +64,8 @@ public class MavenProjectMarker {
 		return pomContexter;
 	}
 
-	public CriterionAndMark groupIdMark(CriterionAndPoints criterion) {
-		return CriterionAndMark.binary(criterion, getPomContexter().isGroupIdValid());
+	public IGrade groupIdGrade() {
+		return Mark.ifPasses(getPomContexter().isGroupIdValid());
 	}
 
 	/**
@@ -82,6 +84,14 @@ public class MavenProjectMarker {
 							projectDirectory.resolve(pomSupplier.getMavenRelativeRoot().get().resolve("pom.xml")));
 		}
 		return testsExistAndPass;
+	}
+
+	public CriterionAndMark atRootMark(CriterionAndPoints criterion) {
+		return CriterionAndMark.binary(criterion, getPomSupplier().isMavenProjectAtRoot());
+	}
+
+	public CriterionAndMark groupIdMark(CriterionAndPoints criterion) {
+		return CriterionAndMark.binary(criterion, getPomContexter().isGroupIdValid());
 	}
 
 	public static MavenProjectMarker given(GitFullContext context) {

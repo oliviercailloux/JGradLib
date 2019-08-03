@@ -1,4 +1,4 @@
-package io.github.oliviercailloux.grade.json;
+package io.github.oliviercailloux.grade.format.json;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -19,8 +19,8 @@ import com.google.common.collect.ImmutableSet;
 import io.github.oliviercailloux.grade.AnonymousGrade;
 import io.github.oliviercailloux.grade.CriterionAndMark;
 import io.github.oliviercailloux.grade.GradeWithStudentAndCriterion;
-import io.github.oliviercailloux.grade.mycourse.StudentOnGitHub;
-import io.github.oliviercailloux.grade.mycourse.StudentOnGitHubKnown;
+import io.github.oliviercailloux.grade.comm.StudentOnGitHub;
+import io.github.oliviercailloux.grade.comm.StudentOnGitHubKnown;
 import io.github.oliviercailloux.grade.mycourse.json.JsonStudentOnGitHub;
 import io.github.oliviercailloux.grade.mycourse.json.JsonStudentOnGitHubKnown;
 import io.github.oliviercailloux.json.JsonbUtils;

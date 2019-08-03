@@ -43,6 +43,24 @@ public class GradeTestsHelper {
 		return composite;
 	}
 
+	public static WeightingGrade getComplexGradeWithPenalty() {
+		final WeightingGrade subGrade1 = getSingletonWeightingGrade();
+		final Mark subGrade2 = Mark.given(0.3d, "comment");
+		final Mark subGradeTrap1 = Mark.given(0.3d, "not great");
+		final Mark subGradeTrap2 = Mark.given(1d, "well done buddy");
+		final Criterion criterion1 = Criterion.given("C1");
+		final Criterion criterion2 = Criterion.given("C2");
+		final Criterion trap1 = Criterion.given("Trap 1");
+		final Criterion trap2 = Criterion.given("Trap 2");
+		/** On trap1, lost 70 % × 75 % = 0.525 points */
+		final ImmutableMap<Criterion, Double> weights = ImmutableMap.of(criterion1, 2d, criterion2, 3d, trap1, -0.75d,
+				trap2, -1d);
+		final ImmutableMap<Criterion, IGrade> subGrades = ImmutableMap.of(criterion1, subGrade1, criterion2, subGrade2,
+				trap1, subGradeTrap1, trap2, subGradeTrap2);
+		final WeightingGrade composite = WeightingGrade.from(subGrades, weights);
+		return composite;
+	}
+
 	/**
 	 * <ul>
 	 * <li>C1: 0.54 [w=0.1]</li>

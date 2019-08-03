@@ -10,7 +10,7 @@ import java.util.Optional;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.revwalk.RevCommit;
 
-import com.diffplug.common.base.Predicates;
+import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableSet;
 
 import io.github.oliviercailloux.git.Client;

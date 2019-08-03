@@ -44,18 +44,18 @@ import io.github.oliviercailloux.git.Checkouter;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.grade.AnonymousGrade;
 import io.github.oliviercailloux.grade.CriterionAndPoints;
-import io.github.oliviercailloux.grade.CsvGrades;
 import io.github.oliviercailloux.grade.GradeWithStudentAndCriterion;
 import io.github.oliviercailloux.grade.GraderOrchestrator;
 import io.github.oliviercailloux.grade.GradingException;
+import io.github.oliviercailloux.grade.comm.StudentOnGitHub;
 import io.github.oliviercailloux.grade.CriterionAndMark;
 import io.github.oliviercailloux.grade.context.FilesSource;
 import io.github.oliviercailloux.grade.context.GitFullContext;
 import io.github.oliviercailloux.grade.contexters.FilesSourceUtils;
 import io.github.oliviercailloux.grade.contexters.FullContextInitializer;
-import io.github.oliviercailloux.grade.json.JsonGradeWithStudentAndCriterion;
+import io.github.oliviercailloux.grade.format.CsvGrades;
+import io.github.oliviercailloux.grade.format.json.JsonGradeWithStudentAndCriterion;
 import io.github.oliviercailloux.grade.markers.Marks;
-import io.github.oliviercailloux.grade.mycourse.StudentOnGitHub;
 import io.github.oliviercailloux.java_grade.compiler.SimpleCompiler;
 
 public class ExObjectsGrader {

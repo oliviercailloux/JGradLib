@@ -12,9 +12,9 @@ import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.ImmutableSet;
 
 import io.github.oliviercailloux.grade.CriterionAndPoints;
-import io.github.oliviercailloux.grade.CsvGrades;
 import io.github.oliviercailloux.grade.GradeWithStudentAndCriterion;
-import io.github.oliviercailloux.grade.json.JsonGradeWithStudentAndCriterion;
+import io.github.oliviercailloux.grade.format.CsvGrades;
+import io.github.oliviercailloux.grade.format.json.JsonGradeWithStudentAndCriterion;
 import io.github.oliviercailloux.java_grade.ex_jpa.ExJpaCriterion;
 
 public class MergeCsvToJson {
