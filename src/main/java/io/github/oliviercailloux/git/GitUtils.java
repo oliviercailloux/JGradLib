@@ -5,6 +5,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import java.time.Instant;
 import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.Collection;
 import java.util.Date;
 import java.util.TimeZone;
 
@@ -47,6 +48,10 @@ public class GitUtils {
 		final ZonedDateTime creationTime = ZonedDateTime.ofInstant(creationInstant.toInstant(),
 				creationZone.toZoneId());
 		return creationTime;
+	}
+
+	public static ImmutableList<String> toOIds(Collection<RevCommit> commits) {
+		return commits.stream().map(RevCommit::getName).collect(ImmutableList.toImmutableList());
 	}
 
 	public static void main(String[] args) throws Exception {

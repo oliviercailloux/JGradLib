@@ -3,9 +3,10 @@ package io.github.oliviercailloux.java_grade.ex_git;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
+import io.github.oliviercailloux.grade.Criterion;
 import io.github.oliviercailloux.grade.CriterionAndPoints;
 
-public enum ExGitCriterion implements CriterionAndPoints {
+public enum ExGitCriterion implements CriterionAndPoints, Criterion {
 	REPO_EXISTS("Repository exists", 2), ON_TIME("Delivered on time", 0, -30d), GIT("Commits done using git", 0, -30d),
 	USER_NAME("Commit is associated to the right user name", 2), SINGLE_ROOT_COMMIT("Only one root commit", 0d, -3d),
 	CONTAINS_START("First commit contains non-empty start.txt", 1),
@@ -50,5 +51,10 @@ public enum ExGitCriterion implements CriterionAndPoints {
 	@Override
 	public double getMinPoints() {
 		return minPoints;
+	}
+
+	@Override
+	public String getName() {
+		return toString();
 	}
 }

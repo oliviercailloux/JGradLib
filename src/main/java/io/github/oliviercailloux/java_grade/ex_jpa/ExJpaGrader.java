@@ -349,7 +349,6 @@ public class ExJpaGrader {
 		orch.readUsernames(srcDir.resolve("usernames.json"));
 
 		orch.readRepositories();
-		orch.setSingleRepo("ArnCLAUDEL");
 		final ImmutableMap<StudentOnGitHub, RepositoryCoordinates> repositories = orch.getRepositoriesByStudent();
 
 		final ExJpaGrader grader = new ExJpaGrader();

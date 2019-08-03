@@ -1,18 +1,6 @@
 package io.github.oliviercailloux.java_grade.ex_extractor;
 
 import static com.google.common.base.Preconditions.checkState;
-import static io.github.oliviercailloux.java_grade.ex_extractor.ExExtractorCriterion.AT_ROOT;
-import static io.github.oliviercailloux.java_grade.ex_extractor.ExExtractorCriterion.COMMIT;
-import static io.github.oliviercailloux.java_grade.ex_extractor.ExExtractorCriterion.COMPILES;
-import static io.github.oliviercailloux.java_grade.ex_extractor.ExExtractorCriterion.GROUP_ID;
-import static io.github.oliviercailloux.java_grade.ex_extractor.ExExtractorCriterion.IMPL;
-import static io.github.oliviercailloux.java_grade.ex_extractor.ExExtractorCriterion.NO_MISLEADING_URL;
-import static io.github.oliviercailloux.java_grade.ex_extractor.ExExtractorCriterion.ON_TIME;
-import static io.github.oliviercailloux.java_grade.ex_extractor.ExExtractorCriterion.PDF_DEP;
-import static io.github.oliviercailloux.java_grade.ex_extractor.ExExtractorCriterion.PREFIX;
-import static io.github.oliviercailloux.java_grade.ex_extractor.ExExtractorCriterion.SIMPLE_EXTRACTOR;
-import static io.github.oliviercailloux.java_grade.ex_extractor.ExExtractorCriterion.SOURCE;
-import static io.github.oliviercailloux.java_grade.ex_extractor.ExExtractorCriterion.UTF;
 import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
@@ -28,33 +16,21 @@ import java.net.URLClassLoader;
 import java.nio.file.FileSystem;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZonedDateTime;
-import java.time.temporal.ChronoUnit;
-import java.util.Collection;
 import java.util.Optional;
-import java.util.Set;
-import java.util.function.Predicate;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.apache.pdfbox.cos.COSArray;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;
-import org.eclipse.jgit.api.errors.GitAPIException;
-import org.eclipse.jgit.lib.ObjectId;
-import org.eclipse.jgit.revwalk.RevCommit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Sets;
 import com.google.common.jimfs.Configuration;
 import com.google.common.jimfs.Jimfs;
 import com.google.common.primitives.Booleans;
@@ -63,185 +39,26 @@ import io.github.classgraph.ClassGraph;
 import io.github.classgraph.ClassInfo;
 import io.github.classgraph.ClassInfoList;
 import io.github.classgraph.ScanResult;
-import io.github.oliviercailloux.git.Checkouter;
-import io.github.oliviercailloux.git.Client;
-import io.github.oliviercailloux.git.GitUtils;
-import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
-import io.github.oliviercailloux.grade.AnonymousGrade;
 import io.github.oliviercailloux.grade.CriterionAndPoints;
-import io.github.oliviercailloux.grade.GradeWithStudentAndCriterion;
-import io.github.oliviercailloux.grade.GraderOrchestrator;
 import io.github.oliviercailloux.grade.GradingException;
-import io.github.oliviercailloux.grade.comm.StudentOnGitHub;
-import io.github.oliviercailloux.grade.CriterionAndMark;
-import io.github.oliviercailloux.grade.context.FilesSource;
-import io.github.oliviercailloux.grade.context.GitFullContext;
-import io.github.oliviercailloux.grade.contexters.FullContextInitializer;
-import io.github.oliviercailloux.grade.contexters.MavenManager;
-import io.github.oliviercailloux.grade.contexters.PomSupplier;
-import io.github.oliviercailloux.grade.format.CsvGrades;
-import io.github.oliviercailloux.grade.format.json.JsonGradeWithStudentAndCriterion;
-import io.github.oliviercailloux.grade.markers.MarkingPredicates;
-import io.github.oliviercailloux.grade.markers.Marks;
-import io.github.oliviercailloux.grade.markers.MavenProjectMarker;
+import io.github.oliviercailloux.grade.Mark;
 import io.github.oliviercailloux.java_grade.ex_dep_git.ExDepGitCriterionAndPoints;
 import io.github.oliviercailloux.java_grade.testers.MarkHelper;
-import io.github.oliviercailloux.utils.Utils;
 
 public class ExExtractorGrader {
 
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(ExExtractorGrader.class);
-	private static final Instant DEADLINE = ZonedDateTime.parse("2019-05-06T16:24:00+02:00").toInstant();
-	private static final Instant START = DEADLINE.minus(40, ChronoUnit.MINUTES);
-
-	public static void main(String[] args) throws Exception {
-		final String prefix = "extractor";
-		final GraderOrchestrator orch = new GraderOrchestrator(prefix);
-		final Path srcDir = Paths.get("../../Java L3/");
-		orch.readUsernames(srcDir.resolve("usernamesGH-manual.json"));
-
-		orch.readRepositories();
-
-		final ImmutableMap<StudentOnGitHub, RepositoryCoordinates> repositories = orch.getRepositoriesByStudent();
-
-		final ExExtractorGrader grader = new ExExtractorGrader();
-
-		final ImmutableSet<GradeWithStudentAndCriterion> grades = repositories.entrySet().stream()
-				.map((e) -> GradeWithStudentAndCriterion.of(e.getKey(), grader.grade(e.getValue()).getMarks().values()))
-				.collect(ImmutableSet.toImmutableSet());
-
-		Files.writeString(srcDir.resolve("all grades " + prefix + ".json"), JsonGradeWithStudentAndCriterion.asJsonArray(grades).toString());
-		Files.writeString(srcDir.resolve("all grades " + prefix + ".csv"), CsvGrades.asCsv(grades));
-	}
-
 	public ExExtractorGrader() {
-		timeMark = null;
 		mavenAbsoluteRoot = null;
-		fullContext = null;
-		commitsReceptionTime = null;
 	}
 
-	private CriterionAndMark timeMark;
 	Path mavenAbsoluteRoot;
-	private GitFullContext fullContext;
-	private ImmutableMap<ObjectId, Instant> commitsReceptionTime;
 
-	public AnonymousGrade grade(RepositoryCoordinates coord) {
-		mavenAbsoluteRoot = null;
-
-		final ImmutableSet.Builder<CriterionAndMark> gradeBuilder = ImmutableSet.builder();
-		final Path projectsBaseDir = Paths.get("/home/olivier/Professions/Enseignement/En cours/extractor");
-
-		final FullContextInitializer spec = (FullContextInitializer) FullContextInitializer.withPathAndIgnore(coord,
-				projectsBaseDir, DEADLINE.plusSeconds(60));
-		commitsReceptionTime = spec.getCommitsReceptionTime();
-		fullContext = spec;
-		final Optional<RevCommit> mainCommit = fullContext.getMainCommit();
-		if (mainCommit.isPresent()) {
-			final Checkouter co = Checkouter.aboutAndUsing(coord, projectsBaseDir);
-			try {
-				co.checkout(mainCommit.get());
-			} catch (IOException | GitAPIException e) {
-				throw new GradingException(e);
-			}
-		}
-
-		final FilesSource filesReader = fullContext.getFilesReader(fullContext.getMainCommit());
-		final MavenProjectMarker mavenMarker = MavenProjectMarker.given(fullContext);
-
-		timeMark = Marks.timeMark(ON_TIME, fullContext, DEADLINE, this::getPenalty);
-		gradeBuilder.add(timeMark);
-		gradeBuilder.add(mavenMarker.atRootMark(AT_ROOT));
-		gradeBuilder.add(mavenMarker.groupIdMark(GROUP_ID));
-		gradeBuilder.add(commitMark());
-
-		final PomSupplier pomSupplier = mavenMarker.getPomSupplier();
-		mavenAbsoluteRoot = fullContext.getClient().getProjectDirectory()
-				.resolve(pomSupplier.getForcedMavenRelativeRoot());
-		final FilesSource pomMultiContent = pomSupplier.asMultiContent();
-		gradeBuilder.add(CriterionAndMark.binary(UTF,
-				pomMultiContent.existsAndAllMatch(
-						MarkingPredicates.containsOnce(Pattern.compile("<properties>" + Utils.ANY_REG_EXP
-								+ "<project\\.build\\.sourceEncoding>UTF-8</project\\.build\\.sourceEncoding>"
-								+ Utils.ANY_REG_EXP + "</properties>")))));
-		gradeBuilder
-				.add(CriterionAndMark.binary(SOURCE,
-						pomMultiContent.existsAndAllMatch(MarkingPredicates.containsOnce(Pattern.compile("<properties>"
-								+ Utils.ANY_REG_EXP + "<maven\\.compiler\\.source>.*</maven\\.compiler\\.source>"
-								+ Utils.ANY_REG_EXP + "</properties>")))));
-		gradeBuilder.add(CriterionAndMark.binary(NO_MISLEADING_URL,
-				pomMultiContent.existsAndAllMatch(
-						Predicates.contains(Pattern.compile("<url>.*\\.apache\\.org.*</url>")).negate())
-						&& pomMultiContent.existsAndAllMatch(
-								Predicates.contains(Pattern.compile("<url>.*example.*</url>")).negate())));
-		gradeBuilder.add(CriterionAndMark.binary(PDF_DEP,
-				pomMultiContent.existsAndAllMatch(MarkingPredicates
-						.containsOnce(Pattern.compile("<dependencies>" + Utils.ANY_REG_EXP + "<dependency>"
-								+ Utils.ANY_REG_EXP + "<groupId>org\\.apache\\.pdfbox</groupId>" + Utils.ANY_REG_EXP
-								+ "<artifactId>pdfbox</artifactId>" + Utils.ANY_REG_EXP + "<version>2\\.0\\.15"
-								+ Utils.ANY_REG_EXP + "</version>" + "[^<]*" + "</dependency>")))));
-		gradeBuilder.add(CriterionAndMark.binary(SIMPLE_EXTRACTOR,
-				!filesReader
-						.filterOnPath(Predicate.isEqual(pomSupplier.getSrcMainJavaFolder()
-								.resolve("io/github/oliviercailloux/y2019/extractor/SimpleExtractor.java")))
-						.asFileContents().isEmpty()));
-		gradeBuilder.add(
-				Marks.packageGroupId(PREFIX, filesReader.filter((fc) -> !fc.getPath().endsWith("SimpleExtractor.java")),
-						pomSupplier, mavenMarker.getPomContexter()));
-
-		final boolean compile = new MavenManager().compile(mavenAbsoluteRoot.resolve("pom.xml"));
-		gradeBuilder.add(CriterionAndMark.binary(COMPILES, compile));
-		gradeBuilder.add(writeMark());
-
-		final ImmutableSet<CriterionAndMark> grade = gradeBuilder.build();
-		final Set<CriterionAndPoints> diff = Sets.symmetricDifference(ImmutableSet.copyOf(ExExtractorCriterion.values()),
-				grade.stream().map(CriterionAndMark::getCriterion).collect(ImmutableSet.toImmutableSet())).immutableCopy();
-		assert diff.isEmpty() : diff;
-		return GradeWithStudentAndCriterion.anonymous(grade);
-	}
-
-	CriterionAndMark commitMark() {
-		final Client client = fullContext.getClient();
-		final Set<RevCommit> commits;
-		try {
-			commits = client.getAllCommits();
-		} catch (IOException | GitAPIException e) {
-			throw new IllegalStateException(e);
-		}
-		final ImmutableList<ZonedDateTime> commitDeclaredTimes = commits.stream().map(GitUtils::getCreationTime)
-				.collect(ImmutableList.toImmutableList());
-		LOGGER.debug("Times: {}.", commitDeclaredTimes);
-		LOGGER.debug("Real times: {}.", commitsReceptionTime.values());
-		final ImmutableList<RevCommit> commitsOwn = commits.stream()
-				.filter((c) -> !c.getAuthorIdent().getName().equals("Olivier Cailloux"))
-				.collect(ImmutableList.toImmutableList());
-		LOGGER.info("All: {}; own: {}.", toOIds(commits), toOIds(commitsOwn));
-		final ImmutableList<RevCommit> commitsEarly = commitsOwn.stream()
-				.filter((c) -> commitsReceptionTime.get(c).isBefore(START.plus(30, ChronoUnit.MINUTES)))
-				.collect(ImmutableList.toImmutableList());
-		final Predicate<? super RevCommit> byGH = MarkHelper::committerIsGitHub;
-		final ImmutableList<RevCommit> commitsManual = commitsOwn.stream().filter(byGH.negate())
-				.collect(ImmutableList.toImmutableList());
-		final String comment = (!commitsEarly.isEmpty() ? "Early enough: " + commitsEarly.iterator().next().getName()
-				: "No commits early enough") + "; "
-				+ (!commitsManual.isEmpty() ? "Using command line: " + commitsManual.iterator().next().getName()
-						: "No commits using command line");
-		final double points = (!commitsEarly.isEmpty() && !commitsManual.isEmpty()) ? COMMIT.getMaxPoints()
-				: COMMIT.getMinPoints();
-		final CriterionAndMark commitMark = CriterionAndMark.of(COMMIT, points, comment);
-		return commitMark;
-	}
-
-	private ImmutableList<String> toOIds(Collection<RevCommit> commits) {
-		return commits.stream().map(RevCommit::getName).collect(ImmutableList.toImmutableList());
-	}
-
-	CriterionAndMark writeMark() {
-		final ExExtractorCriterion criterion = IMPL;
+	Mark writeMark() {
 		final Optional<SimpleExtractor> inst = newInstance();
 		if (!inst.isPresent()) {
-			return CriterionAndMark.min(criterion, "Could not instanciate SimpleExtractor implementation.");
+			return Mark.zero("Could not instanciate SimpleExtractor implementation.");
 		}
 		final SimpleExtractor instance = inst.get();
 		LOGGER.info("Instantiated: {}.", instance.getClass().getName());
@@ -419,9 +236,7 @@ public class ExExtractorGrader {
 		} else if (testExplicitStripper && testThrows && testClosesOwn) {
 			fracPoints += 1d / 8d;
 		}
-		final CriterionAndMark mark = CriterionAndMark.of(criterion,
-				criterion.getMinPoints() + (criterion.getMaxPoints() - criterion.getMinPoints()) * fracPoints,
-				commentBuilder.toString());
+		final Mark mark = Mark.given(fracPoints, commentBuilder.toString());
 		return mark;
 	}
 
@@ -508,10 +323,10 @@ public class ExExtractorGrader {
 	}
 
 	@SuppressWarnings("unused")
-	private CriterionAndMark userWriteToFileMark() {
+	private Mark userWriteToFileMark() {
 		final Optional<Class<?>> namedClass = getNamedClass("ExtractorUser");
 		if (namedClass.isEmpty()) {
-			return CriterionAndMark.min(ON_TIME);
+			return Mark.zero();
 		}
 
 		final String methodName = "writeTextToFile";
@@ -550,7 +365,7 @@ public class ExExtractorGrader {
 			comment = "Method ExtractorUser#" + methodName + " not found";
 		}
 
-		return CriterionAndMark.proportional(ON_TIME, Booleans.countTrue(writtenOk, throwsIOE), 2, comment);
+		return Mark.given(Booleans.countTrue(writtenOk, throwsIOE) / 2d, comment);
 
 	}
 

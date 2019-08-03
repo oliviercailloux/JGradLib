@@ -34,18 +34,20 @@ import com.google.common.base.Verify;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.MoreCollectors;
-import com.google.common.collect.Sets;
+import com.google.common.primitives.Booleans;
 
 import io.github.oliviercailloux.git.Checkouter;
 import io.github.oliviercailloux.git.Client;
 import io.github.oliviercailloux.git.GitHistory;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
+import io.github.oliviercailloux.grade.Criterion;
 import io.github.oliviercailloux.grade.CriterionAndPoints;
 import io.github.oliviercailloux.grade.GradeWithStudentAndCriterion;
 import io.github.oliviercailloux.grade.GraderOrchestrator;
 import io.github.oliviercailloux.grade.GradingException;
+import io.github.oliviercailloux.grade.IGrade;
+import io.github.oliviercailloux.grade.Mark;
 import io.github.oliviercailloux.grade.comm.StudentOnGitHub;
-import io.github.oliviercailloux.grade.CriterionAndMark;
 import io.github.oliviercailloux.grade.context.FilesSource;
 import io.github.oliviercailloux.grade.context.GitContext;
 import io.github.oliviercailloux.grade.context.GitFullContext;
@@ -64,8 +66,8 @@ public class ExJUnitGrader {
 		history = null;
 	}
 
-	public ImmutableSet<CriterionAndMark> grade(RepositoryCoordinates coord, @SuppressWarnings("unused") StudentOnGitHub student) {
-		final ImmutableSet.Builder<CriterionAndMark> gradeBuilder = ImmutableSet.builder();
+	public Map<Criterion, IGrade> grade(RepositoryCoordinates coord) {
+		final ImmutableMap.Builder<Criterion, IGrade> gradeBuilder = ImmutableMap.builder();
 		final Path projectsBaseDir = Paths.get("/home/olivier/Professions/Enseignement/En cours/junit");
 		final Instant deadline = ZonedDateTime.parse("2019-06-04T17:42:00+02:00").toInstant();
 
@@ -113,11 +115,11 @@ public class ExJUnitGrader {
 		}
 
 		if (fullContext != null) {
-			gradeBuilder.add(Marks.timeMark(ON_TIME, fullContext, deadline, this::getPenalty));
-			gradeBuilder.add(Marks.gitRepo(REPO_EXISTS, fullContext));
+			gradeBuilder.put(ON_TIME, Marks.timeGrade(fullContext, deadline, this::getPenalty));
+			gradeBuilder.put(REPO_EXISTS, Marks.gitRepoGrade(fullContext));
 		} else {
-			gradeBuilder.add(CriterionAndMark.max(ON_TIME));
-			gradeBuilder.add(CriterionAndMark.binary(REPO_EXISTS, lastCommitOpt.isPresent()));
+			gradeBuilder.put(ON_TIME, Mark.one());
+			gradeBuilder.put(REPO_EXISTS, Mark.given(Booleans.countTrue(lastCommitOpt.isPresent()), ""));
 		}
 
 		final FilesSource filesReader = context.getFilesReader(lastCommitOpt);
@@ -137,17 +139,17 @@ public class ExJUnitGrader {
 		final ImmutableSet<RevCommit> byOwn = history.getGraph().nodes().stream().filter(gitHub.or(cail).negate())
 				.collect(ImmutableSet.toImmutableSet());
 		{
-			final CriterionAndMark mark;
+			final Mark mark;
 			if (!byOwn.isEmpty()) {
-				mark = CriterionAndMark.of(GIT, GIT.getMaxPoints(), String.format("Own commits: %s.", toString(byOwn)));
+				mark = Mark.given(1d, String.format("Own commits: %s.", toString(byOwn)));
 			} else {
-				mark = CriterionAndMark.min(GIT);
+				mark = Mark.zero();
 			}
-			gradeBuilder.add(mark);
+			gradeBuilder.put(GIT, mark);
 		}
 
 		final Optional<RevCommit> devOpt = tryParseSpec(client, "refs/remotes/origin/testing");
-		gradeBuilder.add(CriterionAndMark.binary(BRANCH, devOpt.isPresent()));
+		gradeBuilder.put(BRANCH, Mark.given(Booleans.countTrue(devOpt.isPresent()), ""));
 
 		final Path srcMainJavaFolder = mavenMarker.getPomSupplier().getSrcMainJavaFolder();
 		final Path srcTestJavaFolder = mavenMarker.getPomSupplier().getSrcTestJavaFolder();
@@ -156,27 +158,32 @@ public class ExJUnitGrader {
 
 		LOGGER.info("ETF: {}.", extractorTestsFiles.getContents().keySet());
 
-		gradeBuilder.add(CriterionAndMark.binary(CLASS_EXISTS, !extractorTestsFiles.asFileContents().isEmpty()));
+		gradeBuilder.put(CLASS_EXISTS,
+				Mark.given(Booleans.countTrue(!extractorTestsFiles.asFileContents().isEmpty()), ""));
 		final Path expectedName = Paths.get("io/github/oliviercailloux/extractor/ExtractorTests.java");
 		final Path expectedPdfName = mavenMarker.getPomSupplier().getSrcFolder()
 				.resolve("test/resources/io/github/oliviercailloux/extractor/hello-world.pdf");
-		gradeBuilder.add(CriterionAndMark.binary(CLASS_NAME,
-				!extractorTestsFiles.asFileContents().isEmpty() && extractorTestsFiles.asFileContents().stream()
-						.allMatch((fc) -> fc.getPath().equals(srcMainJavaFolder.resolve(expectedName))
-								|| fc.getPath().equals(srcTestJavaFolder.resolve(expectedName)))));
+		gradeBuilder.put(CLASS_NAME,
+				Mark.given(Booleans.countTrue(
+						!extractorTestsFiles.asFileContents().isEmpty() && extractorTestsFiles.asFileContents().stream()
+								.allMatch((fc) -> fc.getPath().equals(srcMainJavaFolder.resolve(expectedName))
+										|| fc.getPath().equals(srcTestJavaFolder.resolve(expectedName)))),
+						""));
 
-		gradeBuilder.add(CriterionAndMark.binary(CLASS_IN_TEST,
-				!extractorTestsFiles.asFileContents().isEmpty() && extractorTestsFiles.asFileContents().stream()
-						.allMatch((fc) -> fc.getPath().equals(srcTestJavaFolder.resolve(expectedName)))));
-		gradeBuilder.add(CriterionAndMark.binary(PDF_IN_TEST,
-				filesReader.asFileContents().stream().anyMatch((fc) -> fc.getPath().equals(expectedPdfName))));
-		gradeBuilder.add(CriterionAndMark.min(TEST_TESTS));
+		gradeBuilder
+				.put(CLASS_IN_TEST,
+						Mark.given(
+								Booleans.countTrue(!extractorTestsFiles.asFileContents().isEmpty()
+										&& extractorTestsFiles.asFileContents().stream().allMatch(
+												(fc) -> fc.getPath().equals(srcTestJavaFolder.resolve(expectedName)))),
+								""));
+		gradeBuilder.put(PDF_IN_TEST,
+				Mark.given(Booleans.countTrue(
+						filesReader.asFileContents().stream().anyMatch((fc) -> fc.getPath().equals(expectedPdfName))),
+						""));
+		gradeBuilder.put(TEST_TESTS, Mark.zero());
 
-		final ImmutableSet<CriterionAndMark> grade = gradeBuilder.build();
-		final Set<CriterionAndPoints> diff = Sets.symmetricDifference(ImmutableSet.copyOf(ExJUnitCriterion.values()),
-				grade.stream().map(CriterionAndMark::getCriterion).collect(ImmutableSet.toImmutableSet()));
-		assert diff.isEmpty() : diff;
-		return grade;
+		return gradeBuilder.build();
 	}
 
 	private String toString(Set<RevCommit> commits) {
@@ -209,28 +216,5 @@ public class ExJUnitGrader {
 		LOGGER.debug("Tardiness: {}.", tardiness);
 		final long secondsLate = tardiness.toSeconds();
 		return -0.05d / 20d * maxGrade * secondsLate;
-	}
-
-	public static void main(String[] args) throws Exception {
-		final String prefix = "junit";
-		final GraderOrchestrator orch = new GraderOrchestrator(prefix);
-		final Path srcDir = Paths.get("../../Java L3/");
-		orch.readUsernames(srcDir.resolve("usernamesGH-manual.json"));
-
-		orch.readRepositories();
-
-		final ImmutableMap<StudentOnGitHub, RepositoryCoordinates> repositories = orch.getRepositoriesByStudent();
-		final StudentOnGitHub externalStudent = orch.getUsernames().getStudentOnGitHub("aitalibraham");
-		final Map<StudentOnGitHub, RepositoryCoordinates> repositoriesWithExternal = new LinkedHashMap<>(repositories);
-		repositoriesWithExternal.put(externalStudent, RepositoryCoordinates.from("aitalibraham", "extractor"));
-
-		final ExJUnitGrader grader = new ExJUnitGrader();
-
-		final ImmutableSet<GradeWithStudentAndCriterion> grades = repositoriesWithExternal.entrySet().stream()
-				.map((e) -> GradeWithStudentAndCriterion.of(e.getKey(), grader.grade(e.getValue(), e.getKey())))
-				.collect(ImmutableSet.toImmutableSet());
-
-		Files.writeString(srcDir.resolve("all grades " + prefix + ".json"), JsonGradeWithStudentAndCriterion.asJsonArray(grades).toString());
-		Files.writeString(srcDir.resolve("all grades " + prefix + ".csv"), CsvGrades.asCsv(grades));
 	}
 }

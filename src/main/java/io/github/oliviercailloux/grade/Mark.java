@@ -28,6 +28,10 @@ public class Mark implements IGrade {
 		return new Mark(1d, "");
 	}
 
+	/**
+	 * TODO replace with Booleans.countTrue at usage site; change for an AndGrade
+	 * when involves several conditions.
+	 */
 	public static Mark ifPasses(boolean passes) {
 		return passes ? one() : zero();
 	}
