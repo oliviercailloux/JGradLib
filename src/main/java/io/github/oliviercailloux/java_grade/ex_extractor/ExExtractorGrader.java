@@ -16,11 +16,7 @@ import java.net.URLClassLoader;
 import java.nio.file.FileSystem;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.time.Duration;
-import java.time.Instant;
-import java.time.ZonedDateTime;
 import java.util.Optional;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.apache.pdfbox.cos.COSArray;
@@ -39,16 +35,15 @@ import io.github.classgraph.ClassGraph;
 import io.github.classgraph.ClassInfo;
 import io.github.classgraph.ClassInfoList;
 import io.github.classgraph.ScanResult;
-import io.github.oliviercailloux.grade.CriterionAndPoints;
 import io.github.oliviercailloux.grade.GradingException;
 import io.github.oliviercailloux.grade.Mark;
-import io.github.oliviercailloux.java_grade.ex_dep_git.ExDepGitCriterionAndPoints;
 import io.github.oliviercailloux.java_grade.testers.MarkHelper;
 
 public class ExExtractorGrader {
 
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(ExExtractorGrader.class);
+
 	public ExExtractorGrader() {
 		mavenAbsoluteRoot = null;
 	}
@@ -264,15 +259,6 @@ public class ExExtractorGrader {
 			}
 
 		};
-	}
-
-	double getPenalty(Duration tardiness) {
-		final double maxGrade = Stream.of(ExDepGitCriterionAndPoints.values())
-				.collect(Collectors.summingDouble(CriterionAndPoints::getMaxPoints));
-
-		LOGGER.debug("Tardiness: {}.", tardiness);
-		final long secondsLate = tardiness.toSeconds();
-		return -0.05d / 20d * maxGrade * secondsLate;
 	}
 
 	private Optional<Class<?>> getNamedClass(String simpleName) {

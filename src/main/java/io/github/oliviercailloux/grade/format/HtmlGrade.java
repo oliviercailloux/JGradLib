@@ -7,7 +7,7 @@ import java.util.Locale;
 
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
-import org.w3c.dom.Text;
+import org.w3c.dom.Node;
 
 import com.google.common.collect.ImmutableSet;
 
@@ -42,6 +42,8 @@ public class HtmlGrade {
 			double denominator) {
 		for (CriterionGradeWeight subGrade : subGrades) {
 			final Element li = document.createXhtmlElement("li");
+			ul.appendChild(li);
+
 			final IGrade currentGrade = subGrade.getGrade();
 			final double points = currentGrade.getPoints();
 			final double weight = subGrade.getWeight();
@@ -64,18 +66,18 @@ public class HtmlGrade {
 				} else {
 					thisGradeText = thisGradeStartText + " (" + currentGrade.getComment() + ")";
 				}
-				final Text liText = document.getDocument().createTextNode(thisGradeText);
+				final Node liText = document.createParagraph(thisGradeText);
 				li.appendChild(liText);
 			} else {
 				checkArgument(currentGrade instanceof WeightingGrade);
-				final Text liText = document.getDocument().createTextNode(thisGradeStartText);
+//				final Node liText = document.getDocument().createTextNode(thisGradeStartText);
+				final Node liText = document.createParagraph(thisGradeStartText);
 				li.appendChild(liText);
 				final Element subUl = document.createXhtmlElement("ul");
 				li.appendChild(subUl);
 				appendListTo(((WeightingGrade) currentGrade).getSubGradesAsSet(), document, subUl,
 						denominator * weight);
 			}
-			ul.appendChild(li);
 		}
 	}
 }

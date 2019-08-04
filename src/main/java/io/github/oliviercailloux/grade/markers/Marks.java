@@ -24,8 +24,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.primitives.Booleans;
 
 import io.github.oliviercailloux.git.Client;
-import io.github.oliviercailloux.grade.CriterionAndMark;
-import io.github.oliviercailloux.grade.CriterionAndPoints;
 import io.github.oliviercailloux.grade.IGrade;
 import io.github.oliviercailloux.grade.Mark;
 import io.github.oliviercailloux.grade.context.FilesSource;
@@ -100,11 +98,6 @@ public class Marks {
 
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(Marks.class);
-
-	public static CriterionAndMark notEmpty(CriterionAndPoints criterion, FilesSource multiSupplier) {
-		return !multiSupplier.getContents().isEmpty() ? CriterionAndMark.of(criterion, criterion.getMaxPoints(),
-				"Found: " + multiSupplier.getContents().keySet() + ".") : CriterionAndMark.min(criterion);
-	}
 
 	/**
 	 * The project must be checked out at the version to be tested, at the path

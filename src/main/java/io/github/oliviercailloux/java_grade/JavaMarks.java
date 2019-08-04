@@ -11,8 +11,6 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.MoreCollectors;
 
 import io.github.oliviercailloux.git.FileContent;
-import io.github.oliviercailloux.grade.CriterionAndMark;
-import io.github.oliviercailloux.grade.CriterionAndPoints;
 import io.github.oliviercailloux.grade.IGrade;
 import io.github.oliviercailloux.grade.Mark;
 import io.github.oliviercailloux.grade.context.FilesSource;

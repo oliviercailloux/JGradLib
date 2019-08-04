@@ -2,24 +2,16 @@ package io.github.oliviercailloux.grade.format;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
-import java.io.InputStream;
 import java.io.StringWriter;
 import java.text.NumberFormat;
-import java.text.ParseException;
-import java.util.Collection;
-import java.util.LinkedHashSet;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Set;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Strings;
 import com.google.common.base.Verify;
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
@@ -27,19 +19,12 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSetMultimap;
 import com.google.common.collect.ImmutableTable;
 import com.google.common.collect.MoreCollectors;
-import com.google.common.collect.Sets;
 import com.google.common.collect.Streams;
-import com.univocity.parsers.common.record.Record;
-import com.univocity.parsers.csv.CsvParser;
-import com.univocity.parsers.csv.CsvParserSettings;
 import com.univocity.parsers.csv.CsvWriter;
 import com.univocity.parsers.csv.CsvWriterSettings;
 
 import io.github.oliviercailloux.grade.Criterion;
-import io.github.oliviercailloux.grade.CriterionAndMark;
-import io.github.oliviercailloux.grade.CriterionAndPoints;
 import io.github.oliviercailloux.grade.CriterionGradeWeight;
-import io.github.oliviercailloux.grade.GradeWithStudentAndCriterion;
 import io.github.oliviercailloux.grade.IGrade;
 import io.github.oliviercailloux.grade.WeightingGrade;
 import io.github.oliviercailloux.grade.comm.StudentOnGitHub;
@@ -48,7 +33,7 @@ public class CsvGrades {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(CsvGrades.class);
 
-	private static final double DEFAULT_DENOMINATOR = 20d;
+	public static final double DEFAULT_DENOMINATOR = 20d;
 
 	public static String asCsv(Map<StudentOnGitHub, WeightingGrade> grades) {
 		return asCsv(grades, DEFAULT_DENOMINATOR);
@@ -143,48 +128,5 @@ public class CsvGrades {
 						parent.getWeight() * cwg.getWeight()));
 		final Stream<CriterionGradeWeight> flatmappedChildren = mapped.flatMap((cwg) -> asContextualizedStream(cwg));
 		return Stream.concat(itself, flatmappedChildren);
-	}
-
-	public static ImmutableSet<GradeWithStudentAndCriterion> fromCsv(InputStream input,
-			Function<String, CriterionAndPoints> toCriterion) {
-		final NumberFormat formatter = NumberFormat.getNumberInstance(Locale.FRENCH);
-		final CsvParserSettings settings = new CsvParserSettings();
-		settings.setHeaderExtractionEnabled(true);
-		final CsvParser parser = new CsvParser(settings);
-		parser.beginParsing(input);
-		Record record = parser.parseNextRecord();
-		final ImmutableSet<String> allHeaders = ImmutableSet.copyOf(parser.getRecordMetadata().headers());
-		final ImmutableSet<String> expected = ImmutableSet.of("Name", "GitHub username", "Grade");
-		checkArgument(allHeaders.containsAll(expected));
-		final ImmutableSet<String> criteria = Sets.difference(allHeaders, expected).immutableCopy();
-		final ImmutableSet.Builder<GradeWithStudentAndCriterion> gradesBuilder = ImmutableSet.builder();
-		while (record != null) {
-			final String name = record.getString("Name");
-			final String username = record.getString("GitHub username");
-			final Set<CriterionAndMark> marks = new LinkedHashSet<>();
-			for (String criterionName : criteria) {
-				final String pointsStr = record.getString(criterionName);
-				if (Strings.isNullOrEmpty(pointsStr)) {
-					continue;
-				}
-				final double points;
-				try {
-					points = formatter.parse(pointsStr).doubleValue();
-				} catch (ParseException e) {
-					throw new IllegalStateException(e);
-				}
-				final CriterionAndPoints criterion = toCriterion.apply(criterionName);
-				final CriterionAndMark mark = CriterionAndMark.of(criterion, points, "");
-				marks.add(mark);
-			}
-			if (!marks.isEmpty()) {
-				final GradeWithStudentAndCriterion grade = GradeWithStudentAndCriterion
-						.of(StudentOnGitHub.with(username), marks);
-				LOGGER.debug("Grade built for {}: {}.", name, grade);
-				gradesBuilder.add(grade);
-			}
-			record = parser.parseNextRecord();
-		}
-		return gradesBuilder.build();
 	}
 }

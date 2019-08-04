@@ -4,8 +4,6 @@ import static java.util.Objects.requireNonNull;
 
 import java.nio.file.Path;
 
-import io.github.oliviercailloux.grade.CriterionAndMark;
-import io.github.oliviercailloux.grade.CriterionAndPoints;
 import io.github.oliviercailloux.grade.IGrade;
 import io.github.oliviercailloux.grade.Mark;
 import io.github.oliviercailloux.grade.context.FilesSource;
@@ -68,14 +66,6 @@ public class MavenProjectMarker {
 		return Mark.ifPasses(getPomContexter().isGroupIdValid());
 	}
 
-	/**
-	 * The project must be checked out at the version to be tested, at the path
-	 * indicated by the project directory of the client.
-	 */
-	public CriterionAndMark testMark(CriterionAndPoints criterion) {
-		return CriterionAndMark.binary(criterion, testsExistAndPass);
-	}
-
 	public boolean doTestsExistAndPass() {
 		if (testsExistAndPass == null) {
 			final MavenManager mavenManager = new MavenManager();
@@ -84,14 +74,6 @@ public class MavenProjectMarker {
 							projectDirectory.resolve(pomSupplier.getMavenRelativeRoot().get().resolve("pom.xml")));
 		}
 		return testsExistAndPass;
-	}
-
-	public CriterionAndMark atRootMark(CriterionAndPoints criterion) {
-		return CriterionAndMark.binary(criterion, getPomSupplier().isMavenProjectAtRoot());
-	}
-
-	public CriterionAndMark groupIdMark(CriterionAndPoints criterion) {
-		return CriterionAndMark.binary(criterion, getPomContexter().isGroupIdValid());
 	}
 
 	public static MavenProjectMarker given(GitFullContext context) {
