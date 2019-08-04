@@ -4,24 +4,18 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static io.github.oliviercailloux.java_grade.ex_two_sets.ExTwoSetsCriterion.CONCATENATES;
 import static io.github.oliviercailloux.java_grade.ex_two_sets.ExTwoSetsCriterion.EX_57;
 import static io.github.oliviercailloux.java_grade.ex_two_sets.ExTwoSetsCriterion.JAVADOC;
-import static io.github.oliviercailloux.java_grade.ex_two_sets.ExTwoSetsCriterion.ON_TIME;
 import static io.github.oliviercailloux.java_grade.ex_two_sets.ExTwoSetsCriterion.REPO_EXISTS;
 import static io.github.oliviercailloux.java_grade.ex_two_sets.ExTwoSetsCriterion.THROWS;
 import static io.github.oliviercailloux.java_grade.ex_two_sets.ExTwoSetsCriterion.TYPE_SET;
-import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.time.Duration;
 import java.time.Instant;
-import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Predicate;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import javax.tools.Diagnostic;
 import javax.tools.JavaFileObject;
@@ -40,7 +34,6 @@ import io.github.oliviercailloux.git.Checkouter;
 import io.github.oliviercailloux.git.FileContent;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.grade.Criterion;
-import io.github.oliviercailloux.grade.CriterionAndPoints;
 import io.github.oliviercailloux.grade.GradingException;
 import io.github.oliviercailloux.grade.IGrade;
 import io.github.oliviercailloux.grade.Mark;
@@ -52,8 +45,6 @@ import io.github.oliviercailloux.java_grade.JavaGradeUtils;
 import io.github.oliviercailloux.java_grade.compiler.SimpleCompiler;
 
 public class ExTwoSetsGrader {
-
-	private Instant deadline;
 
 	public Map<Criterion, IGrade> grade(RepositoryCoordinates coord, Instant ignoreAfter) {
 		final ImmutableMap.Builder<Criterion, IGrade> gradeBuilder = ImmutableMap.builder();
@@ -73,8 +64,6 @@ public class ExTwoSetsGrader {
 
 		final FilesSource filesReader = fullContext.getFilesReader(fullContext.getMainCommit());
 
-		timeMark = Marks.timeGrade(fullContext, deadline, this::getPenalty);
-		gradeBuilder.put(ON_TIME, timeMark);
 		gradeBuilder.put(REPO_EXISTS, Marks.gitRepoGrade(fullContext));
 
 		final Predicate<Path> intQ = (p) -> p.endsWith("IntQuestion.java");
@@ -139,23 +128,6 @@ public class ExTwoSetsGrader {
 
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(ExTwoSetsGrader.class);
-	private IGrade timeMark;
 	private Optional<RevCommit> mainCommit;
 
-	public void setDeadline(Instant deadline) {
-		this.deadline = requireNonNull(deadline);
-	}
-
-	double getPenalty(Duration tardiness) {
-		final double maxGrade = Stream.of(ExTwoSetsCriterion.values())
-				.collect(Collectors.summingDouble(CriterionAndPoints::getMaxPoints));
-
-		final long secondsLate = tardiness.toSeconds();
-		return -3d / 20d * maxGrade * secondsLate / 3600;
-	}
-
-	public ExTwoSetsGrader() {
-		deadline = ZonedDateTime.parse("2019-04-16T23:59:59+01:00").toInstant();
-		timeMark = null;
-	}
 }

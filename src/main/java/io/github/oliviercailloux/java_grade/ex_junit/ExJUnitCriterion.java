@@ -4,9 +4,8 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import io.github.oliviercailloux.grade.Criterion;
-import io.github.oliviercailloux.grade.CriterionAndPoints;
 
-public enum ExJUnitCriterion implements CriterionAndPoints, Criterion {
+public enum ExJUnitCriterion implements Criterion {
 	REPO_EXISTS("Repository exists", 2), ON_TIME("Delivered on time", 0, -30d),
 	CLASS_EXISTS("Class ExtractorTests exists", 0.5), CLASS_NAME("Class ExtractorTests is named correctly", 0.5),
 	CLASS_IN_TEST("Class ExtractorTests is in src/test/java", 1.5),
@@ -30,17 +29,14 @@ public enum ExJUnitCriterion implements CriterionAndPoints, Criterion {
 		this.minPoints = minPoints;
 	}
 
-	@Override
 	public String getRequirement() {
 		return requirement;
 	}
 
-	@Override
 	public double getMaxPoints() {
 		return maxPoints;
 	}
 
-	@Override
 	public double getMinPoints() {
 		return minPoints;
 	}

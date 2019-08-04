@@ -12,7 +12,6 @@ import static io.github.oliviercailloux.java_grade.ex_objects.ExObjectsCriterion
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.time.Duration;
 import java.time.Instant;
 import java.time.ZonedDateTime;
 import java.util.List;
@@ -21,8 +20,6 @@ import java.util.Optional;
 import java.util.function.Predicate;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import javax.tools.Diagnostic;
 import javax.tools.JavaFileObject;
@@ -42,7 +39,6 @@ import com.google.common.primitives.Booleans;
 import io.github.oliviercailloux.git.Checkouter;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.grade.Criterion;
-import io.github.oliviercailloux.grade.CriterionAndPoints;
 import io.github.oliviercailloux.grade.GradingException;
 import io.github.oliviercailloux.grade.IGrade;
 import io.github.oliviercailloux.grade.Mark;
@@ -84,7 +80,7 @@ public class ExObjectsGrader {
 
 		final FilesSource filesReader = fullContext.getFilesReader(fullContext.getMainCommit());
 
-		timeMark = Marks.timeGrade(fullContext, DEADLINE, this::getPenalty);
+		timeMark = Marks.timeGrade(fullContext, DEADLINE, (d) -> 1d);
 		gradeBuilder.put(ON_TIME, timeMark);
 		gradeBuilder.put(REPO_EXISTS, Marks.gitRepoGrade(fullContext));
 
@@ -215,13 +211,5 @@ public class ExObjectsGrader {
 			return Paths.get("");
 		}
 		return p.subpath(0, Math.min(3, p.getNameCount() - 1));
-	}
-
-	double getPenalty(Duration tardiness) {
-		final double maxGrade = Stream.of(ExObjectsCriterion.values())
-				.collect(Collectors.summingDouble(CriterionAndPoints::getMaxPoints));
-
-		final long hoursLate = tardiness.toHours() + 1;
-		return -3d / 20d * maxGrade * hoursLate;
 	}
 }

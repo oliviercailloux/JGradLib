@@ -5,8 +5,8 @@ import static io.github.oliviercailloux.grade.mycourse.csv.CsvStudentsOnMyCourse
 
 import java.io.StringWriter;
 import java.text.NumberFormat;
-import java.util.Collection;
 import java.util.Locale;
+import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,7 +14,7 @@ import org.slf4j.LoggerFactory;
 import com.univocity.parsers.csv.CsvWriter;
 import com.univocity.parsers.csv.CsvWriterSettings;
 
-import io.github.oliviercailloux.grade.GradeWithStudentAndCriterion;
+import io.github.oliviercailloux.grade.IGrade;
 import io.github.oliviercailloux.grade.comm.StudentOnMyCourse;
 
 public class MyCourseCsvWriter {
@@ -37,7 +37,7 @@ public class MyCourseCsvWriter {
 		cSVWriter.addValue(FEEDBACK_FORMAT_COLUMN, "SMART_TEXT");
 	}
 
-	public String asMyCourseCsv(String gradeName, int gradeId, Collection<GradeWithStudentAndCriterion> grades, double scaleMax) {
+	public String asMyCourseCsv(String gradeName, int gradeId, Map<StudentOnMyCourse, IGrade> grades) {
 		final String gradeC = gradeName + " |" + gradeId;
 		final NumberFormat formatter = NumberFormat.getNumberInstance(Locale.FRENCH);
 		final StringWriter stringWriter = new StringWriter();
@@ -46,13 +46,13 @@ public class MyCourseCsvWriter {
 		cSVWriter = new CsvWriter(stringWriter, new CsvWriterSettings());
 		cSVWriter.writeHeaders(LAST_NAME_COLUMN, USERNAME_COLUMN, gradeC, NOTES_COLUMN, NOTES_FORMAT_COLUMN,
 				FEEDBACK_COLUMN, FEEDBACK_FORMAT_COLUMN);
-		for (GradeWithStudentAndCriterion grade : grades) {
-			final StudentOnMyCourse student = grade.getStudent().asStudentOnGitHubKnown().asStudentOnMyCourse();
+		for (StudentOnMyCourse student : grades.keySet()) {
+			final IGrade grade = grades.get(student);
 			LOGGER.info("Writing {}.", student);
 			cSVWriter.addValue(LAST_NAME_COLUMN, student.getLastName());
 			cSVWriter.addValue(USERNAME_COLUMN, student.getMyCourseUsername());
-			cSVWriter.addValue(gradeC, formatter.format(grade.getScaledGrade(scaleMax)));
-			addFeedback(grade.getAsMyCourseString(scaleMax));
+			cSVWriter.addValue(gradeC, formatter.format(grade.getPoints()));
+			addFeedback(grade.getComment());
 			cSVWriter.writeValuesToRow();
 		}
 		cSVWriter.close();

@@ -5,7 +5,6 @@ import static io.github.oliviercailloux.java_grade.ex_junit.ExJUnitCriterion.CLA
 import static io.github.oliviercailloux.java_grade.ex_junit.ExJUnitCriterion.CLASS_IN_TEST;
 import static io.github.oliviercailloux.java_grade.ex_junit.ExJUnitCriterion.CLASS_NAME;
 import static io.github.oliviercailloux.java_grade.ex_junit.ExJUnitCriterion.GIT;
-import static io.github.oliviercailloux.java_grade.ex_junit.ExJUnitCriterion.ON_TIME;
 import static io.github.oliviercailloux.java_grade.ex_junit.ExJUnitCriterion.PDF_IN_TEST;
 import static io.github.oliviercailloux.java_grade.ex_junit.ExJUnitCriterion.REPO_EXISTS;
 import static io.github.oliviercailloux.java_grade.ex_junit.ExJUnitCriterion.TEST_TESTS;
@@ -13,15 +12,11 @@ import static io.github.oliviercailloux.java_grade.ex_junit.ExJUnitCriterion.TES
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.time.Duration;
-import java.time.Instant;
-import java.time.ZonedDateTime;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.revwalk.RevCommit;
@@ -39,7 +34,6 @@ import io.github.oliviercailloux.git.Client;
 import io.github.oliviercailloux.git.GitHistory;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.grade.Criterion;
-import io.github.oliviercailloux.grade.CriterionAndPoints;
 import io.github.oliviercailloux.grade.GradingException;
 import io.github.oliviercailloux.grade.IGrade;
 import io.github.oliviercailloux.grade.Mark;
@@ -62,7 +56,6 @@ public class ExJUnitGrader {
 	public Map<Criterion, IGrade> grade(RepositoryCoordinates coord) {
 		final ImmutableMap.Builder<Criterion, IGrade> gradeBuilder = ImmutableMap.builder();
 		final Path projectsBaseDir = Paths.get("/home/olivier/Professions/Enseignement/En cours/junit");
-		final Instant deadline = ZonedDateTime.parse("2019-06-04T17:42:00+02:00").toInstant();
 
 		GitFullContext fullContext;
 		GitContext context;
@@ -108,10 +101,8 @@ public class ExJUnitGrader {
 		}
 
 		if (fullContext != null) {
-			gradeBuilder.put(ON_TIME, Marks.timeGrade(fullContext, deadline, this::getPenalty));
 			gradeBuilder.put(REPO_EXISTS, Marks.gitRepoGrade(fullContext));
 		} else {
-			gradeBuilder.put(ON_TIME, Mark.one());
 			gradeBuilder.put(REPO_EXISTS, Mark.given(Booleans.countTrue(lastCommitOpt.isPresent()), ""));
 		}
 
@@ -201,13 +192,4 @@ public class ExJUnitGrader {
 
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(ExJUnitGrader.class);
-
-	double getPenalty(Duration tardiness) {
-		final double maxGrade = Stream.of(ExJUnitCriterion.values())
-				.collect(Collectors.summingDouble(CriterionAndPoints::getMaxPoints));
-
-		LOGGER.debug("Tardiness: {}.", tardiness);
-		final long secondsLate = tardiness.toSeconds();
-		return -0.05d / 20d * maxGrade * secondsLate;
-	}
 }

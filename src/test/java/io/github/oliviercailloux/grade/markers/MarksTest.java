@@ -13,7 +13,6 @@ import org.mockito.Mockito;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
-import io.github.oliviercailloux.grade.CriterionAndPoints;
 import io.github.oliviercailloux.grade.IGrade;
 import io.github.oliviercailloux.grade.context.FilesSource;
 import io.github.oliviercailloux.grade.contexters.PomContexter;
@@ -40,25 +39,6 @@ class MarksTest {
 		Mockito.when(mocked.getSrcMainJavaFolder()).thenReturn(Paths.get("src/main/java"));
 		Mockito.when(mocked.getSrcTestJavaFolder()).thenReturn(Paths.get("src/test/java"));
 		return mocked;
-	}
-
-	public CriterionAndPoints newCriterion(String req, double min, double max) {
-		return new CriterionAndPoints() {
-			@Override
-			public String getRequirement() {
-				return req;
-			}
-
-			@Override
-			public double getMinPoints() {
-				return min;
-			}
-
-			@Override
-			public double getMaxPoints() {
-				return max;
-			}
-		};
 	}
 
 	@Test

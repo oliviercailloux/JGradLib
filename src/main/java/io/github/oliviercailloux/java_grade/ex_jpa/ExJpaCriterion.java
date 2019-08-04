@@ -4,9 +4,8 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import io.github.oliviercailloux.grade.Criterion;
-import io.github.oliviercailloux.grade.CriterionAndPoints;
 
-public enum ExJpaCriterion implements CriterionAndPoints, Criterion {
+public enum ExJpaCriterion implements Criterion {
 	REPO_EXISTS("Repository exists", 0.5d, 0d), ON_TIME("Delivered on time", 0d, -1d),
 	AT_ROOT("Project is at root of repository", 0d, -0.5d / 20d),
 	GROUP_ID("Group id follows Maven best practices", 0d, -0.5d / 20d), UTF("Encoding property", 0d, -0.5d / 20d),
@@ -56,17 +55,14 @@ public enum ExJpaCriterion implements CriterionAndPoints, Criterion {
 		this.minPoints = minPoints;
 	}
 
-	@Override
 	public String getRequirement() {
 		return requirement;
 	}
 
-	@Override
 	public double getMaxPoints() {
 		return maxPoints;
 	}
 
-	@Override
 	public double getMinPoints() {
 		return minPoints;
 	}

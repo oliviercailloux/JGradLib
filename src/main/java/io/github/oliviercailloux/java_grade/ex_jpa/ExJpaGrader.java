@@ -33,22 +33,17 @@ import static io.github.oliviercailloux.java_grade.ex_jpa.ExJpaCriterion.TRAVIS_
 import static io.github.oliviercailloux.java_grade.ex_jpa.ExJpaCriterion.USING_EM;
 import static io.github.oliviercailloux.java_grade.ex_jpa.ExJpaCriterion.UTF;
 import static io.github.oliviercailloux.java_grade.ex_jpa.ExJpaCriterion.WAR;
-import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.time.Duration;
 import java.time.Instant;
-import java.time.ZonedDateTime;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.revwalk.RevCommit;
@@ -65,7 +60,6 @@ import com.google.common.collect.ImmutableSet;
 import io.github.oliviercailloux.git.Checkouter;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.grade.Criterion;
-import io.github.oliviercailloux.grade.CriterionAndPoints;
 import io.github.oliviercailloux.grade.CriterionGradeWeight;
 import io.github.oliviercailloux.grade.GraderOrchestrator;
 import io.github.oliviercailloux.grade.GradingException;
@@ -92,14 +86,14 @@ import io.github.oliviercailloux.utils.Utils;
 
 public class ExJpaGrader {
 
-	private Instant deadline;
+	private IGrade timeMark;
 
 	public WeightingGrade grade(RepositoryCoordinates coord) {
 		/** TODO improve grading attempts by time. */
 		final WeightingGrade usingLastCommit = grade(coord, Instant.MAX);
 		final ImmutableSet<CriterionGradeWeight> realMarks;
 		if (timeMark.getPoints() < 0d) {
-			final WeightingGrade usingCommitOnTime = grade(coord, deadline);
+			final WeightingGrade usingCommitOnTime = grade(coord);
 //			final Optional<ObjectId> commitOnTime = mainCommit.map(RevCommit::copy);
 			final double lastCommitPoints = usingLastCommit.getPoints();
 			final double onTimePoints = usingCommitOnTime.getPoints();
@@ -130,6 +124,8 @@ public class ExJpaGrader {
 		final ImmutableMap.Builder<Criterion, IGrade> gradeBuilder = ImmutableMap.builder();
 		final Path projectsBaseDir = Paths.get("/home/olivier/Professions/Enseignement/En cours/jpa");
 
+		/** NB should set timeMark! */
+
 		final GitFullContext fullContext = FullContextInitializer.withPathAndIgnore(coord, projectsBaseDir,
 				ignoreAfter);
 		final Optional<RevCommit> mainCommit = fullContext.getMainCommit();
@@ -147,8 +143,6 @@ public class ExJpaGrader {
 		final FilesSource filesReader = fullContext.getFilesReader(fullContext.getMainCommit());
 		final FilesSource testFiles = mavenProjectMarker.getTestFiles();
 
-		timeMark = Marks.timeGrade(fullContext, deadline, this::getPenalty);
-		gradeBuilder.put(ON_TIME, timeMark);
 		gradeBuilder.put(REPO_EXISTS, Marks.gitRepoGrade(fullContext));
 
 		final PomSupplier pomSupplier = mavenProjectMarker.getPomSupplier();
@@ -276,11 +270,6 @@ public class ExJpaGrader {
 
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(ExJpaGrader.class);
-	private IGrade timeMark;
-
-	public void setDeadline(Instant deadline) {
-		this.deadline = requireNonNull(deadline);
-	}
 
 	private IGrade generalTestMark(MavenProjectMarker mavenProjectMarker) {
 		/** TODO refine using sub-grades. */
@@ -326,14 +315,6 @@ public class ExJpaGrader {
 				comment);
 	}
 
-	double getPenalty(Duration tardiness) {
-		final double maxGrade = Stream.of(ExJpaCriterion.values())
-				.collect(Collectors.summingDouble(CriterionAndPoints::getMaxPoints));
-
-		final long hoursLate = tardiness.toHours() + 1;
-		return -3d / 20d * maxGrade * hoursLate;
-	}
-
 	public static void main(String[] args) throws Exception {
 		/**
 		 * TODO 1) no need of history. Repo is cloned locally and set at right commit.
@@ -361,10 +342,5 @@ public class ExJpaGrader {
 		Files.writeString(srcDir.resolve("grades newver " + prefix + ".json"),
 				JsonbUtils.toJsonValue(grades, JsonGrade.asAdapter(), JsonStudentOnGitHub.asAdapter()).toString());
 		Files.writeString(srcDir.resolve("grades newver " + prefix + ".csv"), CsvGrades.asCsv(grades));
-	}
-
-	public ExJpaGrader() {
-		deadline = ZonedDateTime.parse("2019-03-08T23:59:59+01:00").toInstant();
-		timeMark = null;
 	}
 }

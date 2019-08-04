@@ -30,8 +30,6 @@ import java.util.Date;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.lib.PersonIdent;
@@ -52,7 +50,6 @@ import io.github.oliviercailloux.git.GitHistory;
 import io.github.oliviercailloux.git.GitUtils;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.grade.Criterion;
-import io.github.oliviercailloux.grade.CriterionAndPoints;
 import io.github.oliviercailloux.grade.GradingException;
 import io.github.oliviercailloux.grade.IGrade;
 import io.github.oliviercailloux.grade.Mark;
@@ -79,8 +76,8 @@ public class ExGitGrader {
 
 		final GitFullContext fullContext = FullContextInitializer.withPath(coord, projectsBaseDir);
 		final Client client = fullContext.getClient();
-		maxGrade = Stream.of(ExGitCriterion.values())
-				.collect(Collectors.summingDouble(CriterionAndPoints::getMaxPoints));
+//		maxGrade = Stream.of(ExGitCriterion.values())
+//				.collect(Collectors.summingDouble(CriterionAndPoints::getMaxPoints));
 		try {
 			history = client.getWholeHistory();
 		} catch (IOException | GitAPIException e) {
