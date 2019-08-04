@@ -14,7 +14,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
 import io.github.oliviercailloux.grade.CriterionAndPoints;
-import io.github.oliviercailloux.grade.CriterionAndMark;
+import io.github.oliviercailloux.grade.IGrade;
 import io.github.oliviercailloux.grade.context.FilesSource;
 import io.github.oliviercailloux.grade.contexters.PomContexter;
 import io.github.oliviercailloux.grade.contexters.PomSupplier;
@@ -23,13 +23,10 @@ class MarksTest {
 
 	@Test
 	void testPrefixExpectTwoButOnlyOne() {
-		final String req = "";
-		final double min = 0d;
-		final double max = 1d;
-		final CriterionAndMark mark = Marks.packageGroupId(newCriterion(req, min, max),
+		final IGrade mark = Marks.packageGroupId(
 				FilesSource.fromMemory(ImmutableMap.of(Paths.get("src", "main", "java", "aa", "file.txt"), "content")),
 				getPomSupplier(), getPomContexter("aa", "b"));
-		assertEquals(min, mark.getPoints());
+		assertEquals(0d, mark.getPoints());
 	}
 
 	private PomContexter getPomContexter(String... strings) {
@@ -66,51 +63,39 @@ class MarksTest {
 
 	@Test
 	void testNoPrefix() {
-		final String req = "";
-		final double min = 0d;
-		final double max = 1d;
-		final CriterionAndMark mark = Marks.packageGroupId(newCriterion(req, min, max),
+		final IGrade mark = Marks.packageGroupId(
 				FilesSource.fromMemory(ImmutableMap.of(Paths.get("src", "main", "java", "file.txt"), "content")),
 				getPomSupplier(), getPomContexter("aa"));
-		assertEquals(min, mark.getPoints());
+		assertEquals(0d, mark.getPoints());
 	}
 
 	@Test
 	void testPrefixOneButWrongRoot() {
-		final String req = "";
-		final double min = 0d;
-		final double max = 1d;
-		final CriterionAndMark mark = Marks.packageGroupId(newCriterion(req, min, max),
+		final IGrade mark = Marks.packageGroupId(
 				FilesSource.fromMemory(ImmutableMap.of(Paths.get("aa", "file.txt"), "content")), getPomSupplier(),
 				getPomContexter("aa"));
-		assertEquals(min, mark.getPoints());
+		assertEquals(0d, mark.getPoints());
 	}
 
 	@Test
 	void testPrefixTwo() {
-		final String req = "";
-		final double min = 0d;
-		final double max = 1d;
 		final Path path = Paths.get("src", "main", "java", "aa", "b", "c", "file.txt");
 		final Path relativizedPath = Paths.get("aa", "b", "c", "file.txt");
 		final PomContexter pomContexter = getPomContexter("aa", "b");
-		final CriterionAndMark mark = Marks.packageGroupId(newCriterion(req, min, max),
-				FilesSource.fromMemory(ImmutableMap.of(path, "content")), getPomSupplier(), pomContexter);
+		final IGrade mark = Marks.packageGroupId(FilesSource.fromMemory(ImmutableMap.of(path, "content")),
+				getPomSupplier(), pomContexter);
 		assertTrue(PackageGroupIdMarker.hasPrefix(relativizedPath, pomContexter.getGroupIdElements()));
 		assertTrue(PackageGroupIdMarker.hasPrefix(relativizedPath, ImmutableList.of("aa")));
 		assertFalse(PackageGroupIdMarker.hasPrefix(relativizedPath, ImmutableList.of("aa", "c")));
-		assertEquals(max, mark.getPoints());
+		assertEquals(1d, mark.getPoints());
 	}
 
 	@Test
 	void testPrefixOne() {
-		final String req = "";
-		final double min = 0d;
-		final double max = 1d;
-		final CriterionAndMark mark = Marks.packageGroupId(newCriterion(req, min, max),
+		final IGrade mark = Marks.packageGroupId(
 				FilesSource.fromMemory(ImmutableMap.of(Paths.get("src", "main", "java", "aa", "file.txt"), "content")),
 				getPomSupplier(), getPomContexter("aa"));
-		assertEquals(max, mark.getPoints());
+		assertEquals(1d, mark.getPoints());
 	}
 
 }

@@ -51,7 +51,7 @@ class TestTimeline {
 		/** Note that this is not precisely correct, simplification to be solved. */
 		LOGGER.info("Reception ranges: {}; before push: {}.", receptions.size(), commitsBeforeFirstPush.size());
 		assertTrue(receptions.size() < 100);
-		assertTrue(commitsBeforeFirstPush.size() == 3);
+		assertEquals(3, commitsBeforeFirstPush.size());
 //		assertEquals(Range.singleton(ZonedDateTime.parse("2019-02-18T12:33:11+01:00").toInstant()),
 //				receptions.get(ObjectId.fromString("3122819edda3dfd74178167e519a26c6bfdb694d")));
 //		assertEquals(Range.singleton(ZonedDateTime.parse("2019-02-18T12:50:59+01:00").toInstant()),

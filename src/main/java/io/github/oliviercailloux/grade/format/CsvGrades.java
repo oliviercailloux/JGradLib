@@ -187,44 +187,4 @@ public class CsvGrades {
 		}
 		return gradesBuilder.build();
 	}
-
-	public static String asCsv(Collection<GradeWithStudentAndCriterion> grades) {
-		final NumberFormat formatter = NumberFormat.getNumberInstance(Locale.FRENCH);
-		final StringWriter stringWriter = new StringWriter();
-		final CsvWriter writer = new CsvWriter(stringWriter, new CsvWriterSettings());
-
-		final ImmutableSet<CriterionAndPoints> allKeys = grades.stream().flatMap((g) -> g.getMarks().keySet().stream())
-				.collect(ImmutableSet.toImmutableSet());
-		writer.writeHeaders(Streams.concat(Stream.of("Name", "GitHub username"), allKeys.stream().map(Object::toString),
-				Stream.of("Grade")).collect(Collectors.toList()));
-		for (GradeWithStudentAndCriterion grade : grades) {
-			final StudentOnGitHub student = grade.getStudent();
-			LOGGER.info("Writing {}.", student);
-			writer.addValue("Name", student.getLastName().orElse("unknown"));
-			writer.addValue("GitHub username", student.getGitHubUsername());
-
-			for (CriterionAndPoints criterion : grade.getMarks().keySet()) {
-				final double mark = grade.getMarks().get(criterion).getPoints();
-				writer.addValue(criterion.toString(), formatter.format(mark));
-			}
-
-			writer.addValue("Grade", formatter.format(grade.getPoints()));
-			writer.writeValuesToRow();
-		}
-
-		writer.addValue("Name", "Range");
-		writer.addValue("GitHub username", "Range");
-		for (CriterionAndPoints criterion : allKeys) {
-			writer.addValue(criterion.toString(),
-					"[" + criterion.getMinPoints() + ", " + criterion.getMaxPoints() + "]");
-		}
-		final double minGrade = allKeys.stream().collect(Collectors.summingDouble(CriterionAndPoints::getMinPoints));
-		final double maxGrade = allKeys.stream().collect(Collectors.summingDouble(CriterionAndPoints::getMaxPoints));
-		writer.addValue("Grade", "[" + minGrade + "," + maxGrade + "]");
-		writer.writeValuesToRow();
-
-		writer.close();
-
-		return stringWriter.toString();
-	}
 }

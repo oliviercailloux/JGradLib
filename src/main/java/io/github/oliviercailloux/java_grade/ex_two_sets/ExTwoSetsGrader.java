@@ -65,11 +65,6 @@ public class ExTwoSetsGrader {
 
 	private Instant deadline;
 
-	private String toString(Optional<ObjectId> optCommit) {
-		final Optional<String> optId = optCommit.map(ObjectId::getName);
-		return optId.isPresent() ? optId.get() : optId.toString();
-	}
-
 	public Map<Criterion, IGrade> grade(RepositoryCoordinates coord, Instant ignoreAfter) {
 		final ImmutableMap.Builder<Criterion, IGrade> gradeBuilder = ImmutableMap.builder();
 		final Path projectsBaseDir = Paths.get("/home/olivier/Professions/Enseignement/En cours/interfaces");
