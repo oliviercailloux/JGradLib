@@ -10,6 +10,12 @@ import com.google.common.collect.ImmutableMap;
  * one sub-grade. Interfaces to distinguish marks from composite grades do not
  * exist: it would raise complexity and not bring much benefit.
  *
+ *
+ * A grade knows the criteria and sub-grades that it is composed of. But it does
+ * not know which fraction it should preferably use for its own display: this is
+ * known by the user of the grade at display time. It relates to display and not
+ * to grade information per se.
+ *
  * @author Olivier Cailloux
  *
  */
