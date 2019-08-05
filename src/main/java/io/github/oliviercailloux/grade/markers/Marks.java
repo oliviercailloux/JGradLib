@@ -33,6 +33,17 @@ import io.github.oliviercailloux.grade.context.PomContext;
 import io.github.oliviercailloux.grade.contexters.MavenManager;
 import io.github.oliviercailloux.grade.contexters.PomSupplier;
 
+/**
+ *
+ * NB to cope for combinatorics in possible combinations of marks, keep single
+ * ones as simple as possible, and possibly when asking for (e.g.
+ * POM_DEP_GUAVA), specify with a boolean if the comment "pom not found" should
+ * be specified. Or, give it the grades so far, so that it will see whether the
+ * comment has already been given.
+ * 
+ * @author Olivier Cailloux
+ *
+ */
 public class Marks {
 	public static IGrade packageGroupIdGrade(FilesSource wholeSource, PomSupplier pomSupplier, PomContext pomContext) {
 		final List<String> groupIdElements = pomContext.getGroupIdElements();

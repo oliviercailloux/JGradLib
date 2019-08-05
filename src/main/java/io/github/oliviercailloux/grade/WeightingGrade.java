@@ -23,6 +23,15 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
 /**
+ * containing positive points only and strictly positive and strictly negative
+ * weights (one per sub-grade). May order the grades (we may not want all
+ * positive then all negative but interleaving!). The positive weights are
+ * normalized internally. The negative weights must be in [−1, 0). A negative
+ * weight represents the prop. of the total points that can be lost on the
+ * corresponding criterion. Example: weight is −2/20, grade is 1 (means no
+ * penalty) or 0.5 (means −1/20) or 0 (means −2/20). A sub grade in the map may
+ * be an AdditiveGrade (even if it’s a penalty).
+ *
  * {weights: Map<CriterionAndPoints, Double>} (non empty, all non null), this
  * implementation has only the (normalized) weights and the marks, and generates
  * the comment (a string repr of the weights and saying that it is a weighted
@@ -41,10 +50,20 @@ public class WeightingGrade implements IGrade {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(WeightingGrade.class);
 
+	/**
+	 * @param grades  its key set iteration order is used to determine the order of
+	 *                the sub-grades.
+	 * @param weights must have the same keys as the grades (but the iteration order
+	 *                is not used).
+	 */
 	public static WeightingGrade from(Map<Criterion, ? extends IGrade> grades, Map<Criterion, Double> weights) {
 		return new WeightingGrade(grades, weights);
 	}
 
+	/**
+	 * @param grades its iteration order is used to determine the order of the
+	 *               sub-grades.
+	 */
 	@JsonbCreator
 	public static WeightingGrade from(@JsonbProperty("subGrades") Set<CriterionGradeWeight> grades) {
 		final Object gr = grades.iterator().next();
@@ -76,8 +95,12 @@ public class WeightingGrade implements IGrade {
 				String.format("Sub grades have keys: %s, weights have keys: %s", subGrades.keySet(), weights.keySet()));
 		final double sumPosWeights = weights.values().stream().filter((d) -> d > 0d)
 				.collect(Collectors.summingDouble((d) -> d));
-		this.weights = weights.entrySet().stream().collect(ImmutableMap.toImmutableMap((e) -> e.getKey(),
-				(e) -> e.getValue() > 0d ? e.getValue() / sumPosWeights : e.getValue()));
+		/**
+		 * I iterate over the sub grades key set in order to guarantee iteration order
+		 * of the weights reflects the order of the sub-grades.
+		 */
+		this.weights = subGrades.keySet().stream().collect(ImmutableMap.toImmutableMap((c) -> c,
+				(c) -> weights.get(c) > 0d ? weights.get(c) / sumPosWeights : weights.get(c)));
 		this.subGrades = ImmutableMap.copyOf(subGrades);
 	}
 
@@ -108,6 +131,9 @@ public class WeightingGrade implements IGrade {
 		return subGrades;
 	}
 
+	/**
+	 * @return iterates in the order of the sub-grades.
+	 */
 	@JsonbProperty("subGrades")
 	public ImmutableSet<CriterionGradeWeight> getSubGradesAsSet() {
 		return subGrades.keySet().stream().map((c) -> CriterionGradeWeight.from(c, subGrades.get(c), weights.get(c)))
@@ -116,7 +142,7 @@ public class WeightingGrade implements IGrade {
 
 	/**
 	 * @return the weights, such that the positive weights sum to one, with no zero
-	 *         weights, and not empty.
+	 *         weights, and not empty. Iterates in the order of the sub-grades.
 	 */
 	@JsonbTransient
 	public ImmutableMap<Criterion, Double> getWeights() {

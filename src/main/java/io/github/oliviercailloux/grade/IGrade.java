@@ -34,8 +34,9 @@ public interface IGrade {
 	public String getComment();
 
 	/**
-	 * Returns the sub grades, empty iff this grade is a mark, non-empty iff this
-	 * grade is a composite grade.
+	 * Returns the sub-grades (with the key set iterating in order of the
+	 * sub-grades), empty iff this grade is a mark, non-empty iff this grade is a
+	 * composite grade.
 	 *
 	 * @return the sub grades.
 	 */
@@ -43,7 +44,7 @@ public interface IGrade {
 
 	/**
 	 * Two {@link IGrade} objects are equal iff they have the same points, comment,
-	 * and sub grades.
+	 * and sub grades (irrespective of the order of the sub grades).
 	 */
 	@Override
 	public boolean equals(Object o2);
