@@ -90,7 +90,7 @@ public class GitFileSystemProvider extends FileSystemProvider {
 
 	public GitFileSystem newFileSystem(DoubleGitUri uri, Path gitFolder) throws IOException {
 		/**
-		 * If file repo, and this path equals the repo path, nothing to check, it’s up
+		 * If file repo, and this path equals the repo path: nothing to check, it’s up
 		 * to date.
 		 */
 		final boolean direct = uri.getGitScheme() == GitScheme.FILE
@@ -107,12 +107,6 @@ public class GitFileSystemProvider extends FileSystemProvider {
 					if (origin.isPresent() && origin.get().getURIs().size() == 1
 							&& origin.get().getURIs().get(0).toString().equals(uri.getGitUri().toString())) {
 						final PullResult result = git.pull().call();
-//						final Ref originMasterRef = git.getRepository().exactRef("refs/remotes/origin/master");
-//						assert originMasterRef != null : git.branchList().setListMode(ListMode.REMOTE).call();
-//						final RefUpdate updateRef = git.getRepository().updateRef("master");
-//						updateRef.setNewObjectId(originMasterRef.getObjectId());
-//						final Result result = updateRef.update();
-//						final boolean rightState = result == Result.NO_CHANGE || result == Result.RENAMED;
 						final MergeStatus mergeStatus = result.getMergeResult().getMergeStatus();
 						final boolean rightState = result.isSuccessful()
 								&& (mergeStatus == MergeStatus.ALREADY_UP_TO_DATE
