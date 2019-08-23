@@ -50,6 +50,8 @@ public class RepositoryWithFiles {
 							if (e.getValue().getBoolean("isTruncated")) {
 								throw new IllegalStateException();
 							}
+						} else {
+							LOGGER.warn("Ignoring binary file.");
 						}
 						return !binary;
 					})).collect(ImmutableMap.<SimpleEntry<Path, JsonObject>, Path, String>toImmutableMap(

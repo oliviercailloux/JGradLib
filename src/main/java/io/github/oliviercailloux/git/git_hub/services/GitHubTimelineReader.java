@@ -37,7 +37,7 @@ import com.google.common.graph.GraphBuilder;
 import com.google.common.graph.Graphs;
 import com.google.common.graph.MutableGraph;
 
-import io.github.oliviercailloux.git.Client;
+import io.github.oliviercailloux.git.ComplexClient;
 import io.github.oliviercailloux.git.GitHistory;
 import io.github.oliviercailloux.git.git_hub.model.GitHubToken;
 import io.github.oliviercailloux.git.git_hub.model.v3.Event;
@@ -65,7 +65,7 @@ public class GitHubTimelineReader {
 		commitsBeforeFirstPush = null;
 	}
 
-	public Map<ObjectId, Range<Instant>> getReceptionRanges(Client client) throws WebApplicationException {
+	public Map<ObjectId, Range<Instant>> getReceptionRanges(ComplexClient client) throws WebApplicationException {
 		checkState(firstPushEvent == null, "This object is not meant to be re-used.");
 		checkArgument(client.hasContentCached());
 		/** Also checks does not throw. */
@@ -341,7 +341,7 @@ public class GitHubTimelineReader {
 		return Optional.ofNullable(receivedAt.get(id));
 	}
 
-	private void fetchEvents(Client client) throws WebApplicationException {
+	private void fetchEvents(ComplexClient client) throws WebApplicationException {
 		final ImmutableList<Event> eventsReversed;
 		try (GitHubFetcherV3 fetcher = fetcherSupplier.get()) {
 			eventsReversed = fetcher.getEvents(client.getCoordinates());

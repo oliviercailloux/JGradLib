@@ -37,7 +37,7 @@ import com.google.common.graph.Graphs;
 import com.google.common.graph.ImmutableGraph;
 
 import io.github.oliviercailloux.git.Checkouter;
-import io.github.oliviercailloux.git.Client;
+import io.github.oliviercailloux.git.ComplexClient;
 import io.github.oliviercailloux.git.GitUtils;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.grade.Criterion;
@@ -108,7 +108,7 @@ public class ExDepGitGrader {
 				projectsBaseDir);
 		commitsReceptionTime = spec.getCommitsReceptionTime();
 		fullContext = spec;
-		final Client client = fullContext.getClient();
+		final ComplexClient client = fullContext.getClient();
 		final Optional<RevCommit> mainCommit = fullContext.getMainCommit();
 		LOGGER.info("Main commit: {}.", mainCommit);
 		if (mainCommit.isPresent()) {
@@ -153,8 +153,10 @@ public class ExDepGitGrader {
 				} else {
 					parentOfMyBranch = false;
 				}
-				final WeightingGrade newMark = WeightingGrade.proportional(CHILD_OF_STARTING,
-						Mark.ifPasses(childOfStarting), PARENT_OF_MY_BRANCH, Mark.ifPasses(parentOfMyBranch));
+				final Mark childGrade = childOfStarting ? Mark.one("child ok") : Mark.zero("child ko");
+				final Mark parentGrade = Mark.binary(parentOfMyBranch, "", "");
+				final WeightingGrade newMark = WeightingGrade.proportional(CHILD_OF_STARTING, childGrade,
+						PARENT_OF_MY_BRANCH, parentGrade);
 				if (newMark.getPoints() > firstCommitMark.getPoints()) {
 					firstCommitMark = newMark;
 				}
@@ -229,7 +231,7 @@ public class ExDepGitGrader {
 	}
 
 	IGrade commitMark() {
-		final Client client = fullContext.getClient();
+		final ComplexClient client = fullContext.getClient();
 		final Set<RevCommit> commits;
 		try {
 			commits = client.getAllCommits();
@@ -265,7 +267,7 @@ public class ExDepGitGrader {
 		return commits.stream().map(RevCommit::getName).collect(ImmutableList.toImmutableList());
 	}
 
-	private Optional<RevCommit> tryParseSpec(Client client, String revSpec) {
+	private Optional<RevCommit> tryParseSpec(ComplexClient client, String revSpec) {
 		final Optional<RevCommit> devOpt;
 		try {
 			devOpt = client.tryResolve(revSpec).map(t -> {

@@ -105,7 +105,7 @@ public class ExTwoSetsGrader {
 								""));
 
 		/**
-		 * TODO count the number of words, or similar. Shouldn’t get points for
+		 * Should count the number of words, or similar. Shouldn’t get points for
 		 * just @author!
 		 */
 		final boolean noAutoGen = filesReader.existsAndAllMatch(

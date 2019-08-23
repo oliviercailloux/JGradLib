@@ -30,7 +30,7 @@ import com.google.common.collect.MoreCollectors;
 import com.google.common.primitives.Booleans;
 
 import io.github.oliviercailloux.git.Checkouter;
-import io.github.oliviercailloux.git.Client;
+import io.github.oliviercailloux.git.ComplexClient;
 import io.github.oliviercailloux.git.GitHistory;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.grade.Criterion;
@@ -68,7 +68,7 @@ public class ExJUnitGrader {
 			context = ContextInitializer.withPath(coord, projectsBaseDir);
 		}
 
-		final Client client = context.getClient();
+		final ComplexClient client = context.getClient();
 		try {
 			history = client.getWholeHistory();
 		} catch (IOException e) {
@@ -174,7 +174,7 @@ public class ExJUnitGrader {
 		return "[" + commits.stream().map(RevCommit::getName).collect(Collectors.joining(", ")) + "]";
 	}
 
-	private Optional<RevCommit> tryParseSpec(Client client, String revSpec) {
+	private Optional<RevCommit> tryParseSpec(ComplexClient client, String revSpec) {
 		final Optional<RevCommit> devOpt;
 		try {
 			devOpt = client.tryResolve(revSpec).map(t -> {

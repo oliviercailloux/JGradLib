@@ -59,6 +59,7 @@ import com.google.common.collect.ImmutableSet;
 
 import io.github.oliviercailloux.git.Checkouter;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
+import io.github.oliviercailloux.grade.AndGrade;
 import io.github.oliviercailloux.grade.Criterion;
 import io.github.oliviercailloux.grade.CriterionGradeWeight;
 import io.github.oliviercailloux.grade.GraderOrchestrator;
@@ -158,18 +159,21 @@ public class ExJpaGrader {
 
 		gradeBuilder.put(GROUP_ID, mavenProjectMarker.groupIdGrade());
 		gradeBuilder.put(UTF,
-				Mark.ifPasses(MarkingPredicates.containsOnce(Pattern.compile("<properties>" + Utils.ANY_REG_EXP
+				Mark.binary(MarkingPredicates.containsOnce(Pattern.compile("<properties>" + Utils.ANY_REG_EXP
 						+ "<project\\.build\\.sourceEncoding>UTF-8</project\\.build\\.sourceEncoding>"
-						+ Utils.ANY_REG_EXP + "</properties>")).test(pomContent)));
+						+ Utils.ANY_REG_EXP + "</properties>")).test(pomContent), "", ""));
 		gradeBuilder
 				.put(SOURCE,
-						Mark.ifPasses(MarkingPredicates.containsOnce(Pattern.compile("<properties>" + Utils.ANY_REG_EXP
+						Mark.binary(MarkingPredicates.containsOnce(Pattern.compile("<properties>" + Utils.ANY_REG_EXP
 								+ "<maven\\.compiler\\.source>.*</maven\\.compiler\\.source>" + Utils.ANY_REG_EXP
-								+ "</properties>")).test(pomContent)));
-		gradeBuilder.put(NO_MISLEADING_URL, Mark.ifPasses(
-				Predicates.contains(Pattern.compile("<url>.*\\.apache\\.org.*</url>")).negate().test(pomContent)));
-		gradeBuilder.put(WAR, Mark.ifPasses(
-				MarkingPredicates.containsOnce(Pattern.compile("<packaging>war</packaging>")).test(pomContent)));
+								+ "</properties>")).test(pomContent), "", ""));
+		gradeBuilder.put(NO_MISLEADING_URL, Mark.binary(
+				Predicates.contains(Pattern.compile("<url>.*\\.apache\\.org.*</url>")).negate().test(pomContent), "",
+				""));
+		gradeBuilder.put(WAR,
+				Mark.binary(
+						MarkingPredicates.containsOnce(Pattern.compile("<packaging>war</packaging>")).test(pomContent),
+						"", ""));
 		gradeBuilder.put(PREFIX, Marks.packageGroupIdGrade(filesReader, pomSupplier, pomContexter));
 		LOGGER.debug("Compiling");
 		gradeBuilder.put(COMPILE, Marks.mavenCompileGrade(fullContext, pomSupplier));
@@ -180,17 +184,23 @@ public class ExJpaGrader {
 		final FilesSource addServletSourcer = mainSourcer
 				.filterOnPath((p) -> p.getFileName().equals(Paths.get("AddCommentServlet.java")));
 
-		gradeBuilder.put(NO_JSP, Mark.ifPasses(JavaEEMarkers.getNoJsp(filesReader)));
-		gradeBuilder.put(NO_WEB_XML, Mark.ifPasses(JavaEEMarkers.getNoWebXml(filesReader)));
+		gradeBuilder.put(NO_JSP, JavaEEMarkers.getNoJsp(filesReader));
+		gradeBuilder.put(NO_WEB_XML, JavaEEMarkers.getNoWebXml(filesReader));
 		final Predicate<CharSequence> containsGet = Predicates.containsPattern("@GET");
 		final Predicate<CharSequence> containsNoGet = containsGet.negate();
 		final Predicate<CharSequence> containsNoPut = Predicates.containsPattern("@PUT").negate();
 		final Predicate<CharSequence> containsPost = Predicates.containsPattern("@POST");
 		final Predicate<CharSequence> containsNoPost = containsPost.negate();
 		gradeBuilder.put(GET,
-				Mark.ifPasses(getServletSourcer.existsAndAllMatch(containsGet.and(containsNoPut).and(containsNoPost))));
+				AndGrade.given(Criterion.given("Correct @Get"), getServletSourcer.existsAndAllMatch(containsGet),
+						Criterion.given("No Put in get servlet"), getServletSourcer.existsAndAllMatch(containsNoPut),
+						Criterion.given("No Post in get servlet"),
+						getServletSourcer.existsAndAllMatch(containsNoPost)));
 		gradeBuilder.put(POST,
-				Mark.ifPasses(addServletSourcer.existsAndAllMatch(containsNoGet.and(containsNoPut).and(containsPost))));
+				AndGrade.given(Criterion.given("No Get in add servlet"),
+						addServletSourcer.existsAndAllMatch(containsNoGet), Criterion.given("No Put in add servlet"),
+						addServletSourcer.existsAndAllMatch(containsNoPut), Criterion.given("Post in add servlet"),
+						addServletSourcer.existsAndAllMatch(containsPost)));
 
 		gradeBuilder.put(NOT_POLLUTED,
 				Mark.ifPasses(anySourcer.existsAndAllMatch(Predicates.contains(Pattern.compile("Auto-generated"))
@@ -198,7 +208,6 @@ public class ExJpaGrader {
 		gradeBuilder.put(EXC, Mark.ifPasses(anySourcer.noneMatch(
 				Predicates.contains(Pattern.compile("printStackTrace")).or(Predicates.containsPattern("catch\\(")))));
 
-		/** TODO stream a handful of file sources! */
 		final ImmutableList<FilesSource> servletSourcers = ImmutableList.of(getServletSourcer, addServletSourcer);
 		gradeBuilder.put(MTYPE,
 				Mark.given((double) servletSourcers.stream()
@@ -272,7 +281,7 @@ public class ExJpaGrader {
 	private static final Logger LOGGER = LoggerFactory.getLogger(ExJpaGrader.class);
 
 	private IGrade generalTestMark(MavenProjectMarker mavenProjectMarker) {
-		/** TODO refine using sub-grades. */
+		/** This should use sub-grades. */
 		if (mavenProjectMarker.getPomSupplier().asMultiContent().asFileContents().isEmpty()) {
 			return Mark.zero("No POM");
 		}
@@ -316,15 +325,6 @@ public class ExJpaGrader {
 	}
 
 	public static void main(String[] args) throws Exception {
-		/**
-		 * TODO 1) no need of history. Repo is cloned locally and set at right commit.
-		 * Then, only need a path, no git client.
-		 *
-		 * 2) Need navigation through history. Use plumbing API, no work space is
-		 * necessary; a main commit and a plumbing client are required. Get everything
-		 * including the main commit from API. The main commit should be provided by a
-		 * distinct object as it is useful in both cases (author, date…)?
-		 */
 		final String prefix = "jpa";
 		final GraderOrchestrator orch = new GraderOrchestrator(prefix);
 		final Path srcDir = Paths.get("../../Java SITN, app, concept°/");

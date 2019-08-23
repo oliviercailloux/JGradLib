@@ -21,11 +21,15 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.primitives.Booleans;
 
-import io.github.oliviercailloux.git.Client;
+import io.github.oliviercailloux.git.ComplexClient;
+import io.github.oliviercailloux.grade.Criterion;
+import io.github.oliviercailloux.grade.CriterionGradeWeight;
 import io.github.oliviercailloux.grade.IGrade;
 import io.github.oliviercailloux.grade.Mark;
+import io.github.oliviercailloux.grade.WeightingGrade;
 import io.github.oliviercailloux.grade.context.FilesSource;
 import io.github.oliviercailloux.grade.context.GitContext;
 import io.github.oliviercailloux.grade.context.GitFullContext;
@@ -40,7 +44,7 @@ import io.github.oliviercailloux.grade.contexters.PomSupplier;
  * POM_DEP_GUAVA), specify with a boolean if the comment "pom not found" should
  * be specified. Or, give it the grades so far, so that it will see whether the
  * comment has already been given.
- * 
+ *
  * @author Olivier Cailloux
  *
  */
@@ -117,14 +121,14 @@ public class Marks {
 	public static IGrade mavenCompileGrade(GitContext context, PomSupplier pomSupplier) {
 		final MavenManager mavenManager = new MavenManager();
 		final Optional<Path> projectRelativeRootOpt = pomSupplier.getMavenRelativeRoot();
-		return Mark.ifPasses(projectRelativeRootOpt.isPresent() && mavenManager.compile(
-				context.getClient().getProjectDirectory().resolve(projectRelativeRootOpt.get().resolve("pom.xml"))));
+		return Mark.given(Booleans.countTrue(projectRelativeRootOpt.isPresent() && mavenManager.compile(
+				context.getClient().getProjectDirectory().resolve(projectRelativeRootOpt.get().resolve("pom.xml")))),
+				"");
 	}
 
 	public static IGrade travisConfGrade(String travisContent) {
-		/** TODO refine using multiple sub-grades. */
 		if (travisContent.isEmpty()) {
-			return Mark.zero("Configuration not found or incorrectly named.");
+			return Mark.zero("Configuration missing or named incorrectly.");
 		}
 
 		final Predicate<CharSequence> lang = Predicates.contains(Pattern.compile("language: java"));
@@ -135,41 +139,41 @@ public class Marks {
 		final Predicate<CharSequence> distTrusty = Predicates.contains(Pattern.compile("dist: trusty"));
 		final Predicate<CharSequence> script = Predicates.contains(Pattern.compile("script: "));
 		final boolean hasLang = lang.test(travisContent);
-		final boolean hasDist = dist.test(travisContent) || distTrusty.test(travisContent);
+		final boolean hasDistXenial = dist.test(travisContent);
+		final boolean hasDistTrusty = distTrusty.test(travisContent);
+		final boolean hasDist = hasDistXenial || hasDistTrusty;
 		final boolean hasScript = script.test(travisContent);
-		final double points;
-		final String comment;
-		if (!hasLang && !hasScript) {
-			points = 0d;
-			comment = "Missing language.";
-		} else if (!hasLang && hasScript && !hasDist) {
-			points = 1d / 3d;
-			comment = "Missing language (script should be defaulted).";
-		} else if (!hasLang && hasScript && hasDist) {
-			points = 0d;
-			comment = "Missing language (script should be defaulted). Missing dist.";
+		final boolean deducibleLang = hasLang || hasScript;
+		final Mark langAndNoScript;
+		if (hasLang && !hasScript) {
+			langAndNoScript = Mark.one();
+		} else if (hasLang && hasScript) {
+			langAndNoScript = Mark.given(1d / 4d, "Redundant script.");
+		} else if (!hasLang && hasScript) {
+			langAndNoScript = Mark.given(1d / 4d, "Script instead of lang.");
 		} else {
-			assert hasLang;
-			if (!hasDist && !hasScript) {
-				points = 1d * 2d / 3d;
-				comment = "Missing ‘dist: xenial’.";
-			} else if (!hasDist && hasScript) {
-				points = 1d / 3d;
-				comment = "Missing ‘dist: xenial’. Inappropriate script, why not default?";
-			} else if (hasDist && !hasScript) {
-				points = 1d;
-				comment = "";
-			} else {
-				assert hasDist && hasScript;
-				points = 1d / 2d;
-				comment = "Inappropriate script, why not default?";
-			}
+			assert !hasLang && !hasScript;
+			langAndNoScript = Mark.zero("No language given, directly or indirectly.");
 		}
-		return Mark.given(points, comment);
+		final Mark distAndDeducibleLanguage;
+		if (!hasDist) {
+			distAndDeducibleLanguage = Mark.zero("Missing ‘dist: xenial’.");
+		} else if (!deducibleLang) {
+			distAndDeducibleLanguage = Mark.zero("No deducible language");
+		} else if (hasDistTrusty) {
+			distAndDeducibleLanguage = Mark.one("Tolerating dist trusty, but dist xenial is to be preferred");
+		} else {
+			assert hasDist && deducibleLang && !hasDistTrusty && hasDistXenial;
+			distAndDeducibleLanguage = Mark.one();
+		}
+		return WeightingGrade.from(ImmutableSet.of(
+				CriterionGradeWeight.from(Criterion.given("Language indication"), langAndNoScript, 2d / 3d),
+				CriterionGradeWeight.from(Criterion.given("Dist indication (and language indicated)"),
+						distAndDeducibleLanguage, 1d / 3d)));
 	}
 
 	public static IGrade gitRepoGrade(GitFullContext context) {
-		final Client client = context.getClient();
+		final ComplexClient client = context.getClient();
 
 		final IGrade grade;
 		if (!client.existsCached()) {
@@ -191,7 +195,7 @@ public class Marks {
 	}
 
 	private static IGrade mark(GitFullContext context, Instant deadline, Function<Duration, Double> timeScorer) {
-		final Client client = context.getClient();
+		final ComplexClient client = context.getClient();
 
 		if (!client.hasContentCached() || !context.getMainCommit().isPresent()) {
 			return Mark.one();

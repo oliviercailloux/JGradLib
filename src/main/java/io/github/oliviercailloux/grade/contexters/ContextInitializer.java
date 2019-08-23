@@ -13,7 +13,7 @@ import org.eclipse.jgit.revwalk.RevCommit;
 import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableSet;
 
-import io.github.oliviercailloux.git.Client;
+import io.github.oliviercailloux.git.ComplexClient;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.grade.GradingException;
 import io.github.oliviercailloux.grade.context.FilesSource;
@@ -27,7 +27,7 @@ public class ContextInitializer implements GitContext {
 		return ci;
 	}
 
-	private Client client;
+	private ComplexClient client;
 	private RepositoryCoordinates coordinatesSupplier;
 	private Path projectsBaseDir;
 
@@ -39,7 +39,7 @@ public class ContextInitializer implements GitContext {
 
 	public void init() throws GradingException {
 		try {
-			client = Client.aboutAndUsing(coordinatesSupplier, projectsBaseDir);
+			client = ComplexClient.aboutAndUsing(coordinatesSupplier, projectsBaseDir);
 			{
 				client.tryRetrieve();
 				if (client.hasContent()) {
@@ -52,7 +52,7 @@ public class ContextInitializer implements GitContext {
 	}
 
 	@Override
-	public Client getClient() {
+	public ComplexClient getClient() {
 		assert client != null;
 		return client;
 	}

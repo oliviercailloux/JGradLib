@@ -43,8 +43,8 @@ public class GitUtils {
 	}
 
 	public static ZonedDateTime getCreationTime(PersonIdent ident) {
-		Date creationInstant = ident.getWhen();
-		TimeZone creationZone = ident.getTimeZone();
+		final Date creationInstant = ident.getWhen();
+		final TimeZone creationZone = ident.getTimeZone();
 		final ZonedDateTime creationTime = ZonedDateTime.ofInstant(creationInstant.toInstant(),
 				creationZone.toZoneId());
 		return creationTime;

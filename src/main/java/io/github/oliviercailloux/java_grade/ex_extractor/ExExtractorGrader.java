@@ -403,7 +403,7 @@ public class ExExtractorGrader {
 				return Optional.empty();
 			}
 			/**
-			 * TODO probably doesn’t work when loading a second class having the same name?
+			 * Probably doesn’t work when loading a second class having the same name?
 			 */
 			final Class<? extends SimpleExtractor> classToLoad = Class.forName(name, true, child)
 					.asSubclass(SimpleExtractor.class);

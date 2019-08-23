@@ -10,7 +10,7 @@ import org.eclipse.jgit.lib.AnyObjectId;
 
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 
-public class Checkouter extends Client {
+public class Checkouter extends ComplexClient {
 
 	Checkouter(RepositoryCoordinates coordinates, Path outputBaseDir) {
 		super(coordinates, outputBaseDir);

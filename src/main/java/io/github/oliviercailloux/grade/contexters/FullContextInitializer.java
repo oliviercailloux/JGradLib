@@ -13,7 +13,7 @@ import org.eclipse.jgit.revwalk.RevCommit;
 
 import com.google.common.collect.ImmutableMap;
 
-import io.github.oliviercailloux.git.Client;
+import io.github.oliviercailloux.git.ComplexClient;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.git.git_hub.services.GitHubTimelineReader;
 import io.github.oliviercailloux.grade.GradingException;
@@ -53,7 +53,7 @@ public class FullContextInitializer implements GitFullContext {
 	}
 
 	public void init() throws GradingException {
-		final Client client = getClient();
+		final ComplexClient client = getClient();
 		if (client.hasContentCached()) {
 			final GitHubTimelineReader gitHubReceptionTimer = new GitHubTimelineReader();
 			gitHubReceptionTimer.getReceptionRanges(client);
@@ -68,7 +68,7 @@ public class FullContextInitializer implements GitFullContext {
 	}
 
 	@Override
-	public Client getClient() {
+	public ComplexClient getClient() {
 		return delegate.getClient();
 	}
 

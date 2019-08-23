@@ -75,6 +75,10 @@ public class WeightingGrade implements IGrade {
 		return new WeightingGrade(gradesByCriterion, weights);
 	}
 
+	public static WeightingGrade proportional(Criterion c1, IGrade g1, Criterion c2, IGrade g2) {
+		return WeightingGrade.from(ImmutableMap.of(c1, g1, c2, g2), ImmutableMap.of(c1, 0.5d, c2, 0.5d));
+	}
+
 	private static final double MAX_MARK = 1d;
 
 	/**
@@ -168,10 +172,6 @@ public class WeightingGrade implements IGrade {
 	public String toString() {
 		return MoreObjects.toStringHelper(this).add("points", getPoints()).add("comment", getComment())
 				.add("subGrades", getSubGradesAsSet()).toString();
-	}
-
-	public static WeightingGrade proportional(Criterion c1, IGrade g1, Criterion c2, IGrade g2) {
-		return WeightingGrade.from(ImmutableMap.of(c1, g1, c2, g2), ImmutableMap.of(c1, 0.5d, c2, 0.5d));
 	}
 
 }

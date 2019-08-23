@@ -9,7 +9,7 @@ public enum ExExtractorCriterion {
 	UTF("Encoding property", 0.5d, 0d), SOURCE("Maven compiler source property", 0.5d, 0d),
 	NO_MISLEADING_URL("No misleading url pointer", 0.5d),
 	/**
-	 * TODO and on no incorrect version of Guava
+	 * Should be: and on no incorrect version of Guava
 	 */
 	PDF_DEP("Depend on the latest version of PDFBox", 0.75d, 0d),
 	SIMPLE_EXTRACTOR("Interface is at the right place", 0.75d, 0d),

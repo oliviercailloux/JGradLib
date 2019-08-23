@@ -4,13 +4,15 @@ import java.nio.file.Path;
 import java.util.Map;
 import java.util.function.Predicate;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
 import io.github.oliviercailloux.git.FileContent;
 import io.github.oliviercailloux.grade.GradingException;
 import io.github.oliviercailloux.grade.contexters.FilesSourceImpl;
-import io.github.oliviercailloux.grade.contexters.FullContextInitializer;
 
 /**
  * An abstraction over file hierarchies, which can be provided by the network (a
@@ -22,37 +24,37 @@ import io.github.oliviercailloux.grade.contexters.FullContextInitializer;
  *
  * TODO Refactor this using a GitFileSystem, as follows.
  *
- * GitFileSystem has a git repo URI and a tmpFolder. It assumes it’s cloned
- * already, does not deal with updates, and reads from git history.
+ * <h1>GFS</h1>
+ * <li>one file-store</li>
+ * <li>Assumes cloned</li>
+ * <li>Does not update</li>
+ * <li>getRootDirectories(): the commits</li>
  *
- * Now checking out the default commit to a given folder is done as follows:
- * copyHierarchy(GitPath commit, Path outputFolder). Note that it can also be
- * used to “check out” a sub-folder rather than the whole workspace. (Useful for
- * running Maven on the folder, for example.)
+ * <h1>GitPath</h1>
+ * <li>:GFS</li>
+ * <li>commit, symbolic name or SHA, may be "". Utiliser (revstr, ObjectId).
+ * ObjectId représente un SHA-1. Revstr, voir Repository#resolve, est plus large
+ * que juste SHA ou Ref. Conserver RevCommit, un ObjectId qui représente un
+ * commit (try (RevWalk walk = new RevWalk(repository)) commit =
+ * walk.parseCommit(revSpec);) et le RevTree correspondant.</li>
+ * <li>Pour lecture: getPaths(folder: GitPath, recurse: boolean) via le treewalk
+ * (voir getFileContents), renvoyer Map<GitPath, ObjectId> où les répertoires
+ * correspondent à des tree et les fichiers à des blobs. getStream(GitPath) :
+ * trouver l’objet correspondant ? Voir getBlobId.</li>
  *
- * GitPath is bound to a commit, master by default, to a GFS, and delegates to a
- * relative path that stores the directory hierarchy and file name.
- *
- * A GFSProvider (subclass of FSProvider, currently GitContext) registers the
- * URI scheme autograde, gives GFS instances given a git repo URI and optionally
- * a tmp folder (otherwise, uses /tmp unless the URI has a file git-cloneable
- * equivalent). It clones using clone --no-checkout (just needs git history), or
- * checks that the remote there is the git-cloneable equivalent and updates,
- * before creating the GFS instance. GFSProvider has the logic for reading files
- * (using my client based on jgit). A FilteredFileSystem has internally a set of
- * matching paths, is created from a given file system, and convertible to a set
- * of FileContents, as is FilesSource currently. (Think about this more, perhaps
- * interface with Files.newDirectoryStream. Consider using Predicate<Path> to
- * filter in a way compatible with the Java API, and creating a Predicate<Path>
- * from a Predicate<FileContents> by transforming it with a static method.)
- *
- * I need a way of obtaining the commit history from the tmp folder containing
- * the git history. In order to determine which commit I want, after having
- * called GFSProvider and obtained a GitFS.
- *
- * A git repo URI has scheme autograde (mandatory for being an acceptable
- * parameter of GFSProvider), and has an equivalent git-cloneable URI. It has
- * syntax
+ * <h1>GitFSProvider</h1>
+ * <li>Registers URI scheme autograder</li>
+ * <li>newFS(gitRepo: URI, gitFolder: Path): GFS, gitFolder Path must be a
+ * default file system path because of limitations of git underlying client;
+ * gitRepo URI must use autograde scheme per API rules; gitFolder is optional,
+ * defaults to /tmp/repo/.git unless URI has a file git-cloneable equivalent.
+ * Does clone --no-checkout, or checks that the remote is the git-cloneable
+ * equivalent if folder already exists and updates it</li>
+ * <li>Any valid git repo URI (with scheme autograde) has an equivalent
+ * git-cloneable URI.</li>
+ * <li>subclass of FSProvider, currently GitContext</li> A git repo URI has
+ * scheme autograde (mandatory for being an acceptable parameter of
+ * GFSProvider), and has an equivalent git-cloneable URI. It has syntax
  * autograde://host.xz[:port]/path/to/repo.git[/]?git-scheme=access-scheme,
  * where access-scheme is ssh, git, http or https, and with the git-cloneable
  * equivalent being access-scheme://host.xz[:port]/path/to/repo.git[/], or
@@ -62,50 +64,41 @@ import io.github.oliviercailloux.grade.contexters.FullContextInitializer;
  * equivalent file:///path/to/repo.git[/]. (The git clone man page authorizes
  * the trailing slash while GitHub forbids it.) When given the latter form with
  * no optional tmp value, the GFSProvider does not clone or update and reads
- * directly from the given folder. Assume that even under Windows, the
- * file-URI-like paths (slash-separated, percent-encoded) are used (conversion
- * is easy anyway). In general, for
+ * directly from the given folder. Even under Windows, the file-URI-like paths
+ * (slash-separated, percent-encoded) are used. In general, for
  * https://docs.oracle.com/en/java/javase/12/docs/api/java.base/java/nio/file/spi/FileSystemProvider.html#getPath(java.net.URI),
  * a URI may be more complete and identify a commit (possibly master), directory
  * and file. (How to do this in general?) A URI represents a resource (which
  * possibly can change, as with resources in the internet).
+ * <li>Builds history?</li>
  *
- * I suppose I should use an in-memory unix-like path as a delegate into
- * GitPath, so as to be system independent and have URI-like paths.
+ * <h1>Autres</h1> MarkHelper: creates a Predicate<Path> from a
+ * Predicate<FileContents> by transforming it with a static method?
  *
- * To proceed stepwise, I could start with replacing current uses of Path by
- * GitPath. I can throw UOE to getFileSystem. No, rather use systematically
- * paths relative to the project root?
+ * <h1>Details to integrate</h1>
+ * <li>getPath(URI) can repr. a path without commit or one with commit?</li>
+ * <li>Grader: grades using a FS (giving access to commits as roots and to
+ * paths) when needs access to commits. Otherwise, grades using a Path (and
+ * works relative to this). Short term: also needs the Map<Commit, TS>. Later:
+ * Using the URI of the FS, the Grader may also access (through DI) the time
+ * stamps of the commits.</li>
  *
- * Do not cache file content in memory: read it as required. Caching is not
- * useful: either you fetch directly from GitHub network to in-memory FS, or it
- * doesn’t fit memory and you must put on disk anyway. I’ll never have to fetch
- * file by file. (Except perhaps reading several times the same file? But this
- * is a very special and simple case probably better handled with particular
- * code dealing just with that file.)
- *
- * The Grader creates a projectRoot path (for example, a GitPath that represents
- * the commit master), and works relative to this path.
- *
- * Remaining questions: who determines last commit to consider? Do I need a
- * GitHubRepoReader which clones or updates and has the history and timestamps?
  * Note that currently, FullCInit instance is a GFSProvider that first clones
  * the repo, analyzes its history, determines a default commit, and, given
- * commits, gives GFS instances. Is my Client used anywhere else? Grader should
- * never have to use it explicitly, I suppose. Also: path-relative-to-maven-pom
- * (e.g., src/main/java or pom.xml). => fileMatch("pom.xml", "blah") =>
- * MavenRelativePath.get("pom.xml") VS
- * thisReader.getMavenPath.relativize("pom.xml").
+ * commits, gives GFS instances.
  *
- * Concretely, I could refactor {@link FullContextInitializer} into: clones
- * using a GFSProvider, obtaining a GitFS; analyzes history and determines the
- * desired commit; and gets a base path using that commit and the GitFS. (Think
- * about a better separation of concerns?)
+ * Now checking out the default commit to a given folder is done using
+ * https://stackoverflow.com/a/50418060. Note that it can also be used to “check
+ * out” a sub-folder rather than the whole workspace. (Useful for running Maven
+ * on the folder, for example.)
  *
  * @author Olivier Cailloux
  *
  */
 public interface FilesSource {
+	@SuppressWarnings("unused")
+	public static final Logger LOGGER = LoggerFactory.getLogger(FilesSource.class);
+
 	public static FilesSource fromMemory(Map<Path, String> contents) {
 		return new FilesSourceImpl(contents.keySet(), (p) -> contents.getOrDefault(p, ""));
 	}

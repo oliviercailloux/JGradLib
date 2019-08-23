@@ -28,12 +28,16 @@ public class Mark implements IGrade {
 		return new Mark(1d, "");
 	}
 
-	/**
-	 * TODO replace with Booleans.countTrue at usage site; change for an AndGrade
-	 * when involves several conditions.
-	 */
+	public static Mark one(String comment) {
+		return new Mark(1d, comment);
+	}
+
 	public static Mark ifPasses(boolean passes) {
 		return passes ? one() : zero();
+	}
+
+	public static Mark binary(boolean criterion, String okComment, String elseComment) {
+		return criterion ? one(okComment) : zero(elseComment);
 	}
 
 	@JsonbCreator

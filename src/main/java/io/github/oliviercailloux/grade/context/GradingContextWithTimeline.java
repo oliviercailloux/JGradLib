@@ -24,12 +24,12 @@ import com.google.common.collect.Streams;
 import com.google.common.graph.ImmutableGraph;
 import com.google.common.graph.Traverser;
 
-import io.github.oliviercailloux.git.Client;
+import io.github.oliviercailloux.git.ComplexClient;
 import io.github.oliviercailloux.git.GitUtils;
 
 public class GradingContextWithTimeline {
 
-	private final Client client;
+	private final ComplexClient client;
 
 	/**
 	 * @param commitsReceptionTime in case of uncertaintly, indicate the earlier
@@ -37,11 +37,11 @@ public class GradingContextWithTimeline {
 	 *                             know it didn’t exist. This permits to ensure that
 	 *                             conclusions about lateness are certain.
 	 */
-	public static GradingContextWithTimeline given(Client client, Map<ObjectId, Instant> commitsReceptionTime) {
+	public static GradingContextWithTimeline given(ComplexClient client, Map<ObjectId, Instant> commitsReceptionTime) {
 		return new GradingContextWithTimeline(client, commitsReceptionTime);
 	}
 
-	private GradingContextWithTimeline(Client client, Map<ObjectId, Instant> commitsReceptionTime) {
+	private GradingContextWithTimeline(ComplexClient client, Map<ObjectId, Instant> commitsReceptionTime) {
 		this.client = requireNonNull(client);
 		this.commitsReceptionTime = ImmutableMap.copyOf(requireNonNull(commitsReceptionTime));
 	}

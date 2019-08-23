@@ -66,13 +66,13 @@ import io.github.oliviercailloux.utils.Utils;
  * @author Olivier Cailloux
  *
  */
-public class Client {
-	public static Client aboutAndUsing(RepositoryCoordinates coordinates, Path path) {
-		return new Client(coordinates, path);
+public class ComplexClient {
+	public static ComplexClient aboutAndUsing(RepositoryCoordinates coordinates, Path path) {
+		return new ComplexClient(coordinates, path);
 	}
 
 	@SuppressWarnings("unused")
-	private static final Logger LOGGER = LoggerFactory.getLogger(Client.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(ComplexClient.class);
 
 	private final Path outputBaseDir;
 
@@ -93,7 +93,7 @@ public class Client {
 
 	private final Table<ObjectId, Path, String> blobCache;
 
-	Client(RepositoryCoordinates coordinates, Path outputBaseDir) {
+	ComplexClient(RepositoryCoordinates coordinates, Path outputBaseDir) {
 		this.coordinates = requireNonNull(coordinates);
 		this.outputBaseDir = requireNonNull(outputBaseDir);
 		allHistory = null;
@@ -438,9 +438,9 @@ public class Client {
 		return allHistory;
 	}
 
-	public static Client aboutAndUsingTmp(RepositoryCoordinates coordinates) {
+	public static ComplexClient aboutAndUsingTmp(RepositoryCoordinates coordinates) {
 		final String tmpDir = System.getProperty("java.io.tmpdir");
-		return new Client(coordinates, Paths.get(tmpDir));
+		return new ComplexClient(coordinates, Paths.get(tmpDir));
 	}
 
 	public boolean existsCached() {
@@ -466,12 +466,6 @@ public class Client {
 			checkArgument(resolved != null);
 			return resolved;
 		}
-	}
-
-	public Instant getCreationTimeSimple(RevCommit commit) {
-		PersonIdent ident = commit.getAuthorIdent();
-		final ZonedDateTime creationTime = GitUtils.getCreationTime(ident);
-		return creationTime.toInstant();
 	}
 
 	public Set<RevCommit> getAllCommits() throws IOException, GitAPIException {
@@ -532,8 +526,8 @@ public class Client {
 		}
 	}
 
-	public static Client about(RepositoryCoordinates coordinates) {
+	public static ComplexClient about(RepositoryCoordinates coordinates) {
 		final String tmpDir = System.getProperty("java.io.tmpdir");
-		return new Client(coordinates, Paths.get(tmpDir).resolve(Instant.now().toString()));
+		return new ComplexClient(coordinates, Paths.get(tmpDir).resolve(Instant.now().toString()));
 	}
 }

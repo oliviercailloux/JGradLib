@@ -36,7 +36,7 @@ class JUnitExecutor {
 		final long successCount = summary.getTestsSucceededCount();
 		checkState(failureCount + successCount == nbTests);
 		LOGGER.warn("Failed: {}, succeeded: {}.", failureCount, successCount);
-		/** TODO time out if code cycles. */
+		/** Should time out if code cycles. */
 	}
 
 	@SuppressWarnings("unused")

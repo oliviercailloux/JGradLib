@@ -4,11 +4,11 @@ import java.util.Optional;
 
 import org.eclipse.jgit.revwalk.RevCommit;
 
-import io.github.oliviercailloux.git.Client;
+import io.github.oliviercailloux.git.ComplexClient;
 
 public interface GitContext {
 
-	public Client getClient();
+	public ComplexClient getClient();
 
 	/**
 	 * If no such commit, or if given optional is empty, returns a files reader

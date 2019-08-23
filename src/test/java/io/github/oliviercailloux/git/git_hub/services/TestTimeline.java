@@ -16,7 +16,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.MoreCollectors;
 import com.google.common.collect.Range;
 
-import io.github.oliviercailloux.git.Client;
+import io.github.oliviercailloux.git.ComplexClient;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 
 class TestTimeline {
@@ -26,7 +26,7 @@ class TestTimeline {
 	@Test
 	void testJavaCourse() throws Exception {
 		final GitHubTimelineReader reader = new GitHubTimelineReader();
-		final Client client = Client.aboutAndUsingTmp(RepositoryCoordinates.from("oliviercailloux", "java-course"));
+		final ComplexClient client = ComplexClient.aboutAndUsingTmp(RepositoryCoordinates.from("oliviercailloux", "java-course"));
 		client.tryRetrieve();
 		assertTrue(client.hasContent());
 		client.getWholeHistory();
@@ -42,7 +42,7 @@ class TestTimeline {
 	@Test
 	void testRecent() throws Exception {
 		final GitHubTimelineReader reader = new GitHubTimelineReader();
-		final Client client = Client.aboutAndUsingTmp(RepositoryCoordinates.from("oliviercailloux", "JdL"));
+		final ComplexClient client = ComplexClient.aboutAndUsingTmp(RepositoryCoordinates.from("oliviercailloux", "JdL"));
 		client.tryRetrieve();
 		assertTrue(client.hasContent());
 		client.getWholeHistory();

@@ -26,13 +26,11 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.ZonedDateTime;
 import java.util.Comparator;
-import java.util.Date;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
 import org.eclipse.jgit.api.errors.GitAPIException;
-import org.eclipse.jgit.lib.PersonIdent;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,7 +43,7 @@ import com.google.common.collect.Streams;
 import com.google.common.graph.Traverser;
 import com.google.common.primitives.Booleans;
 
-import io.github.oliviercailloux.git.Client;
+import io.github.oliviercailloux.git.ComplexClient;
 import io.github.oliviercailloux.git.GitHistory;
 import io.github.oliviercailloux.git.GitUtils;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
@@ -75,7 +73,7 @@ public class ExGitGrader {
 		final Instant deadline = ZonedDateTime.parse("2019-03-20T23:59:59+01:00").toInstant();
 
 		final GitFullContext fullContext = FullContextInitializer.withPath(coord, projectsBaseDir);
-		final Client client = fullContext.getClient();
+		final ComplexClient client = fullContext.getClient();
 //		maxGrade = Stream.of(ExGitCriterion.values())
 //				.collect(Collectors.summingDouble(CriterionAndPoints::getMaxPoints));
 		try {
@@ -107,7 +105,7 @@ public class ExGitGrader {
 		}
 
 		final Optional<RevCommit> firstRootCommitOpt = rootCommits.stream()
-				.min(Comparator.comparing(this::getCreatedAt));
+				.min(Comparator.comparing(GitUtils::getCreationTime));
 		final FilesSource firstRootCommitReader = fullContext.getFilesReader(firstRootCommitOpt);
 
 		final ImmutableSet<RevCommit> byGitHub = history.getGraph().nodes().stream()
@@ -252,7 +250,7 @@ public class ExGitGrader {
 		return grade;
 	}
 
-	private Optional<RevCommit> tryParseSpec(Client client, String revSpec) {
+	private Optional<RevCommit> tryParseSpec(ComplexClient client, String revSpec) {
 		final Optional<RevCommit> devOpt;
 		try {
 			devOpt = client.tryResolve(revSpec).map(t -> {
@@ -296,16 +294,6 @@ public class ExGitGrader {
 
 	void setMaxGrade(double maxGrade) {
 		this.maxGrade = maxGrade;
-	}
-
-	/**
-	 * TODO check if redundant with client
-	 */
-	private Instant getCreatedAt(RevCommit commit) {
-		final PersonIdent authorIdent = commit.getAuthorIdent();
-		final Date when = authorIdent.getWhen();
-		// final TimeZone tz = authorIdent.getTimeZone();
-		return when.toInstant();
 	}
 
 	private boolean isMergeCommit1(RevCommit commit, Optional<RevCommit> devOpt, Optional<RevCommit> dev2Opt,

@@ -18,6 +18,7 @@ import io.github.oliviercailloux.email.EMailer;
 import io.github.oliviercailloux.email.EMailerMain;
 import io.github.oliviercailloux.email.Email;
 import io.github.oliviercailloux.grade.GradeTestsHelper;
+import io.github.oliviercailloux.grade.IGrade;
 import io.github.oliviercailloux.grade.WeightingGrade;
 import io.github.oliviercailloux.grade.format.json.JsonGrade;
 import io.github.oliviercailloux.xml.XmlUtils;
@@ -47,6 +48,19 @@ class HtmlGradeTests {
 		LOGGER.info("Complex grade: {}.", written);
 
 		final String expected = Resources.toString(getClass().getResource("ComplexGradeWithPenalty.html"),
+				StandardCharsets.UTF_8);
+		assertEquals(expected, written);
+	}
+
+	@Test
+	void testEclecticGrade() throws Exception {
+		final IGrade grade = GradeTestsHelper.getEclecticWeightedGrade();
+		final Document document = HtmlGrade.asHtml(grade, "Ze grade");
+//		XmlUtils.validate(document);
+		final String written = XmlUtils.asString(document);
+		LOGGER.info("Eclectic grade: {}.", written);
+
+		final String expected = Resources.toString(getClass().getResource("EclecticGrade.html"),
 				StandardCharsets.UTF_8);
 		assertEquals(expected, written);
 	}

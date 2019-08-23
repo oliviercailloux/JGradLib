@@ -4,6 +4,8 @@ import static java.util.Objects.requireNonNull;
 
 import java.nio.file.Path;
 
+import com.google.common.primitives.Booleans;
+
 import io.github.oliviercailloux.grade.IGrade;
 import io.github.oliviercailloux.grade.Mark;
 import io.github.oliviercailloux.grade.context.FilesSource;
@@ -51,7 +53,7 @@ public class MavenProjectMarker {
 	}
 
 	public IGrade atRootGrade() {
-		return Mark.ifPasses(getPomSupplier().isMavenProjectAtRoot());
+		return Mark.given(Booleans.countTrue(getPomSupplier().isMavenProjectAtRoot()), "");
 	}
 
 	public PomContexter getPomContexter() {
@@ -63,7 +65,7 @@ public class MavenProjectMarker {
 	}
 
 	public IGrade groupIdGrade() {
-		return Mark.ifPasses(getPomContexter().isGroupIdValid());
+		return Mark.given(Booleans.countTrue(getPomContexter().isGroupIdValid()), "");
 	}
 
 	public boolean doTestsExistAndPass() {
