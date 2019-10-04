@@ -1,0 +1,43 @@
+query pushedDates($repositoryName: String!, $repositoryOwner: String!, $after: String) {
+  repository(name: $repositoryName, owner: $repositoryOwner) {
+    url
+    sshUrl
+    id
+    name
+    createdAt
+    owner {
+      login
+      url
+    }
+    refs(refPrefix: "refs/heads/", first: 100) {
+      nodes {
+        name
+        prefix
+        target {
+          oid
+          ... on Commit {
+            history(after: $after) {
+              totalCount
+              pageInfo {
+                hasNextPage
+                endCursor
+              }
+              nodes {
+                oid
+                parents(first: 100) {
+                  totalCount
+                  nodes {
+                    oid
+                  }
+                }
+                authoredDate
+                committedDate
+                pushedDate
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
