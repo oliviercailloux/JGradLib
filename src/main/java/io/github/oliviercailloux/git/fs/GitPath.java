@@ -61,6 +61,10 @@ public class GitPath implements Path {
 	private static final Comparator<GitPath> COMPARATOR = Comparator.<GitPath, String>comparing((p) -> p.revStr)
 			.thenComparing((p) -> p.dirAndFile);
 
+	static GitPath getMasterSlashPath(GitFileSystem gitFileSystem) {
+		return new GitPath(gitFileSystem, "master", GitFileSystem.JIM_FS_SLASH);
+	}
+
 	private GitFileSystem fileSystem;
 
 	/**
@@ -225,7 +229,7 @@ public class GitPath implements Path {
 		if (isAbsolute()) {
 			return this;
 		}
-		return new GitPath(fileSystem, "master", GitFileSystem.JIM_FS_SLASH).resolveRelative(this);
+		return getMasterSlashPath(fileSystem).resolveRelative(this);
 	}
 
 	@Override

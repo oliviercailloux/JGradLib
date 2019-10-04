@@ -35,14 +35,14 @@ public class GitFileSystem extends FileSystem {
 	/**
 	 * Must be default FS because of limitations of JGit.
 	 */
-	private final Path gitFolder;
+	private final Path workTree;
 	private boolean isOpen;
 
-	public GitFileSystem(GitFileSystemProvider gitProvider, URI gitFsUri, Path gitFolder) {
+	GitFileSystem(GitFileSystemProvider gitProvider, URI gitFsUri, Path workTree) {
 		this.gitProvider = checkNotNull(gitProvider);
 		this.gitFsUri = checkNotNull(gitFsUri);
-		this.gitFolder = checkNotNull(gitFolder);
-		checkArgument(gitFolder.getFileSystem().equals(FileSystems.getDefault()));
+		this.workTree = checkNotNull(workTree);
+		checkArgument(workTree.getFileSystem().equals(FileSystems.getDefault()));
 		isOpen = true;
 	}
 
@@ -50,8 +50,8 @@ public class GitFileSystem extends FileSystem {
 		return gitFsUri;
 	}
 
-	public Path getGitFolder() {
-		return gitFolder;
+	public Path getWorkTree() {
+		return workTree;
 	}
 
 	@Override

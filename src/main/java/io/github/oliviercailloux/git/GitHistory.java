@@ -19,7 +19,7 @@ public class GitHistory {
 	private final ImmutableGraph<RevCommit> graph;
 
 	private GitHistory(Iterable<RevCommit> commits) {
-		MutableGraph<RevCommit> mutableGraph = GraphBuilder.directed().build();
+		final MutableGraph<RevCommit> mutableGraph = GraphBuilder.directed().build();
 		for (RevCommit child : commits) {
 			mutableGraph.addNode(child);
 			final RevCommit[] parents = child.getParents();

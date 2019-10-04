@@ -60,6 +60,8 @@ public class GitUtils {
 //		final RepositoryCoordinates coord = RepositoryCoordinates.from("oliviercailloux", "jmcda-xmcda2-ws-examples");//8, no diff
 		final RepositoryCoordinates coord = RepositoryCoordinates.from("oliviercailloux", "xerces-user");// 1-0, diff!
 		try (GitHubFetcherV3 fetcher = GitHubFetcherV3.using(GitHubToken.getRealInstance())) {
+			final ImmutableList<RepositoryCoordinates> repositories = fetcher.getUserRepositories("oliviercailloux");
+//			for (RepositoryCoordinates coord : repositories) {
 			final ImmutableList<ObjectId> commits = fetcher.getCommitsGitHubDescriptions(coord).stream()
 					.filter((c) -> c.getCommitterCommitDate().compareTo(Instant.now().minus(90, ChronoUnit.DAYS)) >= 0)
 					.map(CommitGitHubDescription::getSha).collect(ImmutableList.toImmutableList());
@@ -73,6 +75,7 @@ public class GitUtils {
 			LOGGER.info("Diff ({}): {}.", diff.size(), diff);
 			LOGGER.info("All commits ({}): {}, pushed ones ({}): {}.", commits.size(), commits, pushedCommits.size(),
 					pushedCommits);
+//			}
 		}
 	}
 

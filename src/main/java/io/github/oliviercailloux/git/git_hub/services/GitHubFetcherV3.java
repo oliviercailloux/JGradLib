@@ -115,6 +115,10 @@ public class GitHubFetcherV3 implements AutoCloseable {
 	 * https://developer.github.com/v3/repos/#list-organization-repositories
 	 */
 	private static final String LIST_ORG_REPOS = "https://api.github.com/orgs/{org}/repos";
+	/**
+	 * https://developer.github.com/v3/repos/#list-user-repositories
+	 */
+	private static final String LIST_USER_REPOS = "https://api.github.com/users/{username}/repos";
 
 	private GitHubFetcherV3(GitHubToken token) {
 		rateLimit = "";
@@ -199,6 +203,11 @@ public class GitHubFetcherV3 implements AutoCloseable {
 
 	public ImmutableList<RepositoryCoordinates> getRepositories(String org) {
 		return getRepositories(org, false);
+	}
+
+	public ImmutableList<RepositoryCoordinates> getUserRepositories(String username) {
+		final WebTarget target = client.target(LIST_USER_REPOS).resolveTemplate("username", username);
+		return getContentAsList(target, RepositoryCoordinates::from, false);
 	}
 
 	public ImmutableList<RepositoryCoordinates> getRepositories(String org, boolean truncate) {
@@ -430,6 +439,18 @@ public class GitHubFetcherV3 implements AutoCloseable {
 				pushEvents.stream().<String>map((e) -> PrintableJsonObjectFactory.wrapObject(e.getJson()).toString())
 						.collect(Collectors.joining(", ")));
 		return pushEvents;
+	}
+
+	public ImmutableList<Event> getCreateBranchEvents(RepositoryCoordinates repositoryCoordinates) {
+		final ImmutableList<Event> events = getEvents(repositoryCoordinates);
+		final ImmutableList<Event> selectedEvents = events.stream()
+				.filter((e) -> e.getType().equals(EventType.CREATE_BRANCH_EVENT))
+				.collect(ImmutableList.toImmutableList());
+		LOGGER.debug("All: {}.",
+				selectedEvents.stream()
+						.<String>map((e) -> PrintableJsonObjectFactory.wrapObject(e.getJson()).toString())
+						.collect(Collectors.joining(", ")));
+		return selectedEvents;
 	}
 
 	public ImmutableList<Event> getEvents(RepositoryCoordinates repositoryCoordinates) throws WebApplicationException {

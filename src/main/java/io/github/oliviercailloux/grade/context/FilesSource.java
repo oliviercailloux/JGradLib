@@ -67,9 +67,8 @@ import io.github.oliviercailloux.grade.contexters.FilesSourceImpl;
  * directly from the given folder. Even under Windows, the file-URI-like paths
  * (slash-separated, percent-encoded) are used. In general, for
  * https://docs.oracle.com/en/java/javase/12/docs/api/java.base/java/nio/file/spi/FileSystemProvider.html#getPath(java.net.URI),
- * a URI may be more complete and identify a commit (possibly master), directory
- * and file. (How to do this in general?) A URI represents a resource (which
- * possibly can change, as with resources in the internet).
+ * A URI represents a resource (which possibly can change, as with resources in
+ * the internet).
  * <li>Builds history?</li>
  *
  * <h1>Autres</h1> MarkHelper: creates a Predicate<Path> from a

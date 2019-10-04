@@ -1,6 +1,8 @@
 package io.github.oliviercailloux.utils;
 
 import java.net.URI;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.Arrays;
 import java.util.Collections;
@@ -51,6 +53,10 @@ public class Utils {
 		final String key = idx > 0 ? it.substring(0, idx) : it;
 		final String value = idx > 0 && it.length() > idx + 1 ? it.substring(idx + 1) : "";
 		return new SimpleImmutableEntry<>(key, value);
+	}
+
+	public static Path getTempDirectory() {
+		return Paths.get(System.getProperty("java.io.tmpdir"));
 	}
 
 }
