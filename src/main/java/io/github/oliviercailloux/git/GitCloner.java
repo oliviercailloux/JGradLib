@@ -17,6 +17,8 @@ import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 import org.eclipse.jgit.transport.RemoteConfig;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.MoreCollectors;
 
@@ -24,6 +26,22 @@ import io.github.oliviercailloux.git.fs.GitScheme;
 import io.github.oliviercailloux.utils.Utils;
 
 public class GitCloner {
+	@SuppressWarnings("unused")
+	private static final Logger LOGGER = LoggerFactory.getLogger(GitCloner.class);
+
+	private boolean update;
+
+	public GitCloner() {
+		update = true;
+	}
+
+	public boolean doesUpdate() {
+		return update;
+	}
+
+	public void setUpdate(boolean update) {
+		this.update = update;
+	}
 
 	private Path getGitFolderPathInTemp(GitUri uris) {
 		final Path tmpDir = Utils.getTempDirectory();
