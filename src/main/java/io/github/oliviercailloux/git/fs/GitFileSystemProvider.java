@@ -49,20 +49,10 @@ public class GitFileSystemProvider extends FileSystemProvider {
 	public static final String GIT_FOLDER = "GIT_FOLDER";
 	public static final String SCHEME = "gitfs";
 
-	private boolean update;
-
 	private final Map<DoubleGitUri, GitFileSystem> cachedFileSystems = new LinkedHashMap<>();
 
 	public GitFileSystemProvider() {
-		update = true;
-	}
-
-	public boolean doesUpdate() {
-		return update;
-	}
-
-	public void setUpdate(boolean update) {
-		this.update = update;
+		/** Default constructor. */
 	}
 
 	@Override
