@@ -1,15 +1,19 @@
 package io.github.oliviercailloux.git;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
+import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.Queue;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import org.eclipse.jgit.lib.ObjectId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.collect.ImmutableSet;
 import com.google.common.graph.GraphBuilder;
+import com.google.common.graph.Graphs;
 import com.google.common.graph.ImmutableGraph;
 import com.google.common.graph.MutableGraph;
 import com.google.common.graph.SuccessorsFunction;
@@ -23,6 +27,8 @@ public class GitGenericHistory<E extends ObjectId> {
 
 	GitGenericHistory(SuccessorsFunction<E> parentsFunction, Set<E> tips) {
 		final Queue<E> toConsider = new LinkedList<>(tips);
+		final Set<E> seen = new LinkedHashSet<>(tips);
+
 		final MutableGraph<E> mutableGraph = GraphBuilder.directed().build();
 		while (!toConsider.isEmpty()) {
 			final E current = toConsider.remove();
@@ -31,25 +37,34 @@ public class GitGenericHistory<E extends ObjectId> {
 			LOGGER.debug("Parents of {}: {}.", current.getName(), parents);
 			for (E parent : parents) {
 				mutableGraph.putEdge(current, parent);
-				toConsider.add(parent);
+				if (!seen.contains(parent)) {
+					toConsider.add(parent);
+					seen.add(parent);
+				}
 			}
 		}
 		this.graph = ImmutableGraph.copyOf(mutableGraph);
+		checkArgument(!Graphs.hasCycle(graph));
 	}
 
 	/**
-	 * TODO consider renaming, these are the ancestors to which everything points.
-	 * (Starters? But wrong direction, misleading.)
+	 * The children to which everything points; the starting points in time of the
+	 * git history. Note that this departs from the usual forest-view of a DAG,
+	 * where the edges go away from the root: here they go towards the roots (as is
+	 * usual when representing a Git history).
 	 *
-	 * @return
+	 * @return a non-empty set.
 	 */
-	public Set<E> getRoots() {
+	public ImmutableSet<E> getRoots() {
 		/**
 		 * We could start from any given node and simply follow the successor
 		 * (has-as-parent) relation, but that finds only one root. Git allows for
 		 * multiple roots.
 		 */
-		return graph.nodes().stream().filter((n) -> graph.successors(n).isEmpty()).collect(Collectors.toSet());
+		final ImmutableSet<E> roots = graph.nodes().stream().filter((n) -> graph.successors(n).isEmpty())
+				.collect(ImmutableSet.toImmutableSet());
+		assert !roots.isEmpty();
+		return roots;
 	}
 
 	@SuppressWarnings("unused")

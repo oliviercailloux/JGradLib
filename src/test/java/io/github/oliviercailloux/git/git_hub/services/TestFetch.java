@@ -1,5 +1,6 @@
 package io.github.oliviercailloux.git.git_hub.services;
 
+import static com.google.common.base.Preconditions.checkState;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -7,8 +8,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Instant;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import javax.json.JsonObject;
 import javax.ws.rs.client.ClientBuilder;
@@ -21,6 +24,14 @@ import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.graph.EndpointPair;
+
+import io.github.oliviercailloux.git.ComplexClient;
+import io.github.oliviercailloux.git.GitGenericHistory;
+import io.github.oliviercailloux.git.GitHistory;
 import io.github.oliviercailloux.git.git_hub.model.GitHubToken;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.git.git_hub.model.graph_ql.RepositoryWithFiles;
@@ -181,6 +192,81 @@ public class TestFetch {
 			final Instant lastModification = rawFetcher.getLastModification(coord, Paths.get("Test.html")).get();
 			LOGGER.debug("Last: {}.", lastModification);
 			assertEquals(Instant.parse("2016-05-02T14:11:38Z"), lastModification);
+		}
+	}
+
+	@Test
+	public void testFetchPushedDates() throws Exception {
+		final RepositoryCoordinates coord = RepositoryCoordinates.from("oliviercailloux", "projets");
+		try (GitHubFetcherQL fetcher = GitHubFetcherQL.using(GitHubToken.getRealInstance())) {
+			final ImmutableMap<ObjectId, Instant> pushedDates = fetcher.getPushedDates(coord);
+			final GitGenericHistory<ObjectId> history = fetcher.getHistory();
+
+			assertEquals(ImmutableSet.of(ObjectId.fromString("f96c728044e885fceaf4a3ae926f1a13dd329758")),
+					history.getRoots());
+			assertEquals(155, history.getGraph().nodes().size());
+			assertEquals(history.getGraph().nodes(), pushedDates.keySet());
+
+			assertEquals(Instant.parse("2019-05-24T15:24:11Z"),
+					pushedDates.get(ObjectId.fromString("81d36d64a5f6304d38b965897b9dc2ef3513a628")));
+			assertEquals(Instant.parse("2019-05-06T14:57:15Z"),
+					pushedDates.get(ObjectId.fromString("dbd7a9439cc79e365dde71930634a9051c82d596")));
+			assertEquals(Instant.parse("2019-05-06T14:57:15Z"),
+					pushedDates.get(ObjectId.fromString("967489122c5d485bda8b571b2835dafa77af787f")));
+			assertEquals(Instant.parse("2019-05-03T14:25:04Z"),
+					pushedDates.get(ObjectId.fromString("3cc31dd1d5a5210b269f0a01d26fd2a670bc4404")));
+
+			final Set<EndpointPair<ObjectId>> edges = history.getGraph().edges();
+			for (EndpointPair<ObjectId> edge : edges) {
+				final ObjectId child = edge.source();
+				final ObjectId parent = edge.target();
+				assertTrue(pushedDates.get(parent).compareTo(pushedDates.get(child)) <= 0);
+			}
+		}
+	}
+
+	/**
+	 * Far too long to be used systematically!
+	 */
+	@Test
+	public void testFetchPushedDatesAll() throws Exception {
+		final ImmutableList<RepositoryCoordinates> allCoordinates;
+//		try (GitHubFetcherV3 fetcher = GitHubFetcherV3.using(GitHubToken.getRealInstance())) {
+//			allCoordinates = fetcher.getUserRepositories("oliviercailloux");
+//		}
+		allCoordinates = ImmutableList.of(RepositoryCoordinates.from("oliviercailloux", "CLut"));
+		/**
+		 * TODO change refPrefix to /refs/ to get also tags. And check that pushed after
+		 * having been created.
+		 */
+
+		try (GitHubFetcherQL fetcher = GitHubFetcherQL.using(GitHubToken.getRealInstance())) {
+			for (RepositoryCoordinates coordinates : allCoordinates) {
+				LOGGER.info("Proceeding with {}.", coordinates);
+				final GitHistory historyFromWorkTree;
+				final ComplexClient client = ComplexClient.aboutAndUsing(coordinates, Path.of("/tmp/"));
+				final boolean retrieved = client.tryRetrieve();
+				checkState(retrieved);
+				historyFromWorkTree = client.getWholeHistory();
+
+				final ImmutableMap<ObjectId, Instant> pushedDates = fetcher.getPushedDates(coordinates);
+				final GitGenericHistory<ObjectId> historyFromGitHub = fetcher.getHistory();
+
+				assertEquals(historyFromWorkTree.getRoots(), historyFromGitHub.getRoots());
+				assertEquals(historyFromWorkTree.getGraph(), historyFromGitHub.getGraph());
+				assertEquals(historyFromGitHub.getGraph().nodes(), pushedDates.keySet());
+
+				final Comparator<ObjectId> comparingByPushedDate = Comparator.comparing((c) -> pushedDates.get(c));
+
+				final Set<EndpointPair<ObjectId>> edges = historyFromGitHub.getGraph().edges();
+				for (EndpointPair<ObjectId> edge : edges) {
+					final ObjectId child = edge.source();
+					final ObjectId parent = edge.target();
+					assertTrue(comparingByPushedDate.compare(parent, child) <= 0,
+							String.format("Parent %s pushed at %s, after child %s pushed at %s.", parent.getName(),
+									pushedDates.get(parent), child.getName(), pushedDates.get(child)));
+				}
+			}
 		}
 	}
 

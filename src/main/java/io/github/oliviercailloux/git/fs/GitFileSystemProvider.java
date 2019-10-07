@@ -101,6 +101,10 @@ public class GitFileSystemProvider extends FileSystemProvider {
 		return subFolder;
 	}
 
+	public GitFileSystem newFileSystem(DoubleGitUri uri) throws IOException {
+		return newFileSystem(uri, getGitFolderPathInTemp(uri));
+	}
+
 	public GitFileSystem newFileSystem(DoubleGitUri uri, Path workTree) throws IOException {
 		if (cachedFileSystems.containsKey(uri)) {
 			throw new FileSystemAlreadyExistsException();
@@ -140,6 +144,10 @@ public class GitFileSystemProvider extends FileSystemProvider {
 					final List<RemoteConfig> remoteList = git.remoteList().call();
 					final Optional<RemoteConfig> origin = remoteList.stream()
 							.filter((r) -> r.getName().equals("origin")).collect(MoreCollectors.toOptional());
+					if (!git.status().call().isClean()) {
+						throw new IllegalStateException("Can’t update: not clean.");
+					}
+					LOGGER.info("Full branch: {}.", repo.getFullBranch());
 					if (origin.isPresent() && origin.get().getURIs().size() == 1
 							&& origin.get().getURIs().get(0).toString().equals(uri.getGitString())) {
 						final PullResult result = git.pull().call();
@@ -148,6 +156,8 @@ public class GitFileSystemProvider extends FileSystemProvider {
 									result.getMergeResult(), result.getRebaseResult());
 							throw new IllegalStateException("Merge failed");
 						}
+					} else {
+						throw new IllegalStateException("Unexpected remote.");
 					}
 				} catch (GitAPIException e) {
 					throw new IllegalStateException(e);
@@ -169,7 +179,7 @@ public class GitFileSystemProvider extends FileSystemProvider {
 	 * the caller to forget closing the just created file system.
 	 *
 	 * A URI may be more complete and identify a commit (possibly master), directory
-	 * and file. How to do this in general? Have not thought about it yet. Patches
+	 * and file. I have not thought about how a general approach to do this. Patches
 	 * welcome.
 	 */
 	@Override
