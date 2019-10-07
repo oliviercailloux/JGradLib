@@ -17,17 +17,19 @@ import org.junit.jupiter.api.Test;
 
 import com.google.common.base.Verify;
 
+import io.github.oliviercailloux.git.GitUri;
+
 class GitFileSystemProviderTests {
 	public static void main(String[] args) throws Exception {
 		final GitFileSystemProvider provider = new GitFileSystemProvider();
 		provider.setUpdate(true);
-		provider.newFileSystem(DoubleGitUri.fromGitUri(URI.create("https://github.com/oliviercailloux/testrel/")),
+		provider.newFileSystem(GitUri.fromGitUri(URI.create("https://github.com/oliviercailloux/testrel/")),
 				Path.of("testrel cloned using https")).close();
 		final Path sshPath = Path.of("testrel cloned using ssh");
-		provider.newFileSystem(DoubleGitUri.fromGitUri(URI.create("ssh:git@github.com:oliviercailloux/testrel.git")),
+		provider.newFileSystem(GitUri.fromGitUri(URI.create("ssh:git@github.com:oliviercailloux/testrel.git")),
 				sshPath).close();
 		provider.setUpdate(true);
-		provider.newFileSystem(DoubleGitUri.fromGitUri(sshPath.toUri()),
+		provider.newFileSystem(GitUri.fromGitUri(sshPath.toUri()),
 				Path.of("testrel cloned using file transport to ssh clone")).close();
 		Files.writeString(sshPath.resolve("newfile.txt"), "newcontent");
 		try (Repository repo = new FileRepository(sshPath.resolve(".git").toFile())) {
@@ -41,9 +43,9 @@ class GitFileSystemProviderTests {
 				Verify.verify(master.getObjectId().equals(newCommit));
 			}
 		}
-		provider.newFileSystem(DoubleGitUri.fromGitUri(sshPath.toUri()),
+		provider.newFileSystem(GitUri.fromGitUri(sshPath.toUri()),
 				Path.of("testrel cloned using file transport to ssh clone")).close();
-		provider.newFileSystem(DoubleGitUri.fromGitUri(sshPath.toUri()), sshPath).close();
+		provider.newFileSystem(GitUri.fromGitUri(sshPath.toUri()), sshPath).close();
 	}
 
 	@Test

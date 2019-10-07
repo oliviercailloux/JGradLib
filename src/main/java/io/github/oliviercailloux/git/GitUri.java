@@ -1,4 +1,4 @@
-package io.github.oliviercailloux.git.fs;
+package io.github.oliviercailloux.git;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -6,21 +6,18 @@ import static com.google.common.base.Preconditions.checkState;
 
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.Arrays;
 import java.util.Objects;
-import java.util.Optional;
 
 import org.eclipse.jgit.transport.URIish;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.MoreObjects;
-import com.google.common.base.Predicates;
 import com.google.common.base.Strings;
 import com.google.common.base.Verify;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.MoreCollectors;
 
+import io.github.oliviercailloux.git.fs.GitFileSystemProvider;
+import io.github.oliviercailloux.git.fs.GitScheme;
 import io.github.oliviercailloux.utils.Utils;
 
 /**
@@ -41,9 +38,9 @@ import io.github.oliviercailloux.utils.Utils;
  * @author Olivier Cailloux
  *
  */
-public class DoubleGitUri {
+public class GitUri {
 	@SuppressWarnings("unused")
-	private static final Logger LOGGER = LoggerFactory.getLogger(DoubleGitUri.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(GitUri.class);
 
 	public static final String GIT_SCHEME_QUERY_PARAMETER = "git-scheme";
 	private final GitScheme gitScheme;
@@ -53,7 +50,7 @@ public class DoubleGitUri {
 	private final String repoPath;
 	private final String repoName;
 
-	public static DoubleGitUri fromGitUri(URI gitUri) {
+	public static GitUri fromGitUri(URI gitUri) {
 		final String user;
 		final String host;
 		final int port;
@@ -77,10 +74,10 @@ public class DoubleGitUri {
 			port = gitUri.getPort();
 			path = Strings.nullToEmpty(gitUri.getPath());
 		}
-		return new DoubleGitUri(GitScheme.valueOf(gitUri.getScheme().toUpperCase()), user, host, port, path);
+		return new GitUri(GitScheme.valueOf(gitUri.getScheme().toUpperCase()), user, host, port, path);
 	}
 
-	public static DoubleGitUri fromGitUrl(String gitUrl) {
+	public static GitUri fromGitUrl(String gitUrl) {
 		final boolean scpLikeUrl;
 		final boolean localPathUrl;
 		if (gitUrl.contains(":")) {
@@ -94,7 +91,7 @@ public class DoubleGitUri {
 			localPathUrl = true;
 		}
 
-		final DoubleGitUri uris;
+		final GitUri uris;
 		if (!scpLikeUrl && !localPathUrl) {
 			uris = fromGitUri(URI.create(gitUrl));
 		} else if (scpLikeUrl) {
@@ -104,58 +101,17 @@ public class DoubleGitUri {
 			} catch (URISyntaxException e) {
 				throw new IllegalArgumentException(e);
 			}
-			uris = new DoubleGitUri(GitScheme.SSH, Strings.nullToEmpty(uriish.getUser()),
+			uris = new GitUri(GitScheme.SSH, Strings.nullToEmpty(uriish.getUser()),
 					Strings.nullToEmpty(uriish.getHost()), uriish.getPort(), uriish.getPath());
 		} else {
 			assert localPathUrl;
-			uris = new DoubleGitUri(GitScheme.FILE, "", "", -1, gitUrl);
+			uris = new GitUri(GitScheme.FILE, "", "", -1, gitUrl);
 		}
 
 		return uris;
 	}
 
-	public static DoubleGitUri fromGitFsUri(URI gitFsUri) {
-		checkArgument(gitFsUri.getScheme().equalsIgnoreCase(GitFileSystemProvider.SCHEME));
-		checkArgument(gitFsUri.isAbsolute());
-
-		final ImmutableList<String> gitSchemes = Utils.getQuery(gitFsUri).getOrDefault(GIT_SCHEME_QUERY_PARAMETER,
-				ImmutableList.of());
-		checkArgument(gitSchemes.size() <= 1);
-		final Optional<String> gitSchemeStrOpt = gitSchemes.stream().collect(MoreCollectors.toOptional());
-		checkArgument(!gitSchemeStrOpt.isPresent() || Arrays.asList(GitScheme.values()).stream()
-				.map(GitScheme::toString).anyMatch(Predicates.equalTo(gitSchemeStrOpt.get().toUpperCase())));
-		final Optional<GitScheme> gitSchemeOpt = gitSchemeStrOpt.map((s) -> GitScheme.valueOf(s.toUpperCase()));
-
-		/**
-		 * Scheme must be present, except that it is optional with file kind (no host)
-		 * and with ssh kind (with user info).
-		 */
-		checkArgument(
-				Utils.implies(gitFsUri.getHost() != null && gitFsUri.getUserInfo() == null, gitSchemeOpt.isPresent()));
-		checkArgument(Utils.implies(gitSchemeOpt.isPresent() && gitSchemeOpt.get().equals(GitScheme.FILE),
-				gitFsUri.getHost() == null));
-		checkArgument(Utils.implies(gitSchemeOpt.isPresent() && !gitSchemeOpt.get().equals(GitScheme.FILE),
-				gitFsUri.getHost() != null));
-		checkArgument(Utils.implies(gitSchemeOpt.isPresent() && gitFsUri.getUserInfo() != null,
-				gitSchemeOpt.equals(Optional.of(GitScheme.SSH))));
-
-		final GitScheme gitScheme;
-		if (gitFsUri.getUserInfo() != null || gitFsUri.isOpaque()) {
-			gitScheme = GitScheme.SSH;
-		} else if (gitFsUri.getHost() == null) {
-			gitScheme = GitScheme.FILE;
-		} else {
-			gitScheme = gitSchemeOpt.get();
-		}
-		try {
-			return fromGitUri(new URI(gitScheme.toString().toLowerCase(), gitFsUri.getSchemeSpecificPart(),
-					gitFsUri.getFragment()));
-		} catch (URISyntaxException e) {
-			throw new AssertionError(e);
-		}
-	}
-
-	DoubleGitUri(GitScheme gitScheme, String userInfo, String host, int port, String repoPath) {
+	GitUri(GitScheme gitScheme, String userInfo, String host, int port, String repoPath) {
 		this.gitScheme = checkNotNull(gitScheme);
 		this.userInfo = checkNotNull(userInfo);
 		this.repoHost = checkNotNull(host);
@@ -220,34 +176,10 @@ public class DoubleGitUri {
 		return repoName;
 	}
 
-	public URI getGitFsUri() {
-		/**
-		 * We need an absolute URI, and, preferably, we would like to use path in giturl
-		 * to be used for path in gitfsuri in a hierarchical URI. But it is impossible
-		 * for scp-like giturls with non absolute paths. In that case, let’s use an
-		 * opaque URI.
-		 */
-		if (!repoPath.startsWith("/")) {
-			Verify.verify(gitScheme == GitScheme.SSH);
-			Verify.verify(!userInfo.isEmpty());
-			Verify.verify(!userInfo.startsWith("/"));
-			Verify.verify(!repoHost.isEmpty());
-			Verify.verify(!repoPath.isEmpty());
-			return URI.create(GitFileSystemProvider.SCHEME + ":" + userInfo + "@" + repoHost + ":" + repoPath);
-		}
-		try {
-			return new URI(GitFileSystemProvider.SCHEME, Strings.emptyToNull(userInfo), Strings.emptyToNull(repoHost),
-					repoPort, Strings.emptyToNull(repoPath),
-					GIT_SCHEME_QUERY_PARAMETER + "=" + gitScheme.toString().toLowerCase(), null);
-		} catch (URISyntaxException e) {
-			throw new AssertionError(e);
-		}
-	}
-
 	/**
 	 * Do not use with gitScheme being FILE: git expects "file://" then path
 	 * (starting with /), whereas a URI contains "file:" then path (starting with
-	 * slash).
+	 * slash). TODO check doc Java URI, accepts file:///.
 	 */
 	public URI getGitHierarchicalUri() {
 		checkState(gitScheme != GitScheme.FILE);
@@ -283,10 +215,10 @@ public class DoubleGitUri {
 
 	@Override
 	public boolean equals(Object o2) {
-		if (!(o2 instanceof DoubleGitUri)) {
+		if (!(o2 instanceof GitUri)) {
 			return false;
 		}
-		final DoubleGitUri d2 = (DoubleGitUri) o2;
+		final GitUri d2 = (GitUri) o2;
 		return gitScheme.equals(d2.gitScheme) && userInfo.equals(d2.userInfo) && repoHost.equals(d2.repoHost)
 				&& repoPort == d2.repoPort && repoPath.equals(d2.repoPath);
 	}
