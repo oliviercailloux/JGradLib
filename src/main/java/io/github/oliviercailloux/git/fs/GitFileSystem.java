@@ -4,7 +4,6 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import java.io.IOException;
-import java.net.URI;
 import java.nio.file.ClosedFileSystemException;
 import java.nio.file.FileStore;
 import java.nio.file.FileSystem;
@@ -31,27 +30,21 @@ public class GitFileSystem extends FileSystem {
 	static final Path JIM_FS_SLASH = JIM_FS.getPath("/");
 	static final Path JIM_FS_EMPTY = JIM_FS.getPath("");
 	private final GitFileSystemProvider gitProvider;
-	private final URI gitFsUri;
 	/**
 	 * Must be default FS because of limitations of JGit.
 	 */
-	private final Path workTree;
+	private final Path gitDir;
 	private boolean isOpen;
 
-	GitFileSystem(GitFileSystemProvider gitProvider, URI gitFsUri, Path workTree) {
+	GitFileSystem(GitFileSystemProvider gitProvider, Path gitDir) {
 		this.gitProvider = checkNotNull(gitProvider);
-		this.gitFsUri = checkNotNull(gitFsUri);
-		this.workTree = checkNotNull(workTree);
-		checkArgument(workTree.getFileSystem().equals(FileSystems.getDefault()));
+		this.gitDir = checkNotNull(gitDir);
+		checkArgument(gitDir.getFileSystem().equals(FileSystems.getDefault()));
 		isOpen = true;
 	}
 
-	public URI getGitFsUri() {
-		return gitFsUri;
-	}
-
-	public Path getWorkTree() {
-		return workTree;
+	public Path getGitDir() {
+		return gitDir;
 	}
 
 	@Override

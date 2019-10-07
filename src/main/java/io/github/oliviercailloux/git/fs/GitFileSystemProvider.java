@@ -49,7 +49,19 @@ public class GitFileSystemProvider extends FileSystemProvider {
 	public static final String GIT_FOLDER = "GIT_FOLDER";
 	public static final String SCHEME = "gitfs";
 
-	private final Map<DoubleGitUri, GitFileSystem> cachedFileSystems = new LinkedHashMap<>();
+	private final Map<Path, GitFileSystem> cachedFileSystems = new LinkedHashMap<>();
+
+	public static Path getGitDir(URI gitFsUri) {
+		checkArgument(gitFsUri.isAbsolute());
+		checkArgument(gitFsUri.getScheme().equalsIgnoreCase(SCHEME));
+		checkArgument(!gitFsUri.isOpaque());
+		checkArgument(gitFsUri.getAuthority() == null);
+		checkArgument(gitFsUri.getQuery() == null);
+		checkArgument(gitFsUri.getFragment() == null);
+
+		final Path gitDir = Path.of(gitFsUri.getPath());
+		return gitDir;
+	}
 
 	public GitFileSystemProvider() {
 		/** Default constructor. */
@@ -61,20 +73,21 @@ public class GitFileSystemProvider extends FileSystemProvider {
 	}
 
 	@Override
-	public GitFileSystem newFileSystem(URI gitfsUri, Map<String, ?> env) throws IOException {
-		final DoubleGitUri uris = DoubleGitUri.fromGitFsUri(gitfsUri);
+	public GitFileSystem newFileSystem(URI gitFsUri, Map<String, ?> env) throws IOException {
+		final Path gitDir = getGitDir(gitFsUri);
+		return newFileSystem(gitDir);
+	}
 
-		final Object gitFolderObj = env.get(GIT_FOLDER);
-		final Path gitFolder;
-		if (gitFolderObj instanceof Path) {
-			gitFolder = (Path) gitFolderObj;
-		} else if (gitFolderObj == null) {
-			gitFolder = getGitFolderPathInTemp(uris);
-		} else {
-			throw new IllegalArgumentException("Unknown " + GIT_FOLDER);
+	public GitFileSystem newFileSystem(Path gitDir) throws IOException {
+		if (cachedFileSystems.containsKey(gitDir)) {
+			throw new FileSystemAlreadyExistsException();
 		}
-
-		return newFileSystem(uris, gitFolder);
+		try (Repository repo = new FileRepositoryBuilder().setGitDir(gitDir.toFile()).build()) {
+			checkArgument(repo.getObjectDatabase().exists());
+		}
+		final GitFileSystem newFs = new GitFileSystem(this, gitDir);
+		cachedFileSystems.put(gitDir, newFs);
+		return newFs;
 	}
 
 	private Path getGitFolderPathInTemp(DoubleGitUri uris) {
@@ -89,20 +102,6 @@ public class GitFileSystemProvider extends FileSystemProvider {
 		 */
 		checkArgument(subFolder.getParent().equals(tmpDir));
 		return subFolder;
-	}
-
-	public GitFileSystem newFileSystem(DoubleGitUri uri) throws IOException {
-		return newFileSystem(uri, getGitFolderPathInTemp(uri));
-	}
-
-	public GitFileSystem newFileSystem(DoubleGitUri uri, Path workTree) throws IOException {
-		if (cachedFileSystems.containsKey(uri)) {
-			throw new FileSystemAlreadyExistsException();
-		}
-		update(uri, workTree);
-		final GitFileSystem newFs = new GitFileSystem(this, uri.getGitFsUri(), workTree);
-		cachedFileSystems.put(uri, newFs);
-		return newFs;
 	}
 
 	private void update(DoubleGitUri uri, Path workTree) throws IOException {
@@ -158,9 +157,13 @@ public class GitFileSystemProvider extends FileSystemProvider {
 
 	@Override
 	public GitFileSystem getFileSystem(URI gitFsUri) {
-		final DoubleGitUri uris = DoubleGitUri.fromGitFsUri(gitFsUri);
-		checkArgument(cachedFileSystems.containsKey(uris));
-		return cachedFileSystems.get(uris);
+		final Path gitDir = getGitDir(gitFsUri);
+		return getFileSystem(gitDir);
+	}
+
+	public GitFileSystem getFileSystem(Path gitDir) {
+		checkArgument(cachedFileSystems.containsKey(gitDir));
+		return cachedFileSystems.get(gitDir);
 	}
 
 	/**
@@ -173,13 +176,17 @@ public class GitFileSystemProvider extends FileSystemProvider {
 	 * welcome.
 	 */
 	@Override
-	public GitPath getPath(URI uri) {
-		final DoubleGitUri uris = DoubleGitUri.fromGitFsUri(uri);
-		if (!cachedFileSystems.containsKey(uris)) {
-			throw new FileSystemNotFoundException(uris.toString());
+	public GitPath getPath(URI gitFsUri) {
+		final Path gitDir = getGitDir(gitFsUri);
+		return getPath(gitDir);
+	}
+
+	public GitPath getPath(Path gitDir) {
+		if (!cachedFileSystems.containsKey(gitDir)) {
+			throw new FileSystemNotFoundException();
 		}
 
-		return GitPath.getMasterSlashPath(cachedFileSystems.get(uris));
+		return GitPath.getMasterSlashPath(cachedFileSystems.get(gitDir));
 	}
 
 	@Override
