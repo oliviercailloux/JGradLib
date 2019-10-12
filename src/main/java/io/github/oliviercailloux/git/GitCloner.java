@@ -22,7 +22,6 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.MoreCollectors;
 
-import io.github.oliviercailloux.git.fs.GitScheme;
 import io.github.oliviercailloux.utils.Utils;
 
 public class GitCloner {
@@ -43,9 +42,12 @@ public class GitCloner {
 		this.update = update;
 	}
 
-	private Path getGitFolderPathInTemp(GitUri uris) {
+	public void download(GitUri uri) throws IOException {
+		update(uri, getGitFolderPathInTemp(uri.getRepositoryName()));
+	}
+
+	private Path getGitFolderPathInTemp(String repositoryName) {
 		final Path tmpDir = Utils.getTempDirectory();
-		final String repositoryName = uris.getRepositoryName();
 		checkArgument(!repositoryName.contains(FileSystems.getDefault().getSeparator()));
 		final Path subFolder = tmpDir.resolve(repositoryName);
 		/**
@@ -57,7 +59,7 @@ public class GitCloner {
 		return subFolder;
 	}
 
-	private void update(GitUri uri, Path workTree) throws IOException {
+	private void download(GitUri uri, Path workTree) throws IOException {
 		/**
 		 * If file repo, and this path equals the repo path: nothing to check, it’s up
 		 * to date.
