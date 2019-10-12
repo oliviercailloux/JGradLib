@@ -122,23 +122,4 @@ public class GitPathTests {
 	private GitPath getGitPath(String revSpec, String dirAndFile) {
 		return new GitPath(GIT_FILE_SYSTEM, revSpec, GitFileSystem.JIM_FS.getPath(dirAndFile));
 	}
-
-	@Test
-	void testUri() throws Exception {
-		try (GitFileSystem gitFS = new GitFileSystem(Mockito.mock(GitFileSystemProvider.class),
-				URI.create("gitfs://host.xz/path/to/repo.git?git-scheme=access-scheme"), Path.of(""))) {
-			assertEquals("gitfs://host.xz/path/to/repo.git?git-scheme=access-scheme",
-					new GitPath(gitFS, "", GitFileSystem.JIM_FS.getPath("")).toUri().toString());
-			assertEquals("gitfs://host.xz/path/to/repo.git?git-scheme=access-scheme&dirAndFile=ploum.txt",
-					new GitPath(gitFS, "", GitFileSystem.JIM_FS.getPath("ploum.txt")).toUri().toString());
-			assertEquals("gitfs://host.xz/path/to/repo.git?git-scheme=access-scheme&revStr=master&dirAndFile=%2F",
-					new GitPath(gitFS, "master", GitFileSystem.JIM_FS.getPath("/")).toUri().toString());
-			assertEquals(
-					"gitfs://host.xz/path/to/repo.git?git-scheme=access-scheme&revStr=master&dirAndFile=%2Ftruc.txt",
-					new GitPath(gitFS, "master", GitFileSystem.JIM_FS.getPath("/truc.txt")).toUri().toString());
-			assertEquals(
-					"gitfs://host.xz/path/to/repo.git?git-scheme=access-scheme&revStr=master&dirAndFile=%2Ftruc%2Fchose",
-					new GitPath(gitFS, "master", GitFileSystem.JIM_FS.getPath("/truc/chose")).toUri().toString());
-		}
-	}
 }

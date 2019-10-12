@@ -32,20 +32,7 @@ public class GitCloner {
 		download(uri, getGitFolderPathInTemp(uri.getRepositoryName()));
 	}
 
-	private Path getGitFolderPathInTemp(String repositoryName) {
-		final Path tmpDir = Utils.getTempDirectory();
-		checkArgument(!repositoryName.contains(FileSystems.getDefault().getSeparator()));
-		final Path subFolder = tmpDir.resolve(repositoryName);
-		/**
-		 * This check is required because the separator we check against is only the
-		 * default one, there could be others, which would allow to create something
-		 * like /tmp/..-mypath, where the - designates this alternative separator.
-		 */
-		checkArgument(subFolder.getParent().equals(tmpDir));
-		return subFolder;
-	}
-
-	private void download(GitUri uri, Path workTree) throws IOException {
+	public void download(GitUri uri, Path workTree) throws IOException {
 		/**
 		 * If file repo, and this path equals the repo path: nothing to check, it’s up
 		 * to date.
@@ -94,6 +81,19 @@ public class GitCloner {
 				}
 			}
 		}
+	}
+
+	private Path getGitFolderPathInTemp(String repositoryName) {
+		final Path tmpDir = Utils.getTempDirectory();
+		checkArgument(!repositoryName.contains(FileSystems.getDefault().getSeparator()));
+		final Path subFolder = tmpDir.resolve(repositoryName);
+		/**
+		 * This check is required because the separator we check against is only the
+		 * default one, there could be others, which would allow to create something
+		 * like /tmp/..-mypath, where the - designates this alternative separator.
+		 */
+		checkArgument(subFolder.getParent().equals(tmpDir));
+		return subFolder;
 	}
 
 }

@@ -5,6 +5,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 import java.io.IOException;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.WatchEvent.Kind;
@@ -212,8 +213,14 @@ public class GitPath implements Path {
 
 	@Override
 	public URI toUri() {
-		final URI fsUri = getFileSystem().getGitFsUri();
-		final UriBuilder builder = UriBuilder.fromUri(fsUri);
+		final Path gitDir = getFileSystem().getGitDir();
+		final URI uri;
+		try {
+			uri = new URI(GitFileSystemProvider.SCHEME, null, gitDir.toAbsolutePath().toString(), null);
+		} catch (URISyntaxException e) {
+			throw new IllegalStateException(e);
+		}
+		final UriBuilder builder = UriBuilder.fromUri(uri);
 		if (!revStr.isEmpty()) {
 			builder.queryParam("revStr", revStr);
 		}

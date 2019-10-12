@@ -13,11 +13,13 @@ public class GitFileSystemTests {
 	@Test
 	void testPaths() throws Exception {
 		try (GitFileSystem gitFS = new GitFileSystem(Mockito.mock(GitFileSystemProvider.class),
-				URI.create("gitfs://host.xz/path/to/repo.git?git-scheme=access-scheme"), Path.of(""))) {
+				Path.of("/path/to/gitdir"))) {
 			assertEquals("", gitFS.getPath("").toString());
 			assertEquals("", gitFS.getPath("", "", "").toString());
 			assertEquals("truc", gitFS.getPath("", "truc").toString());
 			assertEquals("master//truc", gitFS.getPath("master/", "/truc").toString());
+			assertEquals(URI.create("gitfs:/path/to/gitdir?revStr=master&dirAndFile=%2Ftruc"),
+					gitFS.getPath("master/", "/truc").toUri());
 			assertEquals("master//truc", gitFS.getPath("master/", "", "/truc", "").toString());
 			assertEquals("master//truc", gitFS.getPath("master//", "truc").toString());
 			assertEquals("master//truc", gitFS.getPath("master//", "/truc").toString());
