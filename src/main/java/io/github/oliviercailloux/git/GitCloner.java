@@ -28,22 +28,8 @@ public class GitCloner {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(GitCloner.class);
 
-	private boolean update;
-
-	public GitCloner() {
-		update = true;
-	}
-
-	public boolean doesUpdate() {
-		return update;
-	}
-
-	public void setUpdate(boolean update) {
-		this.update = update;
-	}
-
 	public void download(GitUri uri) throws IOException {
-		update(uri, getGitFolderPathInTemp(uri.getRepositoryName()));
+		download(uri, getGitFolderPathInTemp(uri.getRepositoryName()));
 	}
 
 	private Path getGitFolderPathInTemp(String repositoryName) {
@@ -67,10 +53,10 @@ public class GitCloner {
 		final boolean direct = uri.getGitScheme() == GitScheme.FILE
 				&& workTree.toString().equals(uri.getRepositoryPath());
 		final boolean exists = Files.exists(workTree);
-		if (direct || !update) {
+		if (direct) {
 			checkArgument(exists);
 		}
-		if (!exists && !direct && update) {
+		if (!exists && !direct) {
 			final CloneCommand cloneCmd = Git.cloneRepository();
 			cloneCmd.setURI(uri.getGitString());
 			final File dest = workTree.toFile();
@@ -82,7 +68,7 @@ public class GitCloner {
 				throw new IOException(e);
 			}
 		}
-		if (exists && !direct && update) {
+		if (exists && !direct) {
 			try (Repository repo = new FileRepositoryBuilder().setWorkTree(workTree.toFile()).build()) {
 				try (Git git = Git.wrap(repo)) {
 					final List<RemoteConfig> remoteList = git.remoteList().call();
