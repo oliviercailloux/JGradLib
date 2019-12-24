@@ -1,5 +1,5 @@
-query pushedDates($repositoryName: String!, $repositoryOwner: String!, $after: String) {
-  repository(name: $repositoryName, owner: $repositoryOwner) {
+query pushedDates($repositoryOwner: String!, $repositoryName: String!, $after: String) {
+  repository(owner: $repositoryOwner, name: $repositoryName) {
     url
     sshUrl
     id

@@ -1,6 +1,7 @@
 package io.github.oliviercailloux.git;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkState;
 
 import java.io.File;
 import java.io.IOException;
@@ -9,44 +10,71 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.eclipse.jgit.api.CloneCommand;
 import org.eclipse.jgit.api.Git;
+import org.eclipse.jgit.api.ListBranchCommand.ListMode;
 import org.eclipse.jgit.api.PullResult;
 import org.eclipse.jgit.api.errors.GitAPIException;
-import org.eclipse.jgit.lib.Repository;
-import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
+import org.eclipse.jgit.lib.ObjectId;
+import org.eclipse.jgit.lib.Ref;
 import org.eclipse.jgit.transport.RemoteConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ImmutableTable;
 import com.google.common.collect.MoreCollectors;
+import com.google.common.collect.Sets;
+import com.google.common.collect.Sets.SetView;
 
 import io.github.oliviercailloux.utils.Utils;
 
 public class GitCloner {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(GitCloner.class);
+	private ImmutableTable<String, String, ObjectId> remoteRefs;
+	private ImmutableMap<String, ObjectId> localRefs;
+	private boolean checkCommonRefsAgree;
+
+	public GitCloner() {
+		remoteRefs = null;
+		localRefs = null;
+		checkCommonRefsAgree = true;
+	}
+
+	public boolean checksCommonRefsAgree() {
+		return checkCommonRefsAgree;
+	}
+
+	public void setCheckCommonRefsAgree(boolean checkCommonRefsAgree) {
+		this.checkCommonRefsAgree = checkCommonRefsAgree;
+	}
 
 	public void download(GitUri uri) throws IOException {
 		download(uri, getGitFolderPathInTemp(uri.getRepositoryName()));
 	}
 
 	public void download(GitUri uri, Path workTree) throws IOException {
-		/**
-		 * If file repo, and this path equals the repo path: nothing to check, it’s up
-		 * to date.
-		 */
-		final boolean direct = uri.getGitScheme() == GitScheme.FILE
-				&& workTree.toString().equals(uri.getRepositoryPath());
-		final boolean exists = Files.exists(workTree);
-		if (direct) {
-			checkArgument(exists);
-		}
-		if (!exists && !direct) {
+		download(uri, workTree, false);
+	}
+
+	/**
+	 * @param repositoryDirectory GIT_DIR, or .git dir
+	 * @param allowBare           <code>true</code> to clone bare if not exists (if
+	 *                            exists, this method will not check whether it is
+	 *                            bare)
+	 */
+	public void download(GitUri uri, Path repositoryDirectory, boolean allowBare) throws IOException {
+		final boolean exists = Files.exists(repositoryDirectory);
+		if (!exists) {
 			final CloneCommand cloneCmd = Git.cloneRepository();
 			cloneCmd.setURI(uri.getGitString());
-			final File dest = workTree.toFile();
+			cloneCmd.setBare(allowBare);
+			final File dest = repositoryDirectory.toFile();
 			cloneCmd.setDirectory(dest);
 			LOGGER.info("Cloning {} to {}.", uri, dest);
 			try {
@@ -54,31 +82,43 @@ public class GitCloner {
 			} catch (GitAPIException e) {
 				throw new IOException(e);
 			}
-		}
-		if (exists && !direct) {
-			try (Repository repo = new FileRepositoryBuilder().setWorkTree(workTree.toFile()).build()) {
-				try (Git git = Git.wrap(repo)) {
-					final List<RemoteConfig> remoteList = git.remoteList().call();
-					final Optional<RemoteConfig> origin = remoteList.stream()
-							.filter((r) -> r.getName().equals("origin")).collect(MoreCollectors.toOptional());
-					if (!git.status().call().isClean()) {
-						throw new IllegalStateException("Can’t update: not clean.");
-					}
-					LOGGER.info("Full branch: {}.", repo.getFullBranch());
-					if (origin.isPresent() && origin.get().getURIs().size() == 1
-							&& origin.get().getURIs().get(0).toString().equals(uri.getGitString())) {
-						final PullResult result = git.pull().call();
-						if (!result.isSuccessful()) {
-							LOGGER.error("Merge failed with results: {}, {}, {}.", result.getFetchResult(),
-									result.getMergeResult(), result.getRebaseResult());
-							throw new IllegalStateException("Merge failed");
-						}
-					} else {
-						throw new IllegalStateException("Unexpected remote.");
-					}
-				} catch (GitAPIException e) {
-					throw new IllegalStateException(e);
+		} else {
+			try (Git git = Git.open(repositoryDirectory.toFile())) {
+				final List<RemoteConfig> remoteList = git.remoteList().call();
+				final Optional<RemoteConfig> origin = remoteList.stream().filter((r) -> r.getName().equals("origin"))
+						.collect(MoreCollectors.toOptional());
+				if (!git.status().call().isClean()) {
+					throw new IllegalStateException("Can’t update: not clean.");
 				}
+				LOGGER.info("HEAD: {}.", git.getRepository().getFullBranch());
+				if (origin.isPresent() && origin.get().getURIs().size() == 1
+						&& origin.get().getURIs().get(0).toString().equals(uri.getGitString())) {
+					final PullResult result = git.pull().call();
+					if (!result.isSuccessful()) {
+						LOGGER.error("Merge failed with results: {}, {}, {}.", result.getFetchResult(),
+								result.getMergeResult(), result.getRebaseResult());
+						throw new IllegalStateException("Merge failed");
+					}
+				} else {
+					throw new IllegalStateException("Unexpected remote.");
+				}
+
+				if (checkCommonRefsAgree) {
+					final List<Ref> branches = git.branchList().setListMode(ListMode.ALL).call();
+					parse(branches);
+
+					final ImmutableMap<String, ObjectId> originRefs = remoteRefs.row("origin");
+					final SetView<String> commonRefShortNames = Sets.intersection(originRefs.keySet(),
+							localRefs.keySet());
+					final ImmutableSet<String> disagreeingRefShortNames = commonRefShortNames.stream()
+							.filter((s) -> !originRefs.get(s).equals(localRefs.get(s)))
+							.collect(ImmutableSet.toImmutableSet());
+					checkState(disagreeingRefShortNames.isEmpty(),
+							String.format("Disagreeing: %s. Origin refs: %s; local refs: %s.", disagreeingRefShortNames,
+									originRefs, localRefs));
+				}
+			} catch (GitAPIException e) {
+				throw new IllegalStateException(e);
 			}
 		}
 	}
@@ -94,6 +134,36 @@ public class GitCloner {
 		 */
 		checkArgument(subFolder.getParent().equals(tmpDir));
 		return subFolder;
+	}
+
+	private void parse(List<Ref> branches) {
+		final ImmutableTable.Builder<String, String, ObjectId> remoteRefsBuilder = ImmutableTable.builder();
+		final ImmutableMap.Builder<String, ObjectId> localRefsBuilder = ImmutableMap.builder();
+		for (Ref branch : branches) {
+			final String fullName = branch.getName();
+			final Pattern refPattern = Pattern
+					.compile("refs/(?<kind>[^/]+)(/(?<remoteName>[^/]+))?/(?<shortName>[^/]+)");
+			final Matcher matcher = refPattern.matcher(fullName);
+			checkState(matcher.matches(), fullName);
+			final String kind = matcher.group("kind");
+			final String remoteName = matcher.group("remoteName");
+			final String shortName = matcher.group("shortName");
+			final ObjectId objectId = branch.getObjectId();
+			switch (kind) {
+			case "remotes":
+				checkState(remoteName.length() >= 1);
+				remoteRefsBuilder.put(remoteName, shortName, objectId);
+				break;
+			case "heads":
+				checkState(remoteName == null);
+				localRefsBuilder.put(shortName, objectId);
+				break;
+			default:
+				throw new IllegalStateException("Unknown ref kind: " + kind);
+			}
+		}
+		remoteRefs = remoteRefsBuilder.build();
+		localRefs = localRefsBuilder.build();
 	}
 
 }

@@ -18,6 +18,7 @@ import java.util.Set;
 
 import com.google.common.base.Verify;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.jimfs.Configuration;
 import com.google.common.jimfs.Jimfs;
 
@@ -75,7 +76,17 @@ public class GitFileSystem extends FileSystem {
 	}
 
 	@Override
-	public Iterable<Path> getRootDirectories() {
+	public ImmutableSortedSet<Path> getRootDirectories() {
+		if (!isOpen) {
+			throw new ClosedFileSystemException();
+		}
+		throw new UnsupportedOperationException();
+	}
+
+	/**
+	 * @return absolute paths whose rev strings are sha1 object ids.
+	 */
+	public ImmutableSortedSet<GitPath> getGitRootDirectories() {
 		if (!isOpen) {
 			throw new ClosedFileSystemException();
 		}

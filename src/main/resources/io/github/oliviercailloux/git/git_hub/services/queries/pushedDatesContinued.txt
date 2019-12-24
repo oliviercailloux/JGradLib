@@ -1,0 +1,27 @@
+query pushedDatesByOid($repositoryOwner: String!, $repositoryName: String!, $oid: GitObjectID!, $after: String) {
+  repository(owner: $repositoryOwner, name: $repositoryName) {
+    object(oid: $oid) {
+      ... on Commit {
+        history(after: $after) {
+          totalCount
+          pageInfo {
+            hasNextPage
+            endCursor
+          }
+          nodes {
+            oid
+            parents(first: 100) {
+              totalCount
+              nodes {
+                oid
+              }
+            }
+            authoredDate
+            committedDate
+            pushedDate
+          }
+        }
+      }
+    }
+  }
+}

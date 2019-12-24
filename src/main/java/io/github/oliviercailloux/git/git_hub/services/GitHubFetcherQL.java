@@ -1,26 +1,23 @@
 package io.github.oliviercailloux.git.git_hub.services;
 
-import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Verify.verify;
 import static java.util.Objects.requireNonNull;
 
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.time.Instant;
-import java.util.LinkedHashMap;
+import java.util.ArrayDeque;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
+import java.util.Queue;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import javax.json.Json;
 import javax.json.JsonArray;
-import javax.json.JsonArrayBuilder;
 import javax.json.JsonBuilderFactory;
 import javax.json.JsonObject;
 import javax.json.JsonObjectBuilder;
-import javax.json.JsonString;
-import javax.json.JsonValue;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
@@ -34,19 +31,20 @@ import org.slf4j.LoggerFactory;
 
 import com.diffplug.common.base.Errors;
 import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Sets;
+import com.google.common.collect.ImmutableSetMultimap;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Streams;
-import com.google.common.graph.Graph;
-import com.google.common.graph.Graphs;
-import com.google.common.graph.Traverser;
 import com.google.common.io.Resources;
 
 import io.github.oliviercailloux.git.GitGenericHistory;
+import io.github.oliviercailloux.git.git_hub.model.GitHubHistory;
 import io.github.oliviercailloux.git.git_hub.model.GitHubRealToken;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
+import io.github.oliviercailloux.git.git_hub.model.graph_ql.PushedDatesAnswer;
+import io.github.oliviercailloux.git.git_hub.model.graph_ql.PushedDatesAnswer.CommitNode;
 import io.github.oliviercailloux.git.git_hub.model.graph_ql.RepositoryWithFiles;
 import io.github.oliviercailloux.git.git_hub.model.graph_ql.RepositoryWithIssuesWithHistory;
 import io.github.oliviercailloux.json.PrintableJsonObjectFactory;
@@ -77,12 +75,6 @@ public class GitHubFetcherQL implements AutoCloseable {
 
 	private final GitHubRealToken token;
 
-	private JsonArrayBuilder ongoingAnswer;
-
-	private GitGenericHistory<ObjectId> history;
-
-	private JsonArray lastAnswer;
-
 	private GitHubFetcherQL(GitHubRealToken token) {
 		/** Authorization token required for Graph QL GitHub API. */
 		this.token = requireNonNull(token);
@@ -90,9 +82,6 @@ public class GitHubFetcherQL implements AutoCloseable {
 		rateReset = null;
 		client = ClientBuilder.newClient();
 		jsonBuilderFactory = Json.createBuilderFactory(null);
-		ongoingAnswer = Json.createArrayBuilder();
-		history = null;
-		lastAnswer = null;
 	}
 
 	@Override
@@ -145,125 +134,53 @@ public class GitHubFetcherQL implements AutoCloseable {
 		return repo;
 	}
 
-	public ImmutableMap<ObjectId, Instant> getPushedDates(RepositoryCoordinates coordinates) {
-		ongoingAnswer = Json.createArrayBuilder();
-
-		String endCursor = null;
+	public GitHubHistory getGitHubHistory(RepositoryCoordinates coordinates) {
+		final ImmutableList.Builder<PushedDatesAnswer> answersBuilder = ImmutableList.builder();
+		final Queue<String> remainingEndCursors = new ArrayDeque<>();
+		/**
+		 * I need to change the logic here. Build the graph while asking queries: I need
+		 * to be able to detect when I’m back at some commit I know already. Thus, parse
+		 * the initial request, build a partial graph of parents, maintain a list of
+		 * nodes that have not been seen yet (those whose parents are unknown). Request
+		 * history about those nodes (without using the after end cursor) with the
+		 * continuation query.
+		 */
 		do {
 			final JsonObjectBuilder builder = jsonBuilderFactory.createObjectBuilder()
 					.add("repositoryName", coordinates.getRepositoryName())
 					.add("repositoryOwner", coordinates.getOwner());
-			if (endCursor != null) {
-				builder.add("after", endCursor);
+			final boolean isInitialRequest = remainingEndCursors.isEmpty();
+			if (!isInitialRequest) {
+				final String after = remainingEndCursors.remove();
+				builder.add("after", after);
+				LOGGER.info("Continuation request: {}.", after);
+			} else {
+				LOGGER.info("Initial request to {}.", coordinates);
 			}
 			final JsonObject varsJson = builder.build();
 			final JsonObject pushedDatesRepositoryJson = query("pushedDates", ImmutableList.of(), varsJson)
 					.getJsonObject("repository");
-			endCursor = enqueueAndGetEnd(pushedDatesRepositoryJson);
-		} while (!endCursor.equals(""));
-		return asPushedDates(lastAnswer);
-	}
+			final PushedDatesAnswer answer = PushedDatesAnswer.parseInitialAnswer(pushedDatesRepositoryJson);
+			verify(answer.isInitialRequest() == isInitialRequest);
+			answersBuilder.add(answer);
+			remainingEndCursors.addAll(answer.getNextCursors());
+		} while (!remainingEndCursors.isEmpty());
 
-	private String enqueueAndGetEnd(JsonObject pushedDatesRepositoryJson) {
-		/** See also: https://stackoverflow.com/a/47523826. */
-		final JsonObject refs = pushedDatesRepositoryJson.getJsonObject("refs");
-		LOGGER.info("Refs: {}.", PrintableJsonObjectFactory.wrapObject(refs));
-		final JsonArray refNodes = refs.getJsonArray("nodes");
-		String uniqueEndCursor = "";
-		int sumTotalCount = 0;
-		for (JsonValue refNode : refNodes) {
-			final JsonObject node = refNode.asJsonObject();
-			checkArgument(node.getString("prefix").equals("refs/heads/"));
-			final JsonObject target = node.getJsonObject("target");
-			final String refOid = target.getString("oid");
-			LOGGER.info("Ref oid: {}.", refOid);
-			final JsonObject jsonHistory = target.getJsonObject("history");
-			final int totalCount = jsonHistory.getInt("totalCount");
-			sumTotalCount += totalCount;
-			final JsonObject pageInfo = jsonHistory.getJsonObject("pageInfo");
-			final boolean hasNextPage = pageInfo.getBoolean("hasNextPage");
-			final String endCursor = pageInfo.getString("endCursor");
-			final JsonArray commitNodes = jsonHistory.getJsonArray("nodes");
-			ongoingAnswer.addAll(Json.createArrayBuilder(commitNodes));
-			if (hasNextPage) {
-				if (!uniqueEndCursor.equals("")) {
-					throw new UnsupportedOperationException("Multi paging for non-master ref is not supported yet.");
-				}
-				uniqueEndCursor = endCursor;
-			}
-		}
-		if (uniqueEndCursor.equals("")) {
-			lastAnswer = ongoingAnswer.build();
-			checkArgument(lastAnswer.size() == sumTotalCount);
-		}
-		return uniqueEndCursor;
-	}
+		final ImmutableList<PushedDatesAnswer> answers = answersBuilder.build();
+		final ImmutableList<CommitNode> commits = answers.stream().flatMap((a) -> a.getRefNodes().stream())
+				.flatMap((r) -> r.getCommitNodes().stream()).collect(ImmutableList.toImmutableList());
+		final ImmutableSetMultimap<ObjectId, CommitNode> byOid = commits.stream()
+				.collect(ImmutableSetMultimap.toImmutableSetMultimap((c) -> c.getOid(), (c) -> c));
+		verify(byOid.size() == byOid.keySet().size());
+		final ImmutableBiMap<ObjectId, CommitNode> oidToNode = byOid.asMap().entrySet().stream().collect(
+				ImmutableBiMap.toImmutableBiMap((e) -> e.getKey(), (e) -> Iterables.getOnlyElement(e.getValue())));
 
-	private ImmutableMap<ObjectId, Instant> asPushedDates(JsonArray commitNodes) {
-		/**
-		 * Can’t use a
-		 * https://github.com/google/guava/wiki/NewCollectionTypesExplained#multimap
-		 * because I need keys that map to empty parents.
-		 */
-		final Map<ObjectId, ImmutableSet<ObjectId>> parents = new LinkedHashMap<>();
-		final Map<ObjectId, Instant> pushedDates = new LinkedHashMap<>();
-		for (JsonValue commitNode : commitNodes) {
-			final JsonObject commitJsonObject = commitNode.asJsonObject();
-			final String oidString = commitJsonObject.getString("oid");
-			final ObjectId oid = ObjectId.fromString(oidString);
-			final JsonObject parentsObject = commitJsonObject.getJsonObject("parents");
-			final int nbParents = parentsObject.getInt("totalCount");
-			final JsonArray parentsArray = parentsObject.getJsonArray("nodes");
-			checkArgument(parentsArray.size() == nbParents);
-			final ImmutableSet.Builder<ObjectId> thoseParentsBuilder = ImmutableSet.builder();
-			for (JsonValue parentNode : parentsArray) {
-				final JsonObject parentJsonObject = parentNode.asJsonObject();
-				final String parentOid = parentJsonObject.getString("oid");
-				thoseParentsBuilder.add(ObjectId.fromString(parentOid));
-			}
-			final ImmutableSet<ObjectId> thoseParents = thoseParentsBuilder.build();
-			if (parents.containsKey(oid)) {
-				final ImmutableSet<ObjectId> previousParents = parents.get(oid);
-				checkArgument(previousParents.equals(thoseParents));
-			} else {
-				parents.put(oid, thoseParents);
-			}
-			final JsonValue pushedDateJson = commitJsonObject.get("pushedDate");
-			if (!pushedDateJson.equals(JsonValue.NULL)) {
-				final Instant pushedDate = Instant.parse(((JsonString) pushedDateJson).getString());
-				if (pushedDates.containsKey(oid)) {
-					final Instant previousPushedDate = pushedDates.get(oid);
-					checkArgument(previousPushedDate.equals(pushedDate));
-				} else {
-					pushedDates.put(oid, pushedDate);
-				}
-			}
-		}
-
-		final ImmutableMap<ObjectId, ImmutableSet<ObjectId>> parentsMap = ImmutableMap.copyOf(parents);
-		LOGGER.debug("Built parents map: {}.", parentsMap);
-		history = GitGenericHistory.from((o) -> parentsMap.get(o), parentsMap.keySet());
-		final Graph<ObjectId> historyReversedGraph = Graphs.transpose(history.getGraph());
-		final GitGenericHistory<ObjectId> historyReversed = GitGenericHistory.from(historyReversedGraph,
-				parentsMap.keySet());
-
-		final ImmutableMap<ObjectId, Instant> observedPushedDates = ImmutableMap.copyOf(pushedDates);
-		final ImmutableMap.Builder<ObjectId, Instant> deducedPushedDates = ImmutableMap.builder();
-		deducedPushedDates.putAll(observedPushedDates);
-		for (ObjectId oid : Sets.difference(parentsMap.keySet(), observedPushedDates.keySet())) {
-			final Iterable<ObjectId> thoseChildren = Traverser.forGraph(historyReversed.getGraph()).breadthFirst(oid);
-			final Instant minPushedDateAmongThoseChildren = Streams.stream(thoseChildren)
-					.map((o) -> observedPushedDates.getOrDefault(o, Instant.MAX)).min(Instant::compareTo)
-					.orElse(Instant.MAX);
-			checkArgument(!minPushedDateAmongThoseChildren.equals(Instant.MAX));
-			deducedPushedDates.put(oid, minPushedDateAmongThoseChildren);
-		}
-
-		return deducedPushedDates.build();
-	}
-
-	GitGenericHistory<ObjectId> getHistory() {
-		return history;
+		final GitGenericHistory<ObjectId> history = GitGenericHistory.from((o) -> oidToNode.get(o).getParents(),
+				oidToNode.keySet());
+		final ImmutableMap<ObjectId, Instant> pushedDates = oidToNode.values().stream()
+				.filter((c) -> c.getPushedDate().isPresent())
+				.collect(ImmutableMap.toImmutableMap((c) -> c.getOid(), (c) -> c.getPushedDate().get()));
+		return GitHubHistory.given(history, pushedDates);
 	}
 
 	private JsonObject query(String queryName, List<String> fragmentNames, JsonObject variables) {

@@ -2,7 +2,6 @@ package io.github.oliviercailloux.git.fs;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
-import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.channels.SeekableByteChannel;
@@ -13,7 +12,6 @@ import java.nio.file.DirectoryStream.Filter;
 import java.nio.file.FileStore;
 import java.nio.file.FileSystemAlreadyExistsException;
 import java.nio.file.FileSystemNotFoundException;
-import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.OpenOption;
@@ -23,25 +21,15 @@ import java.nio.file.attribute.FileAttribute;
 import java.nio.file.attribute.FileAttributeView;
 import java.nio.file.spi.FileSystemProvider;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 
-import org.eclipse.jgit.api.CloneCommand;
-import org.eclipse.jgit.api.Git;
-import org.eclipse.jgit.api.PullResult;
-import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
-import org.eclipse.jgit.transport.RemoteConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.collect.MoreCollectors;
-
 import io.github.oliviercailloux.git.GitUri;
-import io.github.oliviercailloux.utils.Utils;
 
 public class GitFileSystemProvider extends FileSystemProvider {
 	@SuppressWarnings("unused")
@@ -83,8 +71,13 @@ public class GitFileSystemProvider extends FileSystemProvider {
 		if (cachedFileSystems.containsKey(gitDir)) {
 			throw new FileSystemAlreadyExistsException();
 		}
+		if (!Files.exists(gitDir)) {
+			throw new IOException(String.format("Directory %s not found.", gitDir));
+		}
 		try (Repository repo = new FileRepositoryBuilder().setGitDir(gitDir.toFile()).build()) {
-			checkArgument(repo.getObjectDatabase().exists());
+			if (!repo.getObjectDatabase().exists()) {
+				throw new IOException(String.format("Object database not found in %s.", gitDir));
+			}
 		}
 		final GitFileSystem newFs = new GitFileSystem(this, gitDir);
 		cachedFileSystems.put(gitDir, newFs);

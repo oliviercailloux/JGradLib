@@ -3,6 +3,8 @@ package io.github.oliviercailloux.utils;
 import java.net.URI;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.Arrays;
 import java.util.Collections;
@@ -26,6 +28,13 @@ public class Utils {
 	public static final String ANY_REG_EXP = "[\\s\\S]*";
 
 	public static final URI EXAMPLE_URI = URI.create("http://example.com");
+
+	/**
+	 * Using nanoseconds, and using the comma as a separator as recommended per
+	 * <a href="https://en.wikipedia.org/wiki/ISO_8601">ISO 8601</a>.
+	 */
+	public static final DateTimeFormatter ISO_BASIC_UTC_FORMATTER = DateTimeFormatter.ofPattern("uuuuMMdd'T'HHmmss','m")
+			.withZone(ZoneOffset.UTC);
 
 	public static boolean implies(boolean a, boolean b) {
 		return !a || b;

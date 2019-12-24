@@ -11,7 +11,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Instant;
-import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -21,7 +20,6 @@ import java.util.function.Supplier;
 import org.eclipse.jgit.api.CloneCommand;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.ListBranchCommand.ListMode;
-import org.eclipse.jgit.api.LogCommand;
 import org.eclipse.jgit.api.MergeResult;
 import org.eclipse.jgit.api.MergeResult.MergeStatus;
 import org.eclipse.jgit.api.errors.CheckoutConflictException;
@@ -35,7 +33,6 @@ import org.eclipse.jgit.internal.storage.file.FileRepository;
 import org.eclipse.jgit.lib.AnyObjectId;
 import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.lib.ObjectReader;
-import org.eclipse.jgit.lib.PersonIdent;
 import org.eclipse.jgit.lib.Ref;
 import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.revwalk.RevCommit;
@@ -397,28 +394,18 @@ public class ComplexClient {
 		}
 	}
 
-	private GitHistory getHistory(boolean all) throws IOException, GitAPIException {
+	private GitHistory getHistory() throws IOException, GitAPIException {
+		final File gitDir = getProjectDirectory().toFile();
 		checkState(exists != null);
-		if (all && allHistory != null) {
+		if (allHistory != null) {
 			return allHistory;
 		}
 		if (!exists) {
 			return GitHistory.from(ImmutableSet.of());
 		}
 
-		final GitHistory history;
-		try (Git git = open()) {
-			LOGGER.info("Work dir: {}.", git.getRepository().getWorkTree());
-			final LogCommand log = git.log();
-			if (all) {
-				log.all();
-			}
-			final Iterable<RevCommit> commits = log.call();
-			history = GitHistory.from(commits);
-		}
-		if (all) {
-			allHistory = history;
-		}
+		final GitHistory history = GitUtils.getHistory(gitDir);
+		allHistory = history;
 		return history;
 	}
 
@@ -430,7 +417,7 @@ public class ComplexClient {
 	 * @throws GitAPIException
 	 */
 	public GitHistory getWholeHistory() throws IOException, GitAPIException {
-		return getHistory(true);
+		return getHistory();
 	}
 
 	public GitHistory getAllHistoryCached() {

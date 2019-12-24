@@ -20,6 +20,7 @@ import javax.ws.rs.core.UriBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.Verify;
 import com.google.common.jimfs.Jimfs;
 
 /**
@@ -85,6 +86,11 @@ public class GitPath implements Path {
 		checkArgument(dirAndFile.getFileSystem().provider().getScheme().equals(Jimfs.URI_SCHEME));
 		checkArgument(!revStr.equals("") == dirAndFile.isAbsolute());
 		checkArgument(dirAndFile.isAbsolute() == (dirAndFile.getRoot() != null));
+	}
+
+	public String getRevStr() {
+		Verify.verifyNotNull(revStr);
+		return revStr;
 	}
 
 	@Override

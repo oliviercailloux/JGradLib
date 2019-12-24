@@ -8,6 +8,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Instant;
+import java.time.ZonedDateTime;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
@@ -19,7 +21,10 @@ import javax.ws.rs.client.Entity;
 import javax.ws.rs.client.Invocation.Builder;
 import javax.ws.rs.core.Response;
 
+import org.eclipse.jgit.internal.storage.file.FileRepository;
 import org.eclipse.jgit.lib.ObjectId;
+import org.eclipse.jgit.revwalk.RevCommit;
+import org.eclipse.jgit.revwalk.RevWalk;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,11 +32,15 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ImmutableSetMultimap;
+import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.graph.EndpointPair;
 
 import io.github.oliviercailloux.git.ComplexClient;
 import io.github.oliviercailloux.git.GitGenericHistory;
 import io.github.oliviercailloux.git.GitHistory;
+import io.github.oliviercailloux.git.GitUtils;
+import io.github.oliviercailloux.git.git_hub.model.GitHubHistory;
 import io.github.oliviercailloux.git.git_hub.model.GitHubToken;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.git.git_hub.model.graph_ql.RepositoryWithFiles;
@@ -199,8 +208,9 @@ public class TestFetch {
 	public void testFetchPushedDates() throws Exception {
 		final RepositoryCoordinates coord = RepositoryCoordinates.from("oliviercailloux", "projets");
 		try (GitHubFetcherQL fetcher = GitHubFetcherQL.using(GitHubToken.getRealInstance())) {
-			final ImmutableMap<ObjectId, Instant> pushedDates = fetcher.getPushedDates(coord);
-			final GitGenericHistory<ObjectId> history = fetcher.getHistory();
+			final GitHubHistory gHH = fetcher.getGitHubHistory(coord);
+			final ImmutableMap<ObjectId, Instant> pushedDates = gHH.getPushedDatesWithDeductions();
+			final GitGenericHistory<ObjectId> history = gHH.getHistory();
 
 			assertEquals(ImmutableSet.of(ObjectId.fromString("f96c728044e885fceaf4a3ae926f1a13dd329758")),
 					history.getRoots());
@@ -234,27 +244,50 @@ public class TestFetch {
 //		try (GitHubFetcherV3 fetcher = GitHubFetcherV3.using(GitHubToken.getRealInstance())) {
 //			allCoordinates = fetcher.getUserRepositories("oliviercailloux");
 //		}
-		allCoordinates = ImmutableList.of(RepositoryCoordinates.from("oliviercailloux", "CLut"));
+//		allCoordinates = ImmutableList.of(RepositoryCoordinates.from("oliviercailloux", "CLut"));
+		allCoordinates = ImmutableList.of(RepositoryCoordinates.from("oliviercailloux", "Collaborative-exams"));
 		/**
-		 * TODO change refPrefix to /refs/ to get also tags. And check that pushed after
-		 * having been created.
+		 * TODO change refPrefix to /refs/ to get also tags.
 		 */
 
 		try (GitHubFetcherQL fetcher = GitHubFetcherQL.using(GitHubToken.getRealInstance())) {
 			for (RepositoryCoordinates coordinates : allCoordinates) {
 				LOGGER.info("Proceeding with {}.", coordinates);
-				final GitHistory historyFromWorkTree;
 				final ComplexClient client = ComplexClient.aboutAndUsing(coordinates, Path.of("/tmp/"));
 				final boolean retrieved = client.tryRetrieve();
 				checkState(retrieved);
-				historyFromWorkTree = client.getWholeHistory();
+				final GitHistory historyFromWorkTree = client.getWholeHistory();
 
-				final ImmutableMap<ObjectId, Instant> pushedDates = fetcher.getPushedDates(coordinates);
-				final GitGenericHistory<ObjectId> historyFromGitHub = fetcher.getHistory();
+				LOGGER.info("Fetching.");
+				final GitHubHistory gHH = fetcher.getGitHubHistory(coordinates);
+				LOGGER.info("Fetched.");
+				final ImmutableMap<ObjectId, Instant> pushedDates = gHH.getPushedDatesWithDeductions();
+				final ImmutableSetMultimap<Instant, ObjectId> commitsByPushDate = pushedDates.asMultimap().inverse();
+				final ImmutableSortedMap<Instant, Collection<ObjectId>> commitsBySortedPushDate = ImmutableSortedMap
+						.copyOf(commitsByPushDate.asMap());
+
+				final GitGenericHistory<ObjectId> historyFromGitHub = gHH.getHistory();
 
 				assertEquals(historyFromWorkTree.getRoots(), historyFromGitHub.getRoots());
 				assertEquals(historyFromWorkTree.getGraph(), historyFromGitHub.getGraph());
 				assertEquals(historyFromGitHub.getGraph().nodes(), pushedDates.keySet());
+
+				final Instant lastPush = commitsBySortedPushDate.lastKey();
+				LOGGER.info("Last commits: {}, {}.", lastPush, commitsByPushDate.get(lastPush));
+
+				final ImmutableSet<ObjectId> pushedCommits = pushedDates.keySet();
+				try (RevWalk walk = new RevWalk(
+						new FileRepository(client.getProjectDirectory().resolve(".git").toFile()))) {
+					for (ObjectId pushedCommit : pushedCommits) {
+						final RevCommit pushedRevCommit;
+						pushedRevCommit = walk.parseCommit(pushedCommit);
+						final ZonedDateTime creationTime = GitUtils.getCreationTime(pushedRevCommit);
+						final Instant pushedDate = pushedDates.get(pushedCommit);
+						if (pushedDate.isBefore(creationTime.toInstant())) {
+							LOGGER.warn("Pushed before creation: {}-{}.", coordinates, pushedCommit);
+						}
+					}
+				}
 
 				final Comparator<ObjectId> comparingByPushedDate = Comparator.comparing((c) -> pushedDates.get(c));
 
@@ -262,9 +295,13 @@ public class TestFetch {
 				for (EndpointPair<ObjectId> edge : edges) {
 					final ObjectId child = edge.source();
 					final ObjectId parent = edge.target();
-					assertTrue(comparingByPushedDate.compare(parent, child) <= 0,
-							String.format("Parent %s pushed at %s, after child %s pushed at %s.", parent.getName(),
-									pushedDates.get(parent), child.getName(), pushedDates.get(child)));
+//					assertTrue(comparingByPushedDate.compare(parent, child) <= 0,
+//							String.format("Parent %s pushed at %s, after child %s pushed at %s.", parent.getName(),
+//									pushedDates.get(parent), child.getName(), pushedDates.get(child)));
+					if (comparingByPushedDate.compare(parent, child) > 0) {
+						LOGGER.warn(String.format("Parent %s pushed at %s, after child %s pushed at %s.",
+								parent.getName(), pushedDates.get(parent), child.getName(), pushedDates.get(child)));
+					}
 				}
 			}
 		}

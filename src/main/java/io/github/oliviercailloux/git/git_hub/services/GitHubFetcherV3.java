@@ -157,6 +157,9 @@ public class GitHubFetcherV3 implements AutoCloseable {
 		return getContent(target, JsonObject.class);
 	}
 
+	/**
+	 * Lists commits reachable from "master"
+	 */
 	public List<CommitGitHubDescription> getCommitsGitHubDescriptions(RepositoryCoordinates repositoryCoordinates) {
 		return getCommitsGitHubDescriptions(repositoryCoordinates, false);
 	}
