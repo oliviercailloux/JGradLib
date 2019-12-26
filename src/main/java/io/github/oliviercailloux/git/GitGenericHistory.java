@@ -53,8 +53,7 @@ public class GitGenericHistory<E extends ObjectId> {
 	public ImmutableSet<E> getRoots() {
 		/**
 		 * We could start from any given node and simply follow the successor
-		 * (has-as-parent) relation, but that finds only one root. Git allows for
-		 * multiple roots.
+		 * (has-as-parent) relation, but that finds only one root.
 		 */
 		final ImmutableSet<E> roots = graph.nodes().stream().filter((n) -> graph.successors(n).isEmpty())
 				.collect(ImmutableSet.toImmutableSet());
