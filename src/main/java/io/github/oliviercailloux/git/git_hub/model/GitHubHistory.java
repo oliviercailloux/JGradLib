@@ -1,7 +1,5 @@
 package io.github.oliviercailloux.git.git_hub.model;
 
-import static com.google.common.base.Preconditions.checkArgument;
-
 import java.time.Instant;
 import java.util.Map;
 
@@ -41,18 +39,24 @@ public class GitHubHistory {
 		return pushedDates;
 	}
 
-	public ImmutableMap<ObjectId, Instant> getPushedDatesWithDeductions() {
-		final ImmutableMap<ObjectId, Instant> observedPushedDates = ImmutableMap.copyOf(pushedDates);
+	public ImmutableMap<ObjectId, Instant> getPushedDatesWithTentativeDeductions() {
 		final ImmutableMap.Builder<ObjectId, Instant> deducedPushedDates = ImmutableMap.builder();
-		deducedPushedDates.putAll(observedPushedDates);
-		for (ObjectId oid : Sets.difference(history.getGraph().nodes(), observedPushedDates.keySet())) {
+		deducedPushedDates.putAll(pushedDates);
+		for (ObjectId oid : Sets.difference(history.getGraph().nodes(), pushedDates.keySet())) {
 			final ImmutableGraph<ObjectId> graph = history.getGraph();
-			final Iterable<ObjectId> thoseChildren = Traverser.forGraph(graph::predecessors).breadthFirst(oid);
-			final Instant minPushedDateAmongThoseChildren = Streams.stream(thoseChildren)
-					.map((o) -> observedPushedDates.getOrDefault(o, Instant.MAX)).min(Instant::compareTo)
-					.orElse(Instant.MAX);
-			checkArgument(!minPushedDateAmongThoseChildren.equals(Instant.MAX));
-			deducedPushedDates.put(oid, minPushedDateAmongThoseChildren);
+			/**
+			 * an object is necessarily pushed at a time in [min, max], with min = the max
+			 * date of push time of its parents, and max = the min date of push time of its
+			 * children.
+			 */
+//			final Iterable<ObjectId> thoseChildren = Traverser.forGraph(graph::predecessors).breadthFirst(oid);
+//			final Instant minPushedDateAmongThoseChildren = Streams.stream(thoseChildren)
+//					.map((o) -> pushedDates.getOrDefault(o, Instant.MAX)).min(Instant::compareTo).orElse(Instant.MAX);
+//			deducedPushedDates.put(oid, minPushedDateAmongThoseChildren);
+			final Iterable<ObjectId> thoseParents = Traverser.forGraph(graph).breadthFirst(oid);
+			final Instant maxPushedDateAmongThoseParents = Streams.stream(thoseParents)
+					.map((o) -> pushedDates.getOrDefault(o, Instant.MIN)).max(Instant::compareTo).orElse(Instant.MIN);
+			deducedPushedDates.put(oid, maxPushedDateAmongThoseParents);
 		}
 
 		return deducedPushedDates.build();

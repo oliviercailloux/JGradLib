@@ -2,10 +2,7 @@ package io.github.oliviercailloux.git;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
-import java.util.LinkedHashSet;
-import java.util.LinkedList;
 import java.util.Objects;
-import java.util.Queue;
 import java.util.Set;
 
 import org.eclipse.jgit.lib.ObjectId;
@@ -13,50 +10,43 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.MoreObjects;
+import com.google.common.base.Verify;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.graph.EndpointPair;
+import com.google.common.graph.Graph;
 import com.google.common.graph.GraphBuilder;
 import com.google.common.graph.Graphs;
 import com.google.common.graph.ImmutableGraph;
 import com.google.common.graph.MutableGraph;
 import com.google.common.graph.SuccessorsFunction;
 
-public class GitGenericHistory<E extends ObjectId> {
-	public static <E extends ObjectId> GitGenericHistory<E> from(SuccessorsFunction<E> parentsFunction, Set<E> tips) {
-		return new GitGenericHistory<>(parentsFunction, tips);
-	}
+import io.github.oliviercailloux.utils.Utils;
 
+public class GitGenericHistory<E extends ObjectId> {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(GitGenericHistory.class);
+
+	public static <E extends ObjectId> GitGenericHistory<E> from(SuccessorsFunction<E> parentsFunction, Set<E> tips) {
+		final Graph<E> graph = Utils.asGraph(parentsFunction, tips);
+		return new GitGenericHistory<>(graph);
+	}
+
 	private final ImmutableGraph<E> graph;
 
-	GitGenericHistory(SuccessorsFunction<E> parentsFunction, Set<E> tips) {
-		final Queue<E> toConsider = new LinkedList<>(tips);
-		final Set<E> seen = new LinkedHashSet<>(tips);
-
-		final MutableGraph<E> mutableGraph = GraphBuilder.directed().build();
-		while (!toConsider.isEmpty()) {
-			final E current = toConsider.remove();
-			mutableGraph.addNode(current);
-			final Iterable<? extends E> parents = parentsFunction.successors(current);
-			LOGGER.debug("Parents of {}: {}.", current.getName(), parents);
-			for (E parent : parents) {
-				mutableGraph.putEdge(current, parent);
-				if (!seen.contains(parent)) {
-					toConsider.add(parent);
-					seen.add(parent);
-				}
-			}
-		}
-		this.graph = ImmutableGraph.copyOf(mutableGraph);
+	GitGenericHistory(Graph<E> graph) {
+		this.graph = ImmutableGraph.copyOf(graph);
+		checkArgument(!graph.nodes().isEmpty());
 		checkArgument(!Graphs.hasCycle(graph));
 	}
 
 	/**
-	 * The children to which everything points; the starting points in time of the
+	 * The parents to which everything points; the starting points in time of the
 	 * git history. Note that this departs from the usual forest-view of a DAG,
 	 * where the edges go away from the root: here they go towards the roots (as is
-	 * usual when representing a Git history).
+	 * usual when representing a Git history). (Usually there’s a single root, but
+	 * git allows for <a href=
+	 * "https://git-scm.com/docs/git-checkout#Documentation/git-checkout.txt---orphanltnewbranchgt">multiple
+	 * roots</a>.)
 	 *
 	 * @return a non-empty set.
 	 */
@@ -68,8 +58,20 @@ public class GitGenericHistory<E extends ObjectId> {
 		 */
 		final ImmutableSet<E> roots = graph.nodes().stream().filter((n) -> graph.successors(n).isEmpty())
 				.collect(ImmutableSet.toImmutableSet());
-		assert !roots.isEmpty();
+		Verify.verify(!roots.isEmpty());
 		return roots;
+	}
+
+	/**
+	 * @return the nodes with no children (no predecessor), from which the
+	 *         “successors” (parent-of) relation starts; the most recent node on
+	 *         each branch.
+	 */
+	public ImmutableSet<E> getTips() {
+		final ImmutableSet<E> tips = graph.nodes().stream().filter((n) -> graph.predecessors(n).isEmpty())
+				.collect(ImmutableSet.toImmutableSet());
+		Verify.verify(!tips.isEmpty());
+		return tips;
 	}
 
 	/**

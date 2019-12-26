@@ -6,10 +6,8 @@ import static java.util.Objects.requireNonNull;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.time.Instant;
-import java.util.ArrayDeque;
 import java.util.List;
 import java.util.Optional;
-import java.util.Queue;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -45,6 +43,7 @@ import io.github.oliviercailloux.git.git_hub.model.GitHubRealToken;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.git.git_hub.model.graph_ql.PushedDatesAnswer;
 import io.github.oliviercailloux.git.git_hub.model.graph_ql.PushedDatesAnswer.CommitNode;
+import io.github.oliviercailloux.git.git_hub.model.graph_ql.PushedDatesAnswer.CommitNodes;
 import io.github.oliviercailloux.git.git_hub.model.graph_ql.RepositoryWithFiles;
 import io.github.oliviercailloux.git.git_hub.model.graph_ql.RepositoryWithIssuesWithHistory;
 import io.github.oliviercailloux.json.PrintableJsonObjectFactory;
@@ -135,42 +134,47 @@ public class GitHubFetcherQL implements AutoCloseable {
 	}
 
 	public GitHubHistory getGitHubHistory(RepositoryCoordinates coordinates) {
-		final ImmutableList.Builder<PushedDatesAnswer> answersBuilder = ImmutableList.builder();
-		final Queue<String> remainingEndCursors = new ArrayDeque<>();
 		/**
-		 * I need to change the logic here. Build the graph while asking queries: I need
-		 * to be able to detect when I’m back at some commit I know already. Thus, parse
-		 * the initial request, build a partial graph of parents, maintain a list of
-		 * nodes that have not been seen yet (those whose parents are unknown). Request
-		 * history about those nodes (without using the after end cursor) with the
-		 * continuation query.
+		 * I build the graph while asking queries: I need to be able to detect when I’m
+		 * back at some commit I know already. Thus, parse the initial request, build a
+		 * partial graph of parents, maintain a list of nodes that have not been seen
+		 * yet (those whose parents are unknown). Request history about those nodes
+		 * (without using the after end cursor) with the continuation query.
 		 */
-		do {
+		final PushedDatesAnswer initialAnswer;
+		{
 			final JsonObjectBuilder builder = jsonBuilderFactory.createObjectBuilder()
 					.add("repositoryName", coordinates.getRepositoryName())
 					.add("repositoryOwner", coordinates.getOwner());
-			final boolean isInitialRequest = remainingEndCursors.isEmpty();
-			if (!isInitialRequest) {
-				final String after = remainingEndCursors.remove();
-				builder.add("after", after);
-				LOGGER.info("Continuation request: {}.", after);
-			} else {
-				LOGGER.info("Initial request to {}.", coordinates);
-			}
+			LOGGER.info("Initial request to {}.", coordinates);
 			final JsonObject varsJson = builder.build();
 			final JsonObject pushedDatesRepositoryJson = query("pushedDates", ImmutableList.of(), varsJson)
 					.getJsonObject("repository");
-			final PushedDatesAnswer answer = PushedDatesAnswer.parseInitialAnswer(pushedDatesRepositoryJson);
-			verify(answer.isInitialRequest() == isInitialRequest);
-			answersBuilder.add(answer);
-			remainingEndCursors.addAll(answer.getNextCursors());
-		} while (!remainingEndCursors.isEmpty());
+			initialAnswer = PushedDatesAnswer.parseInitialAnswer(pushedDatesRepositoryJson);
+		}
+		final ImmutableList.Builder<CommitNode> commitsBuilder = ImmutableList.builder();
+		commitsBuilder.addAll(initialAnswer.getCommitNodes());
 
-		final ImmutableList<PushedDatesAnswer> answers = answersBuilder.build();
-		final ImmutableList<CommitNode> commits = answers.stream().flatMap((a) -> a.getRefNodes().stream())
-				.flatMap((r) -> r.getCommitNodes().stream()).collect(ImmutableList.toImmutableList());
+		Optional<ObjectId> next = initialAnswer.getUnknownOids().stream().findFirst();
+		while (next.isPresent()) {
+			final JsonObjectBuilder builder = jsonBuilderFactory.createObjectBuilder()
+					.add("repositoryName", coordinates.getRepositoryName())
+					.add("repositoryOwner", coordinates.getOwner());
+			final ObjectId oid = next.get();
+			builder.add("oid", oid.getName());
+			LOGGER.info("Continuation request to {}, {}.", coordinates, oid);
+			final JsonObject varsJson = builder.build();
+			final JsonObject continuedJson = query("pushedDatesContinued", ImmutableList.of(), varsJson)
+					.getJsonObject("repository");
+			final CommitNodes answer = CommitNodes.parse(continuedJson);
+			commitsBuilder.addAll(answer.asSet());
+			next = CommitNodes.given(commitsBuilder.build()).getUnknownOids().stream().findFirst();
+		}
+
+		final ImmutableList<CommitNode> commits = commitsBuilder.build();
 		final ImmutableSetMultimap<ObjectId, CommitNode> byOid = commits.stream()
 				.collect(ImmutableSetMultimap.toImmutableSetMultimap((c) -> c.getOid(), (c) -> c));
+
 		verify(byOid.size() == byOid.keySet().size());
 		final ImmutableBiMap<ObjectId, CommitNode> oidToNode = byOid.asMap().entrySet().stream().collect(
 				ImmutableBiMap.toImmutableBiMap((e) -> e.getKey(), (e) -> Iterables.getOnlyElement(e.getValue())));

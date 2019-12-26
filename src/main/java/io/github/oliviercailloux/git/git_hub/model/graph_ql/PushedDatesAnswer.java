@@ -5,6 +5,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Verify.verify;
 
 import java.time.Instant;
+import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -17,28 +18,33 @@ import org.eclipse.jgit.lib.ObjectId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ImmutableSetMultimap;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Sets;
+import com.google.common.graph.ImmutableGraph;
 
 import io.github.oliviercailloux.json.PrintableJsonObjectFactory;
+import io.github.oliviercailloux.utils.Utils;
 
 public class PushedDatesAnswer {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(PushedDatesAnswer.class);
 
-	public static PushedDatesAnswer parse(JsonObject pushedDatesRepositoryJson, boolean isInitialRequest) {
+	public static PushedDatesAnswer parseInitialAnswer(JsonObject pushedDatesRepositoryJson) {
 		final JsonObject refs = pushedDatesRepositoryJson.getJsonObject("refs");
 		LOGGER.debug("Refs: {}.", PrintableJsonObjectFactory.wrapObject(refs));
 		final JsonArray refNodes = refs.getJsonArray("nodes");
 		final ImmutableList.Builder<RefNode> refNodesBuilder = ImmutableList.builder();
 		for (JsonValue refNodeValue : refNodes) {
 			final JsonObject node = refNodeValue.asJsonObject();
-			final RefNode refNode = RefNode.parse(node, isInitialRequest);
+			final RefNode refNode = RefNode.parse(node);
 			refNodesBuilder.add(refNode);
 		}
 		final ImmutableList<RefNode> refNodesList = refNodesBuilder.build();
-		return new PushedDatesAnswer(refNodesList, isInitialRequest);
+		return new PushedDatesAnswer(refNodesList);
 	}
 
 	public static class CommitNode {
@@ -105,8 +111,74 @@ public class PushedDatesAnswer {
 		}
 	}
 
+	public static class CommitNodes {
+		public static CommitNodes given(Iterable<CommitNode> nodes) {
+			final CommitNodes commitNodes = new CommitNodes(nodes);
+			return commitNodes;
+		}
+
+		public static CommitNodes parse(JsonObject node) {
+			final JsonObject target = node.getJsonObject("object");
+			final JsonObject jsonHistory = target.getJsonObject("history");
+			final JsonArray commitNodes = jsonHistory.getJsonArray("nodes");
+			final ImmutableList.Builder<CommitNode> commitsBuilder = ImmutableList.builder();
+			for (JsonValue commitNodeValue : commitNodes) {
+				final JsonObject commit = commitNodeValue.asJsonObject();
+				final CommitNode commitNode = CommitNode.parse(commit);
+				commitsBuilder.add(commitNode);
+			}
+			return given(commitsBuilder.build());
+		}
+
+		private final ImmutableSet<CommitNode> commitNodes;
+		private final ImmutableBiMap<ObjectId, CommitNode> oidToNode;
+		/**
+		 * The oids whose parents are known, thus, a subset of those seen in the
+		 * provided json (there’s also those that are designated as parents of a known
+		 * oid, but which are themselves unknown).
+		 */
+		private final ImmutableSet<ObjectId> knownOids;
+		private final ImmutableGraph<ObjectId> parentsGraph;
+
+		private CommitNodes(Iterable<CommitNode> nodes) {
+			commitNodes = ImmutableSet.copyOf(nodes);
+			final ImmutableSetMultimap<ObjectId, CommitNode> byOid = commitNodes.stream()
+					.collect(ImmutableSetMultimap.toImmutableSetMultimap((c) -> c.getOid(), (c) -> c));
+			verify(byOid.size() == byOid.keySet().size());
+			oidToNode = byOid.asMap().entrySet().stream().collect(
+					ImmutableBiMap.toImmutableBiMap((e) -> e.getKey(), (e) -> Iterables.getOnlyElement(e.getValue())));
+
+			knownOids = oidToNode.keySet();
+			parentsGraph = ImmutableGraph.copyOf(Utils.asGraph((o) -> {
+				final CommitNode commitNode = oidToNode.get(o);
+				return commitNode == null ? ImmutableSet.of() : commitNode.getParents();
+			}, oidToNode.keySet()));
+		}
+
+		public ImmutableSet<CommitNode> asSet() {
+			return commitNodes;
+		}
+
+		public ImmutableGraph<ObjectId> getParentsGraph() {
+			return parentsGraph;
+
+		}
+
+		public ImmutableBiMap<ObjectId, CommitNode> asBiMap() {
+			return oidToNode;
+		}
+
+		public ImmutableSet<ObjectId> getKnownOids() {
+			return knownOids;
+		}
+
+		public ImmutableSet<ObjectId> getUnknownOids() {
+			return Sets.difference(parentsGraph.nodes(), knownOids).immutableCopy();
+		}
+	}
+
 	public static class RefNode {
-		public static RefNode parse(JsonObject node, boolean initialRequest) {
+		public static RefNode parse(JsonObject node) {
 			final String name = node.getString("name");
 			final String prefix = node.getString("prefix");
 			checkArgument(prefix.equals("refs/heads/"));
@@ -127,19 +199,12 @@ public class PushedDatesAnswer {
 			}
 			final ImmutableList<CommitNode> commitNodesList = commitsBuilder.build();
 			checkArgument(!commitNodesList.isEmpty());
-			if (initialRequest) {
-				checkArgument(commitNodesList.get(0).getOid().equals(refOid));
-			}
-			/**
-			 * When it’s a continuation request (one that has an "after" parameter), the
-			 * name of the branch is unrelated to the nodes!
-			 */
-			if (initialRequest && hasNextPage) {
-				checkArgument(commitNodesList.size() < historyTotalCount, String.format(
-						"history total count: %s, commit nodes: %s", historyTotalCount, commitNodesList.size()));
-			}
-			return new RefNode(name, prefix, refOid, historyTotalCount, hasNextPage, endCursor, commitNodesList,
-					initialRequest);
+			checkArgument(commitNodesList.get(0).getOid().equals(refOid));
+			checkArgument(commitNodesList.size() <= historyTotalCount, String
+					.format("history total count: %s, commit nodes: %s", historyTotalCount, commitNodesList.size()));
+			checkArgument((commitNodesList.size() == historyTotalCount) == !hasNextPage, String
+					.format("history total count: %s, commit nodes: %s", historyTotalCount, commitNodesList.size()));
+			return new RefNode(name, prefix, refOid, historyTotalCount, hasNextPage, endCursor, commitNodesList);
 		}
 
 		private final String name;
@@ -148,22 +213,18 @@ public class PushedDatesAnswer {
 		private final int historyTotalCount;
 		private final boolean hasNextPage;
 		private final String endCursor;
-		private final ImmutableList<CommitNode> commitNodes;
-		private final boolean initialRequest;
+		private final CommitNodes commitNodes;
 
 		private RefNode(String name, String prefix, ObjectId refOid, int historyTotalCount, boolean hasNextPage,
-				String endCursor, ImmutableList<CommitNode> commitNodes, boolean initialRequest) {
+				String endCursor, Iterable<CommitNode> commitNodes) {
 			this.name = checkNotNull(name);
 			this.prefix = checkNotNull(prefix);
 			this.refOid = checkNotNull(refOid);
 			this.historyTotalCount = checkNotNull(historyTotalCount);
 			this.hasNextPage = checkNotNull(hasNextPage);
 			this.endCursor = checkNotNull(endCursor);
-			this.commitNodes = checkNotNull(commitNodes);
-			this.initialRequest = checkNotNull(initialRequest);
-			if (initialRequest) {
-				verify(historyTotalCount >= commitNodes.size());
-			}
+			this.commitNodes = CommitNodes.given(checkNotNull(commitNodes));
+			verify(historyTotalCount >= this.commitNodes.asSet().size());
 		}
 
 		public String getName() {
@@ -179,12 +240,9 @@ public class PushedDatesAnswer {
 		}
 
 		/**
-		 * This number is meaningless if this is a continuation request.
 		 *
-		 * @return if it’s an initial request, at least the number of commit nodes, and
-		 *         has next page ⇒ strictly more (the converse doesn’t hold: could have
-		 *         strictly more total count than commit nodes but no next page because
-		 *         this might be the last page).
+		 * @return at least the number of commit nodes, and strictly more iff has next
+		 *         page.
 		 */
 		public int getHistoryTotalCount() {
 			return historyTotalCount;
@@ -198,44 +256,50 @@ public class PushedDatesAnswer {
 			return endCursor;
 		}
 
-		public ImmutableList<CommitNode> getCommitNodes() {
+		public CommitNodes getCommitNodes() {
 			return commitNodes;
-		}
-
-		public boolean isInitialRequest() {
-			return initialRequest;
-		}
-	}
-
-	private PushedDatesAnswer(ImmutableList<RefNode> refNodes, boolean isInitialRequest) {
-		this.refNodes = checkNotNull(refNodes);
-		final ImmutableSet<Boolean> areInitialRequests = refNodes.stream().map((r) -> r.isInitialRequest()).distinct()
-				.collect(ImmutableSet.toImmutableSet());
-		checkArgument(areInitialRequests.size() == 1);
-		isInitialRequest = Iterables.getOnlyElement(areInitialRequests);
-		if (!isInitialRequest) {
-			checkArgument(refNodes.size() == 1);
 		}
 	}
 
 	private final ImmutableList<RefNode> refNodes;
-	private final boolean isInitialRequest;
+	private final ImmutableGraph<ObjectId> parentsGraph;
+	/**
+	 * The oids whose parents are known, thus, a subset of those seen in the
+	 * provided json (there’s also those that are designated as parents of a known
+	 * oid, but which are themselves unknown).
+	 */
+	private final ImmutableSet<ObjectId> knownOids;
+
+	private PushedDatesAnswer(ImmutableList<RefNode> refNodes) {
+		this.refNodes = checkNotNull(refNodes);
+		knownOids = getRefNodes().stream().flatMap((r) -> r.getCommitNodes().getKnownOids().stream())
+				.collect(ImmutableSet.toImmutableSet());
+		final ImmutableSet<Entry<ObjectId, CommitNode>> noDupl = getRefNodes().stream()
+				.flatMap((r) -> r.getCommitNodes().asBiMap().entrySet().stream())
+				.collect(ImmutableSet.toImmutableSet());
+		final ImmutableBiMap<ObjectId, CommitNode> asBiMap = noDupl.stream()
+				.collect(ImmutableBiMap.toImmutableBiMap(Entry::getKey, Entry::getValue));
+		parentsGraph = ImmutableGraph.copyOf(Utils.asGraph((o) -> {
+			final CommitNode commitNode = asBiMap.get(o);
+			return commitNode == null ? ImmutableSet.of() : commitNode.getParents();
+		}, asBiMap.keySet()));
+	}
 
 	public ImmutableList<RefNode> getRefNodes() {
 		return refNodes;
 	}
 
-	public ImmutableSet<String> getNextCursors() {
-		/**
-		 * TODO must ask when fetching again the branch corresponding to the cursor,
-		 * otherwise GitHub bugs and answers with the history related to the cursor but
-		 * copied to every branch.
-		 */
-		return refNodes.stream().filter((r) -> r.hasNextPage).map((r) -> r.endCursor)
-				.collect(ImmutableSet.toImmutableSet());
+	public ImmutableGraph<ObjectId> getParentsGraph() {
+		return parentsGraph;
+
 	}
 
-	public boolean isInitialRequest() {
-		return isInitialRequest;
+	public ImmutableSet<ObjectId> getUnknownOids() {
+		return Sets.difference(parentsGraph.nodes(), knownOids).immutableCopy();
+	}
+
+	public ImmutableList<CommitNode> getCommitNodes() {
+		return refNodes.stream().flatMap((r) -> r.getCommitNodes().asSet().stream())
+				.collect(ImmutableList.toImmutableList());
 	}
 }
