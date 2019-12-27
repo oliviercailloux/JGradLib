@@ -59,46 +59,21 @@ public class GitUtils {
 		return commits.stream().map(RevCommit::getName).collect(ImmutableList.toImmutableList());
 	}
 
-	public static void main(String[] args) throws Exception {
-//		final RepositoryCoordinates coord = RepositoryCoordinates.from("oliviercailloux", "java-course");// 82-82, no diff
-//		final RepositoryCoordinates coord = RepositoryCoordinates.from("oliviercailloux", "projets");// 8-8, no diff
-//		final RepositoryCoordinates coord = RepositoryCoordinates.from("oliviercailloux", "jmcda-xmcda2-ws-examples");//8, no diff
-		final RepositoryCoordinates coord = RepositoryCoordinates.from("oliviercailloux", "xerces-user");// 1-0, diff!
-		try (GitHubFetcherV3 fetcher = GitHubFetcherV3.using(GitHubToken.getRealInstance())) {
-			final ImmutableList<RepositoryCoordinates> repositories = fetcher.getUserRepositories("oliviercailloux");
-//			for (RepositoryCoordinates coord : repositories) {
-			final ImmutableList<ObjectId> commits = fetcher.getCommitsGitHubDescriptions(coord).stream()
-					.filter((c) -> c.getCommitterCommitDate().compareTo(Instant.now().minus(90, ChronoUnit.DAYS)) >= 0)
-					.map(CommitGitHubDescription::getSha).collect(ImmutableList.toImmutableList());
-			final ImmutableList<PushEvent> pushes = fetcher.getPushEvents(coord);
-			final ImmutableList<ObjectId> pushedCommits = pushes.stream().map(PushEvent::getPushPayload)
-					.flatMap((p) -> p.getCommits().stream()).map(PayloadCommitDescription::getSha)
-					.collect(ImmutableList.toImmutableList());
-			final ImmutableSet<ObjectId> diff = Sets
-					.symmetricDifference(ImmutableSet.copyOf(commits), ImmutableSet.copyOf(pushedCommits))
-					.immutableCopy();
-			LOGGER.info("Diff ({}): {}.", diff.size(), diff);
-			LOGGER.info("All commits ({}): {}, pushed ones ({}): {}.", commits.size(), commits, pushedCommits.size(),
-					pushedCommits);
-//			}
-		}
-	}
-
 	/**
 	 * @param repositoryDirectory the GIT_DIR or the .git directory
 	 * @return the graph of commits pointed to by at least one ref in /refs plus
 	 *         HEAD, thus including remotes and local branches and tags, together
 	 *         with their parents.
 	 */
-	public static GitHistory getHistory(File repositoryDirectory) throws GitAPIException, NoHeadException, IOException {
-		final GitHistory history;
+	public static GitLocalHistory getHistory(File repositoryDirectory) throws GitAPIException, NoHeadException, IOException {
+		final GitLocalHistory history;
 		try (Git git = Git.open(repositoryDirectory)) {
 			/**
 			 * Should perhaps first check whether the object database exists? Test with bare
 			 * and when no head exists.
 			 */
 			final Iterable<RevCommit> commits = git.log().all().call();
-			history = GitHistory.from(commits);
+			history = GitLocalHistory.from(commits);
 		}
 		return history;
 	}

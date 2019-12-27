@@ -31,7 +31,7 @@ import com.google.common.primitives.Booleans;
 
 import io.github.oliviercailloux.git.Checkouter;
 import io.github.oliviercailloux.git.ComplexClient;
-import io.github.oliviercailloux.git.GitHistory;
+import io.github.oliviercailloux.git.GitLocalHistory;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.grade.Criterion;
 import io.github.oliviercailloux.grade.GradingException;
@@ -47,7 +47,7 @@ import io.github.oliviercailloux.grade.markers.MavenProjectMarker;
 import io.github.oliviercailloux.java_grade.testers.MarkHelper;
 
 public class ExJUnitGrader {
-	private GitHistory history;
+	private GitLocalHistory history;
 
 	public ExJUnitGrader() {
 		history = null;
@@ -75,7 +75,7 @@ public class ExJUnitGrader {
 			throw new GradingException(e);
 		} catch (GitAPIException e) {
 			LOGGER.warn("No history.", e);
-			history = GitHistory.from(ImmutableSet.of());
+			history = GitLocalHistory.from(ImmutableSet.of());
 		}
 
 		final Set<RevCommit> noChildren = history.getGraph().nodes().stream()

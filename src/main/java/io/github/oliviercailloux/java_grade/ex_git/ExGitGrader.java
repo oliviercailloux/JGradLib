@@ -44,7 +44,7 @@ import com.google.common.graph.Traverser;
 import com.google.common.primitives.Booleans;
 
 import io.github.oliviercailloux.git.ComplexClient;
-import io.github.oliviercailloux.git.GitHistory;
+import io.github.oliviercailloux.git.GitLocalHistory;
 import io.github.oliviercailloux.git.GitUtils;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.grade.Criterion;
@@ -60,7 +60,7 @@ import io.github.oliviercailloux.java_grade.testers.MarkHelper;
 
 public class ExGitGrader {
 	private double maxGrade;
-	private GitHistory history;
+	private GitLocalHistory history;
 
 	public ExGitGrader() {
 		maxGrade = Double.NEGATIVE_INFINITY;

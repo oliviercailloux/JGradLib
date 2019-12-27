@@ -32,8 +32,7 @@ import com.google.common.graph.GraphBuilder;
 import com.google.common.graph.ImmutableGraph;
 
 import io.github.oliviercailloux.git.ComplexClient;
-import io.github.oliviercailloux.git.GitGenericHistory;
-import io.github.oliviercailloux.git.GitHistory;
+import io.github.oliviercailloux.git.GitLocalHistory;
 import io.github.oliviercailloux.git.git_hub.model.GitHubHistory;
 import io.github.oliviercailloux.git.git_hub.model.GitHubToken;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
@@ -205,12 +204,11 @@ public class TestFetch {
 			final GitHubHistory gHH = fetcher.getGitHubHistory(coord);
 			final ImmutableMap<ObjectId, Instant> pushedDates = gHH.getPushedDates();
 			final ImmutableMap<ObjectId, Instant> compPushedDates = gHH.getCorrectedAndCompletedPushedDates();
-			final GitGenericHistory<ObjectId> history = gHH.getHistory();
 
 			assertEquals(ImmutableSet.of(ObjectId.fromString("f96c728044e885fceaf4a3ae926f1a13dd329758")),
-					history.getRoots());
-			assertEquals(155, history.getGraph().nodes().size());
-			assertEquals(history.getGraph().nodes(), compPushedDates.keySet());
+					gHH.getRoots());
+			assertEquals(155, gHH.getGraph().nodes().size());
+			assertEquals(gHH.getGraph().nodes(), compPushedDates.keySet());
 			assertTrue(gHH.getPatchedKnowns().nodes().isEmpty());
 
 			assertEquals(Instant.parse("2019-05-24T15:24:11Z"),
@@ -239,19 +237,18 @@ public class TestFetch {
 			final ComplexClient client = ComplexClient.aboutAndUsing(coordinates, Path.of("/tmp/"));
 			final boolean retrieved = client.tryRetrieve();
 			checkState(retrieved);
-			final GitHistory historyFromWorkTree = client.getWholeHistory();
+			final GitLocalHistory historyFromWorkTree = client.getWholeHistory();
 
 			final GitHubHistory gHH = fetcher.getGitHubHistory(coordinates);
 			final ImmutableMap<ObjectId, Instant> pushedDatesWithDeductions = gHH.getCorrectedAndCompletedPushedDates();
 
-			final GitGenericHistory<ObjectId> historyFromGitHub = gHH.getHistory();
 			final ImmutableGraph<RevCommit> g1 = historyFromWorkTree.getGraph();
-			final ImmutableGraph<ObjectId> g2 = historyFromGitHub.getGraph();
+			final ImmutableGraph<ObjectId> g2 = gHH.getGraph();
 
-			checkState(historyFromWorkTree.getRoots().equals(historyFromGitHub.getRoots()));
+			checkState(historyFromWorkTree.getRoots().equals(gHH.getRoots()));
 			checkState(g1.equals(g2), "Nb: " + g1.edges().size() + ", " + g2.edges().size() + "; Diff: "
 					+ Sets.symmetricDifference(g1.edges(), g2.edges()) + ".");
-			checkState(historyFromGitHub.getGraph().nodes().equals(pushedDatesWithDeductions.keySet()));
+			checkState(gHH.getGraph().nodes().equals(pushedDatesWithDeductions.keySet()));
 
 			checkState(gHH.getCommitDates().equals(historyFromWorkTree.getCommitDates()));
 
@@ -271,11 +268,10 @@ public class TestFetch {
 			final GitHubHistory gHH = fetcher.getGitHubHistory(coord);
 			final ImmutableMap<ObjectId, Instant> pushedDates = gHH.getPushedDates();
 			final ImmutableMap<ObjectId, Instant> compPushedDates = gHH.getCorrectedAndCompletedPushedDates();
-			final GitGenericHistory<ObjectId> history = gHH.getHistory();
 
 			assertEquals(ImmutableMap.of(), pushedDates);
 			assertEquals(ImmutableSet.of(Instant.MIN), ImmutableSet.copyOf(compPushedDates.values()));
-			assertEquals(compPushedDates.keySet(), history.getGraph().nodes());
+			assertEquals(compPushedDates.keySet(), gHH.getGraph().nodes());
 		}
 	}
 
@@ -289,13 +285,13 @@ public class TestFetch {
 			final ComplexClient client = ComplexClient.aboutAndUsing(coordinates, Path.of("/tmp/"));
 			final boolean retrieved = client.tryRetrieve();
 			checkState(retrieved);
-			final GitHistory historyFromWorkTree = client.getWholeHistory();
+			final GitLocalHistory historyFromWorkTree = client.getWholeHistory();
 
 			/** This node is only reached through a tag, currently. */
 			assertTrue(historyFromWorkTree.getGraph().nodes()
 					.contains(ObjectId.fromString("0136b06d5dbcc5af0c7d4cb236afb720b2faea24")));
-			assertTrue(gHH.getHistory().getGraph().nodes()
-					.contains(ObjectId.fromString("0136b06d5dbcc5af0c7d4cb236afb720b2faea24")));
+			assertTrue(
+					gHH.getGraph().nodes().contains(ObjectId.fromString("0136b06d5dbcc5af0c7d4cb236afb720b2faea24")));
 		}
 	}
 
@@ -307,23 +303,20 @@ public class TestFetch {
 			final ComplexClient client = ComplexClient.aboutAndUsing(coordinates, Path.of("/tmp/"));
 			final boolean retrieved = client.tryRetrieve();
 			checkState(retrieved);
-			final GitHistory historyFromWorkTree = client.getWholeHistory();
+			final GitLocalHistory historyFromWorkTree = client.getWholeHistory();
 
 			final GitHubHistory gHH = fetcher.getGitHubHistory(coordinates);
 			final ImmutableMap<ObjectId, Instant> pushedDatesWithDeductions = gHH.getCorrectedAndCompletedPushedDates();
 
-			final GitGenericHistory<ObjectId> historyFromGitHub = gHH.getHistory();
 			final ImmutableGraph<RevCommit> g1 = historyFromWorkTree.getGraph();
-			final ImmutableGraph<ObjectId> g2 = historyFromGitHub.getGraph();
+			final ImmutableGraph<ObjectId> g2 = gHH.getGraph();
 
-			checkState(historyFromWorkTree.getRoots().equals(historyFromGitHub.getRoots()));
+			checkState(historyFromWorkTree.getRoots().equals(gHH.getRoots()));
 			checkState(g1.equals(g2), "Nb: " + g1.edges().size() + ", " + g2.edges().size() + "; Diff: "
 					+ Sets.symmetricDifference(g1.edges(), g2.edges()) + ".");
-			checkState(historyFromGitHub.getGraph().nodes().equals(pushedDatesWithDeductions.keySet()));
+			checkState(gHH.getGraph().nodes().equals(pushedDatesWithDeductions.keySet()));
 
 			checkState(gHH.getCommitDates().equals(historyFromWorkTree.getCommitDates()));
-
-			LOGGER.warn("{}", gHH.getPatchedKnowns());
 
 			final ImmutableGraph<Object> expectedPatch = GraphBuilder.directed().immutable()
 					.putEdge(ObjectId.fromString("5d15007fde7cb7b62dc14a601cc18f5174174ada"),
@@ -347,17 +340,16 @@ public class TestFetch {
 				final ComplexClient client = ComplexClient.aboutAndUsing(coordinates, Path.of("/tmp/"));
 				final boolean retrieved = client.tryRetrieve();
 				checkState(retrieved);
-				final GitHistory historyFromWorkTree = client.getWholeHistory();
+				final GitLocalHistory historyFromWorkTree = client.getWholeHistory();
 
 				final GitHubHistory gHH = fetcher.getGitHubHistory(coordinates);
 				final ImmutableMap<ObjectId, Instant> pushedDatesWithDeductions = gHH
 						.getCorrectedAndCompletedPushedDates();
 
-				final GitGenericHistory<ObjectId> historyFromGitHub = gHH.getHistory();
 				final ImmutableGraph<RevCommit> g1 = historyFromWorkTree.getGraph();
-				final ImmutableGraph<ObjectId> g2 = historyFromGitHub.getGraph();
+				final ImmutableGraph<ObjectId> g2 = gHH.getGraph();
 
-				checkState(historyFromWorkTree.getRoots().equals(historyFromGitHub.getRoots()));
+				checkState(historyFromWorkTree.getRoots().equals(gHH.getRoots()));
 				checkState(g1.equals(g2), "Nb: " + g1.edges().size() + ", " + g2.edges().size() + "; Diff: "
 						+ Sets.symmetricDifference(g1.edges(), g2.edges()) + ".");
 //				checkState(g1.equals((Graph<ObjectId>) Graphs.inducedSubgraph(g2, g1.nodes())),
@@ -367,7 +359,7 @@ public class TestFetch {
 //					LOGGER.warn("Nb: " + g1.edges().size() + ", " + g2.edges().size() + "; Diff: "
 //							+ Sets.symmetricDifference(g1.edges(), g2.edges()) + ".");
 //				}
-				checkState(historyFromGitHub.getGraph().nodes().equals(pushedDatesWithDeductions.keySet()));
+				checkState(gHH.getGraph().nodes().equals(pushedDatesWithDeductions.keySet()));
 
 				final ImmutableSortedMap<Instant, ImmutableSet<ObjectId>> refsBySortedPushedDates = gHH
 						.getRefsBySortedPushedDates();

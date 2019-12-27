@@ -75,7 +75,7 @@ public class ComplexClient {
 
 	private final RepositoryCoordinates coordinates;
 
-	private GitHistory allHistory;
+	private GitLocalHistory allHistory;
 
 	/**
 	 * The repository can be cloned or fetched.
@@ -394,17 +394,17 @@ public class ComplexClient {
 		}
 	}
 
-	private GitHistory getHistory() throws IOException, GitAPIException {
+	private GitLocalHistory getHistory() throws IOException, GitAPIException {
 		final File gitDir = getProjectDirectory().toFile();
 		checkState(exists != null);
 		if (allHistory != null) {
 			return allHistory;
 		}
 		if (!exists) {
-			return GitHistory.from(ImmutableSet.of());
+			return GitLocalHistory.from(ImmutableSet.of());
 		}
 
-		final GitHistory history = GitUtils.getHistory(gitDir);
+		final GitLocalHistory history = GitUtils.getHistory(gitDir);
 		allHistory = history;
 		return history;
 	}
@@ -416,11 +416,11 @@ public class ComplexClient {
 	 * @throws IOException
 	 * @throws GitAPIException
 	 */
-	public GitHistory getWholeHistory() throws IOException, GitAPIException {
+	public GitLocalHistory getWholeHistory() throws IOException, GitAPIException {
 		return getHistory();
 	}
 
-	public GitHistory getAllHistoryCached() {
+	public GitLocalHistory getAllHistoryCached() {
 		checkState(allHistory != null);
 		return allHistory;
 	}

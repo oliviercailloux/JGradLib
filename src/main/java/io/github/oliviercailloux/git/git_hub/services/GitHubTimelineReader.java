@@ -38,7 +38,7 @@ import com.google.common.graph.Graphs;
 import com.google.common.graph.MutableGraph;
 
 import io.github.oliviercailloux.git.ComplexClient;
-import io.github.oliviercailloux.git.GitHistory;
+import io.github.oliviercailloux.git.GitLocalHistory;
 import io.github.oliviercailloux.git.git_hub.model.GitHubToken;
 import io.github.oliviercailloux.git.git_hub.model.v3.Event;
 import io.github.oliviercailloux.git.git_hub.model.v3.EventType;
@@ -390,6 +390,6 @@ public class GitHubTimelineReader {
 	private boolean createdButNoContent;
 	private Optional<PushEvent> firstPushEvent;
 	private Range<Instant> rangeFirstCommits;
-	private GitHistory history;
+	private GitLocalHistory history;
 	private ImmutableSet<RevCommit> commitsBeforeFirstPush;
 }

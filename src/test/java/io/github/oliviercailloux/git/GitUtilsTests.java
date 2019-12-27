@@ -30,7 +30,7 @@ class GitUtilsTests {
 		final Path workTreePath = Utils.getTempDirectory().resolve("testrel cloned " + Instant.now());
 		new GitCloner().download(GitUri.fromGitUri(URI.create("ssh:git@github.com:oliviercailloux/testrel.git")),
 				workTreePath);
-		final GitHistory history = GitUtils.getHistory(workTreePath.toFile());
+		final GitLocalHistory history = GitUtils.getHistory(workTreePath.toFile());
 		assertTrue(history.getGraph().nodes().size() >= 2);
 	}
 
@@ -40,7 +40,7 @@ class GitUtilsTests {
 		final Path gitDirPath = workTreePath.resolve(".git");
 		Git.init().setDirectory(workTreePath.toFile()).call().close();
 
-		final GitHistory historyEmpty = GitUtils.getHistory(gitDirPath.toFile());
+		final GitLocalHistory historyEmpty = GitUtils.getHistory(gitDirPath.toFile());
 		assertEquals(GraphBuilder.directed().build(), historyEmpty.getGraph());
 
 		final RevCommit newCommit;
@@ -55,7 +55,7 @@ class GitUtilsTests {
 			Verify.verify(objectId.equals(newCommit));
 		}
 
-		final GitHistory historyOne = GitUtils.getHistory(gitDirPath.toFile());
+		final GitLocalHistory historyOne = GitUtils.getHistory(gitDirPath.toFile());
 		assertEquals(ImmutableSet.of(newCommit), historyOne.getGraph().nodes());
 		assertEquals(ImmutableSet.of(newCommit), historyOne.getRoots());
 	}
@@ -65,7 +65,7 @@ class GitUtilsTests {
 		final Path gitDirPath = Utils.getTempDirectory().resolve("Just created " + Instant.now()).resolve(".git");
 		Git.init().setGitDir(gitDirPath.toFile()).call().close();
 
-		final GitHistory historyEmpty = GitUtils.getHistory(gitDirPath.toFile());
+		final GitLocalHistory historyEmpty = GitUtils.getHistory(gitDirPath.toFile());
 		assertEquals(GraphBuilder.directed().build(), historyEmpty.getGraph());
 
 	}
@@ -75,7 +75,7 @@ class GitUtilsTests {
 		final Path gitDirPath = Utils.getTempDirectory().resolve("testrel cloned " + Instant.now()).resolve(".git");
 		new GitCloner().download(GitUri.fromGitUri(URI.create("ssh:git@github.com:oliviercailloux/testrel.git")),
 				gitDirPath, true);
-		final GitHistory history = GitUtils.getHistory(gitDirPath.toFile());
+		final GitLocalHistory history = GitUtils.getHistory(gitDirPath.toFile());
 		assertTrue(history.getGraph().nodes().size() >= 2);
 	}
 

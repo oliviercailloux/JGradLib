@@ -396,11 +396,11 @@ public class PushedDatesAnswer {
 		return commitsWithHistory;
 	}
 
-	public ImmutableList<HeadNode> getHeadNodes() {
+	private ImmutableList<HeadNode> getHeadNodes() {
 		return headNodes;
 	}
 
-	public ImmutableList<TagNode> getTagNodes() {
+	private ImmutableList<TagNode> getTagNodes() {
 		return tagNodes;
 	}
 

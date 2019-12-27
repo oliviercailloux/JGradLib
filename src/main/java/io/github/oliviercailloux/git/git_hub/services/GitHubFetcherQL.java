@@ -35,9 +35,9 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSetMultimap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Streams;
+import com.google.common.graph.Graph;
 import com.google.common.io.Resources;
 
-import io.github.oliviercailloux.git.GitGenericHistory;
 import io.github.oliviercailloux.git.git_hub.model.GitHubHistory;
 import io.github.oliviercailloux.git.git_hub.model.GitHubRealToken;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
@@ -47,6 +47,7 @@ import io.github.oliviercailloux.git.git_hub.model.graph_ql.PushedDatesAnswer.Co
 import io.github.oliviercailloux.git.git_hub.model.graph_ql.RepositoryWithFiles;
 import io.github.oliviercailloux.git.git_hub.model.graph_ql.RepositoryWithIssuesWithHistory;
 import io.github.oliviercailloux.json.PrintableJsonObjectFactory;
+import io.github.oliviercailloux.utils.Utils;
 
 public class GitHubFetcherQL implements AutoCloseable {
 	public static final String GRAPHQL_ENDPOINT = "https://api.github.com/graphql";
@@ -154,7 +155,6 @@ public class GitHubFetcherQL implements AutoCloseable {
 		}
 		final ImmutableList.Builder<CommitNode> commitsBuilder = ImmutableList.builder();
 		commitsBuilder.addAll(initialAnswer.getCommitNodes());
-
 		Optional<ObjectId> next = initialAnswer.getUnknownOids().stream().findFirst();
 		while (next.isPresent()) {
 			final JsonObjectBuilder builder = jsonBuilderFactory.createObjectBuilder()
@@ -179,8 +179,7 @@ public class GitHubFetcherQL implements AutoCloseable {
 		final ImmutableBiMap<ObjectId, CommitNode> oidToNode = byOid.asMap().entrySet().stream().collect(
 				ImmutableBiMap.toImmutableBiMap((e) -> e.getKey(), (e) -> Iterables.getOnlyElement(e.getValue())));
 
-		final GitGenericHistory<ObjectId> history = GitGenericHistory.from((o) -> oidToNode.get(o).getParents(),
-				oidToNode.keySet());
+		final Graph<ObjectId> history = Utils.asGraph((o) -> oidToNode.get(o).getParents(), oidToNode.keySet());
 		final ImmutableMap<ObjectId, Instant> commitDates = oidToNode.values().stream()
 				.collect(ImmutableMap.toImmutableMap((c) -> c.getOid(), (c) -> c.getCommittedDate()));
 		final ImmutableMap<ObjectId, Instant> pushedDates = oidToNode.values().stream()

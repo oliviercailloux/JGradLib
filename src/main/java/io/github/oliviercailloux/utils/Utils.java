@@ -20,7 +20,6 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import org.eclipse.jgit.lib.ObjectId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -29,9 +28,11 @@ import com.diffplug.common.base.Throwing;
 import com.google.common.base.Strings;
 import com.google.common.base.Verify;
 import com.google.common.collect.ImmutableList;
+import com.google.common.graph.EndpointPair;
 import com.google.common.graph.Graph;
 import com.google.common.graph.GraphBuilder;
 import com.google.common.graph.ImmutableGraph;
+import com.google.common.graph.ImmutableGraph.Builder;
 import com.google.common.graph.MutableGraph;
 import com.google.common.graph.SuccessorsFunction;
 
@@ -106,6 +107,22 @@ public class Utils {
 			}
 		}
 		return mutableGraph;
+	}
+
+	public static <E> ImmutableGraph<E> asImmutableGraph(Graph<E> graph) {
+		if (graph instanceof ImmutableGraph) {
+			return (ImmutableGraph<E>) graph;
+		}
+		final Builder<E> builder = GraphBuilder.directed().immutable();
+		final Set<E> nodes = graph.nodes();
+		for (E node : nodes) {
+			builder.addNode(node);
+		}
+		final Set<EndpointPair<E>> edges = graph.edges();
+		for (EndpointPair<E> edge : edges) {
+			builder.putEdge(edge);
+		}
+		return builder.build();
 	}
 
 }

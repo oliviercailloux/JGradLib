@@ -56,7 +56,7 @@ class GitClonerTests {
 				.resolve("testrel cloned using https " + Utils.ISO_BASIC_UTC_FORMATTER.format(Instant.now()));
 		cloner.download(GitUri.fromGitUri(URI.create("https://github.com/oliviercailloux/testrel/")), httpsPath);
 		final File httpsGitDirAsFile = httpsPath.resolve(".git").toFile();
-		final GitHistory historyFromHttpsClone = GitUtils.getHistory(httpsGitDirAsFile);
+		final GitLocalHistory historyFromHttpsClone = GitUtils.getHistory(httpsGitDirAsFile);
 		/**
 		 * Compare only the root rather than everything because the list obtained from
 		 * GitHub contains only the master branch, thus, might be less than the full
@@ -85,7 +85,7 @@ class GitClonerTests {
 		 * This clone does not clone the clone’s origin branches that are not local to
 		 * the clone. Thus, their histories might differ.
 		 */
-		final GitHistory historyFromFileClone = GitUtils.getHistory(filePath.resolve(".git").toFile());
+		final GitLocalHistory historyFromFileClone = GitUtils.getHistory(filePath.resolve(".git").toFile());
 		final ImmutableList<ObjectId> commitsToMasterInFileClone = ImmutableList
 				.copyOf(Traverser.forGraph(historyFromFileClone.getRawGraph()).depthFirstPostOrder(masterId));
 		assertEquals(commitsToMaster, commitsToMasterInFileClone);
@@ -106,7 +106,7 @@ class GitClonerTests {
 
 		/** Should update and fetch the new commit. */
 		cloner.download(GitUri.fromGitUri(sshPath.toUri()), filePath);
-		final GitHistory enlargedHistory = GitUtils.getHistory(filePath.resolve(".git").toFile());
+		final GitLocalHistory enlargedHistory = GitUtils.getHistory(filePath.resolve(".git").toFile());
 		assertNotEquals(historyFromHttpsClone, enlargedHistory);
 		final ImmutableSet<ObjectId> expectedEnlargedCommits = ImmutableSet.<ObjectId>builder().addAll(commitsToMaster)
 				.add(newCommit).build();

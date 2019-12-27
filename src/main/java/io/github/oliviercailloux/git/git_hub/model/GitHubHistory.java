@@ -1,6 +1,5 @@
 package io.github.oliviercailloux.git.git_hub.model;
 
-import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Verify.verify;
 
@@ -30,7 +29,9 @@ import com.google.common.graph.GraphBuilder;
 import com.google.common.graph.Graphs;
 import com.google.common.graph.ImmutableGraph;
 
-import io.github.oliviercailloux.git.GitGenericHistory;
+import io.github.oliviercailloux.git.GitHistory;
+import io.github.oliviercailloux.git.GitRawHistoryDecorator;
+import io.github.oliviercailloux.utils.Utils;
 
 /**
  * Many null values among the pushedDate information sent by GitHub. Also,
@@ -65,24 +66,54 @@ import io.github.oliviercailloux.git.GitGenericHistory;
  * @author Olivier Cailloux
  *
  */
-public class GitHubHistory {
+public class GitHubHistory extends GitRawHistoryDecorator<ObjectId> implements GitHistory<ObjectId> {
 
-	public static GitHubHistory given(GitGenericHistory<ObjectId> history, Map<ObjectId, Instant> commitDates,
+	public static GitHubHistory given(Graph<ObjectId> history, Map<ObjectId, Instant> commitDates,
 			Map<ObjectId, Instant> pushedDates) {
-		return new GitHubHistory(history, commitDates, pushedDates);
+		final GitRawHistoryObjectId raw = new GitRawHistoryObjectId(history, commitDates);
+		return new GitHubHistory(raw, pushedDates);
 	}
 
-	private final GitGenericHistory<ObjectId> history;
-	private final ImmutableMap<ObjectId, Instant> commitDates;
+	private static class GitRawHistoryObjectId implements GitRawHistory<ObjectId> {
+
+		private final ImmutableGraph<ObjectId> graph;
+		private ImmutableMap<ObjectId, Instant> commitDates;
+
+		private GitRawHistoryObjectId(Graph<ObjectId> graph, Map<ObjectId, Instant> commitDates) {
+			this.graph = Utils.asImmutableGraph(graph);
+			this.commitDates = ImmutableMap.copyOf(commitDates);
+		}
+
+		@Override
+		public ImmutableGraph<ObjectId> getGraph() {
+			return graph;
+		}
+
+		@Override
+		public ImmutableGraph<ObjectId> getRawGraph() {
+			return graph;
+		}
+
+		@Override
+		public Instant getCommitDate(ObjectId objectId) {
+			return commitDates.get(objectId);
+		}
+
+		@Override
+		public ImmutableMap<ObjectId, Instant> getCommitDates() {
+			return commitDates;
+		}
+
+	}
+
+	private final GitRawHistoryObjectId raw;
 	private final ImmutableMap<ObjectId, Instant> pushedDates;
 	private ImmutableMap<ObjectId, Instant> finalPushedDates;
 	private ImmutableGraph<ObjectId> patchedKnowns;
 
-	private GitHubHistory(GitGenericHistory<ObjectId> history, Map<ObjectId, Instant> commitDates,
-			Map<ObjectId, Instant> pushedDates) {
-		this.history = checkNotNull(history);
-		this.commitDates = ImmutableMap.copyOf(commitDates);
-		checkArgument(commitDates.keySet().equals(history.getGraph().nodes()));
+	private GitHubHistory(GitRawHistoryObjectId raw, Map<ObjectId, Instant> pushedDates) {
+		super(raw);
+		this.raw = checkNotNull(raw);
 		this.pushedDates = ImmutableMap.copyOf(pushedDates);
 		checkAndCompletePushDates();
 	}
@@ -96,7 +127,7 @@ public class GitHubHistory {
 	 * pushedDate values.
 	 */
 	private void checkAndCompletePushDates() {
-		final ImmutableGraph<ObjectId> graph = history.getGraph();
+		final ImmutableGraph<ObjectId> graph = raw.getGraph();
 
 		final ImmutableMap.Builder<ObjectId, Instant> initialBuilder = ImmutableMap.builder();
 		initialBuilder.putAll(pushedDates);
@@ -195,14 +226,6 @@ public class GitHubHistory {
 		return ImmutableMap.copyOf(originatorOfDate);
 	}
 
-	public GitGenericHistory<ObjectId> getHistory() {
-		return history;
-	}
-
-	public ImmutableMap<ObjectId, Instant> getCommitDates() {
-		return commitDates;
-	}
-
 	public ImmutableMap<ObjectId, Instant> getPushedDates() {
 		return pushedDates;
 	}
@@ -234,7 +257,7 @@ public class GitHubHistory {
 	 * Among the observed pushed dates, and after possible patching.
 	 */
 	public ImmutableSet<ObjectId> getPushedBeforeCommitted() {
-		return pushedDates.keySet().stream().filter((o) -> finalPushedDates.get(o).isBefore(commitDates.get(o)))
+		return pushedDates.keySet().stream().filter((o) -> finalPushedDates.get(o).isBefore(getCommitDate(o)))
 				.collect(ImmutableSet.toImmutableSet());
 	}
 }
