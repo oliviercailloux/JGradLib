@@ -5,6 +5,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Verify.verify;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Optional;
@@ -34,17 +35,32 @@ public class PushedDatesAnswer {
 	private static final Logger LOGGER = LoggerFactory.getLogger(PushedDatesAnswer.class);
 
 	public static PushedDatesAnswer parseInitialAnswer(JsonObject pushedDatesRepositoryJson) {
-		final JsonObject refs = pushedDatesRepositoryJson.getJsonObject("refs");
-		LOGGER.debug("Refs: {}.", PrintableJsonObjectFactory.wrapObject(refs));
-		final JsonArray refNodes = refs.getJsonArray("nodes");
-		final ImmutableList.Builder<RefNode> refNodesBuilder = ImmutableList.builder();
-		for (JsonValue refNodeValue : refNodes) {
-			final JsonObject node = refNodeValue.asJsonObject();
-			final RefNode refNode = RefNode.parse(node);
-			refNodesBuilder.add(refNode);
+		final ImmutableList<HeadNode> headNodesList;
+		{
+			final JsonObject heads = pushedDatesRepositoryJson.getJsonObject("heads");
+			LOGGER.debug("Refs: {}.", PrintableJsonObjectFactory.wrapObject(heads));
+			checkArgument(!heads.getJsonObject("pageInfo").getBoolean("hasNextPage"));
+			final JsonArray headNodes = heads.getJsonArray("nodes");
+			final ImmutableList.Builder<HeadNode> headNodesBuilder = ImmutableList.builder();
+			for (JsonValue headNodeValue : headNodes) {
+				final JsonObject node = headNodeValue.asJsonObject();
+				final HeadNode headNode = HeadNode.parse(node);
+				headNodesBuilder.add(headNode);
+			}
+			headNodesList = headNodesBuilder.build();
 		}
-		final ImmutableList<RefNode> refNodesList = refNodesBuilder.build();
-		return new PushedDatesAnswer(refNodesList);
+
+		final JsonObject tags = pushedDatesRepositoryJson.getJsonObject("tags");
+		checkArgument(!tags.getJsonObject("pageInfo").getBoolean("hasNextPage"));
+		final JsonArray tagNodes = tags.getJsonArray("nodes");
+		final ImmutableList.Builder<TagNode> tagNodesBuilder = ImmutableList.builder();
+		for (JsonValue tagNodeValue : tagNodes) {
+			final JsonObject node = tagNodeValue.asJsonObject();
+			final TagNode tagNode = TagNode.parse(node);
+			tagNodesBuilder.add(tagNode);
+		}
+		final ImmutableList<TagNode> tagNodesList = tagNodesBuilder.build();
+		return new PushedDatesAnswer(headNodesList, tagNodesList);
 	}
 
 	public static class CommitNode {
@@ -63,6 +79,8 @@ public class PushedDatesAnswer {
 				thoseParentsBuilder.add(ObjectId.fromString(parentOid));
 			}
 			final ImmutableSet<ObjectId> parents = thoseParentsBuilder.build();
+			final Instant authoredDate = Instant.parse(commitJsonObject.getString("authoredDate"));
+			final Instant committedDate = Instant.parse(commitJsonObject.getString("committedDate"));
 			final JsonValue pushedDateJson = commitJsonObject.get("pushedDate");
 			final Optional<Instant> pushedDate;
 			if (!pushedDateJson.equals(JsonValue.NULL)) {
@@ -71,17 +89,23 @@ public class PushedDatesAnswer {
 				pushedDate = Optional.empty();
 			}
 
-			return new CommitNode(oid, parents, pushedDate);
+			return new CommitNode(oid, parents, authoredDate, committedDate, pushedDate);
 		}
 
 		private final ObjectId oid;
 		private final ImmutableSet<ObjectId> parents;
+		private Instant authoredDate;
+		private Instant committedDate;
 		private final Optional<Instant> pushedDate;
 
-		private CommitNode(ObjectId oid, ImmutableSet<ObjectId> parents, Optional<Instant> pushedDate) {
+		private CommitNode(ObjectId oid, ImmutableSet<ObjectId> parents, Instant authoredDate, Instant committedDate,
+				Optional<Instant> pushedDate) {
 			this.oid = checkNotNull(oid);
 			this.parents = checkNotNull(parents);
+			this.authoredDate = checkNotNull(authoredDate);
+			this.committedDate = checkNotNull(committedDate);
 			this.pushedDate = checkNotNull(pushedDate);
+			checkArgument(!authoredDate.isAfter(committedDate));
 		}
 
 		public ObjectId getOid() {
@@ -90,6 +114,14 @@ public class PushedDatesAnswer {
 
 		public ImmutableSet<ObjectId> getParents() {
 			return parents;
+		}
+
+		public Instant getAuthoredDate() {
+			return authoredDate;
+		}
+
+		public Instant getCommittedDate() {
+			return committedDate;
 		}
 
 		public Optional<Instant> getPushedDate() {
@@ -177,8 +209,11 @@ public class PushedDatesAnswer {
 		}
 	}
 
-	public static class RefNode {
-		public static RefNode parse(JsonObject node) {
+	public static class CommitWithHistoryNode {
+	}
+
+	public static class HeadNode {
+		public static HeadNode parse(JsonObject node) {
 			final String name = node.getString("name");
 			final String prefix = node.getString("prefix");
 			checkArgument(prefix.equals("refs/heads/"));
@@ -204,7 +239,7 @@ public class PushedDatesAnswer {
 					.format("history total count: %s, commit nodes: %s", historyTotalCount, commitNodesList.size()));
 			checkArgument((commitNodesList.size() == historyTotalCount) == !hasNextPage, String
 					.format("history total count: %s, commit nodes: %s", historyTotalCount, commitNodesList.size()));
-			return new RefNode(name, prefix, refOid, historyTotalCount, hasNextPage, endCursor, commitNodesList);
+			return new HeadNode(name, prefix, refOid, historyTotalCount, hasNextPage, endCursor, commitNodesList);
 		}
 
 		private final String name;
@@ -215,7 +250,7 @@ public class PushedDatesAnswer {
 		private final String endCursor;
 		private final CommitNodes commitNodes;
 
-		private RefNode(String name, String prefix, ObjectId refOid, int historyTotalCount, boolean hasNextPage,
+		private HeadNode(String name, String prefix, ObjectId refOid, int historyTotalCount, boolean hasNextPage,
 				String endCursor, Iterable<CommitNode> commitNodes) {
 			this.name = checkNotNull(name);
 			this.prefix = checkNotNull(prefix);
@@ -261,7 +296,36 @@ public class PushedDatesAnswer {
 		}
 	}
 
-	private final ImmutableList<RefNode> refNodes;
+	public static class TagNode {
+		public static TagNode parse(JsonObject node) {
+			final String name = node.getString("name");
+			final String prefix = node.getString("prefix");
+			checkArgument(prefix.equals("refs/tags/"));
+			final JsonObject target = node.getJsonObject("target");
+			final ObjectId refOid = ObjectId.fromString(target.getString("oid"));
+			LOGGER.debug("Tag ref oid: {}.", refOid);
+			return new TagNode(name, refOid);
+		}
+
+		private final String name;
+		private final ObjectId oid;
+
+		private TagNode(String name, ObjectId oid) {
+			this.name = checkNotNull(name);
+			this.oid = checkNotNull(oid);
+		}
+
+		public String getName() {
+			return name;
+		}
+
+		public ObjectId getOid() {
+			return oid;
+		}
+	}
+
+	private final ImmutableList<HeadNode> headNodes;
+	private final ImmutableList<TagNode> tagNodes;
 	private final ImmutableGraph<ObjectId> parentsGraph;
 	/**
 	 * The oids whose parents are known, thus, a subset of those seen in the
@@ -270,11 +334,12 @@ public class PushedDatesAnswer {
 	 */
 	private final ImmutableSet<ObjectId> knownOids;
 
-	private PushedDatesAnswer(ImmutableList<RefNode> refNodes) {
-		this.refNodes = checkNotNull(refNodes);
-		knownOids = getRefNodes().stream().flatMap((r) -> r.getCommitNodes().getKnownOids().stream())
+	private PushedDatesAnswer(List<HeadNode> headNodes, List<TagNode> tagNodes) {
+		this.headNodes = ImmutableList.copyOf(headNodes);
+		this.tagNodes = ImmutableList.copyOf(tagNodes);
+		knownOids = getHeadNodes().stream().flatMap((r) -> r.getCommitNodes().getKnownOids().stream())
 				.collect(ImmutableSet.toImmutableSet());
-		final ImmutableSet<Entry<ObjectId, CommitNode>> noDupl = getRefNodes().stream()
+		final ImmutableSet<Entry<ObjectId, CommitNode>> noDupl = getHeadNodes().stream()
 				.flatMap((r) -> r.getCommitNodes().asBiMap().entrySet().stream())
 				.collect(ImmutableSet.toImmutableSet());
 		final ImmutableBiMap<ObjectId, CommitNode> asBiMap = noDupl.stream()
@@ -285,8 +350,8 @@ public class PushedDatesAnswer {
 		}, asBiMap.keySet()));
 	}
 
-	public ImmutableList<RefNode> getRefNodes() {
-		return refNodes;
+	public ImmutableList<HeadNode> getHeadNodes() {
+		return headNodes;
 	}
 
 	public ImmutableGraph<ObjectId> getParentsGraph() {
@@ -295,11 +360,13 @@ public class PushedDatesAnswer {
 	}
 
 	public ImmutableSet<ObjectId> getUnknownOids() {
-		return Sets.difference(parentsGraph.nodes(), knownOids).immutableCopy();
+		final ImmutableSet<ObjectId> tagOids = tagNodes.stream().map(TagNode::getOid)
+				.collect(ImmutableSet.toImmutableSet());
+		return Sets.difference(Sets.union(parentsGraph.nodes(), tagOids), knownOids).immutableCopy();
 	}
 
 	public ImmutableList<CommitNode> getCommitNodes() {
-		return refNodes.stream().flatMap((r) -> r.getCommitNodes().asSet().stream())
+		return headNodes.stream().flatMap((r) -> r.getCommitNodes().asSet().stream())
 				.collect(ImmutableList.toImmutableList());
 	}
 }

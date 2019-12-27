@@ -1,0 +1,21 @@
+fragment commitHistory on Commit {
+            history {
+              totalCount
+              pageInfo {
+                hasNextPage
+                endCursor
+              }
+              nodes {
+                oid
+                parents(first: 100) {
+                  totalCount
+                  nodes {
+                    oid
+                  }
+                }
+                authoredDate
+                committedDate
+                pushedDate
+              }
+            }
+}

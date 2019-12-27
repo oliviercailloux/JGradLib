@@ -148,8 +148,8 @@ public class GitHubFetcherQL implements AutoCloseable {
 					.add("repositoryOwner", coordinates.getOwner());
 			LOGGER.info("Initial request to {}.", coordinates);
 			final JsonObject varsJson = builder.build();
-			final JsonObject pushedDatesRepositoryJson = query("pushedDates", ImmutableList.of(), varsJson)
-					.getJsonObject("repository");
+			final JsonObject pushedDatesRepositoryJson = query("pushedDates", ImmutableList.of("commitHistory"),
+					varsJson).getJsonObject("repository");
 			initialAnswer = PushedDatesAnswer.parseInitialAnswer(pushedDatesRepositoryJson);
 		}
 		final ImmutableList.Builder<CommitNode> commitsBuilder = ImmutableList.builder();
@@ -181,10 +181,12 @@ public class GitHubFetcherQL implements AutoCloseable {
 
 		final GitGenericHistory<ObjectId> history = GitGenericHistory.from((o) -> oidToNode.get(o).getParents(),
 				oidToNode.keySet());
+		final ImmutableMap<ObjectId, Instant> commitDates = oidToNode.values().stream()
+				.collect(ImmutableMap.toImmutableMap((c) -> c.getOid(), (c) -> c.getCommittedDate()));
 		final ImmutableMap<ObjectId, Instant> pushedDates = oidToNode.values().stream()
 				.filter((c) -> c.getPushedDate().isPresent())
 				.collect(ImmutableMap.toImmutableMap((c) -> c.getOid(), (c) -> c.getPushedDate().get()));
-		return GitHubHistory.given(history, pushedDates);
+		return GitHubHistory.given(history, commitDates, pushedDates);
 	}
 
 	private JsonObject query(String queryName, List<String> fragmentNames, JsonObject variables) {

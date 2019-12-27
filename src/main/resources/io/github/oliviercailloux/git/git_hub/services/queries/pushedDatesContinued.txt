@@ -17,6 +17,11 @@ query pushedDatesByOid($repositoryOwner: String!, $repositoryName: String!, $oid
           }
         }
       }
+      ... on Tag {
+        target {
+          oid
+        }
+      }
     }
   }
 }

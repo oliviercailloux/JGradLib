@@ -1,4 +1,4 @@
-query pushedDates($repositoryOwner: String!, $repositoryName: String!, $after: String) {
+query pushedDates($repositoryOwner: String!, $repositoryName: String!) {
   repository(owner: $repositoryOwner, name: $repositoryName) {
     url
     sshUrl
@@ -9,33 +9,38 @@ query pushedDates($repositoryOwner: String!, $repositoryName: String!, $after: S
       login
       url
     }
-    refs(refPrefix: "refs/heads/", first: 100) {
+    heads: refs(refPrefix: "refs/heads/", first: 100) {
+      pageInfo {
+        hasNextPage
+      }
       nodes {
         name
         prefix
         target {
           oid
           ... on Commit {
-            history(after: $after) {
-              totalCount
-              pageInfo {
-                hasNextPage
-                endCursor
-              }
-              nodes {
-                oid
-                parents(first: 100) {
-                  totalCount
-                  nodes {
-                    oid
-                  }
-                }
-                authoredDate
-                committedDate
-                pushedDate
+            ... commitHistory
+          }
+        }
+      }
+    }
+    tags: refs(refPrefix: "refs/tags/", first: 100) {
+      pageInfo {
+        hasNextPage
+      }
+      nodes {
+        name
+        prefix
+        target {
+          oid
+          ... on Tag {
+            target {
+              oid
+              ... on Commit {
+                ... commitHistory
               }
             }
-          }
+	      }
         }
       }
     }

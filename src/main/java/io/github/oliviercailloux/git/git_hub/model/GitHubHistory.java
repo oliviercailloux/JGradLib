@@ -1,65 +1,169 @@
 package io.github.oliviercailloux.git.git_hub.model;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Verify.verify;
+
 import java.time.Instant;
+import java.util.ArrayDeque;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Queue;
+import java.util.Set;
+import java.util.function.Function;
 
 import org.eclipse.jgit.lib.ObjectId;
 
+import com.google.common.collect.HashMultiset;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSetMultimap;
 import com.google.common.collect.ImmutableSortedMap;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Multimaps;
+import com.google.common.collect.Multiset;
 import com.google.common.collect.Sets;
-import com.google.common.collect.Streams;
+import com.google.common.graph.Graph;
+import com.google.common.graph.GraphBuilder;
+import com.google.common.graph.Graphs;
 import com.google.common.graph.ImmutableGraph;
-import com.google.common.graph.Traverser;
 
 import io.github.oliviercailloux.git.GitGenericHistory;
 
 public class GitHubHistory {
 
-	public static GitHubHistory given(GitGenericHistory<ObjectId> history, Map<ObjectId, Instant> pushedDates) {
-		return new GitHubHistory(history, pushedDates);
-	}
-
-	private GitHubHistory(GitGenericHistory<ObjectId> history, Map<ObjectId, Instant> pushedDates) {
-		this.history = history;
-		this.pushedDates = ImmutableMap.copyOf(pushedDates);
+	public static GitHubHistory given(GitGenericHistory<ObjectId> history, Map<ObjectId, Instant> commitDates,
+			Map<ObjectId, Instant> pushedDates) {
+		return new GitHubHistory(history, commitDates, pushedDates);
 	}
 
 	private final GitGenericHistory<ObjectId> history;
+	private final ImmutableMap<ObjectId, Instant> commitDates;
 	private final ImmutableMap<ObjectId, Instant> pushedDates;
+	private ImmutableMap<ObjectId, Instant> finalPushedDates;
+	private ImmutableGraph<ObjectId> patchedKnowns;
+
+	private GitHubHistory(GitGenericHistory<ObjectId> history, Map<ObjectId, Instant> commitDates,
+			Map<ObjectId, Instant> pushedDates) {
+		this.history = checkNotNull(history);
+		this.commitDates = ImmutableMap.copyOf(commitDates);
+		checkArgument(commitDates.keySet().equals(history.getGraph().nodes()));
+		this.pushedDates = ImmutableMap.copyOf(pushedDates);
+		checkAndCompletePushDates();
+	}
+
+	private void checkAndCompletePushDates() {
+		final ImmutableGraph<ObjectId> graph = history.getGraph();
+
+		final ImmutableMap.Builder<ObjectId, Instant> initialBuilder = ImmutableMap.builder();
+		initialBuilder.putAll(pushedDates);
+		final Set<ObjectId> nodes = graph.nodes();
+		final ImmutableSet<ObjectId> unobservedPushedDates = Sets.difference(nodes, pushedDates.keySet())
+				.immutableCopy();
+		for (ObjectId unobserved : unobservedPushedDates) {
+			initialBuilder.put(unobserved, Instant.MAX);
+		}
+		final ImmutableMap<ObjectId, Instant> initial = initialBuilder.build();
+		verify(initial.keySet().equals(nodes));
+
+		final Comparator<Instant> comparator = Comparator.naturalOrder();
+
+		final ImmutableMap<ObjectId, ObjectId> patch = getLoweringPatchForNonIncreasing(graph, initial, comparator);
+
+		final ImmutableMap<ObjectId, Instant> modifiedPushedDates = nodes.stream().collect(ImmutableMap.toImmutableMap(
+				Function.identity(), (n) -> pushedDates.containsKey(n) ? pushedDates.get(patch.get(n)) : Instant.MIN));
+		final ImmutableMap<ObjectId, ObjectId> patchedKnownsMap = ImmutableMap
+				.copyOf(Maps.filterKeys(patch, (o) -> pushedDates.containsKey(o) && !patch.get(o).equals(o)));
+		final ImmutableSet<Entry<ObjectId, ObjectId>> entrySet = patchedKnownsMap.entrySet();
+		final ImmutableGraph.Builder<ObjectId> graphBuilder = GraphBuilder.directed().immutable();
+		for (Entry<ObjectId, ObjectId> patchEntry : entrySet) {
+			graphBuilder.putEdge(patchEntry.getKey(), patchEntry.getValue());
+		}
+		patchedKnowns = graphBuilder.build();
+
+		final ImmutableMap<ObjectId, ObjectId> unknownsPatch = getLoweringPatchForNonIncreasing(Graphs.transpose(graph),
+				modifiedPushedDates, comparator.reversed());
+		verify(unknownsPatch.keySet().stream().filter((o) -> !unknownsPatch.get(o).equals(o))
+				.allMatch((o) -> !pushedDates.containsKey(o)));
+		finalPushedDates = nodes.stream().collect(
+				ImmutableMap.toImmutableMap(Function.identity(), (n) -> modifiedPushedDates.get(unknownsPatch.get(n))));
+	}
+
+	/**
+	 * Starting with nodes with no predecessor, computes the change to be brought to
+	 * the given initial map so that children have weakly “smaller” values (meaning,
+	 * not “greater” values) that their parents, proposing only changes that “lower”
+	 * the initial values.
+	 *
+	 * Words such as “greater” or “smallest” are understood as defined by the given
+	 * comparator.
+	 *
+	 * @return for a given key oid, indicates as value which is the oid that should
+	 *         give its date, if the date of the key oid is to be changed (is itself
+	 *         iff not to be changed). For each key oid, the value is the ancestor
+	 *         (including itself) whose date value is “smallest”.
+	 */
+	private static ImmutableMap<ObjectId, ObjectId> getLoweringPatchForNonIncreasing(Graph<ObjectId> graph,
+			Map<ObjectId, Instant> initial, Comparator<Instant> comparator) {
+		final Map<ObjectId, ObjectId> originatorOfDate = new LinkedHashMap<>();
+		final Set<ObjectId> nodes = graph.nodes();
+		final Map<ObjectId, Instant> modifiedPushedDates = new LinkedHashMap<>(initial);
+
+		final Queue<ObjectId> visitNext = new ArrayDeque<>();
+		final Multiset<ObjectId> remainingVisits = HashMultiset.create();
+		for (ObjectId node : nodes) {
+			final int nbIncoming = graph.predecessors(node).size();
+			remainingVisits.add(node, nbIncoming);
+			if (nbIncoming == 0) {
+				visitNext.add(node);
+				originatorOfDate.put(node, node);
+			}
+		}
+		verify(!visitNext.isEmpty());
+
+		while (!visitNext.isEmpty()) {
+			final ObjectId predecessor = visitNext.remove();
+			verify(originatorOfDate.containsKey(predecessor));
+			final Instant predecessorDate = modifiedPushedDates.get(predecessor);
+			final Set<ObjectId> successors = graph.successors(predecessor);
+			for (ObjectId successor : successors) {
+				final Instant successorDate = modifiedPushedDates.get(successor);
+				/**
+				 * Ensures the value associated to this successor is the “smallest” one among
+				 * all ancestors of this successor seen so far and the original value of this
+				 * successor.
+				 */
+				final boolean change = comparator.compare(predecessorDate, successorDate) < 0;
+				if (change) {
+					modifiedPushedDates.put(successor, predecessorDate);
+					originatorOfDate.put(successor, originatorOfDate.get(predecessor));
+				}
+
+				final int before = remainingVisits.remove(successor, 1);
+				if (before == 1) {
+					visitNext.add(successor);
+					if (!originatorOfDate.containsKey(successor)) {
+						originatorOfDate.put(successor, successor);
+					}
+				}
+			}
+		}
+		verify(originatorOfDate.keySet().equals(nodes));
+		return ImmutableMap.copyOf(originatorOfDate);
+	}
 
 	public GitGenericHistory<ObjectId> getHistory() {
 		return history;
 	}
 
-	public ImmutableMap<ObjectId, Instant> getPushedDates() {
-		return pushedDates;
+	public ImmutableMap<ObjectId, Instant> getCommitDates() {
+		return commitDates;
 	}
 
-	public ImmutableMap<ObjectId, Instant> getPushedDatesWithTentativeDeductions() {
-		final ImmutableMap.Builder<ObjectId, Instant> deducedPushedDates = ImmutableMap.builder();
-		deducedPushedDates.putAll(pushedDates);
-		for (ObjectId oid : Sets.difference(history.getGraph().nodes(), pushedDates.keySet())) {
-			final ImmutableGraph<ObjectId> graph = history.getGraph();
-			/**
-			 * an object is necessarily pushed at a time in [min, max], with min = the max
-			 * date of push time of its parents, and max = the min date of push time of its
-			 * children.
-			 */
-//			final Iterable<ObjectId> thoseChildren = Traverser.forGraph(graph::predecessors).breadthFirst(oid);
-//			final Instant minPushedDateAmongThoseChildren = Streams.stream(thoseChildren)
-//					.map((o) -> pushedDates.getOrDefault(o, Instant.MAX)).min(Instant::compareTo).orElse(Instant.MAX);
-//			deducedPushedDates.put(oid, minPushedDateAmongThoseChildren);
-			final Iterable<ObjectId> thoseParents = Traverser.forGraph(graph).breadthFirst(oid);
-			final Instant maxPushedDateAmongThoseParents = Streams.stream(thoseParents)
-					.map((o) -> pushedDates.getOrDefault(o, Instant.MIN)).max(Instant::compareTo).orElse(Instant.MIN);
-			deducedPushedDates.put(oid, maxPushedDateAmongThoseParents);
-		}
-
-		return deducedPushedDates.build();
+	public ImmutableMap<ObjectId, Instant> getPushedDates() {
+		return pushedDates;
 	}
 
 	public ImmutableSortedMap<Instant, ImmutableSet<ObjectId>> getRefsBySortedPushedDates() {
@@ -71,5 +175,21 @@ public class GitHubHistory {
 
 	public ImmutableSetMultimap<Instant, ObjectId> getRefsByPushedDates() {
 		return pushedDates.asMultimap().inverse();
+	}
+
+	public ImmutableMap<ObjectId, Instant> getCorrectedAndCompletedPushedDates() {
+		return finalPushedDates;
+	}
+
+	public ImmutableGraph<ObjectId> getPatchedKnowns() {
+		return patchedKnowns;
+	}
+
+	/**
+	 * Among the observed pushed dates, and after correction if have been patched.
+	 */
+	public ImmutableSet<ObjectId> getPushedBeforeCommitted() {
+		return pushedDates.keySet().stream().filter((o) -> finalPushedDates.get(o).isBefore(commitDates.get(o)))
+				.collect(ImmutableSet.toImmutableSet());
 	}
 }
