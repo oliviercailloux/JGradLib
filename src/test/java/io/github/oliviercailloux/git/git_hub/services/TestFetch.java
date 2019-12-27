@@ -264,19 +264,83 @@ public class TestFetch {
 		}
 	}
 
+	@Test
+	public void testGitHubHistoryJBiblio() throws Exception {
+		final RepositoryCoordinates coord = RepositoryCoordinates.from("oliviercailloux", "J-Biblio");
+		try (GitHubFetcherQL fetcher = GitHubFetcherQL.using(GitHubToken.getRealInstance())) {
+			final GitHubHistory gHH = fetcher.getGitHubHistory(coord);
+			final ImmutableMap<ObjectId, Instant> pushedDates = gHH.getPushedDates();
+			final ImmutableMap<ObjectId, Instant> compPushedDates = gHH.getCorrectedAndCompletedPushedDates();
+			final GitGenericHistory<ObjectId> history = gHH.getHistory();
+
+			assertEquals(ImmutableMap.of(), pushedDates);
+			assertEquals(ImmutableSet.of(Instant.MIN), ImmutableSet.copyOf(compPushedDates.values()));
+			assertEquals(compPushedDates.keySet(), history.getGraph().nodes());
+		}
+	}
+
+	@SuppressWarnings("unlikely-arg-type")
+	@Test
+	public void testGitHubHistoryJing() throws Exception {
+		final RepositoryCoordinates coordinates = RepositoryCoordinates.from("oliviercailloux", "jing-trang");
+		try (GitHubFetcherQL fetcher = GitHubFetcherQL.using(GitHubToken.getRealInstance())) {
+			final GitHubHistory gHH = fetcher.getGitHubHistory(coordinates);
+
+			final ComplexClient client = ComplexClient.aboutAndUsing(coordinates, Path.of("/tmp/"));
+			final boolean retrieved = client.tryRetrieve();
+			checkState(retrieved);
+			final GitHistory historyFromWorkTree = client.getWholeHistory();
+
+			/** This node is only reached through a tag, currently. */
+			assertTrue(historyFromWorkTree.getGraph().nodes()
+					.contains(ObjectId.fromString("0136b06d5dbcc5af0c7d4cb236afb720b2faea24")));
+			assertTrue(gHH.getHistory().getGraph().nodes()
+					.contains(ObjectId.fromString("0136b06d5dbcc5af0c7d4cb236afb720b2faea24")));
+		}
+	}
+
+	@Test
+	void testGitHubHistorySampleRestClient() throws Exception {
+		final RepositoryCoordinates coordinates = RepositoryCoordinates.from("oliviercailloux", "sample-rest-client");
+		try (GitHubFetcherQL fetcher = GitHubFetcherQL.using(GitHubToken.getRealInstance())) {
+			LOGGER.info("Proceeding with {}.", coordinates);
+			final ComplexClient client = ComplexClient.aboutAndUsing(coordinates, Path.of("/tmp/"));
+			final boolean retrieved = client.tryRetrieve();
+			checkState(retrieved);
+			final GitHistory historyFromWorkTree = client.getWholeHistory();
+
+			final GitHubHistory gHH = fetcher.getGitHubHistory(coordinates);
+			final ImmutableMap<ObjectId, Instant> pushedDatesWithDeductions = gHH.getCorrectedAndCompletedPushedDates();
+
+			final GitGenericHistory<ObjectId> historyFromGitHub = gHH.getHistory();
+			final ImmutableGraph<RevCommit> g1 = historyFromWorkTree.getGraph();
+			final ImmutableGraph<ObjectId> g2 = historyFromGitHub.getGraph();
+
+			checkState(historyFromWorkTree.getRoots().equals(historyFromGitHub.getRoots()));
+			checkState(g1.equals(g2), "Nb: " + g1.edges().size() + ", " + g2.edges().size() + "; Diff: "
+					+ Sets.symmetricDifference(g1.edges(), g2.edges()) + ".");
+			checkState(historyFromGitHub.getGraph().nodes().equals(pushedDatesWithDeductions.keySet()));
+
+			checkState(gHH.getCommitDates().equals(historyFromWorkTree.getCommitDates()));
+
+			LOGGER.warn("{}", gHH.getPatchedKnowns());
+
+			final ImmutableGraph<Object> expectedPatch = GraphBuilder.directed().immutable()
+					.putEdge(ObjectId.fromString("5d15007fde7cb7b62dc14a601cc18f5174174ada"),
+							ObjectId.fromString("8d3a2ae555b0c82917db2ede5a5fd3d1cbe6f903"))
+					.build();
+			assertEquals(expectedPatch, gHH.getPatchedKnowns());
+			assertTrue(gHH.getPushedBeforeCommitted().isEmpty());
+		}
+	}
+
 	public static void main(String[] args) throws Exception {
 		final ImmutableList<RepositoryCoordinates> allCoordinates;
-//		try (GitHubFetcherV3 fetcher = GitHubFetcherV3.using(GitHubToken.getRealInstance())) {
-//			allCoordinates = fetcher.getUserRepositories("oliviercailloux");
-//		}
-//		allCoordinates = ImmutableList.of(RepositoryCoordinates.from("oliviercailloux", "J-Biblio"));
+		try (GitHubFetcherV3 fetcher = GitHubFetcherV3.using(GitHubToken.getRealInstance())) {
+			allCoordinates = fetcher.getUserRepositories("oliviercailloux");
+		}
 //		allCoordinates = ImmutableList.of(RepositoryCoordinates.from("oliviercailloux", "Collaborative-exams"));
 //		allCoordinates = ImmutableList.of(RepositoryCoordinates.from("oliviercailloux", "Collaborative-exams-2016"));
-		/** TODO jing has pbl diff; I suppose possible because rewrite of history. */
-		allCoordinates = ImmutableList.of(RepositoryCoordinates.from("oliviercailloux", "jing-trang"));
-		/**
-		 * TODO change refPrefix to /refs/ to get also tags.
-		 */
 
 		try (GitHubFetcherQL fetcher = GitHubFetcherQL.using(GitHubToken.getRealInstance())) {
 			for (RepositoryCoordinates coordinates : allCoordinates) {

@@ -210,17 +210,10 @@ public class PushedDatesAnswer {
 	}
 
 	public static class CommitWithHistoryNode {
-	}
-
-	public static class HeadNode {
-		public static HeadNode parse(JsonObject node) {
-			final String name = node.getString("name");
-			final String prefix = node.getString("prefix");
-			checkArgument(prefix.equals("refs/heads/"));
-			final JsonObject target = node.getJsonObject("target");
-			final ObjectId refOid = ObjectId.fromString(target.getString("oid"));
-			LOGGER.debug("Ref oid: {}.", refOid);
-			final JsonObject jsonHistory = target.getJsonObject("history");
+		public static CommitWithHistoryNode parse(JsonObject node) {
+			final ObjectId oid = ObjectId.fromString(node.getString("oid"));
+			LOGGER.debug("Commit oid: {}.", oid);
+			final JsonObject jsonHistory = node.getJsonObject("history");
 			final int historyTotalCount = jsonHistory.getInt("totalCount");
 			final JsonObject pageInfo = jsonHistory.getJsonObject("pageInfo");
 			final boolean hasNextPage = pageInfo.getBoolean("hasNextPage");
@@ -234,27 +227,23 @@ public class PushedDatesAnswer {
 			}
 			final ImmutableList<CommitNode> commitNodesList = commitsBuilder.build();
 			checkArgument(!commitNodesList.isEmpty());
-			checkArgument(commitNodesList.get(0).getOid().equals(refOid));
+			checkArgument(commitNodesList.get(0).getOid().equals(oid));
 			checkArgument(commitNodesList.size() <= historyTotalCount, String
 					.format("history total count: %s, commit nodes: %s", historyTotalCount, commitNodesList.size()));
 			checkArgument((commitNodesList.size() == historyTotalCount) == !hasNextPage, String
 					.format("history total count: %s, commit nodes: %s", historyTotalCount, commitNodesList.size()));
-			return new HeadNode(name, prefix, refOid, historyTotalCount, hasNextPage, endCursor, commitNodesList);
+			return new CommitWithHistoryNode(oid, historyTotalCount, hasNextPage, endCursor, commitNodesList);
 		}
 
-		private final String name;
-		private final String prefix;
-		private final ObjectId refOid;
+		private final ObjectId oid;
 		private final int historyTotalCount;
 		private final boolean hasNextPage;
 		private final String endCursor;
 		private final CommitNodes commitNodes;
 
-		private HeadNode(String name, String prefix, ObjectId refOid, int historyTotalCount, boolean hasNextPage,
-				String endCursor, Iterable<CommitNode> commitNodes) {
-			this.name = checkNotNull(name);
-			this.prefix = checkNotNull(prefix);
-			this.refOid = checkNotNull(refOid);
+		private CommitWithHistoryNode(ObjectId oid, int historyTotalCount, boolean hasNextPage, String endCursor,
+				Iterable<CommitNode> commitNodes) {
+			this.oid = checkNotNull(oid);
 			this.historyTotalCount = checkNotNull(historyTotalCount);
 			this.hasNextPage = checkNotNull(hasNextPage);
 			this.endCursor = checkNotNull(endCursor);
@@ -262,16 +251,8 @@ public class PushedDatesAnswer {
 			verify(historyTotalCount >= this.commitNodes.asSet().size());
 		}
 
-		public String getName() {
-			return name;
-		}
-
-		public String getPrefix() {
-			return prefix;
-		}
-
-		public ObjectId getRefOid() {
-			return refOid;
+		public ObjectId getOid() {
+			return oid;
 		}
 
 		/**
@@ -296,31 +277,85 @@ public class PushedDatesAnswer {
 		}
 	}
 
-	public static class TagNode {
-		public static TagNode parse(JsonObject node) {
+	public static class HeadNode {
+		public static HeadNode parse(JsonObject node) {
 			final String name = node.getString("name");
 			final String prefix = node.getString("prefix");
-			checkArgument(prefix.equals("refs/tags/"));
+			checkArgument(prefix.equals("refs/heads/"));
 			final JsonObject target = node.getJsonObject("target");
-			final ObjectId refOid = ObjectId.fromString(target.getString("oid"));
-			LOGGER.debug("Tag ref oid: {}.", refOid);
-			return new TagNode(name, refOid);
+			final CommitWithHistoryNode commitWithHistory = CommitWithHistoryNode.parse(target);
+			return new HeadNode(name, prefix, commitWithHistory);
 		}
 
 		private final String name;
-		private final ObjectId oid;
+		private final String prefix;
+		private final CommitWithHistoryNode commit;
 
-		private TagNode(String name, ObjectId oid) {
+		private HeadNode(String name, String prefix, CommitWithHistoryNode commit) {
 			this.name = checkNotNull(name);
-			this.oid = checkNotNull(oid);
+			this.prefix = checkNotNull(prefix);
+			this.commit = checkNotNull(commit);
 		}
 
 		public String getName() {
 			return name;
 		}
 
-		public ObjectId getOid() {
-			return oid;
+		public String getPrefix() {
+			return prefix;
+		}
+
+		public CommitWithHistoryNode getCommitWithHistory() {
+			return commit;
+		}
+	}
+
+	public static class TagNode {
+		public static TagNode parse(JsonObject node) {
+			final String name = node.getString("name");
+			final String prefix = node.getString("prefix");
+			checkArgument(prefix.equals("refs/tags/"));
+			final JsonObject firstTarget = node.getJsonObject("target");
+			final String targetType = firstTarget.getString("__typename");
+			final Optional<ObjectId> tagOid;
+			final JsonObject commitTarget;
+			switch (targetType) {
+			case "Tag":
+				tagOid = Optional.of(ObjectId.fromString(firstTarget.getString("oid")));
+				commitTarget = firstTarget.getJsonObject("target");
+				break;
+			case "Commit":
+				tagOid = Optional.empty();
+				commitTarget = firstTarget;
+				break;
+			default:
+				throw new IllegalStateException();
+			}
+			final CommitWithHistoryNode commitWithHistory = CommitWithHistoryNode.parse(commitTarget);
+			LOGGER.debug("Tag ref oid: {}.", tagOid);
+			return new TagNode(name, tagOid, commitWithHistory);
+		}
+
+		private final String name;
+		private final Optional<ObjectId> tagOid;
+		private final CommitWithHistoryNode commit;
+
+		private TagNode(String name, Optional<ObjectId> tagOid, CommitWithHistoryNode commit) {
+			this.name = checkNotNull(name);
+			this.tagOid = checkNotNull(tagOid);
+			this.commit = checkNotNull(commit);
+		}
+
+		public String getName() {
+			return name;
+		}
+
+		public Optional<ObjectId> getTagOid() {
+			return tagOid;
+		}
+
+		public CommitWithHistoryNode getCommitWithHistory() {
+			return commit;
 		}
 	}
 
@@ -337,10 +372,11 @@ public class PushedDatesAnswer {
 	private PushedDatesAnswer(List<HeadNode> headNodes, List<TagNode> tagNodes) {
 		this.headNodes = ImmutableList.copyOf(headNodes);
 		this.tagNodes = ImmutableList.copyOf(tagNodes);
-		knownOids = getHeadNodes().stream().flatMap((r) -> r.getCommitNodes().getKnownOids().stream())
+		final ImmutableSet<CommitWithHistoryNode> commitsWithHistory = getCommitsWithHistory();
+		knownOids = commitsWithHistory.stream().flatMap((c) -> c.getCommitNodes().getKnownOids().stream())
 				.collect(ImmutableSet.toImmutableSet());
-		final ImmutableSet<Entry<ObjectId, CommitNode>> noDupl = getHeadNodes().stream()
-				.flatMap((r) -> r.getCommitNodes().asBiMap().entrySet().stream())
+		final ImmutableSet<Entry<ObjectId, CommitNode>> noDupl = commitsWithHistory.stream()
+				.flatMap((c) -> c.getCommitNodes().asBiMap().entrySet().stream())
 				.collect(ImmutableSet.toImmutableSet());
 		final ImmutableBiMap<ObjectId, CommitNode> asBiMap = noDupl.stream()
 				.collect(ImmutableBiMap.toImmutableBiMap(Entry::getKey, Entry::getValue));
@@ -350,8 +386,22 @@ public class PushedDatesAnswer {
 		}, asBiMap.keySet()));
 	}
 
+	private ImmutableSet<CommitWithHistoryNode> getCommitsWithHistory() {
+		final ImmutableSet<CommitWithHistoryNode> commitsFromHead = getHeadNodes().stream()
+				.map((r) -> r.getCommitWithHistory()).collect(ImmutableSet.toImmutableSet());
+		final ImmutableSet<CommitWithHistoryNode> commitsFromTag = getTagNodes().stream()
+				.map((r) -> r.getCommitWithHistory()).collect(ImmutableSet.toImmutableSet());
+		final ImmutableSet<CommitWithHistoryNode> commitsWithHistory = Sets.union(commitsFromHead, commitsFromTag)
+				.immutableCopy();
+		return commitsWithHistory;
+	}
+
 	public ImmutableList<HeadNode> getHeadNodes() {
 		return headNodes;
+	}
+
+	public ImmutableList<TagNode> getTagNodes() {
+		return tagNodes;
 	}
 
 	public ImmutableGraph<ObjectId> getParentsGraph() {
@@ -360,13 +410,11 @@ public class PushedDatesAnswer {
 	}
 
 	public ImmutableSet<ObjectId> getUnknownOids() {
-		final ImmutableSet<ObjectId> tagOids = tagNodes.stream().map(TagNode::getOid)
-				.collect(ImmutableSet.toImmutableSet());
-		return Sets.difference(Sets.union(parentsGraph.nodes(), tagOids), knownOids).immutableCopy();
+		return Sets.difference(parentsGraph.nodes(), knownOids).immutableCopy();
 	}
 
 	public ImmutableList<CommitNode> getCommitNodes() {
-		return headNodes.stream().flatMap((r) -> r.getCommitNodes().asSet().stream())
+		return getCommitsWithHistory().stream().flatMap((c) -> c.getCommitNodes().asSet().stream())
 				.collect(ImmutableList.toImmutableList());
 	}
 }

@@ -31,10 +31,16 @@ query pushedDates($repositoryOwner: String!, $repositoryName: String!) {
       nodes {
         name
         prefix
+# Some tags have a Tag as target (which has a Commit as target) while some have directly a Commit as target.
         target {
+          __typename
           oid
+          ... on Commit {
+            ... commitHistory
+          }
           ... on Tag {
             target {
+              __typename
               oid
               ... on Commit {
                 ... commitHistory

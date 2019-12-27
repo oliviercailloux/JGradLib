@@ -32,6 +32,39 @@ import com.google.common.graph.ImmutableGraph;
 
 import io.github.oliviercailloux.git.GitGenericHistory;
 
+/**
+ * Many null values among the pushedDate information sent by GitHub. Also,
+ * there’s probably occasional bugs, where a commit is reportedly pushed before
+ * its parent (which I don’t think is possible). This class attempts to correct.
+ *
+ * Corrected by taking the most favorable hypothesis for the student (the one
+ * that yields the earliest push date) among those that do not put everything in
+ * question. Perhaps one precise definition of this is as follows (probably
+ * incorrect, better refer to the algorithm!). Conflicts in a set of commits:
+ * the pairs of commits taken in that set such that the earlier commit has a
+ * later date. Conflicting set: a set of commits that has at least one conflict.
+ * Related conflicting set: a conflicting set such that each conflict pair have
+ * a common child or a common parent that is in conflict with each of the
+ * elements of the pair. Minimal conflicting set: a related conflicting set such
+ * that any superset that is a related conflicting set has the same conflicts.
+ * [Perhaps unnecessary because a related conflicting set would be minimal?]
+ * Reconciliation of a related conflicting set: assignment of dates to each
+ * commit in the set such that it is no more a conflicting set when considering
+ * the assignment. Min reconciliation: the reconciliation that chooses pushed
+ * dates as early as possible among the reconciliations that leave at least one
+ * value unchanged among all the conflicts and does not touch the commits that
+ * are in no conflicting pairs.
+ *
+ * The resulting pushed dates, when they have been patched, are coherent but
+ * should be taken with caution. Only when {@link #getPatchedKnowns()} is empty
+ * should they be used, ideally. Even in that case, the completion (about the
+ * pushed dates that were missing in the reported data) is to be taken only as
+ * lower bounds.
+ *
+ *
+ * @author Olivier Cailloux
+ *
+ */
 public class GitHubHistory {
 
 	public static GitHubHistory given(GitGenericHistory<ObjectId> history, Map<ObjectId, Instant> commitDates,
@@ -54,6 +87,14 @@ public class GitHubHistory {
 		checkAndCompletePushDates();
 	}
 
+	/**
+	 * From tips downwards, propagate a “ceiling” information: a parent of a child
+	 * can have at most the push date of the child. This step is sufficient to patch
+	 * possible bugs in the dates reported by GitHub. But it is not sufficient to
+	 * obtain lower bounds for the missing values. As a second step, from roots
+	 * upwards, propagate a “floor” information, in order to fill-in the missing
+	 * pushedDate values.
+	 */
 	private void checkAndCompletePushDates() {
 		final ImmutableGraph<ObjectId> graph = history.getGraph();
 
@@ -181,12 +222,16 @@ public class GitHubHistory {
 		return finalPushedDates;
 	}
 
+	/**
+	 * @return the object ids that have been patched (changed compared to the
+	 *         reported values) due to a suspected bug in GitHub.
+	 */
 	public ImmutableGraph<ObjectId> getPatchedKnowns() {
 		return patchedKnowns;
 	}
 
 	/**
-	 * Among the observed pushed dates, and after correction if have been patched.
+	 * Among the observed pushed dates, and after possible patching.
 	 */
 	public ImmutableSet<ObjectId> getPushedBeforeCommitted() {
 		return pushedDates.keySet().stream().filter((o) -> finalPushedDates.get(o).isBefore(commitDates.get(o)))
