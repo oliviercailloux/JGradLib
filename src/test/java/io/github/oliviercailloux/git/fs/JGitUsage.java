@@ -2,6 +2,8 @@ package io.github.oliviercailloux.git.fs;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
+import java.util.Map;
 
 import org.eclipse.jgit.internal.storage.dfs.DfsRepositoryDescription;
 import org.eclipse.jgit.internal.storage.dfs.InMemoryRepository;
@@ -54,15 +56,14 @@ class JGitUsage {
 					"Second commit");
 
 			final RefUpdate updateRef = repo.updateRef("refs/heads/master");
-			updateRef.setNewObjectId(commitStart);
+			updateRef.setNewObjectId(commitNext);
 			final Result updateResult = updateRef.update();
 			Verify.verify(updateResult == Result.NEW, updateResult.toString());
 		}
 	}
 
-	public static ObjectId insertCommit(ObjectInserter inserter, PersonIdent personIdent,
-			ImmutableMap<String, String> files, ImmutableList<ObjectId> parents, String commitMessage)
-			throws IOException {
+	public static ObjectId insertCommit(ObjectInserter inserter, PersonIdent personIdent, Map<String, String> files,
+			List<ObjectId> parents, String commitMessage) throws IOException {
 		final TreeFormatter treeFormatter = new TreeFormatter();
 		for (String fileName : files.keySet()) {
 			final String fileContent = files.get(fileName);
@@ -79,6 +80,7 @@ class JGitUsage {
 			commitBuilder.addParentId(parent);
 		}
 		final ObjectId commitId = inserter.insert(commitBuilder);
+		inserter.flush();
 		LOGGER.info("Created commit: {}.", commitId);
 		return commitId;
 	}
