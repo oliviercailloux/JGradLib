@@ -57,7 +57,6 @@ public class GitLocalHistory extends GitRawHistoryDecorator<RevCommit> implement
 			return getGraph().nodes().stream()
 					.collect(ImmutableMap.toImmutableMap(Function.identity(), this::getCommitDate));
 		}
-
 	}
 
 	private GitLocalHistory(GitRaw raw) {
