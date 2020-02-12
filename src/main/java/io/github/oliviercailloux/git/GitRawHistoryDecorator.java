@@ -91,11 +91,11 @@ public class GitRawHistoryDecorator<E extends ObjectId> implements GitHistory<E>
 
 	@Override
 	public boolean equals(Object o2) {
-		if (!(o2 instanceof GitRawHistoryDecorator<?>)) {
+		if (!(o2 instanceof GitHistory<?>)) {
 			return false;
 		}
 
-		final GitRawHistoryDecorator<?> h2 = (GitRawHistoryDecorator<?>) o2;
+		final GitHistory<?> h2 = (GitHistory<?>) o2;
 		return getGraph().equals(h2.getGraph()) && getCommitDates().equals(h2.getCommitDates());
 	}
 
