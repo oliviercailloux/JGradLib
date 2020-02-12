@@ -12,6 +12,7 @@ import java.time.ZoneOffset;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -19,7 +20,6 @@ import com.google.common.collect.ImmutableList;
 
 import io.github.oliviercailloux.git.git_hub.model.GitHubToken;
 import io.github.oliviercailloux.git.git_hub.model.graph_ql.RepositoryWithIssuesWithHistory;
-import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherQL;
 import io.github.oliviercailloux.students_project_following.Project;
 
 public class TestFinder {
@@ -42,6 +42,7 @@ public class TestFinder {
 	}
 
 	@Test
+	@EnabledIfEnvironmentVariable(named = "CONTINUOUS_INTEGRATION", matches = "true")
 	public void testFindTooMany() throws IOException {
 		final Project myProject = Project.from("Biblio");
 		try (GitHubFetcherQL fetcher = GitHubFetcherQL.using(GitHubToken.getRealInstance())) {
@@ -72,6 +73,7 @@ public class TestFinder {
 	}
 
 	@Test
+	@EnabledIfEnvironmentVariable(named = "CONTINUOUS_INTEGRATION", matches = "true")
 	public void testNoFindTooLate() throws IOException {
 		final Project myProject = Project.from("java-course");
 		try (GitHubFetcherQL finder = GitHubFetcherQL.using(GitHubToken.getRealInstance())) {

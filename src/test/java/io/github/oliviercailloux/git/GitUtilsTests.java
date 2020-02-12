@@ -16,6 +16,7 @@ import org.eclipse.jgit.lib.PersonIdent;
 import org.eclipse.jgit.lib.Ref;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 
 import com.google.common.base.Verify;
 import com.google.common.collect.ImmutableSet;
@@ -26,6 +27,7 @@ import io.github.oliviercailloux.utils.Utils;
 class GitUtilsTests {
 
 	@Test
+	@EnabledIfEnvironmentVariable(named = "CONTINUOUS_INTEGRATION", matches = "true")
 	void testLogFromClone() throws Exception {
 		final Path workTreePath = Utils.getTempDirectory().resolve("testrel cloned " + Instant.now());
 		new GitCloner().download(GitUri.fromGitUri(URI.create("ssh:git@github.com:oliviercailloux/testrel.git")),
@@ -71,6 +73,7 @@ class GitUtilsTests {
 	}
 
 	@Test
+	@EnabledIfEnvironmentVariable(named = "CONTINUOUS_INTEGRATION", matches = "true")
 	void testUsingBareClone() throws Exception {
 		final Path gitDirPath = Utils.getTempDirectory().resolve("testrel cloned " + Instant.now()).resolve(".git");
 		new GitCloner().download(GitUri.fromGitUri(URI.create("ssh:git@github.com:oliviercailloux/testrel.git")),

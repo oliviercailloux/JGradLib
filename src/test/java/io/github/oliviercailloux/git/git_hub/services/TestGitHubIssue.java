@@ -13,6 +13,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -25,7 +26,6 @@ import io.github.oliviercailloux.git.git_hub.model.graph_ql.IssueSnapshot;
 import io.github.oliviercailloux.git.git_hub.model.graph_ql.IssueWithHistory;
 import io.github.oliviercailloux.git.git_hub.model.graph_ql.RepositoryWithIssuesWithHistory;
 import io.github.oliviercailloux.git.git_hub.model.graph_ql.User;
-import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherQL;
 
 public class TestGitHubIssue {
 
@@ -33,6 +33,7 @@ public class TestGitHubIssue {
 	private static final Logger LOGGER = LoggerFactory.getLogger(TestGitHubIssue.class);
 
 	@Test
+	@EnabledIfEnvironmentVariable(named = "CONTINUOUS_INTEGRATION", matches = "true")
 	public void testAssignees() throws Exception {
 		final RepositoryCoordinates coord = RepositoryCoordinates.from("badga", "Collaborative-exams");
 		try (GitHubFetcherQL factory = GitHubFetcherQL.using(GitHubToken.getRealInstance())) {
@@ -50,6 +51,7 @@ public class TestGitHubIssue {
 	}
 
 	@Test
+	@EnabledIfEnvironmentVariable(named = "CONTINUOUS_INTEGRATION", matches = "true")
 	public void testDupl() throws Exception {
 		try (GitHubFetcherQL factory = GitHubFetcherQL.using(GitHubToken.getRealInstance())) {
 			final RepositoryCoordinates coords = RepositoryCoordinates.from("benzait27", "Dauphine-Open-Data");
@@ -60,6 +62,7 @@ public class TestGitHubIssue {
 	}
 
 	@Test
+	@EnabledIfEnvironmentVariable(named = "CONTINUOUS_INTEGRATION", matches = "true")
 	public void testHist() throws Exception {
 		final RepositoryCoordinates coord = RepositoryCoordinates.from("oliviercailloux", "testrel");
 		try (GitHubFetcherQL factory = GitHubFetcherQL.using(GitHubToken.getRealInstance())) {
@@ -82,6 +85,7 @@ public class TestGitHubIssue {
 	}
 
 	@Test
+	@EnabledIfEnvironmentVariable(named = "CONTINUOUS_INTEGRATION", matches = "true")
 	public void testOpen() throws Exception {
 		final RepositoryCoordinates coord = RepositoryCoordinates.from("oliviercailloux", "testrel");
 		try (GitHubFetcherQL factory = GitHubFetcherQL.using(GitHubToken.getRealInstance())) {

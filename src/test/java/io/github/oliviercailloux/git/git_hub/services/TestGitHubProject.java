@@ -14,6 +14,7 @@ import javax.json.bind.Jsonb;
 import javax.json.bind.JsonbBuilder;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -25,7 +26,6 @@ import io.github.oliviercailloux.git.git_hub.model.GitHubToken;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.git.git_hub.model.graph_ql.IssueWithHistory;
 import io.github.oliviercailloux.git.git_hub.model.graph_ql.RepositoryWithIssuesWithHistory;
-import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherQL;
 import io.github.oliviercailloux.json.PrintableJsonObjectFactory;
 import io.github.oliviercailloux.students_project_following.Project;
 
@@ -35,6 +35,7 @@ public class TestGitHubProject {
 	private static final Logger LOGGER = LoggerFactory.getLogger(TestGitHubProject.class);
 
 	@Test
+	@EnabledIfEnvironmentVariable(named = "CONTINUOUS_INTEGRATION", matches = "true")
 	public void testGetRepo() throws Exception {
 		try (GitHubFetcherQL fetcher = GitHubFetcherQL.using(GitHubToken.getRealInstance())) {
 			final RepositoryWithIssuesWithHistory repo = fetcher
@@ -45,6 +46,7 @@ public class TestGitHubProject {
 	}
 
 	@Test
+	@EnabledIfEnvironmentVariable(named = "CONTINUOUS_INTEGRATION", matches = "true")
 	public void testGithubIssues() throws Exception {
 		final Project myProject = Project.from("Dauphine-Open-Data");
 		final List<RepositoryWithIssuesWithHistory> found;
@@ -80,6 +82,7 @@ public class TestGitHubProject {
 	}
 
 	@Test
+	@EnabledIfEnvironmentVariable(named = "CONTINUOUS_INTEGRATION", matches = "true")
 	public void testProject() throws Exception {
 		try (GitHubFetcherQL factory = GitHubFetcherQL.using(GitHubToken.getRealInstance())) {
 			final RepositoryCoordinates coords = RepositoryCoordinates.from("oliviercailloux", "testrel");

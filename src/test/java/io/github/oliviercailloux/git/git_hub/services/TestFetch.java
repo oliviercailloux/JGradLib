@@ -20,6 +20,7 @@ import javax.ws.rs.core.Response;
 import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -83,6 +84,7 @@ public class TestFetch {
 	}
 
 	@Test
+	@EnabledIfEnvironmentVariable(named = "CONTINUOUS_INTEGRATION", matches = "true")
 	public void testFindFileCreationExists2() throws Exception {
 		final RepositoryCoordinates coord = RepositoryCoordinates.from("ynestacamille", "Java-L3-Eck-Ex");
 		try (GitHubFetcherV3 rawFetcher = GitHubFetcherV3.using(GitHubToken.getRealInstance())) {
@@ -107,6 +109,7 @@ public class TestFetch {
 	}
 
 	@Test
+	@EnabledIfEnvironmentVariable(named = "CONTINUOUS_INTEGRATION", matches = "true")
 	public void testFindFileCreationExistsOld() throws Exception {
 		final RepositoryCoordinates coord = RepositoryCoordinates.from("oliviercailloux", "java-course");
 		try (GitHubFetcherV3 rawFetcher = GitHubFetcherV3.using(GitHubToken.getRealInstance())) {
@@ -137,6 +140,7 @@ public class TestFetch {
 	}
 
 	@Test
+	@EnabledIfEnvironmentVariable(named = "CONTINUOUS_INTEGRATION", matches = "true")
 	public void testFindFilePathsByCode() throws Exception {
 		final RepositoryCoordinates coord = RepositoryCoordinates.from("oliviercailloux", "java-course");
 		// final RepositoryCoordinates coord = RepositoryCoordinates.from("Raphaaal",
@@ -149,6 +153,7 @@ public class TestFetch {
 	}
 
 	@Test
+	@EnabledIfEnvironmentVariable(named = "CONTINUOUS_INTEGRATION", matches = "true")
 	public void testIssuesHistory() throws Exception {
 		final RepositoryCoordinates coord = RepositoryCoordinates.from("MAMERY-DOUMBIA", "Dauphine-Pole-Info");
 		try (GitHubFetcherQL fetcher = GitHubFetcherQL.using(GitHubToken.getRealInstance())) {
@@ -198,6 +203,7 @@ public class TestFetch {
 	}
 
 	@Test
+	@EnabledIfEnvironmentVariable(named = "CONTINUOUS_INTEGRATION", matches = "true")
 	public void testGitHubHistoryProjets() throws Exception {
 		final RepositoryCoordinates coord = RepositoryCoordinates.from("oliviercailloux", "projets");
 		try (GitHubFetcherQL fetcher = GitHubFetcherQL.using(GitHubToken.getRealInstance())) {
@@ -230,6 +236,7 @@ public class TestFetch {
 	}
 
 	@Test
+	@EnabledIfEnvironmentVariable(named = "CONTINUOUS_INTEGRATION", matches = "true")
 	void testGitHubHistoryCLut() throws Exception {
 		final RepositoryCoordinates coordinates = RepositoryCoordinates.from("oliviercailloux", "CLut");
 		try (GitHubFetcherQL fetcher = GitHubFetcherQL.using(GitHubToken.getRealInstance())) {
@@ -262,6 +269,7 @@ public class TestFetch {
 	}
 
 	@Test
+	@EnabledIfEnvironmentVariable(named = "CONTINUOUS_INTEGRATION", matches = "true")
 	public void testGitHubHistoryJBiblio() throws Exception {
 		final RepositoryCoordinates coord = RepositoryCoordinates.from("oliviercailloux", "J-Biblio");
 		try (GitHubFetcherQL fetcher = GitHubFetcherQL.using(GitHubToken.getRealInstance())) {
@@ -276,6 +284,7 @@ public class TestFetch {
 	}
 
 	@Test
+	@EnabledIfEnvironmentVariable(named = "CONTINUOUS_INTEGRATION", matches = "true")
 	void testGitHubHistorySampleRestClient() throws Exception {
 		final RepositoryCoordinates coordinates = RepositoryCoordinates.from("oliviercailloux", "sample-rest-client");
 		try (GitHubFetcherQL fetcher = GitHubFetcherQL.using(GitHubToken.getRealInstance())) {
