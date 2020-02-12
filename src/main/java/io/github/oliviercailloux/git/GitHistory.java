@@ -33,8 +33,6 @@ public interface GitHistory<E extends ObjectId> {
 	 * git allows for <a href=
 	 * "https://git-scm.com/docs/git-checkout#Documentation/git-checkout.txt---orphanltnewbranchgt">multiple
 	 * roots</a>.)
-	 *
-	 * @return a non-empty set.
 	 */
 	public ImmutableSet<E> getRoots();
 

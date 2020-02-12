@@ -11,7 +11,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.MoreObjects;
-import com.google.common.base.Verify;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
@@ -40,7 +39,6 @@ public class GitRawHistoryDecorator<E extends ObjectId> implements GitHistory<E>
 
 	protected GitRawHistoryDecorator(GitRawHistory<E> raw) {
 		this.raw = raw;
-		checkArgument(!raw.getGraph().nodes().isEmpty());
 		checkArgument(!Graphs.hasCycle(raw.getGraph()));
 		final ImmutableSet<E> dateKeys = raw.getCommitDates().keySet();
 		final Set<E> nodes = raw.getGraph().nodes();
@@ -67,7 +65,6 @@ public class GitRawHistoryDecorator<E extends ObjectId> implements GitHistory<E>
 		 */
 		final ImmutableSet<E> roots = getGraph().nodes().stream().filter((n) -> getGraph().successors(n).isEmpty())
 				.collect(ImmutableSet.toImmutableSet());
-		Verify.verify(!roots.isEmpty());
 		return roots;
 	}
 
@@ -75,7 +72,6 @@ public class GitRawHistoryDecorator<E extends ObjectId> implements GitHistory<E>
 	public ImmutableSet<E> getTips() {
 		final ImmutableSet<E> tips = getGraph().nodes().stream().filter((n) -> getGraph().predecessors(n).isEmpty())
 				.collect(ImmutableSet.toImmutableSet());
-		Verify.verify(!tips.isEmpty());
 		return tips;
 	}
 

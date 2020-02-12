@@ -1,12 +1,11 @@
 package io.github.oliviercailloux.git;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Verify.verify;
 
 import java.io.File;
 import java.io.IOException;
-import java.time.Instant;
 import java.time.ZonedDateTime;
-import java.time.temporal.ChronoUnit;
 import java.util.Collection;
 import java.util.Date;
 import java.util.TimeZone;
@@ -14,22 +13,12 @@ import java.util.TimeZone;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.api.errors.NoHeadException;
-import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.lib.PersonIdent;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Sets;
-
-import io.github.oliviercailloux.git.git_hub.model.GitHubToken;
-import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
-import io.github.oliviercailloux.git.git_hub.model.v3.CommitGitHubDescription;
-import io.github.oliviercailloux.git.git_hub.model.v3.PayloadCommitDescription;
-import io.github.oliviercailloux.git.git_hub.model.v3.PushEvent;
-import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherV3;
 
 public class GitUtils {
 	@SuppressWarnings("unused")
@@ -65,13 +54,18 @@ public class GitUtils {
 	 *         HEAD, thus including remotes and local branches and tags, together
 	 *         with their parents.
 	 */
-	public static GitLocalHistory getHistory(File repositoryDirectory) throws GitAPIException, NoHeadException, IOException {
+	public static GitLocalHistory getHistory(File repositoryDirectory)
+			throws GitAPIException, NoHeadException, IOException {
 		final GitLocalHistory history;
 		try (Git git = Git.open(repositoryDirectory)) {
+			verify(git.getRepository().getObjectDatabase().exists());
 			/**
-			 * Should perhaps first check whether the object database exists? Test with bare
-			 * and when no head exists.
+			 * Log command fails (with org.eclipse.jgit.api.errors.NoHeadException) if “No
+			 * HEAD exists and no explicit starting revision was specified”.
 			 */
+			if (!git.getRepository().getRefDatabase().hasRefs()) {
+				return GitLocalHistory.from(ImmutableList.of());
+			}
 			final Iterable<RevCommit> commits = git.log().all().call();
 			history = GitLocalHistory.from(commits);
 		}
