@@ -2,7 +2,6 @@ package io.github.oliviercailloux.git.fs;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -18,8 +17,7 @@ class GitFileSystemProviderTests {
 	void testNoSystemThere() {
 		final Path emptyDir = Utils.getTempDirectory().resolve("test-" + Instant.now().toString());
 		assertFalse(Files.exists(emptyDir));
-		assertThrows(IOException.class, () -> new GitFileSystemProvider().newFileSystem(emptyDir));
-		fail("Not yet implemented");
+		assertThrows(IOException.class, () -> new GitFileSystemProvider().newFileSystemFromGitDir(emptyDir));
 	}
 
 }

@@ -10,6 +10,7 @@ import java.nio.file.CopyOption;
 import java.nio.file.DirectoryStream;
 import java.nio.file.DirectoryStream.Filter;
 import java.nio.file.FileStore;
+import java.nio.file.FileSystem;
 import java.nio.file.FileSystemAlreadyExistsException;
 import java.nio.file.FileSystemNotFoundException;
 import java.nio.file.Files;
@@ -38,8 +39,6 @@ public class GitFileSystemProvider extends FileSystemProvider {
 	public static final String GIT_FOLDER = "GIT_FOLDER";
 	public static final String SCHEME = "gitfs";
 
-	private final Map<Path, GitFileSystem> cachedFileSystems = new LinkedHashMap<>();
-
 	public static Path getGitDir(URI gitFsUri) {
 		checkArgument(gitFsUri.isAbsolute());
 		checkArgument(gitFsUri.getScheme().equalsIgnoreCase(SCHEME));
@@ -51,6 +50,8 @@ public class GitFileSystemProvider extends FileSystemProvider {
 		final Path gitDir = Path.of(gitFsUri.getPath());
 		return gitDir;
 	}
+
+	private final Map<Path, GitFileSystem> cachedFileSystems = new LinkedHashMap<>();
 
 	public GitFileSystemProvider() {
 		/** Default constructor. */
@@ -64,10 +65,15 @@ public class GitFileSystemProvider extends FileSystemProvider {
 	@Override
 	public GitFileSystem newFileSystem(URI gitFsUri, Map<String, ?> env) throws IOException {
 		final Path gitDir = getGitDir(gitFsUri);
-		return newFileSystem(gitDir);
+		return newFileSystemFromGitDir(gitDir);
 	}
 
-	public GitFileSystem newFileSystem(Path gitDir) throws IOException {
+	@Override
+	public FileSystem newFileSystem(Path path, Map<String, ?> env) throws IOException {
+		throw new UnsupportedOperationException();
+	}
+
+	public GitFileSystem newFileSystemFromGitDir(Path gitDir) throws IOException {
 		if (cachedFileSystems.containsKey(gitDir)) {
 			throw new FileSystemAlreadyExistsException();
 		}
@@ -87,10 +93,10 @@ public class GitFileSystemProvider extends FileSystemProvider {
 	@Override
 	public GitFileSystem getFileSystem(URI gitFsUri) {
 		final Path gitDir = getGitDir(gitFsUri);
-		return getFileSystem(gitDir);
+		return getFileSystemFromGitDir(gitDir);
 	}
 
-	public GitFileSystem getFileSystem(Path gitDir) {
+	public GitFileSystem getFileSystemFromGitDir(Path gitDir) {
 		checkArgument(cachedFileSystems.containsKey(gitDir));
 		return cachedFileSystems.get(gitDir);
 	}
@@ -101,16 +107,16 @@ public class GitFileSystemProvider extends FileSystemProvider {
 	 * the caller to forget closing the just created file system.
 	 *
 	 * A URI may be more complete and identify a commit (possibly master), directory
-	 * and file. I have not thought about how a general approach to do this. Patches
+	 * and file. I have not thought about a general approach to do this. Patches
 	 * welcome.
 	 */
 	@Override
 	public GitPath getPath(URI gitFsUri) {
 		final Path gitDir = getGitDir(gitFsUri);
-		return getPath(gitDir);
+		return getPathFromGitDir(gitDir);
 	}
 
-	public GitPath getPath(Path gitDir) {
+	public GitPath getPathFromGitDir(Path gitDir) {
 		if (!cachedFileSystems.containsKey(gitDir)) {
 			throw new FileSystemNotFoundException();
 		}
