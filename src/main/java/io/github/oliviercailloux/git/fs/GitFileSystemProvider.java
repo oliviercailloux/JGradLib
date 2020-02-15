@@ -27,6 +27,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 
+import org.eclipse.jgit.internal.storage.dfs.DfsRepository;
 import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 import org.slf4j.Logger;
@@ -55,6 +56,8 @@ public class GitFileSystemProvider extends FileSystemProvider {
 	}
 
 	private final Map<Path, GitFileSystem> cachedFileSystems = new LinkedHashMap<>();
+
+	private final Map<String, GitRepoFileSystem> cachedRepoFileSystems = new LinkedHashMap<>();
 
 	public GitFileSystemProvider() {
 		/** Default constructor. */
@@ -93,8 +96,21 @@ public class GitFileSystemProvider extends FileSystemProvider {
 		return newFs;
 	}
 
+	public GitRepoFileSystem newFileSystemFromRepository(DfsRepository repository) throws IOException {
+		if (cachedRepoFileSystems.containsKey(repository.getDescription().getRepositoryName())) {
+			throw new FileSystemAlreadyExistsException();
+		}
+		if (!repository.getObjectDatabase().exists()) {
+			throw new IOException(String.format("Object database not found."));
+		}
+		final GitRepoFileSystem newFs = GitRepoFileSystem.given(this, repository);
+		cachedRepoFileSystems.put(repository.getDescription().getRepositoryName(), newFs);
+		return newFs;
+	}
+
 	@Override
 	public GitFileSystem getFileSystem(URI gitFsUri) {
+		/** TODO this could contain a repo name. */
 		final Path gitDir = getGitDir(gitFsUri);
 		return getFileSystemFromGitDir(gitDir);
 	}
@@ -102,6 +118,11 @@ public class GitFileSystemProvider extends FileSystemProvider {
 	public GitFileSystem getFileSystemFromGitDir(Path gitDir) {
 		checkArgument(cachedFileSystems.containsKey(gitDir));
 		return cachedFileSystems.get(gitDir);
+	}
+
+	public GitRepoFileSystem getFileSystemFromRepositoryName(String name) {
+		checkArgument(cachedRepoFileSystems.containsKey(name));
+		return cachedRepoFileSystems.get(name);
 	}
 
 	/**

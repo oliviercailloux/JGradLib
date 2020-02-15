@@ -16,8 +16,7 @@ import java.nio.file.WatchService;
 import java.util.Comparator;
 import java.util.Objects;
 
-import javax.ws.rs.core.UriBuilder;
-
+import org.eclipse.jgit.internal.storage.dfs.DfsRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -64,15 +63,15 @@ public class GitPath implements Path {
 	private static final Comparator<GitPath> COMPARATOR = Comparator.<GitPath, String>comparing((p) -> p.revStr)
 			.thenComparing((p) -> p.dirAndFile);
 
-	static GitPath getMasterSlashPath(GitFileSystem gitFileSystem) {
+	static GitPath getMasterSlashPath(GitRepoFileSystem gitFileSystem) {
 		/**
 		 * TODO make JIM_FS_SLASH non static, one per file system. Move this method to
 		 * file system.
 		 */
-		return new GitPath(gitFileSystem, "master", GitFileSystem.JIM_FS_SLASH);
+		return new GitPath(gitFileSystem, "master", GitRepoFileSystem.JIM_FS_SLASH);
 	}
 
-	private GitFileSystem fileSystem;
+	private GitRepoFileSystem fileSystem;
 
 	/**
 	 * Empty for no commit specified.
@@ -84,7 +83,7 @@ public class GitPath implements Path {
 	 */
 	private Path dirAndFile;
 
-	GitPath(GitFileSystem fileSystem, String revStr, Path dirAndFile) {
+	GitPath(GitRepoFileSystem fileSystem, String revStr, Path dirAndFile) {
 		this.fileSystem = checkNotNull(fileSystem);
 		this.revStr = checkNotNull(revStr);
 		this.dirAndFile = checkNotNull(dirAndFile);
@@ -99,7 +98,7 @@ public class GitPath implements Path {
 	}
 
 	@Override
-	public GitFileSystem getFileSystem() {
+	public GitRepoFileSystem getFileSystem() {
 		return fileSystem;
 	}
 
@@ -114,10 +113,10 @@ public class GitPath implements Path {
 		if (revStr.equals("")) {
 			return null;
 		}
-		if (dirAndFile.equals(GitFileSystem.JIM_FS_SLASH)) {
+		if (dirAndFile.equals(GitRepoFileSystem.JIM_FS_SLASH)) {
 			return this;
 		}
-		return new GitPath(fileSystem, revStr, GitFileSystem.JIM_FS_SLASH);
+		return new GitPath(fileSystem, revStr, GitRepoFileSystem.JIM_FS_SLASH);
 	}
 
 	public GitPath getWithoutRoot() {
@@ -125,7 +124,7 @@ public class GitPath implements Path {
 			return this;
 		}
 		assert dirAndFile.isAbsolute();
-		return new GitPath(fileSystem, "", GitFileSystem.JIM_FS_SLASH.relativize(dirAndFile));
+		return new GitPath(fileSystem, "", GitRepoFileSystem.JIM_FS_SLASH.relativize(dirAndFile));
 	}
 
 	@Override
@@ -231,24 +230,52 @@ public class GitPath implements Path {
 		throw new IllegalArgumentException();
 	}
 
+	@SuppressWarnings("resource")
 	@Override
 	public URI toUri() {
-		final Path gitDir = getFileSystem().getGitDir();
-		final URI uri;
-		try {
-			uri = new URI(GitFileSystemProvider.SCHEME, null, gitDir.toAbsolutePath().toString(), null);
-		} catch (URISyntaxException e) {
-			throw new IllegalStateException(e);
-		}
-		final UriBuilder builder = UriBuilder.fromUri(uri);
+		/**
+		 * I do not use UriBuilder because it “perform contextual encoding of characters
+		 * not permitted in the corresponding URI component following the rules of the
+		 * application/x-www-form-urlencoded media type for query parameters”, and
+		 * therefore encodes / to %2F.
+		 */
+		final StringBuilder queryBuilder = new StringBuilder();
 		if (!revStr.isEmpty()) {
-			builder.queryParam("revStr", revStr);
+			assert !dirAndFile.toString().isEmpty();
+			queryBuilder.append("revStr=" + revStr + "&");
 		}
 		if (!dirAndFile.toString().isEmpty()) {
-			builder.queryParam("dirAndFile", dirAndFile);
+			queryBuilder.append("dirAndFile=" + dirAndFile);
+		}
+		final String query = queryBuilder.toString();
+
+		final URI uri;
+		final GitRepoFileSystem fs = getFileSystem();
+		if (fs instanceof GitFileSystem) {
+			final GitFileSystem pathBasedFs = (GitFileSystem) fs;
+			final Path gitDir = pathBasedFs.getGitDir();
+			try {
+				uri = new URI(GitFileSystemProvider.SCHEME, null, gitDir.toAbsolutePath().toString(), query, null);
+			} catch (URISyntaxException e) {
+				throw new IllegalStateException(e);
+			}
+		} else if (fs.getRepository() instanceof DfsRepository) {
+			final DfsRepository repo = (DfsRepository) fs.getRepository();
+			try {
+				uri = new URI(GitFileSystemProvider.SCHEME, "mem", "/" + repo.getDescription().getRepositoryName(),
+						query, null);
+			} catch (URISyntaxException e) {
+				throw new IllegalStateException(e);
+			}
+		} else {
+			try {
+				uri = new URI(GitFileSystemProvider.SCHEME, "mem", fs.getRepository().toString(), query, null);
+			} catch (URISyntaxException e) {
+				throw new IllegalStateException(e);
+			}
 		}
 
-		return builder.build();
+		return uri;
 	}
 
 	@Override

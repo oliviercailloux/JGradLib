@@ -7,10 +7,10 @@ import java.io.FileNotFoundException;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.time.Instant;
 
-import org.eclipse.jgit.internal.storage.file.FileRepository;
-import org.eclipse.jgit.lib.Repository;
+import org.eclipse.jgit.internal.storage.dfs.DfsRepository;
+import org.eclipse.jgit.internal.storage.dfs.DfsRepositoryDescription;
+import org.eclipse.jgit.internal.storage.dfs.InMemoryRepository;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
@@ -26,7 +26,7 @@ public class GitFileSystemTests {
 			assertEquals("truc", gitFS.getPath("", "truc").getWithoutRoot().toString());
 			assertEquals("master//truc", gitFS.getPath("master/", "/truc").toString());
 			assertEquals("truc", gitFS.getPath("master/", "/truc").getWithoutRoot().toString());
-			assertEquals(URI.create("gitfs:/path/to/gitdir?revStr=master&dirAndFile=%2Ftruc"),
+			assertEquals(URI.create("gitfs:/path/to/gitdir?revStr=master&dirAndFile=/truc"),
 					gitFS.getPath("master/", "/truc").toUri());
 			assertEquals("master//truc", gitFS.getPath("master/", "", "/truc", "").toString());
 			assertEquals("master//truc", gitFS.getPath("master//", "truc").toString());
@@ -51,20 +51,20 @@ public class GitFileSystemTests {
 
 	@Test
 	void testReadNonExistingFile() throws Exception {
-		final Path gitDir = Path.of("git-test-read " + Instant.now());
-		Files.createDirectory(gitDir);
-		try (Repository repo = new FileRepository(gitDir.toString())) {
+//		final Path gitDir = Path.of("git-test-read " + Instant.now());
+//		Files.createDirectory(gitDir);
+//		try (Repository repo = new FileRepository(gitDir.toString())) {
+		try (DfsRepository repo = new InMemoryRepository(new DfsRepositoryDescription("myrepo"))) {
 			JGitUsage.createBasicRepo(repo);
-		}
-//		try (GitFileSystem gitFS = GitFileSystem.given(Mockito.mock(GitFileSystemProvider.class), gitDir)) {
-		try (GitFileSystem gitFS = new GitFileSystemProvider().newFileSystemFromGitDir(gitDir)) {
-			assertThrows(FileNotFoundException.class,
-					() -> gitFS.newByteChannel(gitFS.getPath("master/", "/ploum.txt")));
-			final GitPath path = gitFS.getPath("master/", "/file1.txt");
+			try (GitRepoFileSystem gitFS = new GitFileSystemProvider().newFileSystemFromRepository(repo)) {
+				assertThrows(FileNotFoundException.class,
+						() -> gitFS.newByteChannel(gitFS.getPath("master/", "/ploum.txt")));
+				final GitPath path = gitFS.getPath("master/", "/file1.txt");
 //			final SeekableByteChannel newByteChannel = gitFS.newByteChannel(path);
 //			newByteChannel.
-			final String content1 = Files.readString(path);
-			assertEquals("Hello, world", content1);
+				final String content1 = Files.readString(path);
+				assertEquals("Hello, world", content1);
+			}
 		}
 	}
 }

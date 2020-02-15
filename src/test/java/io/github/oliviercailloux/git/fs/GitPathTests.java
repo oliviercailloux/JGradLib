@@ -10,6 +10,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.net.URI;
 import java.nio.file.Path;
 
+import org.eclipse.jgit.internal.storage.dfs.DfsRepositoryDescription;
+import org.eclipse.jgit.internal.storage.dfs.InMemoryRepository;
+import org.eclipse.jgit.lib.Repository;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
@@ -119,7 +122,26 @@ public class GitPathTests {
 		assertNotEquals(getGitPath("", "truc/chose"), getGitPath("master", "/truc/chose"));
 	}
 
+	@Test
+	void testUris() throws Exception {
+		final Path gitDir = Path.of("git dir");
+		@SuppressWarnings("resource")
+		final GitFileSystem fs = GitFileSystem.given(new GitFileSystemProvider(), gitDir);
+		final GitPath path = fs.getPath("master/", "/file.txt");
+		assertEquals(
+				new URI("gitfs", null, gitDir.toAbsolutePath().toString(), "revStr=master&dirAndFile=/file.txt", null),
+				path.toUri());
+
+		try (Repository repo = new InMemoryRepository(new DfsRepositoryDescription("myrepo"))) {
+			JGitUsage.createBasicRepo(repo);
+			@SuppressWarnings("resource")
+			final GitRepoFileSystem rfs = GitRepoFileSystem.given(new GitFileSystemProvider(), repo);
+			final GitPath p2 = rfs.getPath("master/", "/file.txt");
+			assertEquals("gitfs://mem/myrepo?revStr=master&dirAndFile=/file.txt", p2.toUri().toString());
+		}
+	}
+
 	private GitPath getGitPath(String revSpec, String dirAndFile) {
-		return new GitPath(GIT_FILE_SYSTEM, revSpec, GitFileSystem.JIM_FS.getPath(dirAndFile));
+		return new GitPath(GIT_FILE_SYSTEM, revSpec, GitRepoFileSystem.JIM_FS.getPath(dirAndFile));
 	}
 }
