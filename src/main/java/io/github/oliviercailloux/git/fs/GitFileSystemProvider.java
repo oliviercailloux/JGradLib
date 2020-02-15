@@ -208,45 +208,38 @@ public class GitFileSystemProvider extends FileSystemProvider {
 
 	@Override
 	public boolean isSameFile(Path path, Path path2) throws IOException {
-		TODO();
-		return false;
+		throw new UnsupportedOperationException();
 	}
 
 	@Override
 	public boolean isHidden(Path path) throws IOException {
-		TODO();
-		return false;
+		throw new UnsupportedOperationException();
 	}
 
 	@Override
 	public FileStore getFileStore(Path path) throws IOException {
-		TODO();
-		return null;
+		throw new UnsupportedOperationException();
 	}
 
 	@Override
 	public void checkAccess(Path path, AccessMode... modes) throws IOException {
-		TODO();
-
+		throw new UnsupportedOperationException();
 	}
 
 	@Override
 	public <V extends FileAttributeView> V getFileAttributeView(Path path, Class<V> type, LinkOption... options) {
-		TODO();
-		return null;
+		throw new UnsupportedOperationException();
 	}
 
 	@Override
 	public <A extends BasicFileAttributes> A readAttributes(Path path, Class<A> type, LinkOption... options)
 			throws IOException {
-		TODO();
-		return null;
+		throw new UnsupportedOperationException();
 	}
 
 	@Override
 	public Map<String, Object> readAttributes(Path path, String attributes, LinkOption... options) throws IOException {
-		TODO();
-		return null;
+		throw new UnsupportedOperationException();
 	}
 
 	@Override
