@@ -36,6 +36,7 @@ public class GitRawHistoryDecorator<E extends ObjectId> implements GitHistory<E>
 	}
 
 	private final GitRawHistory<E> raw;
+	private ImmutableGraph<E> transitiveClosure;
 
 	protected GitRawHistoryDecorator(GitRawHistory<E> raw) {
 		this.raw = raw;
@@ -45,11 +46,19 @@ public class GitRawHistoryDecorator<E extends ObjectId> implements GitHistory<E>
 		checkArgument(dateKeys.equals(nodes),
 				String.format("Commit dates: %s; graph nodes: %s, dates contain nodes: %s, missing: %s.",
 						dateKeys.size(), nodes.size(), dateKeys.containsAll(nodes), Sets.difference(dateKeys, nodes)));
+		transitiveClosure = null;
 	}
 
 	@Override
 	public ImmutableGraph<E> getGraph() {
 		return raw.getGraph();
+	}
+
+	public ImmutableGraph<E> getTransitivelyClosedGraph() {
+		if (transitiveClosure == null) {
+			transitiveClosure = ImmutableGraph.copyOf(Graphs.transitiveClosure(getGraph()));
+		}
+		return transitiveClosure;
 	}
 
 	@Override

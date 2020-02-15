@@ -13,7 +13,10 @@ import java.util.TimeZone;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.api.errors.NoHeadException;
+import org.eclipse.jgit.errors.RepositoryNotFoundException;
+import org.eclipse.jgit.internal.storage.file.FileRepository;
 import org.eclipse.jgit.lib.PersonIdent;
+import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -49,25 +52,39 @@ public class GitUtils {
 	}
 
 	/**
-	 * @param repositoryDirectory the GIT_DIR or the .git directory
+	 * @param gitDir the GIT_DIR or the .git directory
 	 * @return the graph of commits pointed to by at least one ref in /refs plus
 	 *         HEAD, thus including remotes and local branches and tags, together
 	 *         with their parents.
 	 */
-	public static GitLocalHistory getHistory(File repositoryDirectory)
-			throws GitAPIException, NoHeadException, IOException {
+	public static GitLocalHistory getHistory(File gitDir) throws IOException {
 		final GitLocalHistory history;
-		try (Git git = Git.open(repositoryDirectory)) {
-			verify(git.getRepository().getObjectDatabase().exists());
-			/**
-			 * Log command fails (with org.eclipse.jgit.api.errors.NoHeadException) if “No
-			 * HEAD exists and no explicit starting revision was specified”.
-			 */
-			if (!git.getRepository().getRefDatabase().hasRefs()) {
-				return GitLocalHistory.from(ImmutableList.of());
+		try (FileRepository repo = new FileRepository(gitDir)) {
+			if (!repo.getObjectDatabase().exists()) {
+				throw new RepositoryNotFoundException(gitDir);
 			}
+			history = getHistory(repo);
+		}
+		return history;
+	}
+
+	public static GitLocalHistory getHistory(Repository repository) throws IOException {
+		verify(repository.getObjectDatabase().exists());
+		final GitLocalHistory history;
+		/**
+		 * Log command fails (with org.eclipse.jgit.api.errors.NoHeadException) if “No
+		 * HEAD exists and no explicit starting revision was specified”.
+		 */
+		if (!repository.getRefDatabase().hasRefs()) {
+			return GitLocalHistory.from(ImmutableList.of());
+		}
+		try (Git git = Git.wrap(repository)) {
 			final Iterable<RevCommit> commits = git.log().all().call();
 			history = GitLocalHistory.from(commits);
+		} catch (NoHeadException e) {
+			throw new IllegalStateException(e);
+		} catch (GitAPIException e) {
+			throw new IllegalStateException(e);
 		}
 		return history;
 	}

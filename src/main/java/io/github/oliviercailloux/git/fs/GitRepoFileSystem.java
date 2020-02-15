@@ -2,6 +2,7 @@ package io.github.oliviercailloux.git.fs;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.base.Verify.verify;
 
 import java.io.FileNotFoundException;
@@ -18,6 +19,7 @@ import java.nio.file.PathMatcher;
 import java.nio.file.WatchService;
 import java.nio.file.attribute.UserPrincipalLookupService;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.Iterator;
 import java.util.Set;
 
@@ -30,6 +32,7 @@ import org.eclipse.jgit.lib.ObjectLoader;
 import org.eclipse.jgit.lib.ObjectReader;
 import org.eclipse.jgit.lib.Ref;
 import org.eclipse.jgit.lib.Repository;
+import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.revwalk.RevTree;
 import org.eclipse.jgit.revwalk.RevWalk;
 import org.eclipse.jgit.treewalk.TreeWalk;
@@ -41,9 +44,12 @@ import com.google.common.base.Verify;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedSet;
+import com.google.common.graph.ImmutableGraph;
 import com.google.common.jimfs.Configuration;
 import com.google.common.jimfs.Jimfs;
 
+import io.github.oliviercailloux.git.GitLocalHistory;
+import io.github.oliviercailloux.git.GitUtils;
 import io.github.oliviercailloux.utils.SeekableInMemoryByteChannel;
 
 public class GitRepoFileSystem extends FileSystem {
@@ -86,12 +92,15 @@ public class GitRepoFileSystem extends FileSystem {
 	private Repository repository;
 	private ObjectReader reader;
 
+	private GitLocalHistory history;
+
 	protected GitRepoFileSystem(GitFileSystemProvider gitProvider, Repository repository) {
 		this.gitProvider = checkNotNull(gitProvider);
 		this.repository = checkNotNull(repository);
 		reader = repository.newObjectReader();
 		reader.setAvoidUnreachableObjects(true);
 		isOpen = true;
+		history = null;
 	}
 
 	@Override
@@ -127,17 +136,83 @@ public class GitRepoFileSystem extends FileSystem {
 		if (!isOpen) {
 			throw new ClosedFileSystemException();
 		}
-		throw new UnsupportedOperationException();
+
+		try {
+			getHistory();
+		} catch (IOException e) {
+			throw new IllegalStateException(e);
+		}
+
+		final Comparator<Path> compareWithoutTies = Comparator.comparing((p) -> ((GitPath) p),
+				getLecixographicTemporalComparator());
+		return ImmutableSortedSet.copyOf(compareWithoutTies,
+				getCachedHistory().getGraph().nodes().stream().map((c) -> getPath(c.getName() + "/")).iterator());
 	}
 
 	/**
-	 * @return absolute paths whose rev strings are sha1 object ids.
+	 * @return absolute paths whose rev strings are sha1 object ids, ordered with
+	 *         earlier commits coming first.
 	 */
 	public ImmutableSortedSet<GitPath> getGitRootDirectories() {
 		if (!isOpen) {
 			throw new ClosedFileSystemException();
 		}
-		throw new UnsupportedOperationException();
+
+		try {
+			getHistory();
+		} catch (IOException e) {
+			throw new IllegalStateException(e);
+		}
+
+		final Comparator<GitPath> compareWithoutTies = getLecixographicTemporalComparator();
+
+		/** Important to compare without ties, otherwise some commits get collapsed. */
+		return ImmutableSortedSet.copyOf(compareWithoutTies,
+				getCachedHistory().getGraph().nodes().stream().map((c) -> getPath(c.getName() + "/")).iterator());
+	}
+
+	private Comparator<GitPath> getLecixographicTemporalComparator() {
+		final Comparator<GitPath> comparingDates = Comparator
+				.comparing((p) -> getCachedHistory().getCommitDate(getCommit(p)));
+		final Comparator<GitPath> compareWithoutTies = comparingDates.thenComparing((p1, p2) -> {
+			final RevCommit c1 = getCommit(p1);
+			final RevCommit c2 = getCommit(p2);
+			final ImmutableGraph<RevCommit> graph = getCachedHistory().getTransitivelyClosedGraph();
+			if (graph.hasEdgeConnecting(c2, c1)) {
+				/** c1 < c2 */
+				return -1;
+			}
+			if (graph.hasEdgeConnecting(c1, c2)) {
+				/** c1 child-of c2 thus c1 comes after (is greater than) c2 temporally. */
+				return 1;
+			}
+			return 0;
+		}).thenComparing(Comparator.comparing(GitPath::toString));
+		return compareWithoutTies;
+	}
+
+	/**
+	 * history must have been loaded (might be more efficient to use
+	 * {@link #getObjectId(GitPath)} if history is not loaded).
+	 *
+	 * @param path must have a revStr in the form of a sha1, not a reference such as
+	 *             "master".
+	 */
+	private RevCommit getCommit(GitPath path) {
+		final ObjectId objectId = ObjectId.fromString(path.getRevStr());
+		return getCachedHistory().getCommit(objectId);
+	}
+
+	public GitLocalHistory getHistory() throws IOException {
+		if (history == null) {
+			history = GitUtils.getHistory(repository);
+		}
+		return history;
+	}
+
+	public GitLocalHistory getCachedHistory() {
+		checkState(history != null);
+		return history;
 	}
 
 	@Override
@@ -285,8 +360,11 @@ public class GitRepoFileSystem extends FileSystem {
 		return objectId;
 	}
 
-	public SeekableByteChannel newByteChannel(GitPath gitPath)
-			throws IOException, MissingObjectException, IncorrectObjectTypeException {
+	public SeekableByteChannel newByteChannel(GitPath gitPath) throws IOException {
+		if (!isOpen) {
+			throw new ClosedFileSystemException();
+		}
+
 		final ObjectId fileId = getObjectId(gitPath);
 
 		final ObjectLoader fileLoader = reader.open(fileId, Constants.OBJ_BLOB);
@@ -296,6 +374,10 @@ public class GitRepoFileSystem extends FileSystem {
 	}
 
 	public DirectoryStream<GitPath> newDirectoryStream(GitPath dir, Filter<? super Path> filter) throws IOException {
+		if (!isOpen) {
+			throw new ClosedFileSystemException();
+		}
+
 		final RevTree tree = getTree(dir);
 
 		final ImmutableSet.Builder<GitPath> builder = ImmutableSet.builder();

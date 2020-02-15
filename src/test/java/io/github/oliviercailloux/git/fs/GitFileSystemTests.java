@@ -11,12 +11,18 @@ import java.nio.file.Path;
 import org.eclipse.jgit.internal.storage.dfs.DfsRepository;
 import org.eclipse.jgit.internal.storage.dfs.DfsRepositoryDescription;
 import org.eclipse.jgit.internal.storage.dfs.InMemoryRepository;
+import org.eclipse.jgit.revwalk.RevCommit;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableSet;
 
 public class GitFileSystemTests {
+	@SuppressWarnings("unused")
+	private static final Logger LOGGER = LoggerFactory.getLogger(GitFileSystemTests.class);
+
 	@Test
 	void testPaths() throws Exception {
 		try (GitFileSystem gitFS = GitFileSystem.given(Mockito.mock(GitFileSystemProvider.class),
@@ -83,6 +89,19 @@ public class GitFileSystemTests {
 				assertEquals(
 						ImmutableSet.of(gitFS.getPath("master/", "/file1.txt"), gitFS.getPath("master/", "/file2.txt")),
 						ImmutableSet.copyOf(gitFS.newDirectoryStream(masterRootDir, (p) -> true)));
+			}
+		}
+	}
+
+	@Test
+	void testRoots() throws Exception {
+		try (DfsRepository repo = new InMemoryRepository(new DfsRepositoryDescription("myrepo"))) {
+			JGitUsage.createBasicRepo(repo);
+			try (GitRepoFileSystem gitFS = new GitFileSystemProvider().newFileSystemFromRepository(repo)) {
+				final ImmutableSet<RevCommit> commitsOrdered = gitFS.getHistory().getCommitDates().keySet();
+				final ImmutableSet<GitPath> commitPaths = commitsOrdered.stream()
+						.map((c) -> gitFS.getPath(c.getName() + "/")).collect(ImmutableSet.toImmutableSet());
+				assertEquals(commitPaths, gitFS.getGitRootDirectories());
 			}
 		}
 	}

@@ -8,6 +8,7 @@ import java.util.function.Function;
 import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.revwalk.RevCommit;
 
+import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.graph.EndpointPair;
@@ -59,8 +60,22 @@ public class GitLocalHistory extends GitRawHistoryDecorator<RevCommit> implement
 		}
 	}
 
+	private ImmutableBiMap<RevCommit, ObjectId> commitToObjectId;
+
 	private GitLocalHistory(GitRaw raw) {
 		super(raw);
+		commitToObjectId = null;
+	}
+
+	public RevCommit getCommit(ObjectId objectId) {
+		if (commitToObjectId == null) {
+			commitToObjectId = getGraph().nodes().stream().collect(ImmutableBiMap.toImmutableBiMap((c) -> c, (c) -> c));
+		}
+		return commitToObjectId.inverse().get(objectId);
+	}
+
+	public Instant getCommitDateById(ObjectId objectId) {
+		return getCommitDate(getCommit(objectId));
 	}
 
 }
