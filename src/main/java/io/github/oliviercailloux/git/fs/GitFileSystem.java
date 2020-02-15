@@ -2,8 +2,12 @@ package io.github.oliviercailloux.git.fs;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Verify.verify;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.nio.channels.SeekableByteChannel;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.ClosedFileSystemException;
 import java.nio.file.FileStore;
 import java.nio.file.FileSystem;
@@ -16,13 +20,39 @@ import java.nio.file.spi.FileSystemProvider;
 import java.util.Arrays;
 import java.util.Set;
 
+import org.eclipse.jgit.errors.IncorrectObjectTypeException;
+import org.eclipse.jgit.errors.MissingObjectException;
+import org.eclipse.jgit.internal.storage.file.FileRepository;
+import org.eclipse.jgit.lib.Constants;
+import org.eclipse.jgit.lib.ObjectId;
+import org.eclipse.jgit.lib.ObjectLoader;
+import org.eclipse.jgit.lib.ObjectReader;
+import org.eclipse.jgit.lib.Ref;
+import org.eclipse.jgit.lib.Repository;
+import org.eclipse.jgit.revwalk.RevTree;
+import org.eclipse.jgit.revwalk.RevWalk;
+import org.eclipse.jgit.treewalk.TreeWalk;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.common.base.Verify;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.jimfs.Configuration;
 import com.google.common.jimfs.Jimfs;
 
+import io.github.oliviercailloux.utils.SeekableInMemoryByteChannel;
+
 public class GitFileSystem extends FileSystem {
+	@SuppressWarnings("unused")
+	private static final Logger LOGGER = LoggerFactory.getLogger(GitFileSystem.class);
+
+	public static GitFileSystem given(GitFileSystemProvider provider, Path gitDir) throws IOException {
+		final GitFileSystem fs = new GitFileSystem(provider, gitDir);
+		fs.open();
+		return fs;
+	}
+
 	/**
 	 * It is crucial to always use the same instance of Jimfs, because Jimfs refuses
 	 * to resolve paths coming from different instances.
@@ -36,11 +66,19 @@ public class GitFileSystem extends FileSystem {
 	 */
 	private final Path gitDir;
 	private boolean isOpen;
+	private Repository repository;
+	private ObjectReader reader;
 
-	GitFileSystem(GitFileSystemProvider gitProvider, Path gitDir) {
+	private GitFileSystem(GitFileSystemProvider gitProvider, Path gitDir) {
 		this.gitProvider = checkNotNull(gitProvider);
 		this.gitDir = checkNotNull(gitDir);
 		checkArgument(gitDir.getFileSystem().equals(FileSystems.getDefault()));
+	}
+
+	private void open() throws IOException {
+		repository = new FileRepository(this.gitDir.toFile());
+		reader = repository.newObjectReader();
+		reader.setAvoidUnreachableObjects(true);
 		isOpen = true;
 	}
 
@@ -56,7 +94,9 @@ public class GitFileSystem extends FileSystem {
 	@Override
 	public void close() throws IOException {
 		isOpen = false;
-		gitProvider.hasBeenClosed(this);
+		reader.close();
+		repository.close();
+		gitProvider.hasBeenClosedEvent(this);
 	}
 
 	@Override
@@ -180,6 +220,42 @@ public class GitFileSystem extends FileSystem {
 	@Override
 	public WatchService newWatchService() throws IOException {
 		throw new UnsupportedOperationException();
+	}
+
+	public SeekableByteChannel newByteChannel(GitPath gitPath)
+			throws IOException, MissingObjectException, IncorrectObjectTypeException {
+		checkArgument(gitPath.isAbsolute());
+
+		final String revStr = gitPath.getRevStr();
+		final Ref ref = repository.findRef(revStr);
+		if (ref == null) {
+			throw new FileNotFoundException("Rev str " + revStr + " not found.");
+		}
+
+		final ObjectId commitId = ref.getLeaf().getObjectId();
+		if (commitId == null) {
+			throw new FileNotFoundException("Ref " + ref.getName() + " does not exist.");
+		}
+
+		final RevTree tree;
+		try (RevWalk walk = new RevWalk(reader)) {
+			tree = walk.parseCommit(commitId).getTree();
+		}
+
+		final ObjectId fileId;
+		final GitPath withoutRoot = gitPath.getWithoutRoot();
+		try (TreeWalk treeWalk = TreeWalk.forPath(repository, withoutRoot.toString(), tree)) {
+			if (treeWalk == null) {
+				throw new FileNotFoundException("Path " + withoutRoot + " not found.");
+			}
+			fileId = treeWalk.getObjectId(0);
+			verify(!treeWalk.next());
+		}
+
+		final ObjectLoader fileLoader = reader.open(fileId, Constants.OBJ_BLOB);
+		final byte[] bytes = fileLoader.getBytes();
+		LOGGER.info("Read: {}.", new String(bytes, StandardCharsets.UTF_8));
+		return new SeekableInMemoryByteChannel(bytes);
 	}
 
 }

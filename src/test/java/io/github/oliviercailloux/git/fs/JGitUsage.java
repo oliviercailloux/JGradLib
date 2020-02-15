@@ -49,11 +49,11 @@ class JGitUsage {
 		final ObjectDatabase objectDatabase = repo.getObjectDatabase();
 		try (ObjectInserter inserter = objectDatabase.newInserter()) {
 			final PersonIdent personIdent = new PersonIdent("Me", "email");
-			final ObjectId commitStart = insertCommit(inserter, personIdent, ImmutableMap.of("name", "Hello, world"),
-					ImmutableList.of(), "First commit");
+			final ObjectId commitStart = insertCommit(inserter, personIdent,
+					ImmutableMap.of("file1.txt", "Hello, world"), ImmutableList.of(), "First commit");
 			final ObjectId commitNext = insertCommit(inserter, personIdent,
-					ImmutableMap.of("name", "Hello, world", "new", "Hello again"), ImmutableList.of(commitStart),
-					"Second commit");
+					ImmutableMap.of("file1.txt", "Hello, world", "file2.txt", "Hello again"),
+					ImmutableList.of(commitStart), "Second commit");
 
 			final RefUpdate updateRef = repo.updateRef("refs/heads/master");
 			updateRef.setNewObjectId(commitNext);

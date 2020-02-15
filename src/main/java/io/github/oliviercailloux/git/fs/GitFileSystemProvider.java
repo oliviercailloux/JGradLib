@@ -17,6 +17,8 @@ import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.OpenOption;
 import java.nio.file.Path;
+import java.nio.file.ReadOnlyFileSystemException;
+import java.nio.file.StandardOpenOption;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileAttribute;
 import java.nio.file.attribute.FileAttributeView;
@@ -30,7 +32,8 @@ import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.github.oliviercailloux.git.GitUri;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Sets;
 
 public class GitFileSystemProvider extends FileSystemProvider {
 	@SuppressWarnings("unused")
@@ -85,7 +88,7 @@ public class GitFileSystemProvider extends FileSystemProvider {
 				throw new IOException(String.format("Object database not found in %s.", gitDir));
 			}
 		}
-		final GitFileSystem newFs = new GitFileSystem(this, gitDir);
+		final GitFileSystem newFs = GitFileSystem.given(this, gitDir);
 		cachedFileSystems.put(gitDir, newFs);
 		return newFs;
 	}
@@ -127,8 +130,17 @@ public class GitFileSystemProvider extends FileSystemProvider {
 	@Override
 	public SeekableByteChannel newByteChannel(Path path, Set<? extends OpenOption> options, FileAttribute<?>... attrs)
 			throws IOException {
-		TODO();
-		return null;
+		checkArgument(path instanceof GitPath);
+		if (attrs.length >= 1) {
+			throw new ReadOnlyFileSystemException();
+		}
+		if (!Sets.difference(options, ImmutableSet.of(StandardOpenOption.READ)).isEmpty()) {
+			LOGGER.error("Unknown options: " + Sets.difference(options, ImmutableSet.of(StandardOpenOption.READ)));
+			throw new ReadOnlyFileSystemException();
+		}
+
+		final GitPath gitPath = (GitPath) path.toAbsolutePath();
+		return gitPath.getFileSystem().newByteChannel(gitPath);
 	}
 
 	@Override
@@ -139,26 +151,22 @@ public class GitFileSystemProvider extends FileSystemProvider {
 
 	@Override
 	public void createDirectory(Path dir, FileAttribute<?>... attrs) throws IOException {
-		TODO();
-
+		throw new ReadOnlyFileSystemException();
 	}
 
 	@Override
 	public void delete(Path path) throws IOException {
-		TODO();
-
+		throw new ReadOnlyFileSystemException();
 	}
 
 	@Override
 	public void copy(Path source, Path target, CopyOption... options) throws IOException {
-		TODO();
-
+		throw new ReadOnlyFileSystemException();
 	}
 
 	@Override
 	public void move(Path source, Path target, CopyOption... options) throws IOException {
-		TODO();
-
+		throw new ReadOnlyFileSystemException();
 	}
 
 	@Override
@@ -206,12 +214,11 @@ public class GitFileSystemProvider extends FileSystemProvider {
 
 	@Override
 	public void setAttribute(Path path, String attribute, Object value, LinkOption... options) throws IOException {
-		TODO();
-
+		throw new ReadOnlyFileSystemException();
 	}
 
-	void hasBeenClosed(GitFileSystem fs) {
-		cachedFileSystems.remove(GitUri.fromGitFsUri(fs.getGitFsUri()));
+	void hasBeenClosedEvent(GitFileSystem fs) {
+		cachedFileSystems.remove(fs.getGitDir());
 	}
 
 }

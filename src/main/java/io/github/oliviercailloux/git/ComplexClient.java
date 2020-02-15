@@ -200,7 +200,7 @@ public class ComplexClient {
 		}
 
 		LOGGER.debug("Blob cache miss, fetching {}.", path);
-		try (Repository repository = openRepository()) {
+		try (Repository repository = new FileRepository(getProjectDirectory().resolve(".git").toFile())) {
 			final Optional<AnyObjectId> foundId = getBlobId(repository, revSpec, path);
 
 			final String read;

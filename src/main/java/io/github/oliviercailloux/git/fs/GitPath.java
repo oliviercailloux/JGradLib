@@ -2,6 +2,7 @@ package io.github.oliviercailloux.git.fs;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Verify.verify;
 
 import java.io.IOException;
 import java.net.URI;
@@ -64,6 +65,10 @@ public class GitPath implements Path {
 			.thenComparing((p) -> p.dirAndFile);
 
 	static GitPath getMasterSlashPath(GitFileSystem gitFileSystem) {
+		/**
+		 * TODO make JIM_FS_SLASH non static, one per file system. Move this method to
+		 * file system.
+		 */
 		return new GitPath(gitFileSystem, "master", GitFileSystem.JIM_FS_SLASH);
 	}
 
@@ -100,6 +105,7 @@ public class GitPath implements Path {
 
 	@Override
 	public boolean isAbsolute() {
+		verify(dirAndFile.isAbsolute() == !revStr.isEmpty());
 		return dirAndFile.isAbsolute();
 	}
 
@@ -112,6 +118,14 @@ public class GitPath implements Path {
 			return this;
 		}
 		return new GitPath(fileSystem, revStr, GitFileSystem.JIM_FS_SLASH);
+	}
+
+	public GitPath getWithoutRoot() {
+		if (revStr.isEmpty()) {
+			return this;
+		}
+		assert dirAndFile.isAbsolute();
+		return new GitPath(fileSystem, "", GitFileSystem.JIM_FS_SLASH.relativize(dirAndFile));
 	}
 
 	@Override
