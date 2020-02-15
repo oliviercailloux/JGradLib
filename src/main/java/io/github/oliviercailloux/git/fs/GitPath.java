@@ -192,9 +192,12 @@ public class GitPath implements Path {
 	}
 
 	@Override
-	public Path resolve(Path other) {
+	public GitPath resolve(Path other) {
+		if (!getFileSystem().equals(other.getFileSystem())) {
+			throw new IllegalArgumentException();
+		}
 		if (other.isAbsolute()) {
-			return other;
+			return (GitPath) other;
 		}
 		return resolveRelative(other);
 	}

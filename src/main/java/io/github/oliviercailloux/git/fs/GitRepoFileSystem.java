@@ -9,6 +9,8 @@ import java.io.IOException;
 import java.nio.channels.SeekableByteChannel;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.ClosedFileSystemException;
+import java.nio.file.DirectoryStream;
+import java.nio.file.DirectoryStream.Filter;
 import java.nio.file.FileStore;
 import java.nio.file.FileSystem;
 import java.nio.file.Path;
@@ -16,8 +18,10 @@ import java.nio.file.PathMatcher;
 import java.nio.file.WatchService;
 import java.nio.file.attribute.UserPrincipalLookupService;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.Set;
 
+import org.eclipse.jgit.errors.CorruptObjectException;
 import org.eclipse.jgit.errors.IncorrectObjectTypeException;
 import org.eclipse.jgit.errors.MissingObjectException;
 import org.eclipse.jgit.lib.Constants;
@@ -29,11 +33,13 @@ import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.revwalk.RevTree;
 import org.eclipse.jgit.revwalk.RevWalk;
 import org.eclipse.jgit.treewalk.TreeWalk;
+import org.eclipse.jgit.treewalk.filter.TreeFilter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Verify;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.jimfs.Configuration;
 import com.google.common.jimfs.Jimfs;
@@ -41,6 +47,26 @@ import com.google.common.jimfs.Jimfs;
 import io.github.oliviercailloux.utils.SeekableInMemoryByteChannel;
 
 public class GitRepoFileSystem extends FileSystem {
+	private static class NoSubtreeFilter extends TreeFilter {
+		@Override
+		public boolean shouldBeRecursive() {
+			return false;
+		}
+
+		@Override
+		public boolean include(TreeWalk walker)
+				throws MissingObjectException, IncorrectObjectTypeException, IOException {
+			return !walker.isSubtree();
+		}
+
+		@Override
+		public TreeFilter clone() {
+			return this;
+		}
+	}
+
+	private static final TreeFilter NO_SUBTREE_FILTER = new NoSubtreeFilter();
+
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(GitFileSystem.class);
 
@@ -203,11 +229,12 @@ public class GitRepoFileSystem extends FileSystem {
 		throw new UnsupportedOperationException();
 	}
 
-	public SeekableByteChannel newByteChannel(GitPath gitPath)
-			throws IOException, MissingObjectException, IncorrectObjectTypeException {
-		checkArgument(gitPath.isAbsolute());
+	Repository getRepository() {
+		return repository;
+	}
 
-		final String revStr = gitPath.getRevStr();
+	private RevTree getTree(String revStr)
+			throws IOException, FileNotFoundException, MissingObjectException, IncorrectObjectTypeException {
 		final Ref ref = repository.findRef(revStr);
 		if (ref == null) {
 			throw new FileNotFoundException("Rev str " + revStr + " not found.");
@@ -222,16 +249,45 @@ public class GitRepoFileSystem extends FileSystem {
 		try (RevWalk walk = new RevWalk(reader)) {
 			tree = walk.parseCommit(commitId).getTree();
 		}
+		return tree;
+	}
 
-		final ObjectId fileId;
+	private RevTree getTree(GitPath dir) throws IOException, FileNotFoundException, MissingObjectException,
+			IncorrectObjectTypeException, CorruptObjectException {
+		if (dir.getWithoutRoot().toString().isEmpty()) {
+			return getTree(dir.toAbsolutePath().getRevStr());
+		}
+
+		final ObjectId dirId = getObjectId(dir);
+		final RevTree tree;
+		try (RevWalk walk = new RevWalk(reader)) {
+			tree = walk.parseTree(dirId);
+		}
+		return tree;
+	}
+
+	private ObjectId getObjectId(GitPath gitPath) throws IOException, FileNotFoundException, MissingObjectException,
+			IncorrectObjectTypeException, CorruptObjectException {
+		checkArgument(!gitPath.getWithoutRoot().toString().isEmpty());
+
+		final String revStr = gitPath.toAbsolutePath().getRevStr();
+		final RevTree tree = getTree(revStr);
+
+		final ObjectId objectId;
 		final GitPath withoutRoot = gitPath.getWithoutRoot();
 		try (TreeWalk treeWalk = TreeWalk.forPath(repository, withoutRoot.toString(), tree)) {
 			if (treeWalk == null) {
 				throw new FileNotFoundException("Path " + withoutRoot + " not found.");
 			}
-			fileId = treeWalk.getObjectId(0);
+			objectId = treeWalk.getObjectId(0);
 			verify(!treeWalk.next());
 		}
+		return objectId;
+	}
+
+	public SeekableByteChannel newByteChannel(GitPath gitPath)
+			throws IOException, MissingObjectException, IncorrectObjectTypeException {
+		final ObjectId fileId = getObjectId(gitPath);
 
 		final ObjectLoader fileLoader = reader.open(fileId, Constants.OBJ_BLOB);
 		final byte[] bytes = fileLoader.getBytes();
@@ -239,8 +295,35 @@ public class GitRepoFileSystem extends FileSystem {
 		return new SeekableInMemoryByteChannel(bytes);
 	}
 
-	Repository getRepository() {
-		return repository;
+	public DirectoryStream<GitPath> newDirectoryStream(GitPath dir, Filter<? super Path> filter) throws IOException {
+		final RevTree tree = getTree(dir);
+
+		final ImmutableSet.Builder<GitPath> builder = ImmutableSet.builder();
+		try (TreeWalk treeWalk = new TreeWalk(reader)) {
+			treeWalk.addTree(tree);
+			treeWalk.setRecursive(false);
+			treeWalk.setFilter(NO_SUBTREE_FILTER);
+			while (treeWalk.next()) {
+				final GitPath path = dir.resolve(new GitPath(this, "", JIM_FS.getPath(treeWalk.getNameString())));
+				if (!filter.accept(path)) {
+					continue;
+				}
+				builder.add(path);
+			}
+		}
+		final ImmutableSet<GitPath> built = builder.build();
+
+		return new DirectoryStream<>() {
+			@Override
+			public void close() throws IOException {
+				// nothing to do.
+			}
+
+			@Override
+			public Iterator<GitPath> iterator() {
+				return built.iterator();
+			}
+		};
 	}
 
 }

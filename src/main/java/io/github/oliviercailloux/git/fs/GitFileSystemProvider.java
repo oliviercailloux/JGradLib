@@ -23,6 +23,7 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileAttribute;
 import java.nio.file.attribute.FileAttributeView;
 import java.nio.file.spi.FileSystemProvider;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
@@ -34,6 +35,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterators;
 import com.google.common.collect.Sets;
 
 public class GitFileSystemProvider extends FileSystemProvider {
@@ -160,14 +162,28 @@ public class GitFileSystemProvider extends FileSystemProvider {
 			throw new ReadOnlyFileSystemException();
 		}
 
-		final GitPath gitPath = (GitPath) path.toAbsolutePath();
+		final GitPath gitPath = (GitPath) path;
 		return gitPath.getFileSystem().newByteChannel(gitPath);
 	}
 
+	@SuppressWarnings("resource")
 	@Override
 	public DirectoryStream<Path> newDirectoryStream(Path dir, Filter<? super Path> filter) throws IOException {
-		TODO();
-		return null;
+		checkArgument(dir instanceof GitPath);
+		final GitPath gitPath = (GitPath) dir;
+		final DirectoryStream<GitPath> newDirectoryStream = gitPath.getFileSystem().newDirectoryStream(gitPath, filter);
+		return new DirectoryStream<>() {
+
+			@Override
+			public void close() throws IOException {
+				newDirectoryStream.close();
+			}
+
+			@Override
+			public Iterator<Path> iterator() {
+				return Iterators.transform(newDirectoryStream.iterator(), (p) -> p);
+			}
+		};
 	}
 
 	@Override

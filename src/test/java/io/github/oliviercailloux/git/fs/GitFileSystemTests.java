@@ -14,6 +14,8 @@ import org.eclipse.jgit.internal.storage.dfs.InMemoryRepository;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
+import com.google.common.collect.ImmutableSet;
+
 public class GitFileSystemTests {
 	@Test
 	void testPaths() throws Exception {
@@ -50,7 +52,7 @@ public class GitFileSystemTests {
 	}
 
 	@Test
-	void testReadNonExistingFile() throws Exception {
+	void testReadFiles() throws Exception {
 //		final Path gitDir = Path.of("git-test-read " + Instant.now());
 //		Files.createDirectory(gitDir);
 //		try (Repository repo = new FileRepository(gitDir.toString())) {
@@ -61,9 +63,26 @@ public class GitFileSystemTests {
 						() -> gitFS.newByteChannel(gitFS.getPath("master/", "/ploum.txt")));
 				final GitPath path = gitFS.getPath("master/", "/file1.txt");
 //			final SeekableByteChannel newByteChannel = gitFS.newByteChannel(path);
-//			newByteChannel.
 				final String content1 = Files.readString(path);
 				assertEquals("Hello, world", content1);
+			}
+		}
+	}
+
+	@Test
+	void testReadDir() throws Exception {
+		try (DfsRepository repo = new InMemoryRepository(new DfsRepositoryDescription("myrepo"))) {
+			JGitUsage.createBasicRepo(repo);
+			try (GitRepoFileSystem gitFS = new GitFileSystemProvider().newFileSystemFromRepository(repo)) {
+				final GitPath noSuchDir = gitFS.getPath("master/", "/no such dir");
+				assertThrows(FileNotFoundException.class, () -> gitFS.newDirectoryStream(noSuchDir, (p) -> true));
+				final GitPath rootDir = gitFS.getPath("", "");
+				assertEquals(ImmutableSet.of(gitFS.getPath("", "file1.txt"), gitFS.getPath("", "file2.txt")),
+						ImmutableSet.copyOf(gitFS.newDirectoryStream(rootDir, (p) -> true)));
+				final GitPath masterRootDir = gitFS.getPath("master/", "/");
+				assertEquals(
+						ImmutableSet.of(gitFS.getPath("master/", "/file1.txt"), gitFS.getPath("master/", "/file2.txt")),
+						ImmutableSet.copyOf(gitFS.newDirectoryStream(masterRootDir, (p) -> true)));
 			}
 		}
 	}
