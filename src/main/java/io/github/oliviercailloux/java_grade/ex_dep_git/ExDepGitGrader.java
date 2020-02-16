@@ -235,7 +235,7 @@ public class ExDepGitGrader {
 		final Set<RevCommit> commits;
 		try {
 			commits = client.getAllCommits();
-		} catch (IOException | GitAPIException e) {
+		} catch (IOException e) {
 			throw new IllegalStateException(e);
 		}
 		final ImmutableList<ZonedDateTime> commitDeclaredTimes = commits.stream().map(GitUtils::getCreationTime)

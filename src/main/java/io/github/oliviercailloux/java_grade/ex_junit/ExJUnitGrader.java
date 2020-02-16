@@ -73,9 +73,6 @@ public class ExJUnitGrader {
 			history = client.getWholeHistory();
 		} catch (IOException e) {
 			throw new GradingException(e);
-		} catch (GitAPIException e) {
-			LOGGER.warn("No history.", e);
-			history = GitLocalHistory.from(ImmutableSet.of());
 		}
 
 		final Set<RevCommit> noChildren = history.getGraph().nodes().stream()

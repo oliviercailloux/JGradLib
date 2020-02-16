@@ -30,7 +30,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
-import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -78,7 +77,7 @@ public class ExGitGrader {
 //				.collect(Collectors.summingDouble(CriterionAndPoints::getMaxPoints));
 		try {
 			history = client.getWholeHistory();
-		} catch (IOException | GitAPIException e) {
+		} catch (IOException e) {
 			throw new GradingException(e);
 		}
 		gradeBuilder.put(ON_TIME, Marks.timeGrade(fullContext, deadline, this::getPenalty));

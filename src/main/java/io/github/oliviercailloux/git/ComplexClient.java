@@ -394,7 +394,7 @@ public class ComplexClient {
 		}
 	}
 
-	private GitLocalHistory getHistory() throws IOException, GitAPIException {
+	private GitLocalHistory getHistory() throws IOException {
 		final File gitDir = getProjectDirectory().toFile();
 		checkState(exists != null);
 		if (allHistory != null) {
@@ -416,7 +416,7 @@ public class ComplexClient {
 	 * @throws IOException
 	 * @throws GitAPIException
 	 */
-	public GitLocalHistory getWholeHistory() throws IOException, GitAPIException {
+	public GitLocalHistory getWholeHistory() throws IOException {
 		return getHistory();
 	}
 
@@ -455,7 +455,7 @@ public class ComplexClient {
 		}
 	}
 
-	public Set<RevCommit> getAllCommits() throws IOException, GitAPIException {
+	public Set<RevCommit> getAllCommits() throws IOException {
 		return getWholeHistory().getGraph().nodes();
 	}
 
