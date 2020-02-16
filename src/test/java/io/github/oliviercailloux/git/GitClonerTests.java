@@ -119,9 +119,9 @@ class GitClonerTests {
 	@EnabledIfEnvironmentVariable(named = "CONTINUOUS_INTEGRATION", matches = "true")
 	void testCloneBare() throws Exception {
 		final Path gitDirPath = Utils.getTempDirectory()
-				.resolve("testrel cloned " + Utils.ISO_BASIC_UTC_FORMATTER.format(Instant.now())).resolve(".git");
-		new GitCloner().download(GitUri.fromGitUri(URI.create("ssh:git@github.com:oliviercailloux/testrel.git")),
-				gitDirPath, true);
+				.resolve("testrel cloned " + Utils.ISO_BASIC_UTC_FORMATTER.format(Instant.now()));
+		new GitCloner().downloadBare(GitUri.fromGitUri(URI.create("ssh:git@github.com:oliviercailloux/testrel.git")),
+				gitDirPath);
 		assertTrue(Files.exists(gitDirPath.resolve("refs")));
 		assertFalse(Files.exists(gitDirPath.resolve(".git")));
 	}
@@ -138,7 +138,7 @@ class GitClonerTests {
 			LOGGER.info("Cloning from {}.", uri);
 			final Path clonedTo = Utils.getTempDirectory()
 					.resolve("Just cloned using .git " + Utils.ISO_BASIC_UTC_FORMATTER.format(Instant.now()));
-			new GitCloner().download(GitUri.fromGitUri(uri), clonedTo, false);
+			new GitCloner().download(GitUri.fromGitUri(uri), clonedTo);
 			assertTrue(Files.exists(clonedTo.resolve(".git")));
 			assertTrue(Files.exists(clonedTo.resolve(".git").resolve("refs")));
 		}
@@ -147,7 +147,7 @@ class GitClonerTests {
 		LOGGER.info("Cloning from {}.", uri);
 		final Path clonedTo = Utils.getTempDirectory()
 				.resolve("Just cloned " + Utils.ISO_BASIC_UTC_FORMATTER.format(Instant.now()));
-		new GitCloner().download(GitUri.fromGitUri(uri), clonedTo, false);
+		new GitCloner().download(GitUri.fromGitUri(uri), clonedTo);
 		assertTrue(Files.exists(clonedTo.resolve(".git")));
 		assertTrue(Files.exists(clonedTo.resolve(".git").resolve("refs")));
 	}
@@ -160,8 +160,7 @@ class GitClonerTests {
 		Git.init().setDirectory(workTreePath.toFile()).call().close();
 
 		final URI uri = gitDirPath.toUri();
-		assertThrows(IllegalStateException.class,
-				() -> new GitCloner().download(GitUri.fromGitUri(uri), workTreePath, false));
+		assertThrows(IllegalStateException.class, () -> new GitCloner().download(GitUri.fromGitUri(uri), workTreePath));
 	}
 
 }

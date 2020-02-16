@@ -63,7 +63,8 @@ class GitUtilsTests {
 	}
 
 	@Test
-	void testUsingBareCreated() throws Exception {
+	@EnabledIfEnvironmentVariable(named = "CONTINUOUS_INTEGRATION", matches = "true")
+	void testUsingJustCreated() throws Exception {
 		final Path gitDirPath = Utils.getTempDirectory().resolve("Just created " + Instant.now()).resolve(".git");
 		Git.init().setGitDir(gitDirPath.toFile()).call().close();
 
@@ -75,11 +76,30 @@ class GitUtilsTests {
 	@Test
 	@EnabledIfEnvironmentVariable(named = "CONTINUOUS_INTEGRATION", matches = "true")
 	void testUsingBareClone() throws Exception {
-		final Path gitDirPath = Utils.getTempDirectory().resolve("testrel cloned " + Instant.now()).resolve(".git");
-		new GitCloner().download(GitUri.fromGitUri(URI.create("ssh:git@github.com:oliviercailloux/testrel.git")),
-				gitDirPath, true);
-		final GitLocalHistory history = GitUtils.getHistory(gitDirPath.toFile());
+		final GitUri testRel = GitUri.fromGitUri(URI.create("ssh:git@github.com:oliviercailloux/testrel.git"));
+		final Path repoBarePath = Utils.getTempDirectory().resolve("testrel cloned bare " + Instant.now());
+		new GitCloner().downloadBare(testRel, repoBarePath);
+		final GitLocalHistory history = GitUtils.getHistory(repoBarePath.toFile());
 		assertTrue(history.getGraph().nodes().size() >= 2);
+		new GitCloner().downloadBare(testRel, repoBarePath);
+		assertEquals(history, GitUtils.getHistory(repoBarePath.toFile()));
+		new GitCloner().download(testRel, repoBarePath);
+		assertEquals(history, GitUtils.getHistory(repoBarePath.toFile()));
+	}
+
+	@Test
+	@EnabledIfEnvironmentVariable(named = "CONTINUOUS_INTEGRATION", matches = "true")
+	void testUsingClone() throws Exception {
+		final GitUri testRel = GitUri.fromGitUri(URI.create("ssh:git@github.com:oliviercailloux/testrel.git"));
+		final Path workTreePath = Utils.getTempDirectory().resolve("testrel cloned " + Instant.now());
+		final Path gitDir = workTreePath.resolve(".git");
+		new GitCloner().download(testRel, workTreePath);
+		final GitLocalHistory history = GitUtils.getHistory(gitDir.toFile());
+		assertTrue(history.getGraph().nodes().size() >= 2);
+		new GitCloner().download(testRel, workTreePath);
+		assertEquals(history, GitUtils.getHistory(gitDir.toFile()));
+		new GitCloner().downloadBare(testRel, gitDir);
+		assertEquals(history, GitUtils.getHistory(gitDir.toFile()));
 	}
 
 	@Test

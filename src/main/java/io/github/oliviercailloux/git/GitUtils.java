@@ -52,7 +52,7 @@ public class GitUtils {
 	}
 
 	/**
-	 * @param gitDir the GIT_DIR or the .git directory
+	 * @param gitDir the GIT_DIR directory (usually ending with .git)
 	 * @return the graph of commits pointed to by at least one ref in /refs plus
 	 *         HEAD, thus including remotes and local branches and tags, together
 	 *         with their parents.
@@ -81,6 +81,7 @@ public class GitUtils {
 		try (Git git = Git.wrap(repository)) {
 			final Iterable<RevCommit> commits = git.log().all().call();
 			history = GitLocalHistory.from(commits);
+			LOGGER.info("Commits: {}.", history.getGraph().nodes());
 		} catch (NoHeadException e) {
 			throw new IllegalStateException(e);
 		} catch (GitAPIException e) {

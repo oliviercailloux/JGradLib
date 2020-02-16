@@ -18,8 +18,10 @@ import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.ListBranchCommand.ListMode;
 import org.eclipse.jgit.api.PullResult;
 import org.eclipse.jgit.api.errors.GitAPIException;
+import org.eclipse.jgit.internal.storage.file.FileRepository;
 import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.lib.Ref;
+import org.eclipse.jgit.transport.FetchResult;
 import org.eclipse.jgit.transport.RemoteConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -62,13 +64,21 @@ public class GitCloner {
 		download(uri, workTree, false);
 	}
 
+	public void downloadBare(GitUri uri, Path gitDir) throws IOException {
+		download(uri, gitDir, true);
+	}
+
 	/**
-	 * @param repositoryDirectory GIT_DIR, or .git dir
+	 * @param repositoryDirectory GIT_DIR (replacing .git dir) if bare (see
+	 *                            {@link FileRepository}), otherwise, work tree dir,
+	 *                            in which a .git dir will be created (or exists).
 	 * @param allowBare           <code>true</code> to clone bare if not exists (if
 	 *                            exists, this method will not check whether it is
 	 *                            bare)
 	 */
-	public void download(GitUri uri, Path repositoryDirectory, boolean allowBare) throws IOException {
+	private void download(GitUri uri, Path repositoryDirectory, boolean allowBare) throws IOException {
+		localRefs = null;
+		remoteRefs = null;
 		final boolean exists = Files.exists(repositoryDirectory);
 		if (!exists) {
 			final CloneCommand cloneCmd = Git.cloneRepository();
@@ -87,17 +97,26 @@ public class GitCloner {
 				final List<RemoteConfig> remoteList = git.remoteList().call();
 				final Optional<RemoteConfig> origin = remoteList.stream().filter((r) -> r.getName().equals("origin"))
 						.collect(MoreCollectors.toOptional());
-				if (!git.status().call().isClean()) {
+				if (!git.getRepository().isBare() && !git.status().call().isClean()) {
 					throw new IllegalStateException("Can’t update: not clean.");
 				}
 				LOGGER.info("HEAD: {}.", git.getRepository().getFullBranch());
 				if (origin.isPresent() && origin.get().getURIs().size() == 1
 						&& origin.get().getURIs().get(0).toString().equals(uri.getGitString())) {
-					final PullResult result = git.pull().call();
-					if (!result.isSuccessful()) {
-						LOGGER.error("Merge failed with results: {}, {}, {}.", result.getFetchResult(),
-								result.getMergeResult(), result.getRebaseResult());
-						throw new IllegalStateException("Merge failed");
+					if (git.getRepository().isBare()) {
+						final FetchResult result = git.fetch().call();
+						final String messages = result.getMessages();
+						if (!messages.isEmpty()) {
+							LOGGER.error("Fetch result: {}.", messages);
+							throw new IllegalStateException("Fetch failed (perhaps)");
+						}
+					} else {
+						final PullResult result = git.pull().call();
+						if (!result.isSuccessful()) {
+							LOGGER.error("Merge failed with results: {}, {}, {}.", result.getFetchResult(),
+									result.getMergeResult(), result.getRebaseResult());
+							throw new IllegalStateException("Merge failed");
+						}
 					}
 				} else {
 					throw new IllegalStateException("Unexpected remote.");
