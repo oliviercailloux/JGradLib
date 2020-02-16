@@ -61,6 +61,7 @@ public class GitUtils {
 		final GitLocalHistory history;
 		try (FileRepository repo = new FileRepository(gitDir)) {
 			if (!repo.getObjectDatabase().exists()) {
+				LOGGER.info("No object database at " + gitDir + ", did you forget to use the GIT_DIR?");
 				throw new RepositoryNotFoundException(gitDir);
 			}
 			history = getHistory(repo);

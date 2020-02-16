@@ -395,7 +395,7 @@ public class ComplexClient {
 	}
 
 	private GitLocalHistory getHistory() throws IOException {
-		final File gitDir = getProjectDirectory().toFile();
+		final File gitDir = getProjectDirectory().resolve(".git").toFile();
 		checkState(exists != null);
 		if (allHistory != null) {
 			return allHistory;

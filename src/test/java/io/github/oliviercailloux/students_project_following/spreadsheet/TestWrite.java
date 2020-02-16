@@ -92,7 +92,6 @@ public class TestWrite {
 	}
 
 	@Test
-	@EnabledIfEnvironmentVariable(named = "ENV", matches = "staging-server")
 	public void testWriteOneProject() throws Exception {
 		LOGGER.info("Started write p1.");
 		final Builder<Functionality> functionalitiesBuilder = ImmutableList.builder();

@@ -27,16 +27,6 @@ import io.github.oliviercailloux.utils.Utils;
 class GitUtilsTests {
 
 	@Test
-	@EnabledIfEnvironmentVariable(named = "CONTINUOUS_INTEGRATION", matches = "true")
-	void testLogFromClone() throws Exception {
-		final Path workTreePath = Utils.getTempDirectory().resolve("testrel cloned " + Instant.now());
-		new GitCloner().download(GitUri.fromGitUri(URI.create("ssh:git@github.com:oliviercailloux/testrel.git")),
-				workTreePath);
-		final GitLocalHistory history = GitUtils.getHistory(workTreePath.toFile());
-		assertTrue(history.getGraph().nodes().size() >= 2);
-	}
-
-	@Test
 	void testLogFromCreated() throws Exception {
 		final Path workTreePath = Utils.getTempDirectory().resolve("Just created " + Instant.now());
 		final Path gitDirPath = workTreePath.resolve(".git");
