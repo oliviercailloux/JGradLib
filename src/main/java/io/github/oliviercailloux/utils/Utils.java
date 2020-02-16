@@ -113,7 +113,7 @@ public class Utils {
 		if (graph instanceof ImmutableGraph) {
 			return (ImmutableGraph<E>) graph;
 		}
-		final Builder<E> builder = GraphBuilder.directed().immutable();
+		final Builder<E> builder = GraphBuilder.from(graph).immutable();
 		final Set<E> nodes = graph.nodes();
 		for (E node : nodes) {
 			builder.addNode(node);
