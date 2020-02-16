@@ -237,6 +237,27 @@ public class TestFetch {
 
 	@Test
 	@EnabledIfEnvironmentVariable(named = "CONTINUOUS_INTEGRATION", matches = "true")
+	public void testGitHubHistoryFiltered() throws Exception {
+		final RepositoryCoordinates coord = RepositoryCoordinates.from("oliviercailloux", "projets");
+		try (GitHubFetcherQL fetcher = GitHubFetcherQL.using(GitHubToken.getRealInstance())) {
+			final GitHubHistory gHH = fetcher.getGitHubHistory(coord);
+			final ImmutableMap<ObjectId, Instant> pushedDates = gHH.getPushedDates();
+			final ImmutableMap<ObjectId, Instant> compPushedDates = gHH.getCorrectedAndCompletedPushedDates();
+			assertEquals(Instant.parse("2016-09-23T13:01:18Z"),
+					pushedDates.get(ObjectId.fromString("c2e245e7a7ca785fe8410213db89f142dda13bcf")));
+			assertEquals(Instant.parse("2016-09-23T13:02:36Z"),
+					pushedDates.get(ObjectId.fromString("cc61d5dd68156cb5429da29c23729d169639a64d")));
+
+			final GitHubHistory filtered = gHH
+					.filter((o) -> compPushedDates.get(o).isBefore(Instant.parse("2016-09-23T13:01:30Z")));
+			assertTrue(gHH.getGraph().nodes().size() >= 164);
+			assertEquals(16, filtered.getGraph().nodes().size());
+			assertEquals(16, filtered.getGraph().edges().size());
+		}
+	}
+
+	@Test
+	@EnabledIfEnvironmentVariable(named = "CONTINUOUS_INTEGRATION", matches = "true")
 	void testGitHubHistoryCLut() throws Exception {
 		final RepositoryCoordinates coordinates = RepositoryCoordinates.from("oliviercailloux", "CLut");
 		try (GitHubFetcherQL fetcher = GitHubFetcherQL.using(GitHubToken.getRealInstance())) {

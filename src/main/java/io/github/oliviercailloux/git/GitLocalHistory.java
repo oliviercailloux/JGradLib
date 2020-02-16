@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.util.Arrays;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.function.Predicate;
 
 import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.revwalk.RevCommit;
@@ -62,9 +63,15 @@ public class GitLocalHistory extends GitRawHistoryDecorator<RevCommit> implement
 
 	private ImmutableBiMap<RevCommit, ObjectId> commitToObjectId;
 
-	private GitLocalHistory(GitRaw raw) {
+	private GitLocalHistory(GitRawHistory<RevCommit> raw) {
 		super(raw);
 		commitToObjectId = null;
+	}
+
+	@Override
+	public GitLocalHistory filter(Predicate<RevCommit> predicate) {
+		final GitRawHistory<RevCommit> filtered = filter(raw, predicate);
+		return new GitLocalHistory(filtered);
 	}
 
 	public RevCommit getCommit(ObjectId objectId) {

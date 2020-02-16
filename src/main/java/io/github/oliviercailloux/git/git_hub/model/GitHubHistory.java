@@ -1,6 +1,5 @@
 package io.github.oliviercailloux.git.git_hub.model;
 
-import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Verify.verify;
 
 import java.time.Instant;
@@ -12,6 +11,7 @@ import java.util.Map.Entry;
 import java.util.Queue;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.function.Predicate;
 
 import org.eclipse.jgit.lib.ObjectId;
 
@@ -73,14 +73,12 @@ public class GitHubHistory extends GitRawHistoryDecorator<ObjectId> implements G
 		return new GitHubHistory(raw, pushedDates);
 	}
 
-	private final GitRawHistory<ObjectId> raw;
 	private final ImmutableMap<ObjectId, Instant> pushedDates;
 	private ImmutableMap<ObjectId, Instant> finalPushedDates;
 	private ImmutableGraph<ObjectId> patchedKnowns;
 
 	private GitHubHistory(GitRawHistory<ObjectId> raw, Map<ObjectId, Instant> pushedDates) {
 		super(raw);
-		this.raw = checkNotNull(raw);
 		this.pushedDates = ImmutableMap.copyOf(pushedDates);
 		checkAndCompletePushDates();
 	}
@@ -226,5 +224,10 @@ public class GitHubHistory extends GitRawHistoryDecorator<ObjectId> implements G
 	public ImmutableSet<ObjectId> getPushedBeforeCommitted() {
 		return pushedDates.keySet().stream().filter((o) -> finalPushedDates.get(o).isBefore(getCommitDate(o)))
 				.collect(ImmutableSet.toImmutableSet());
+	}
+
+	@Override
+	public GitHubHistory filter(Predicate<ObjectId> predicate) {
+		return new GitHubHistory(filter(raw, predicate), Maps.filterKeys(pushedDates, predicate::test));
 	}
 }

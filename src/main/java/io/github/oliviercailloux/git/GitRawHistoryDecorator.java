@@ -36,6 +36,13 @@ public class GitRawHistoryDecorator<E extends ObjectId> implements GitHistory<E>
 		final ImmutableSet<E> kept = graph.nodes().stream().filter(predicate).collect(ImmutableSet.toImmutableSet());
 		kept.stream().forEach(builder::addNode);
 
+		/**
+		 * I Did not find any algorithm for this in JGraphT as of Feb, 2020.
+		 *
+		 * Roughly speaking, I want a filtered graph that has edges from the original
+		 * one only if a was reachable from b but is not deducible by transitive closure
+		 * from the reduct.
+		 */
 		for (E a : kept) {
 			final Queue<E> queue = new LinkedList<>();
 			queue.addAll(graph.predecessors(a));
@@ -103,7 +110,7 @@ public class GitRawHistoryDecorator<E extends ObjectId> implements GitHistory<E>
 		return new GitRawHistoryDecorator<>(raw);
 	}
 
-	private final GitRawHistory<E> raw;
+	protected final GitRawHistory<E> raw;
 	private ImmutableGraph<E> transitiveClosure;
 
 	protected GitRawHistoryDecorator(GitRawHistory<E> raw) {
@@ -160,6 +167,10 @@ public class GitRawHistoryDecorator<E extends ObjectId> implements GitHistory<E>
 	@Override
 	public ImmutableMap<E, Instant> getCommitDates() {
 		return raw.getCommitDates();
+	}
+
+	public GitHistory<E> filter(Predicate<E> predicate) {
+		return wrap(filter(raw, predicate));
 	}
 
 	@Override
