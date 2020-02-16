@@ -4,6 +4,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 
 import java.time.Instant;
 import java.util.LinkedList;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Queue;
 import java.util.Set;
@@ -18,9 +19,12 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import com.google.common.graph.Graph;
 import com.google.common.graph.GraphBuilder;
 import com.google.common.graph.Graphs;
 import com.google.common.graph.ImmutableGraph;
+
+import io.github.oliviercailloux.utils.Utils;
 
 public class GitRawHistoryDecorator<E extends ObjectId> implements GitHistory<E> {
 	@SuppressWarnings("unused")
@@ -56,6 +60,43 @@ public class GitRawHistoryDecorator<E extends ObjectId> implements GitHistory<E>
 		public Instant getCommitDate(E objectId);
 
 		public ImmutableMap<E, Instant> getCommitDates();
+	}
+
+	public static class GitRawHistoryImpl<E extends ObjectId> implements GitRawHistory<E> {
+
+		public static <E extends ObjectId> GitRawHistoryImpl<E> given(Graph<E> graph, Map<E, Instant> commitDates) {
+			return new GitRawHistoryImpl<>(graph, commitDates);
+		}
+
+		private final ImmutableGraph<E> graph;
+		private ImmutableMap<E, Instant> commitDates;
+
+		private GitRawHistoryImpl(Graph<E> graph, Map<E, Instant> commitDates) {
+			this.graph = Utils.asImmutableGraph(graph);
+			this.commitDates = ImmutableMap.copyOf(commitDates);
+		}
+
+		@Override
+		public ImmutableGraph<E> getGraph() {
+			return graph;
+		}
+
+		@SuppressWarnings("unchecked")
+		@Override
+		public ImmutableGraph<ObjectId> getRawGraph() {
+			return (ImmutableGraph<ObjectId>) graph;
+		}
+
+		@Override
+		public Instant getCommitDate(E objectId) {
+			return commitDates.get(objectId);
+		}
+
+		@Override
+		public ImmutableMap<E, Instant> getCommitDates() {
+			return commitDates;
+		}
+
 	}
 
 	public static <E extends ObjectId> GitHistory<E> wrap(GitRawHistory<E> raw) {
