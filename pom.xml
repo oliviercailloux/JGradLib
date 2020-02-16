@@ -13,9 +13,6 @@
 		<maven.compiler.target>11</maven.compiler.target>
 		<maven.compiler.release>11</maven.compiler.release>
 	</properties>
-	<prerequisites>
-		<maven>3.0</maven>
-	</prerequisites>
 
 	<build>
 		<plugins>
