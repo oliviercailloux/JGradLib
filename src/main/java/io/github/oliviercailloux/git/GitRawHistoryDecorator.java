@@ -49,7 +49,7 @@ public class GitRawHistoryDecorator<E extends ObjectId> implements GitHistory<E>
 			}
 		}
 
-		return GitRawHistoryImpl.given(builder.build(), Maps.filterKeys(history.getCommitDates(), predicate::test));
+		return raw(builder.build(), Maps.filterKeys(history.getCommitDates(), predicate::test));
 	}
 
 	public static interface GitRawHistory<E extends ObjectId> {
@@ -62,11 +62,11 @@ public class GitRawHistoryDecorator<E extends ObjectId> implements GitHistory<E>
 		public ImmutableMap<E, Instant> getCommitDates();
 	}
 
-	public static class GitRawHistoryImpl<E extends ObjectId> implements GitRawHistory<E> {
+	public static <E extends ObjectId> GitRawHistoryImpl<E> raw(Graph<E> graph, Map<E, Instant> commitDates) {
+		return new GitRawHistoryImpl<>(graph, commitDates);
+	}
 
-		public static <E extends ObjectId> GitRawHistoryImpl<E> given(Graph<E> graph, Map<E, Instant> commitDates) {
-			return new GitRawHistoryImpl<>(graph, commitDates);
-		}
+	private static class GitRawHistoryImpl<E extends ObjectId> implements GitRawHistory<E> {
 
 		private final ImmutableGraph<E> graph;
 		private ImmutableMap<E, Instant> commitDates;

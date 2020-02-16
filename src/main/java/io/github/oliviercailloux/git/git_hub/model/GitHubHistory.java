@@ -31,7 +31,6 @@ import com.google.common.graph.ImmutableGraph;
 
 import io.github.oliviercailloux.git.GitHistory;
 import io.github.oliviercailloux.git.GitRawHistoryDecorator;
-import io.github.oliviercailloux.git.GitRawHistoryImpl;
 
 /**
  * Many null values among the pushedDate information sent by GitHub. Also,
@@ -70,16 +69,16 @@ public class GitHubHistory extends GitRawHistoryDecorator<ObjectId> implements G
 
 	public static GitHubHistory given(Graph<ObjectId> history, Map<ObjectId, Instant> commitDates,
 			Map<ObjectId, Instant> pushedDates) {
-		final GitRawHistoryImpl<ObjectId> raw = GitRawHistoryImpl.given(history, commitDates);
+		final GitRawHistory<ObjectId> raw = GitRawHistoryDecorator.raw(history, commitDates);
 		return new GitHubHistory(raw, pushedDates);
 	}
 
-	private final GitRawHistoryImpl<ObjectId> raw;
+	private final GitRawHistory<ObjectId> raw;
 	private final ImmutableMap<ObjectId, Instant> pushedDates;
 	private ImmutableMap<ObjectId, Instant> finalPushedDates;
 	private ImmutableGraph<ObjectId> patchedKnowns;
 
-	private GitHubHistory(GitRawHistoryImpl<ObjectId> raw, Map<ObjectId, Instant> pushedDates) {
+	private GitHubHistory(GitRawHistory<ObjectId> raw, Map<ObjectId, Instant> pushedDates) {
 		super(raw);
 		this.raw = checkNotNull(raw);
 		this.pushedDates = ImmutableMap.copyOf(pushedDates);
