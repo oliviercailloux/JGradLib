@@ -3,8 +3,11 @@ package io.github.oliviercailloux.git;
 import static com.google.common.base.Preconditions.checkArgument;
 
 import java.time.Instant;
+import java.util.LinkedList;
 import java.util.Objects;
+import java.util.Queue;
 import java.util.Set;
+import java.util.function.Predicate;
 
 import org.eclipse.jgit.lib.ObjectId;
 import org.slf4j.Logger;
@@ -13,13 +16,37 @@ import org.slf4j.LoggerFactory;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import com.google.common.graph.GraphBuilder;
 import com.google.common.graph.Graphs;
 import com.google.common.graph.ImmutableGraph;
 
 public class GitRawHistoryDecorator<E extends ObjectId> implements GitHistory<E> {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(GitRawHistoryDecorator.class);
+
+	public static <E extends ObjectId> GitRawHistory<E> filter(GitRawHistory<E> history, Predicate<E> predicate) {
+		final ImmutableGraph.Builder<E> builder = GraphBuilder.directed().immutable();
+		final ImmutableGraph<E> graph = history.getGraph();
+		final ImmutableSet<E> kept = graph.nodes().stream().filter(predicate).collect(ImmutableSet.toImmutableSet());
+		kept.stream().forEach(builder::addNode);
+
+		for (E a : kept) {
+			final Queue<E> queue = new LinkedList<>();
+			queue.addAll(graph.predecessors(a));
+			while (!queue.isEmpty()) {
+				final E b = queue.remove();
+				if (predicate.test(b)) {
+					builder.putEdge(a, b);
+				} else {
+					queue.addAll(graph.predecessors(b));
+				}
+			}
+		}
+
+		return GitRawHistoryImpl.given(builder.build(), Maps.filterKeys(history.getCommitDates(), predicate::test));
+	}
 
 	public static interface GitRawHistory<E extends ObjectId> {
 		public ImmutableGraph<E> getGraph();

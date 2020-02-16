@@ -31,7 +31,7 @@ import com.google.common.graph.ImmutableGraph;
 
 import io.github.oliviercailloux.git.GitHistory;
 import io.github.oliviercailloux.git.GitRawHistoryDecorator;
-import io.github.oliviercailloux.utils.Utils;
+import io.github.oliviercailloux.git.GitRawHistoryImpl;
 
 /**
  * Many null values among the pushedDate information sent by GitHub. Also,
@@ -70,48 +70,16 @@ public class GitHubHistory extends GitRawHistoryDecorator<ObjectId> implements G
 
 	public static GitHubHistory given(Graph<ObjectId> history, Map<ObjectId, Instant> commitDates,
 			Map<ObjectId, Instant> pushedDates) {
-		final GitRawHistoryObjectId raw = new GitRawHistoryObjectId(history, commitDates);
+		final GitRawHistoryImpl<ObjectId> raw = GitRawHistoryImpl.given(history, commitDates);
 		return new GitHubHistory(raw, pushedDates);
 	}
 
-	private static class GitRawHistoryObjectId implements GitRawHistory<ObjectId> {
-
-		private final ImmutableGraph<ObjectId> graph;
-		private ImmutableMap<ObjectId, Instant> commitDates;
-
-		private GitRawHistoryObjectId(Graph<ObjectId> graph, Map<ObjectId, Instant> commitDates) {
-			this.graph = Utils.asImmutableGraph(graph);
-			this.commitDates = ImmutableMap.copyOf(commitDates);
-		}
-
-		@Override
-		public ImmutableGraph<ObjectId> getGraph() {
-			return graph;
-		}
-
-		@Override
-		public ImmutableGraph<ObjectId> getRawGraph() {
-			return graph;
-		}
-
-		@Override
-		public Instant getCommitDate(ObjectId objectId) {
-			return commitDates.get(objectId);
-		}
-
-		@Override
-		public ImmutableMap<ObjectId, Instant> getCommitDates() {
-			return commitDates;
-		}
-
-	}
-
-	private final GitRawHistoryObjectId raw;
+	private final GitRawHistoryImpl<ObjectId> raw;
 	private final ImmutableMap<ObjectId, Instant> pushedDates;
 	private ImmutableMap<ObjectId, Instant> finalPushedDates;
 	private ImmutableGraph<ObjectId> patchedKnowns;
 
-	private GitHubHistory(GitRawHistoryObjectId raw, Map<ObjectId, Instant> pushedDates) {
+	private GitHubHistory(GitRawHistoryImpl<ObjectId> raw, Map<ObjectId, Instant> pushedDates) {
 		super(raw);
 		this.raw = checkNotNull(raw);
 		this.pushedDates = ImmutableMap.copyOf(pushedDates);
