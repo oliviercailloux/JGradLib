@@ -17,12 +17,14 @@ import java.nio.file.Path;
 import org.eclipse.jgit.internal.storage.dfs.DfsRepository;
 import org.eclipse.jgit.internal.storage.dfs.DfsRepositoryDescription;
 import org.eclipse.jgit.internal.storage.dfs.InMemoryRepository;
+import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
 public class GitFileSystemTests {
@@ -92,12 +94,11 @@ public class GitFileSystemTests {
 
 	@Test
 	void testExists() throws Exception {
-//		final Path gitDir = Path.of("git-test " + Instant.now());
-//		Files.createDirectory(gitDir);
-//		try (Repository repo = new FileRepository(gitDir.toString())) {
 		try (DfsRepository repo = new InMemoryRepository(new DfsRepositoryDescription("myrepo"))) {
-			JGit.createRepoWithSubDir(repo);
+			final ImmutableList<ObjectId> commits = JGit.createRepoWithSubDir(repo);
 			try (GitRepoFileSystem gitFS = new GitFileSystemProvider().newFileSystemFromRepository(repo)) {
+				assertEquals(ImmutableSet.copyOf(commits), gitFS.getHistory().getCommitDates().keySet());
+				assertTrue(Files.exists(gitFS.getAbsolutePath(commits.get(0).getName())));
 				assertFalse(Files.exists(gitFS.getPath("master/", "/ploum.txt")));
 				assertFalse(Files.exists(gitFS.getPath("master/", "/dir/ploum.txt")));
 				assertTrue(Files.exists(gitFS.getPath("master/", "/dir/file.txt")));
@@ -106,6 +107,11 @@ public class GitFileSystemTests {
 				assertTrue(Files.exists(gitFS.getPath("master/", "/")));
 				assertTrue(Files.exists(gitFS.getPath("", "dir")));
 				assertTrue(Files.exists(gitFS.getPath("", "")));
+				assertFalse(Files.exists(gitFS.getRelativePath("ploum.txt")));
+				assertFalse(Files.exists(gitFS.getAbsolutePath("blah")));
+				assertFalse(Files.exists(gitFS.getAbsolutePath("blah", "/file1.txt")));
+				assertTrue(Files.exists(gitFS.getAbsolutePath(commits.get(0).getName(), "/file1.txt")));
+				assertFalse(Files.exists(gitFS.getAbsolutePath(commits.get(0).getName(), "/ploum.txt")));
 			}
 		}
 	}
@@ -115,14 +121,13 @@ public class GitFileSystemTests {
 		try (DfsRepository repo = new InMemoryRepository(new DfsRepositoryDescription("myrepo"))) {
 			JGit.createBasicRepo(repo);
 			try (GitRepoFileSystem gitFS = new GitFileSystemProvider().newFileSystemFromRepository(repo)) {
-				assertThrows(NoSuchFileException.class, () -> gitFS.newDirectoryStream(gitFS.getPath("master/", "/no such dir"), (p) -> true));
-				final GitPath rootDir = gitFS.getPath("", "");
+				assertThrows(NoSuchFileException.class,
+						() -> gitFS.newDirectoryStream(gitFS.getPath("master/", "/no such dir"), (p) -> true));
 				assertEquals(ImmutableSet.of(gitFS.getPath("", "file1.txt"), gitFS.getPath("", "file2.txt")),
-						ImmutableSet.copyOf(gitFS.newDirectoryStream(rootDir, p -> true)));
-				final GitPath masterRootDir = gitFS.getPath("master/", "/");
+						ImmutableSet.copyOf(gitFS.newDirectoryStream(gitFS.getRoot(), p -> true)));
 				assertEquals(
 						ImmutableSet.of(gitFS.getPath("master/", "/file1.txt"), gitFS.getPath("master/", "/file2.txt")),
-						ImmutableSet.copyOf(gitFS.newDirectoryStream(masterRootDir, (p) -> true)));
+						ImmutableSet.copyOf(gitFS.newDirectoryStream(gitFS.getPath("master/", "/"), p -> true)));
 			}
 		}
 	}

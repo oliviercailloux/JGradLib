@@ -376,17 +376,21 @@ public class GitRepoFileSystem extends FileSystem {
 		return repository;
 	}
 
-	private Optional<ObjectId> getCommitId(String revStr) throws IOException {
+	/**
+	 * @param refStr must be a ref, such as “master”, and not a SHA-1 object id
+	 */
+	private Optional<ObjectId> getCommitIdFromRef(String refStr) throws IOException {
 		final Optional<ObjectId> commitId;
 
-		final Ref ref = repository.findRef(revStr);
+		final Ref ref = repository.findRef(refStr);
 		if (ref == null) {
-			LOGGER.debug("Rev str " + revStr + " not found.");
+			LOGGER.debug("Ref str " + refStr + " not found.");
 			commitId = Optional.empty();
 		} else {
 			commitId = Optional.ofNullable(ref.getLeaf().getObjectId());
 			if (commitId.isEmpty()) {
-				LOGGER.debug("Ref " + ref.getName() + " does not exist.");
+				/** TODO enquire how this can happen. */
+				LOGGER.debug("Ref " + ref.getName() + " does not exist yet.");
 			} else {
 				LOGGER.debug("Ref {} found: {}.", ref.getName(), commitId);
 			}
@@ -394,7 +398,22 @@ public class GitRepoFileSystem extends FileSystem {
 		return commitId;
 	}
 
-	private Optional<RevTree> getTree(String revStr)
+	private Optional<ObjectId> getCommitId(String revStr) throws IOException {
+		if (isObjectId(revStr)) {
+			return Optional.of(ObjectId.fromString(revStr));
+		}
+		return getCommitIdFromRef(revStr);
+	}
+
+	private boolean isObjectId(String revStr) {
+		/**
+		 * This is incorrect (I suppose): a ref could have the same length as an object
+		 * id.
+		 */
+		return revStr.length() == 40;
+	}
+
+	private Optional<RevTree> getCommitTree(String revStr)
 			throws IOException, MissingObjectException, IncorrectObjectTypeException {
 		final Optional<ObjectId> commitId = getCommitId(revStr);
 
@@ -410,31 +429,44 @@ public class GitRepoFileSystem extends FileSystem {
 		return commit.map(RevCommit::getTree);
 	}
 
+	private Optional<TreeWalk> getTreeWalk(GitPath gitPath)
+			throws IOException, MissingObjectException, IncorrectObjectTypeException, CorruptObjectException {
+		final GitPath withoutRoot = gitPath.toRelativePath();
+		/**
+		 * TreeWalk.forPath says “Empty path not permitted” if using "" or "/".
+		 */
+		checkArgument(!withoutRoot.equals(root));
+
+		final Optional<RevTree> tree = getCommitTree(gitPath.toAbsolutePath().getRevStr());
+		/**
+		 * Dangerous zone: treeWalk could end up not closed if an exception is thrown
+		 * after creation and before return (as it is not in a try block). Seems
+		 * unlikely, though.
+		 */
+		final Optional<TreeWalk> treeWalk = tree.flatMap(
+				Utils.uncheck(t -> Optional.ofNullable(TreeWalk.forPath(repository, withoutRoot.toString(), t))));
+		if (treeWalk.isEmpty()) {
+			LOGGER.debug("Path " + withoutRoot + " not found.");
+		}
+		return treeWalk;
+	}
+
 	/**
 	 * @param gitPath dirAndFile part must be non-empty.
 	 */
 	private Optional<ObjectId> getObjectId(GitPath gitPath)
 			throws IOException, MissingObjectException, IncorrectObjectTypeException, CorruptObjectException {
-		final GitPath withoutRoot = gitPath.toRelativePath();
-		checkArgument(!withoutRoot.equals(root));
+		checkArgument(!gitPath.toRelativePath().equals(root));
 
-		final Optional<RevTree> tree = getTree(gitPath.toAbsolutePath().getRevStr());
-		if (tree.isEmpty()) {
+		final Optional<TreeWalk> treeWalkOpt = getTreeWalk(gitPath);
+		if (treeWalkOpt.isEmpty()) {
 			return Optional.empty();
 		}
 
 		final Optional<ObjectId> objectId;
-		/**
-		 * TreeWalk.forPath says that empty path is not permitted if using "" or "/".
-		 */
-		try (TreeWalk treeWalk = TreeWalk.forPath(repository, withoutRoot.toString(), tree.get())) {
-			if (treeWalk == null) {
-				LOGGER.debug("Path " + withoutRoot + " not found.");
-				objectId = Optional.empty();
-			} else {
-				objectId = Optional.of(treeWalk.getObjectId(0));
-				verify(!treeWalk.next());
-			}
+		try (TreeWalk treeWalk = treeWalkOpt.get()) {
+			objectId = Optional.of(treeWalk.getObjectId(0));
+			verify(!treeWalk.next());
 		}
 		return objectId;
 	}
@@ -442,7 +474,7 @@ public class GitRepoFileSystem extends FileSystem {
 	private Optional<RevTree> getTree(GitPath dir)
 			throws IOException, MissingObjectException, IncorrectObjectTypeException, CorruptObjectException {
 		if (dir.toRelativePath().equals(root)) {
-			return getTree(dir.toAbsolutePath().getRevStr());
+			return getCommitTree(dir.toAbsolutePath().getRevStr());
 		}
 
 		final Optional<ObjectId> dirId = getObjectId(dir);
@@ -457,12 +489,19 @@ public class GitRepoFileSystem extends FileSystem {
 		return Optional.of(tree);
 	}
 
+	/**
+	 * if the given path is a reference, and this method returns an objectId, then
+	 * it implies existence of that commit root; otherwise (thus if the given path
+	 * contains an object id and not a reference), this method simply returns the
+	 * object id without checking for its validity.
+	 */
 	public Optional<ObjectId> getCommitId(GitPath gitPath) throws IOException {
 		if (!isOpen) {
 			throw new ClosedFileSystemException();
 		}
 
-		return getCommitId(gitPath.toAbsolutePath().getRevStr());
+		final String revStr = gitPath.toAbsolutePath().getRevStr();
+		return getCommitId(revStr);
 	}
 
 	public void checkAccess(GitPath gitPath, AccessMode... modes)
@@ -474,19 +513,32 @@ public class GitRepoFileSystem extends FileSystem {
 		if (!Sets.difference(modesList, ImmutableSet.of(AccessMode.READ, AccessMode.EXECUTE)).isEmpty()) {
 			throw new UnsupportedOperationException();
 		}
-
-		final Optional<RevTree> tree = getTree(gitPath.toAbsolutePath().getRevStr());
-		final GitPath withoutRoot = gitPath.toRelativePath();
-		final Optional<FileMode> fileMode;
-		try (TreeWalk treeWalk = TreeWalk.forPath(repository, withoutRoot.toString(), tree.get())) {
-			if (treeWalk == null) {
-				LOGGER.debug("Path " + withoutRoot + " not found.");
-				fileMode = Optional.empty();
+		if (gitPath.toRelativePath().equals(root)) {
+			final String revStr = gitPath.toAbsolutePath().getRevStr();
+			if (isObjectId(revStr)) {
+				if (getCommitTree(revStr).isEmpty()) {
+					throw new NoSuchFileException(gitPath.toString());
+				}
 			} else {
+				final Optional<ObjectId> commitId = getCommitId(revStr);
+				if (commitId.isEmpty()) {
+					throw new NoSuchFileException(gitPath.toString());
+				}
+			}
+			return;
+		}
+
+		final Optional<FileMode> fileMode;
+		final Optional<TreeWalk> treeWalkOpt = getTreeWalk(gitPath);
+		if (treeWalkOpt.isEmpty()) {
+			fileMode = Optional.empty();
+		} else {
+			try (TreeWalk treeWalk = treeWalkOpt.get()) {
 				fileMode = Optional.of(treeWalk.getFileMode());
 				verify(!treeWalk.next());
 			}
 		}
+
 		if (fileMode.isEmpty()) {
 			throw new NoSuchFileException(gitPath.toString());
 		}

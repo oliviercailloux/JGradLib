@@ -52,6 +52,7 @@ import com.google.common.jimfs.Jimfs;
  * distinguishing a path with a linux-like relative path and one with a
  * linux-like absolute path in string form would be hard.
  * </p>
+ * TODO distinguish Ref (such as master) and OId (a SHA-1).
  *
  * @author Olivier Cailloux
  *
@@ -63,17 +64,17 @@ public class GitPath implements Path {
 	private static final Comparator<GitPath> COMPARATOR = Comparator.<GitPath, String>comparing((p) -> p.revStr)
 			.thenComparing((p) -> p.dirAndFile);
 
-	private GitRepoFileSystem fileSystem;
+	private final GitRepoFileSystem fileSystem;
 
 	/**
 	 * Empty for no commit specified.
 	 */
-	private String revStr;
+	private final String revStr;
 
 	/**
 	 * Linux style in-memory path, may be the empty path.
 	 */
-	private Path dirAndFile;
+	private final Path dirAndFile;
 
 	GitPath(GitRepoFileSystem fileSystem, String revStr, Path dirAndFile) {
 		this.fileSystem = checkNotNull(fileSystem);

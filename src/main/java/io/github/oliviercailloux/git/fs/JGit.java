@@ -1,5 +1,7 @@
 package io.github.oliviercailloux.git.fs;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
@@ -65,9 +67,11 @@ class JGit {
 					ImmutableMap.of("file1.txt", "Hello, world", "file2.txt", "Hello again"),
 					ImmutableList.of(commitStart), "Second commit");
 			builder.add(commitNext);
-			final ObjectId commitThird = insertCommit(inserter, personIdent,
-					ImmutableMap.of("file1.txt", "Hello, world", "dir/file.txt", "Hello from sub dir"),
-					ImmutableList.of(commitNext), "Third commit");
+			final ObjectId subTree = insertTree(inserter, ImmutableMap.of("file.txt", "Hello from sub dir"));
+			final ObjectId treeRoot = insertTree(inserter, ImmutableMap.of("file1.txt", "Hello, world"),
+					ImmutableMap.of("dir", subTree));
+			final ObjectId commitThird = insertCommit(inserter, personIdent, treeRoot, ImmutableList.of(commitNext),
+					"Third commit");
 			builder.add(commitThird);
 
 			final ImmutableList<ObjectId> commits = builder.build();
@@ -84,6 +88,11 @@ class JGit {
 	public static ObjectId insertCommit(ObjectInserter inserter, PersonIdent personIdent, Map<String, String> files,
 			List<ObjectId> parents, String commitMessage) throws IOException {
 		final ObjectId treeId = insertTree(inserter, files);
+		return insertCommit(inserter, personIdent, treeId, parents, commitMessage);
+	}
+
+	public static ObjectId insertCommit(ObjectInserter inserter, PersonIdent personIdent, ObjectId treeId,
+			List<ObjectId> parents, String commitMessage) throws IOException {
 		final CommitBuilder commitBuilder = new CommitBuilder();
 		commitBuilder.setMessage(commitMessage);
 		commitBuilder.setAuthor(personIdent);
@@ -99,17 +108,32 @@ class JGit {
 	}
 
 	public static ObjectId insertTree(ObjectInserter inserter, Map<String, String> files) throws IOException {
+		return insertTree(inserter, files, ImmutableMap.of());
+	}
+
+	public static ObjectId insertTree(ObjectInserter inserter, Map<String, String> files,
+			Map<String, ObjectId> subTrees) throws IOException {
+		/**
+		 * TODO TreeFormatter says that the entries must come in the <i>right</i> order;
+		 * what’s that?
+		 */
 		final TreeFormatter treeFormatter = new TreeFormatter();
 		for (String fileName : files.keySet()) {
 			/**
-			 * This works even when the file name contains / (creates the required
-			 * sub-directories).
+			 * See TreeFormatter: “This formatter does not process subtrees”.
 			 */
+			checkArgument(!fileName.contains("/"));
 			final String fileContent = files.get(fileName);
 			final ObjectId fileOId = inserter.insert(Constants.OBJ_BLOB, fileContent.getBytes(StandardCharsets.UTF_8));
 			treeFormatter.append(fileName, FileMode.REGULAR_FILE, fileOId);
 		}
-		return inserter.insert(treeFormatter);
+		for (String treeName : subTrees.keySet()) {
+			final ObjectId tree = subTrees.get(treeName);
+			treeFormatter.append(treeName, FileMode.TREE, tree);
+		}
+		final ObjectId inserted = inserter.insert(treeFormatter);
+		inserter.flush();
+		return inserted;
 	}
 
 }

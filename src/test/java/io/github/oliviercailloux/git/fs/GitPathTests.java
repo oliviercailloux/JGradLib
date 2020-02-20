@@ -16,8 +16,11 @@ import org.eclipse.jgit.lib.Repository;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
+import io.github.oliviercailloux.utils.Utils;
+
 public class GitPathTests {
-	private static final GitFileSystem GIT_FILE_SYSTEM = Mockito.mock(GitFileSystem.class);
+	private static final GitFileSystem GIT_FILE_SYSTEM = Utils
+			.getOrThrow(() -> GitFileSystem.given(Mockito.mock(GitFileSystemProvider.class), Path.of(".")));
 
 	@Test
 	void testBasics() throws Exception {
