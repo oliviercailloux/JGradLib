@@ -147,7 +147,7 @@ public class GitFileSystemProvider extends FileSystemProvider {
 			throw new FileSystemNotFoundException();
 		}
 
-		return GitPath.getMasterSlashPath(cachedFileSystems.get(gitDir));
+		return cachedFileSystems.get(gitDir).root;
 	}
 
 	@Override
@@ -223,7 +223,9 @@ public class GitFileSystemProvider extends FileSystemProvider {
 
 	@Override
 	public void checkAccess(Path path, AccessMode... modes) throws IOException {
-		throw new UnsupportedOperationException();
+		checkArgument(path instanceof GitPath);
+		final GitPath gitPath = (GitPath) path;
+		gitPath.getFileSystem().checkAccess(gitPath, modes);
 	}
 
 	@Override

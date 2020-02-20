@@ -3,6 +3,7 @@ package io.github.oliviercailloux.utils;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -55,8 +56,27 @@ public class Utils {
 		return !a || b;
 	}
 
-	public static <T, R> Function<T, R> wrapUsingIllegalStateException(Throwing.Function<T, R> function) {
+	public static <T, R> Function<T, R> uncheck(Throwing.Function<T, R> function) {
 		return Errors.createRethrowing(IllegalStateException::new).wrap(function);
+	}
+
+	public static <T> T getOrThrow(SupplierThrowingIOException<T> supplier) {
+		try {
+			return supplier.get();
+		} catch (Throwable e) {
+			throw new IllegalStateException(e);
+		}
+	}
+
+	/**
+	 *
+	 * TODO
+	 * https://www.freecodecamp.org/news/why-you-should-ignore-exceptions-in-java-and-how-to-do-it-correctly-8e95e5775e58/
+	 * https://github.com/ylegat/uncheck https://github.com/diffplug/durian/issues/8
+	 */
+	@FunctionalInterface
+	public interface SupplierThrowingIOException<T> {
+		T get() throws IOException;
 	}
 
 	/**

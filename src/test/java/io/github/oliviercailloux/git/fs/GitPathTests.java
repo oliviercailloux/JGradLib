@@ -133,7 +133,7 @@ public class GitPathTests {
 				path.toUri());
 
 		try (Repository repo = new InMemoryRepository(new DfsRepositoryDescription("myrepo"))) {
-			JGitUsage.createBasicRepo(repo);
+			JGit.createBasicRepo(repo);
 			@SuppressWarnings("resource")
 			final GitRepoFileSystem rfs = GitRepoFileSystem.given(new GitFileSystemProvider(), repo);
 			final GitPath p2 = rfs.getPath("master/", "/file.txt");

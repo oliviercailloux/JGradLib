@@ -9,6 +9,10 @@ import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.diffplug.common.base.Predicates;
+
+import io.github.oliviercailloux.java_grade.testers.MarkHelper;
+
 public class MarkingPredicates {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(MarkingPredicates.class);
@@ -21,6 +25,10 @@ public class MarkingPredicates {
 			LOGGER.debug("Trying to find in source '{}' the pattern {}: {} and {}.", s, pattern, found, foundAgain);
 			return found && !foundAgain;
 		};
+	}
+
+	public static Predicate<Path> pathContainsOnce(Pattern pattern) {
+		return Predicates.compose(containsOnce(pattern), MarkHelper::getContentOrEmpty);
 	}
 
 	public static Predicate<Path> startsWithPathRelativeTo(Optional<Path> relativeTo, Path start) {

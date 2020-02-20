@@ -4,10 +4,10 @@ import static com.google.common.base.Preconditions.checkState;
 
 import java.lang.management.ManagementFactory;
 import java.lang.management.OperatingSystemMXBean;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.regex.Pattern;
 
-import org.eclipse.jgit.lib.PersonIdent;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,8 +15,8 @@ import org.slf4j.LoggerFactory;
 import com.sun.management.UnixOperatingSystemMXBean;
 
 import io.github.oliviercailloux.git.FileContent;
-import io.github.oliviercailloux.grade.GradingException;
 import io.github.oliviercailloux.grade.context.FilesSource;
+import io.github.oliviercailloux.utils.Utils;
 
 public class MarkHelper {
 
@@ -59,21 +59,24 @@ public class MarkHelper {
 		return Math.toIntExact(os2.getOpenFileDescriptorCount());
 	}
 
+	/**
+	 * When the GitHub GUI is used, the committer is set to GitHub
+	 * <noreply@github.com> while the author seems to be the logged user.
+	 */
 	public static boolean committerIsGitHub(RevCommit commit) {
-		return committerIsKnown(commit, "GitHub");
+		return commit.getCommitterIdent().getName().equals("GitHub");
 	}
 
-	public static boolean committerIsCailloux(RevCommit commit) {
-		return committerIsKnown(commit, "oliviercailloux");
+	public static boolean committerAndAuthorIs(RevCommit commit, String name) {
+		final boolean committerIsRight = commit.getCommitterIdent().getName().equals(name);
+		final boolean authorIsRight = commit.getAuthorIdent().getName().equals(name);
+		return committerIsRight && authorIsRight;
 	}
 
-	private static boolean committerIsKnown(RevCommit commit, String name) {
-		final PersonIdent author = commit.getAuthorIdent();
-		final PersonIdent committer = commit.getCommitterIdent();
-		final boolean committerIsKnown = committer.getName().equals(name);
-		if (!committerIsKnown && !author.getName().equals(committer.getName())) {
-			throw new GradingException(String.format("Author: %s; Committer: %s.", author, committer));
+	public static String getContentOrEmpty(Path path) {
+		if (!Files.exists(path)) {
+			return "";
 		}
-		return committerIsKnown;
+		return Utils.getOrThrow(() -> Files.readString(path));
 	}
 }

@@ -125,7 +125,7 @@ public class EMailer {
 				final ImmutableList<Message> found = ImmutableList.copyOf(folder.search(term));
 				LOGGER.info("Nb: {}.", found.size());
 				final Throwing.Function<Message, String> function = Message::getSubject;
-				LOGGER.info("Found: {}.", found.stream().limit(1).map(Utils.wrapUsingIllegalStateException(function))
+				LOGGER.info("Found: {}.", found.stream().limit(1).map(Utils.uncheck(function))
 						.collect(ImmutableList.toImmutableList()));
 				// final Message message = found.get(0);
 			}

@@ -63,14 +63,6 @@ public class GitPath implements Path {
 	private static final Comparator<GitPath> COMPARATOR = Comparator.<GitPath, String>comparing((p) -> p.revStr)
 			.thenComparing((p) -> p.dirAndFile);
 
-	static GitPath getMasterSlashPath(GitRepoFileSystem gitFileSystem) {
-		/**
-		 * TODO make JIM_FS_SLASH non static, one per file system. Move this method to
-		 * file system.
-		 */
-		return new GitPath(gitFileSystem, "master", GitRepoFileSystem.JIM_FS_SLASH);
-	}
-
 	private GitRepoFileSystem fileSystem;
 
 	/**
@@ -89,6 +81,11 @@ public class GitPath implements Path {
 		this.dirAndFile = checkNotNull(dirAndFile);
 		checkArgument(dirAndFile.getFileSystem().provider().getScheme().equals(Jimfs.URI_SCHEME));
 		checkArgument(!revStr.equals("") == dirAndFile.isAbsolute());
+		/**
+		 * TODO should check that in git, revStr may not contain / (assumption can be
+		 * relaxed otherwise)
+		 */
+		checkArgument(!revStr.contains("/"));
 		checkArgument(dirAndFile.isAbsolute() == (dirAndFile.getRoot() != null));
 	}
 
@@ -117,14 +114,6 @@ public class GitPath implements Path {
 			return this;
 		}
 		return new GitPath(fileSystem, revStr, GitRepoFileSystem.JIM_FS_SLASH);
-	}
-
-	public GitPath getWithoutRoot() {
-		if (revStr.isEmpty()) {
-			return this;
-		}
-		assert dirAndFile.isAbsolute();
-		return new GitPath(fileSystem, "", GitRepoFileSystem.JIM_FS_SLASH.relativize(dirAndFile));
 	}
 
 	@Override
@@ -237,10 +226,10 @@ public class GitPath implements Path {
 	@Override
 	public URI toUri() {
 		/**
-		 * I do not use UriBuilder because it “perform contextual encoding of characters
-		 * not permitted in the corresponding URI component following the rules of the
-		 * application/x-www-form-urlencoded media type for query parameters”, and
-		 * therefore encodes / to %2F.
+		 * I do not use UriBuilder because it performs “contextual encoding of
+		 * characters not permitted in the corresponding URI component following the
+		 * rules of the application/x-www-form-urlencoded media type for query
+		 * parameters”, and therefore encodes / to %2F.
 		 */
 		final StringBuilder queryBuilder = new StringBuilder();
 		if (!revStr.isEmpty()) {
@@ -286,7 +275,15 @@ public class GitPath implements Path {
 		if (isAbsolute()) {
 			return this;
 		}
-		return getMasterSlashPath(fileSystem).resolveRelative(this);
+		return fileSystem.masterRoot.resolveRelative(this);
+	}
+
+	public GitPath toRelativePath() {
+		if (revStr.isEmpty()) {
+			return this;
+		}
+		assert dirAndFile.isAbsolute();
+		return new GitPath(fileSystem, "", GitRepoFileSystem.JIM_FS_SLASH.relativize(dirAndFile));
 	}
 
 	@Override

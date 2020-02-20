@@ -23,6 +23,16 @@ import io.github.oliviercailloux.grade.mycourse.json.StudentsReaderFromJson;
 
 public class GraderOrchestrator {
 
+	public static ImmutableList<RepositoryCoordinates> readRepositories(String org, String prefix) throws IOException {
+		final ImmutableList<RepositoryCoordinates> repositories;
+		try (GitHubFetcherV3 fetcher = GitHubFetcherV3.using(GitHubToken.getRealInstance())) {
+			repositories = fetcher.getRepositories(org, false);
+		}
+		final Pattern pattern = Pattern.compile(prefix + "-(.*)");
+		return repositories.stream().filter((r) -> pattern.matcher(r.getRepositoryName()).matches())
+				.collect(ImmutableList.toImmutableList());
+	}
+
 	public GraderOrchestrator(String prefix) {
 		this.prefix = prefix;
 		usernames = new StudentsReaderFromJson();

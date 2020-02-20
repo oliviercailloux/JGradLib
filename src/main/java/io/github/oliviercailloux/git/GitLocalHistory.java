@@ -1,5 +1,7 @@
 package io.github.oliviercailloux.git;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.Set;
@@ -78,7 +80,9 @@ public class GitLocalHistory extends GitRawHistoryDecorator<RevCommit> implement
 		if (commitToObjectId == null) {
 			commitToObjectId = getGraph().nodes().stream().collect(ImmutableBiMap.toImmutableBiMap((c) -> c, (c) -> c));
 		}
-		return commitToObjectId.inverse().get(objectId);
+		final RevCommit revCommit = commitToObjectId.inverse().get(objectId);
+		checkArgument(revCommit != null);
+		return revCommit;
 	}
 
 	public Instant getCommitDateById(ObjectId objectId) {

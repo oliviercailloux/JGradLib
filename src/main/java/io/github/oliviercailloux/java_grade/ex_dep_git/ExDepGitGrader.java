@@ -15,7 +15,6 @@ import java.nio.file.Paths;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZonedDateTime;
-import java.util.Collection;
 import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
@@ -245,12 +244,12 @@ public class ExDepGitGrader {
 		final ImmutableList<RevCommit> commitsOwn = commits.stream()
 				.filter((c) -> !c.getAuthorIdent().getName().equals("Olivier Cailloux"))
 				.collect(ImmutableList.toImmutableList());
-		LOGGER.info("All: {}; own: {}.", toOIds(commits), toOIds(commitsOwn));
+		LOGGER.info("All: {}; own: {}.", GitUtils.toOIds(commits), GitUtils.toOIds(commitsOwn));
 		final Predicate<? super RevCommit> byGH = MarkHelper::committerIsGitHub;
-		LOGGER.info("GH: {}.", toOIds(commits.stream().filter(byGH).collect(ImmutableList.toImmutableList())));
+		LOGGER.info("GH: {}.", GitUtils.toOIds(commits.stream().filter(byGH).collect(ImmutableList.toImmutableList())));
 		commitsManual = commitsOwn.stream().filter(byGH.negate()).collect(ImmutableList.toImmutableList());
-		final String comment = (!commitsOwn.isEmpty() ? "Own: " + toOIds(commitsOwn) + ". " : "")
-				+ (!commitsManual.isEmpty() ? "Using git: " + toOIds(commitsManual) : "No commits using git");
+		final String comment = (!commitsOwn.isEmpty() ? "Own: " + GitUtils.toOIds(commitsOwn) + ". " : "")
+				+ (!commitsManual.isEmpty() ? "Using git: " + GitUtils.toOIds(commitsManual) : "No commits using git");
 		final double points = (!commitsManual.isEmpty()) ? 1d : 0d;
 		final Mark commitMark = Mark.given(points, comment);
 		return commitMark;
@@ -261,10 +260,6 @@ public class ExDepGitGrader {
 		final long secondsLate = tardiness.toSeconds();
 		final double penalty = Math.min(1d, 0.05d / 20d * secondsLate);
 		return 1d - penalty;
-	}
-
-	private ImmutableList<String> toOIds(Collection<RevCommit> commits) {
-		return commits.stream().map(RevCommit::getName).collect(ImmutableList.toImmutableList());
 	}
 
 	private Optional<RevCommit> tryParseSpec(ComplexClient client, String revSpec) {

@@ -198,7 +198,7 @@ public class TestFetch {
 		try (GitHubFetcherV3 rawFetcher = GitHubFetcherV3.using(GitHubToken.getRealInstance())) {
 			final Instant lastModification = rawFetcher.getLastModification(coord, Paths.get("Test.html")).get();
 			LOGGER.debug("Last: {}.", lastModification);
-			assertEquals(Instant.parse("2016-05-02T14:11:38Z"), lastModification);
+			assertEquals(Instant.parse("2020-02-17T19:37:26Z"), lastModification);
 		}
 	}
 

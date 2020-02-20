@@ -2,7 +2,10 @@ package io.github.oliviercailloux.grade.mycourse.json;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
+import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Map;
 import java.util.Set;
 
@@ -43,6 +46,12 @@ public class StudentsReaderFromJson {
 		idsToLastNames = null;
 		idsNotSubmitted = null;
 		json = null;
+	}
+
+	public void read(Path input) throws IOException {
+		try (InputStream inputStream = Files.newInputStream(input)) {
+			read(inputStream);
+		}
 	}
 
 	public void read(InputStream inputStream) {

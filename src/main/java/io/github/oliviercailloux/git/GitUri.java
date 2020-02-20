@@ -20,8 +20,6 @@ import io.github.oliviercailloux.git.fs.GitFileSystemProvider;
 import io.github.oliviercailloux.utils.Utils;
 
 /**
- *
- *
  * This class rejects relative file urls such as ./foobar, because this can’t be
  * translated to an absolute hierarchical url: an absolute url that is
  * hierarchical has an absolute path, see URI.

@@ -191,20 +191,33 @@ public class Marks {
 
 	public static IGrade timeGrade(GitFullContext contextSupplier, Instant deadline,
 			Function<Duration, Double> timeScorer) {
-		return mark(contextSupplier, deadline, timeScorer);
-	}
+		final ComplexClient client = contextSupplier.getClient();
 
-	private static IGrade mark(GitFullContext context, Instant deadline, Function<Duration, Double> timeScorer) {
-		final ComplexClient client = context.getClient();
-
-		if (!client.hasContentCached() || !context.getMainCommit().isPresent()) {
+		if (!client.hasContentCached() || !contextSupplier.getMainCommit().isPresent()) {
 			return Mark.one();
 		}
 
-		final Instant submitted = context.getSubmittedTime();
+		final Instant submitted = contextSupplier.getSubmittedTime();
 
 		final Instant tooLate = deadline.plus(Duration.ofSeconds(1));
 		final Duration tardiness = Duration.between(tooLate, submitted);
+
+		LOGGER.debug("Last: {}, deadline: {}, tardiness: {}.", submitted, deadline, tardiness);
+		final Mark grade;
+		if (tardiness.compareTo(Duration.ZERO) > 0) {
+			LOGGER.warn("Last event after deadline: {}.", submitted);
+			final double penalty = timeScorer.apply(tardiness);
+			checkArgument(0d <= penalty && penalty <= 1d);
+			grade = Mark.given(penalty, "Last event after deadline: "
+					+ ZonedDateTime.ofInstant(submitted, ZoneId.of("Europe/Paris")) + ", " + tardiness + " late.");
+		} else {
+			grade = Mark.one();
+		}
+		return grade;
+	}
+
+	public static IGrade timeGrade(Instant submitted, Instant deadline, Function<Duration, Double> timeScorer) {
+		final Duration tardiness = Duration.between(deadline, submitted);
 
 		LOGGER.debug("Last: {}, deadline: {}, tardiness: {}.", submitted, deadline, tardiness);
 		final Mark grade;

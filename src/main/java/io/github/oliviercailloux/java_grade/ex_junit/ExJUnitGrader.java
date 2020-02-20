@@ -116,7 +116,7 @@ public class ExJUnitGrader {
 		}
 
 		final Predicate<RevCommit> gitHub = MarkHelper::committerIsGitHub;
-		final Predicate<RevCommit> cail = MarkHelper::committerIsCailloux;
+		final Predicate<RevCommit> cail = c -> MarkHelper.committerAndAuthorIs(c, "Olivier Cailloux");
 		final ImmutableSet<RevCommit> byOwn = history.getGraph().nodes().stream().filter(gitHub.or(cail).negate())
 				.collect(ImmutableSet.toImmutableSet());
 		{
