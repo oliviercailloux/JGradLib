@@ -19,8 +19,8 @@ import org.mockito.Mockito;
 import io.github.oliviercailloux.utils.Utils;
 
 public class GitPathTests {
-	private static final GitFileSystem GIT_FILE_SYSTEM = Utils
-			.getOrThrow(() -> GitFileSystem.given(Mockito.mock(GitFileSystemProvider.class), Path.of(".")));
+	private static final GitRepoFileSystem GIT_FILE_SYSTEM = Utils
+			.getOrThrow(() -> GitDirFileSystem.given(Mockito.mock(GitFileSystemProvider.class), Path.of(".")));
 
 	@Test
 	void testBasics() throws Exception {
@@ -129,7 +129,7 @@ public class GitPathTests {
 	void testUris() throws Exception {
 		final Path gitDir = Path.of("git dir");
 		@SuppressWarnings("resource")
-		final GitFileSystem fs = GitFileSystem.given(new GitFileSystemProvider(), gitDir);
+		final GitRepoFileSystem fs = GitDirFileSystem.given(new GitFileSystemProvider(), gitDir);
 		final GitPath path = fs.getPath("master/", "/file.txt");
 		assertEquals(
 				new URI("gitfs", null, gitDir.toAbsolutePath().toString(), "revStr=master&dirAndFile=/file.txt", null),

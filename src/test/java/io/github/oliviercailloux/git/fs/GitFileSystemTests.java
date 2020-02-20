@@ -33,7 +33,7 @@ public class GitFileSystemTests {
 
 	@Test
 	void testPaths() throws Exception {
-		try (GitFileSystem gitFS = GitFileSystem.given(Mockito.mock(GitFileSystemProvider.class),
+		try (GitRepoFileSystem gitFS = GitDirFileSystem.given(Mockito.mock(GitFileSystemProvider.class),
 				Path.of("/path/to/gitdir"))) {
 			assertEquals("", gitFS.getPath("").toString());
 			assertEquals("", gitFS.getPath("", "", "").toString());
@@ -77,10 +77,16 @@ public class GitFileSystemTests {
 		assertThrows(IOException.class, () -> Files.readString(root));
 
 		try (DfsRepository repo = new InMemoryRepository(new DfsRepositoryDescription("myrepo"))) {
-			JGit.createRepoWithSubDir(repo);
+			final ImmutableList<ObjectId> commits = JGit.createRepoWithSubDir(repo);
 			try (GitRepoFileSystem gitFS = new GitFileSystemProvider().newFileSystemFromRepository(repo)) {
 				assertEquals("Hello, world", Files.readString(gitFS.getPath("", "file1.txt")));
 				assertEquals("Hello, world", Files.readString(gitFS.getPath("master/", "/file1.txt")));
+				assertEquals("Hello, world", Files.readString(gitFS.getAbsolutePath("master", "file1.txt")));
+				assertThrows(NoSuchFileException.class,
+						() -> Files.readString(gitFS.getAbsolutePath(commits.get(0).getName(), "file2.txt")));
+				assertEquals("Hello again",
+						Files.readString(gitFS.getAbsolutePath(commits.get(1).getName(), "file2.txt")));
+				assertEquals("I insist", Files.readString(gitFS.getAbsolutePath("master", "file2.txt")));
 				assertThrows(NoSuchFileException.class,
 						() -> gitFS.newByteChannel(gitFS.getPath("master/", "/ploum.txt")));
 				try (SeekableByteChannel dirChannel = gitFS.newByteChannel(gitFS.getPath("master/", "/"))) {

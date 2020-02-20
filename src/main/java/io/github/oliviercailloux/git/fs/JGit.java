@@ -68,7 +68,8 @@ class JGit {
 					ImmutableList.of(commitStart), "Second commit");
 			builder.add(commitNext);
 			final ObjectId subTree = insertTree(inserter, ImmutableMap.of("file.txt", "Hello from sub dir"));
-			final ObjectId treeRoot = insertTree(inserter, ImmutableMap.of("file1.txt", "Hello, world"),
+			final ObjectId treeRoot = insertTree(inserter,
+					ImmutableMap.of("file1.txt", "Hello, world", "file2.txt", "I insist"),
 					ImmutableMap.of("dir", subTree));
 			final ObjectId commitThird = insertCommit(inserter, personIdent, treeRoot, ImmutableList.of(commitNext),
 					"Third commit");

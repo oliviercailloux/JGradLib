@@ -36,8 +36,8 @@ import com.google.common.graph.ImmutableGraph;
 
 import io.github.oliviercailloux.git.GitCloner;
 import io.github.oliviercailloux.git.GitUri;
-import io.github.oliviercailloux.git.fs.GitFileSystem;
 import io.github.oliviercailloux.git.fs.GitFileSystemProvider;
+import io.github.oliviercailloux.git.fs.GitRepoFileSystem;
 import io.github.oliviercailloux.git.git_hub.model.GitHubHistory;
 import io.github.oliviercailloux.git.git_hub.model.GitHubToken;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
@@ -80,8 +80,8 @@ public class ExDepGitGraderSimpler {
 
 		final ExDepGitGraderSimpler grader = new ExDepGitGraderSimpler();
 
-		final ImmutableMap<RepositoryCoordinates, IGrade> grades = repositories.stream().collect(ImmutableMap
-				.toImmutableMap(Function.identity(), Utils.uncheck(r -> grader.grade(r))));
+		final ImmutableMap<RepositoryCoordinates, IGrade> grades = repositories.stream()
+				.collect(ImmutableMap.toImmutableMap(Function.identity(), Utils.uncheck(r -> grader.grade(r))));
 
 		LOGGER.info("Grades: {}.", grades);
 
@@ -127,7 +127,7 @@ public class ExDepGitGraderSimpler {
 		final Path projectDir = projectsBaseDir.resolve(coord.getRepositoryName());
 		new GitCloner().download(GitUri.fromGitUri(coord.asURI()), projectDir);
 		final ImmutableMap.Builder<Instant, IGrade> possibleGradesBuilder = ImmutableMap.builder();
-		try (GitFileSystem fs = new GitFileSystemProvider().newFileSystemFromGitDir(projectDir.resolve(".git"))) {
+		try (GitRepoFileSystem fs = new GitFileSystemProvider().newFileSystemFromGitDir(projectDir.resolve(".git"))) {
 			for (Instant acceptUntil : considered) {
 				final GitHubHistory filtered = gitHubHistory
 						.filter(o -> !gitHubHistory.getCommitDate(o).isAfter(acceptUntil));
@@ -165,7 +165,8 @@ public class ExDepGitGraderSimpler {
 			final Path projectsBaseDir = Paths.get("/home/olivier/Professions/Enseignement/En cours/dep-git");
 			final Path projectDir = projectsBaseDir.resolve(coord.getRepositoryName());
 			new GitCloner().download(GitUri.fromGitUri(coord.asURI()), projectDir);
-			try (GitFileSystem fs = new GitFileSystemProvider().newFileSystemFromGitDir(projectDir.resolve(".git"))) {
+			try (GitRepoFileSystem fs = new GitFileSystemProvider()
+					.newFileSystemFromGitDir(projectDir.resolve(".git"))) {
 				final GitHubHistory filtered = gitHubHistory
 						.filter(o -> !gitHubHistory.getCommitDate(o).isAfter(lastOnTime));
 				grade = grade(coord.getOwner(), fs, filtered);
@@ -174,7 +175,7 @@ public class ExDepGitGraderSimpler {
 		return grade;
 	}
 
-	public IGrade grade(String owner, GitFileSystem fs, GitHubHistory history) throws IOException {
+	public IGrade grade(String owner, GitRepoFileSystem fs, GitHubHistory history) throws IOException {
 		fs.getHistory();
 		final GitHubHistory manual = history
 				.filter(o -> !MarkHelper.committerIsGitHub(fs.getCachedHistory().getCommit(o)));
@@ -276,6 +277,7 @@ public class ExDepGitGraderSimpler {
 					} else {
 						depMark = Mark.given(1d / 2d, "Expected last version 5.3.1.201904271842-r");
 					}
+					break;
 				}
 			}
 			gradeBuilder.put(DEP, depMark);

@@ -244,8 +244,8 @@ public class GitPath implements Path {
 
 		final URI uri;
 		final GitRepoFileSystem fs = getFileSystem();
-		if (fs instanceof GitFileSystem) {
-			final GitFileSystem pathBasedFs = (GitFileSystem) fs;
+		if (fs instanceof GitDirFileSystem) {
+			final GitDirFileSystem pathBasedFs = (GitDirFileSystem) fs;
 			final Path gitDir = pathBasedFs.getGitDir();
 			try {
 				uri = new URI(GitFileSystemProvider.SCHEME, null, gitDir.toAbsolutePath().toString(), query, null);

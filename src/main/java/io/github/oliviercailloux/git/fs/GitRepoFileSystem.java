@@ -131,7 +131,7 @@ public class GitRepoFileSystem extends FileSystem {
 	private static final TreeFilter NO_SUBTREE_FILTER = new NoSubtreeFilter();
 
 	@SuppressWarnings("unused")
-	private static final Logger LOGGER = LoggerFactory.getLogger(GitFileSystem.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(GitRepoFileSystem.class);
 
 	public static GitRepoFileSystem given(GitFileSystemProvider provider, Repository repository) {
 		return new GitRepoFileSystem(provider, repository);
@@ -569,7 +569,7 @@ public class GitRepoFileSystem extends FileSystem {
 			throw new IOException("Unexpected file type: " + fileLoader.getType());
 		}
 		final byte[] bytes = fileLoader.getBytes();
-		LOGGER.info("Read: {}.", new String(bytes, StandardCharsets.UTF_8));
+		LOGGER.debug("Read: {}.", new String(bytes, StandardCharsets.UTF_8));
 		return new SeekableInMemoryByteChannel(bytes);
 	}
 

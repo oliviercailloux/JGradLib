@@ -9,31 +9,22 @@ import java.nio.file.Path;
 
 import org.eclipse.jgit.internal.storage.file.FileRepository;
 
-/**
- *
- * That this extends {@link GitRepoFileSystem} should be considered an
- * implementation detail; it is subject to change. By contract, however, this
- * class extends GitFileSystem.
- *
- * @author Olivier Cailloux
- *
- */
-public class GitFileSystem extends GitRepoFileSystem {
+public class GitDirFileSystem extends GitRepoFileSystem {
 
 	/**
 	 * TODO think about forbidding to create a file system if the path does not
 	 * exist (how does the default provider react?)
-	 * 
+	 *
 	 * @throws IOException the repository appears to already exist but cannot be
 	 *                     accessed.
 	 */
 	@SuppressWarnings("resource")
-	public static GitFileSystem given(GitFileSystemProvider provider, Path gitDir) throws IOException {
+	public static GitDirFileSystem given(GitFileSystemProvider provider, Path gitDir) throws IOException {
 		checkArgument(gitDir.getFileSystem().equals(FileSystems.getDefault()));
 		FileRepository fileRepository = null;
 		try {
 			fileRepository = new FileRepository(gitDir.toFile());
-			final GitFileSystem fs = new GitFileSystem(provider, gitDir, fileRepository);
+			final GitDirFileSystem fs = new GitDirFileSystem(provider, gitDir, fileRepository);
 			return fs;
 		} catch (Exception e) {
 			if (fileRepository != null) {
@@ -48,7 +39,7 @@ public class GitFileSystem extends GitRepoFileSystem {
 	 */
 	private final Path gitDir;
 
-	private GitFileSystem(GitFileSystemProvider gitProvider, Path gitDir, FileRepository repository) {
+	private GitDirFileSystem(GitFileSystemProvider gitProvider, Path gitDir, FileRepository repository) {
 		super(gitProvider, repository);
 		this.gitDir = checkNotNull(gitDir);
 	}

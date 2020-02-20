@@ -57,7 +57,7 @@ public class GitFileSystemProvider extends FileSystemProvider {
 		return gitDir;
 	}
 
-	private final Map<Path, GitFileSystem> cachedFileSystems = new LinkedHashMap<>();
+	private final Map<Path, GitDirFileSystem> cachedFileSystems = new LinkedHashMap<>();
 
 	private final Map<String, GitRepoFileSystem> cachedRepoFileSystems = new LinkedHashMap<>();
 
@@ -71,7 +71,7 @@ public class GitFileSystemProvider extends FileSystemProvider {
 	}
 
 	@Override
-	public GitFileSystem newFileSystem(URI gitFsUri, Map<String, ?> env) throws IOException {
+	public GitDirFileSystem newFileSystem(URI gitFsUri, Map<String, ?> env) throws IOException {
 		final Path gitDir = getGitDir(gitFsUri);
 		return newFileSystemFromGitDir(gitDir);
 	}
@@ -81,7 +81,7 @@ public class GitFileSystemProvider extends FileSystemProvider {
 		throw new UnsupportedOperationException();
 	}
 
-	public GitFileSystem newFileSystemFromGitDir(Path gitDir) throws IOException {
+	public GitDirFileSystem newFileSystemFromGitDir(Path gitDir) throws IOException {
 		if (cachedFileSystems.containsKey(gitDir)) {
 			throw new FileSystemAlreadyExistsException();
 		}
@@ -93,7 +93,7 @@ public class GitFileSystemProvider extends FileSystemProvider {
 				throw new IOException(String.format("Object database not found in %s.", gitDir));
 			}
 		}
-		final GitFileSystem newFs = GitFileSystem.given(this, gitDir);
+		final GitDirFileSystem newFs = GitDirFileSystem.given(this, gitDir);
 		cachedFileSystems.put(gitDir, newFs);
 		return newFs;
 	}
@@ -111,13 +111,13 @@ public class GitFileSystemProvider extends FileSystemProvider {
 	}
 
 	@Override
-	public GitFileSystem getFileSystem(URI gitFsUri) {
+	public GitDirFileSystem getFileSystem(URI gitFsUri) {
 		/** TODO this could contain a repo name. */
 		final Path gitDir = getGitDir(gitFsUri);
 		return getFileSystemFromGitDir(gitDir);
 	}
 
-	public GitFileSystem getFileSystemFromGitDir(Path gitDir) {
+	public GitDirFileSystem getFileSystemFromGitDir(Path gitDir) {
 		checkArgument(cachedFileSystems.containsKey(gitDir));
 		return cachedFileSystems.get(gitDir);
 	}
@@ -249,7 +249,7 @@ public class GitFileSystemProvider extends FileSystemProvider {
 		throw new ReadOnlyFileSystemException();
 	}
 
-	void hasBeenClosedEvent(GitFileSystem fs) {
+	void hasBeenClosedEvent(GitDirFileSystem fs) {
 		cachedFileSystems.remove(fs.getGitDir());
 	}
 
