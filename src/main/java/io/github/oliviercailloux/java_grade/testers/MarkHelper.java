@@ -1,5 +1,6 @@
 package io.github.oliviercailloux.java_grade.testers;
 
+import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 
 import java.lang.management.ManagementFactory;
@@ -68,6 +69,7 @@ public class MarkHelper {
 	}
 
 	public static boolean committerAndAuthorIs(RevCommit commit, String name) {
+		checkNotNull(name);
 		final boolean committerIsRight = commit.getCommitterIdent().getName().equals(name);
 		final boolean authorIsRight = commit.getAuthorIdent().getName().equals(name);
 		return committerIsRight && authorIsRight;
@@ -77,6 +79,6 @@ public class MarkHelper {
 		if (!Files.exists(path)) {
 			return "";
 		}
-		return Utils.getOrThrow(() -> Files.readString(path));
+		return Utils.getOrThrowIO(() -> Files.readString(path));
 	}
 }

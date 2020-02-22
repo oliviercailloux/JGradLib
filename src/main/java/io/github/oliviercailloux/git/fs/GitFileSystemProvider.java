@@ -29,6 +29,7 @@ import java.util.Map;
 import java.util.Set;
 
 import org.eclipse.jgit.internal.storage.dfs.DfsRepository;
+import org.eclipse.jgit.internal.storage.file.FileRepository;
 import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 import org.slf4j.Logger;
@@ -98,7 +99,31 @@ public class GitFileSystemProvider extends FileSystemProvider {
 		return newFs;
 	}
 
-	public GitRepoFileSystem newFileSystemFromRepository(DfsRepository repository) throws IOException {
+	public GitRepoFileSystem newFileSystemFromRepository(Repository repository) throws IOException {
+		if (repository instanceof DfsRepository) {
+			final DfsRepository dfs = (DfsRepository) repository;
+			return newFileSystemFromDfsRepository(dfs);
+		}
+		if (repository instanceof FileRepository) {
+			final FileRepository f = (FileRepository) repository;
+			final Path gitDir = f.getDirectory().toPath();
+			if (cachedFileSystems.containsKey(gitDir)) {
+				throw new FileSystemAlreadyExistsException();
+			}
+			if (!Files.exists(gitDir)) {
+				throw new IOException(String.format("Directory %s not found.", gitDir));
+			}
+			if (!repository.getObjectDatabase().exists()) {
+				throw new IOException(String.format("Object database not found in %s.", gitDir));
+			}
+			final GitDirFileSystem newFs = GitDirFileSystem.given(this, gitDir);
+			cachedFileSystems.put(gitDir, newFs);
+			return newFs;
+		}
+		throw new IllegalArgumentException("Unknown repository");
+	}
+
+	public GitRepoFileSystem newFileSystemFromDfsRepository(DfsRepository repository) throws IOException {
 		if (cachedRepoFileSystems.containsKey(repository.getDescription().getRepositoryName())) {
 			throw new FileSystemAlreadyExistsException();
 		}
@@ -233,10 +258,20 @@ public class GitFileSystemProvider extends FileSystemProvider {
 		throw new UnsupportedOperationException();
 	}
 
+	@SuppressWarnings("unchecked")
 	@Override
 	public <A extends BasicFileAttributes> A readAttributes(Path path, Class<A> type, LinkOption... options)
 			throws IOException {
-		throw new UnsupportedOperationException();
+		checkArgument(path instanceof GitPath);
+		final GitPath gitPath = (GitPath) path;
+
+		if (!type.equals(BasicFileAttributes.class)) {
+			throw new UnsupportedOperationException();
+		}
+
+		final ImmutableSet<LinkOption> optionsSet = ImmutableSet.copyOf(options);
+
+		return (A) gitPath.getFileSystem().readAttributes(gitPath, optionsSet);
 	}
 
 	@Override

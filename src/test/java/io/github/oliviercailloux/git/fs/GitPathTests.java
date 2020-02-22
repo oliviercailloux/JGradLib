@@ -20,7 +20,7 @@ import io.github.oliviercailloux.utils.Utils;
 
 public class GitPathTests {
 	private static final GitRepoFileSystem GIT_FILE_SYSTEM = Utils
-			.getOrThrow(() -> GitDirFileSystem.given(Mockito.mock(GitFileSystemProvider.class), Path.of(".")));
+			.getOrThrowIO(() -> GitDirFileSystem.given(Mockito.mock(GitFileSystemProvider.class), Path.of(".")));
 
 	@Test
 	void testBasics() throws Exception {

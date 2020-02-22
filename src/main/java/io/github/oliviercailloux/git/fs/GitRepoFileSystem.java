@@ -16,15 +16,20 @@ import java.nio.file.DirectoryStream;
 import java.nio.file.DirectoryStream.Filter;
 import java.nio.file.FileStore;
 import java.nio.file.FileSystem;
+import java.nio.file.LinkOption;
 import java.nio.file.NoSuchFileException;
+import java.nio.file.NotDirectoryException;
 import java.nio.file.Path;
 import java.nio.file.PathMatcher;
 import java.nio.file.WatchService;
+import java.nio.file.attribute.BasicFileAttributes;
+import java.nio.file.attribute.FileTime;
 import java.nio.file.attribute.UserPrincipalLookupService;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 
@@ -61,24 +66,6 @@ import io.github.oliviercailloux.utils.SeekableInMemoryByteChannel;
 import io.github.oliviercailloux.utils.Utils;
 
 public class GitRepoFileSystem extends FileSystem {
-	private static class NoSubtreeFilter extends TreeFilter {
-		@Override
-		public boolean shouldBeRecursive() {
-			return false;
-		}
-
-		@Override
-		public boolean include(TreeWalk walker)
-				throws MissingObjectException, IncorrectObjectTypeException, IOException {
-			return !walker.isSubtree();
-		}
-
-		@Override
-		public TreeFilter clone() {
-			return this;
-		}
-	}
-
 	private static class DirectoryChannel implements SeekableByteChannel {
 		private boolean open;
 
@@ -128,7 +115,87 @@ public class GitRepoFileSystem extends FileSystem {
 
 	}
 
-	private static final TreeFilter NO_SUBTREE_FILTER = new NoSubtreeFilter();
+	/**
+	 * It would be clearer to have three kinds of git objects. One, with a file mode
+	 * (an objectid that has been found with a tree walker and corresponds to a file
+	 * or a sub-directory). Second, a commit that has been checked to exist,
+	 * together with its tree! Third, a commit that has not been checked to exist
+	 * (the object id was given right from the start and we never had to walk
+	 * anything).
+	 */
+	private static class GitObject {
+		private ObjectId objectId;
+		/**
+		 * <code>null</code> when this is a commit.
+		 */
+		private FileMode fileMode;
+
+		public GitObject(ObjectId objectId, FileMode fileMode) {
+			this.objectId = checkNotNull(objectId);
+			this.fileMode = fileMode;
+		}
+	}
+
+	private static class GitBasicFileAttributes implements BasicFileAttributes {
+		private GitObject gitObject;
+		private long size;
+
+		public GitBasicFileAttributes(GitObject gitObject, long size) {
+			this.gitObject = checkNotNull(gitObject);
+			final FileMode fileMode = gitObject.fileMode;
+			checkArgument(fileMode == null || !fileMode.equals(FileMode.TYPE_GITLINK));
+			checkArgument(fileMode == null || !fileMode.equals(FileMode.TYPE_MASK));
+			checkArgument(fileMode == null || !fileMode.equals(FileMode.TYPE_MISSING));
+			this.size = size;
+		}
+
+		@Override
+		public FileTime lastModifiedTime() {
+			return FileTime.fromMillis(0);
+		}
+
+		@Override
+		public FileTime lastAccessTime() {
+			return FileTime.fromMillis(0);
+		}
+
+		@Override
+		public FileTime creationTime() {
+			return FileTime.fromMillis(0);
+		}
+
+		@Override
+		public boolean isRegularFile() {
+			return Objects.equals(gitObject.fileMode, FileMode.REGULAR_FILE)
+					|| Objects.equals(gitObject.fileMode, FileMode.EXECUTABLE_FILE);
+		}
+
+		@Override
+		public boolean isDirectory() {
+			return gitObject.fileMode == null || Objects.equals(gitObject.fileMode, FileMode.TREE);
+		}
+
+		@Override
+		public boolean isSymbolicLink() {
+			return Objects.equals(gitObject.fileMode, FileMode.SYMLINK);
+		}
+
+		@Override
+		public boolean isOther() {
+			return false;
+		}
+
+		@Override
+		public long size() {
+			return size;
+		}
+
+		@Override
+		public ObjectId fileKey() {
+			return gitObject.objectId;
+		}
+
+	}
 
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(GitRepoFileSystem.class);
@@ -205,7 +272,7 @@ public class GitRepoFileSystem extends FileSystem {
 			throw new ClosedFileSystemException();
 		}
 
-		Utils.getOrThrow(() -> getHistory());
+		Utils.getOrThrowIO(() -> getHistory());
 
 		final Comparator<Path> compareWithoutTies = Comparator.comparing((p) -> ((GitPath) p),
 				getPathLexicographicTemporalComparator());
@@ -222,7 +289,7 @@ public class GitRepoFileSystem extends FileSystem {
 			throw new ClosedFileSystemException();
 		}
 
-		Utils.getOrThrow(() -> getHistory());
+		Utils.getOrThrowIO(() -> getHistory());
 
 		final Comparator<GitPath> compareWithoutTies = getPathLexicographicTemporalComparator();
 
@@ -289,9 +356,9 @@ public class GitRepoFileSystem extends FileSystem {
 		return getAbsolutePath(revStr, "/");
 	}
 
-	public GitPath getAbsolutePath(String revStr, String dirAndFile) {
+	public GitPath getAbsolutePath(String revStr, String dirAndFile, String... more) {
 		checkArgument(!revStr.isEmpty());
-		final Path part = JIM_FS_SLASH.resolve(dirAndFile);
+		final Path part = JIM_FS_SLASH.resolve(JIM_FS.getPath(dirAndFile, more));
 		checkArgument(part.isAbsolute());
 		return new GitPath(this, revStr, part);
 	}
@@ -405,6 +472,22 @@ public class GitRepoFileSystem extends FileSystem {
 		return getCommitIdFromRef(revStr);
 	}
 
+	private GitObject getAndCheckCommit(GitPath gitPath)
+			throws IOException, NoSuchFileException, MissingObjectException, IncorrectObjectTypeException {
+		final String revStr = gitPath.toAbsolutePath().getRevStr();
+		final Optional<ObjectId> commitIdOpt = getCommitId(revStr);
+		if (commitIdOpt.isEmpty()) {
+			throw new NoSuchFileException(gitPath.toString());
+		}
+		if (isObjectId(revStr)) {
+			if (getCommitTree(revStr).isEmpty()) {
+				throw new NoSuchFileException(gitPath.toString());
+			}
+		}
+		final ObjectId commitId = commitIdOpt.get();
+		return new GitObject(commitId, null);
+	}
+
 	private boolean isObjectId(String revStr) {
 		/**
 		 * This is incorrect (I suppose): a ref could have the same length as an object
@@ -429,46 +512,48 @@ public class GitRepoFileSystem extends FileSystem {
 		return commit.map(RevCommit::getTree);
 	}
 
-	private Optional<TreeWalk> getTreeWalk(GitPath gitPath)
+	/**
+	 * @param gitPath dirAndFile part must be non-empty and not "/".
+	 */
+	private Optional<GitObject> getGitObjectNotRoot(GitPath gitPath)
 			throws IOException, MissingObjectException, IncorrectObjectTypeException, CorruptObjectException {
+		checkArgument(!gitPath.toRelativePath().equals(root));
 		final GitPath withoutRoot = gitPath.toRelativePath();
 		/**
 		 * TreeWalk.forPath says “Empty path not permitted” if using "" or "/".
 		 */
 		checkArgument(!withoutRoot.equals(root));
 
-		final Optional<RevTree> tree = getCommitTree(gitPath.toAbsolutePath().getRevStr());
-		/**
-		 * Dangerous zone: treeWalk could end up not closed if an exception is thrown
-		 * after creation and before return (as it is not in a try block). Seems
-		 * unlikely, though.
-		 */
-		final Optional<TreeWalk> treeWalk = tree.flatMap(
-				Utils.uncheck(t -> Optional.ofNullable(TreeWalk.forPath(repository, withoutRoot.toString(), t))));
-		if (treeWalk.isEmpty()) {
-			LOGGER.debug("Path " + withoutRoot + " not found.");
+		final Optional<RevTree> treeOpt = getCommitTree(gitPath.toAbsolutePath().getRevStr());
+
+		final Optional<GitObject> objectId;
+		if (treeOpt.isEmpty()) {
+			objectId = Optional.empty();
+		} else {
+			final RevTree tree = treeOpt.get();
+			try (TreeWalk treeWalk = TreeWalk.forPath(repository, withoutRoot.toString(), tree)) {
+				if (treeWalk == null) {
+					objectId = Optional.empty();
+					LOGGER.debug("Path " + withoutRoot + " not found.");
+				} else {
+					objectId = Optional.of(new GitObject(treeWalk.getObjectId(0), treeWalk.getFileMode()));
+					verify(!treeWalk.next());
+				}
+			}
 		}
-		return treeWalk;
+		verify(objectId.isEmpty() || objectId.get().fileMode != null);
+		return objectId;
 	}
 
-	/**
-	 * @param gitPath dirAndFile part must be non-empty.
-	 */
-	private Optional<ObjectId> getObjectId(GitPath gitPath)
-			throws IOException, MissingObjectException, IncorrectObjectTypeException, CorruptObjectException {
-		checkArgument(!gitPath.toRelativePath().equals(root));
-
-		final Optional<TreeWalk> treeWalkOpt = getTreeWalk(gitPath);
-		if (treeWalkOpt.isEmpty()) {
-			return Optional.empty();
+	private GitObject getAndCheckGitObject(GitPath gitPath) throws IOException, NoSuchFileException,
+			MissingObjectException, IncorrectObjectTypeException, CorruptObjectException {
+		final GitObject gitObject;
+		if (gitPath.toRelativePath().equals(root)) {
+			gitObject = getAndCheckCommit(gitPath);
+		} else {
+			gitObject = getGitObjectNotRoot(gitPath).orElseThrow(() -> new NoSuchFileException(gitPath.toString()));
 		}
-
-		final Optional<ObjectId> objectId;
-		try (TreeWalk treeWalk = treeWalkOpt.get()) {
-			objectId = Optional.of(treeWalk.getObjectId(0));
-			verify(!treeWalk.next());
-		}
-		return objectId;
+		return gitObject;
 	}
 
 	private Optional<RevTree> getTree(GitPath dir)
@@ -477,14 +562,19 @@ public class GitRepoFileSystem extends FileSystem {
 			return getCommitTree(dir.toAbsolutePath().getRevStr());
 		}
 
-		final Optional<ObjectId> dirId = getObjectId(dir);
-		if (dirId.isEmpty()) {
+		final Optional<GitObject> gitObjectOpt = getGitObjectNotRoot(dir);
+		if (gitObjectOpt.isEmpty()) {
 			return Optional.empty();
+		}
+		final GitObject gitObject = gitObjectOpt.get();
+		assert gitObject.fileMode != null;
+		if (!gitObject.fileMode.equals(FileMode.TYPE_TREE)) {
+			throw new NotDirectoryException(dir.toString());
 		}
 
 		final RevTree tree;
 		try (RevWalk walk = new RevWalk(reader)) {
-			tree = walk.parseTree(dirId.get());
+			tree = walk.parseTree(gitObject.objectId);
 		}
 		return Optional.of(tree);
 	}
@@ -513,38 +603,11 @@ public class GitRepoFileSystem extends FileSystem {
 		if (!Sets.difference(modesList, ImmutableSet.of(AccessMode.READ, AccessMode.EXECUTE)).isEmpty()) {
 			throw new UnsupportedOperationException();
 		}
-		if (gitPath.toRelativePath().equals(root)) {
-			final String revStr = gitPath.toAbsolutePath().getRevStr();
-			if (isObjectId(revStr)) {
-				if (getCommitTree(revStr).isEmpty()) {
-					throw new NoSuchFileException(gitPath.toString());
-				}
-			} else {
-				final Optional<ObjectId> commitId = getCommitId(revStr);
-				if (commitId.isEmpty()) {
-					throw new NoSuchFileException(gitPath.toString());
-				}
-			}
-			return;
-		}
 
-		final Optional<FileMode> fileMode;
-		final Optional<TreeWalk> treeWalkOpt = getTreeWalk(gitPath);
-		if (treeWalkOpt.isEmpty()) {
-			fileMode = Optional.empty();
-		} else {
-			try (TreeWalk treeWalk = treeWalkOpt.get()) {
-				fileMode = Optional.of(treeWalk.getFileMode());
-				verify(!treeWalk.next());
-			}
-		}
-
-		if (fileMode.isEmpty()) {
-			throw new NoSuchFileException(gitPath.toString());
-		}
+		final GitObject gitObject = getAndCheckGitObject(gitPath);
 
 		if (modesList.contains(AccessMode.EXECUTE)) {
-			if (!fileMode.get().equals(FileMode.EXECUTABLE_FILE)) {
+			if (!Objects.equals(gitObject.fileMode, FileMode.EXECUTABLE_FILE)) {
 				throw new AccessDeniedException(gitPath.toString());
 			}
 		}
@@ -554,20 +617,17 @@ public class GitRepoFileSystem extends FileSystem {
 		if (!isOpen) {
 			throw new ClosedFileSystemException();
 		}
-		if (gitPath.toRelativePath().equals(root)) {
+
+		final GitObject gitObject = getAndCheckGitObject(gitPath);
+		if (gitObject.fileMode == null || gitObject.fileMode.equals(FileMode.TYPE_TREE)) {
 			return new DirectoryChannel();
 		}
-
-		final ObjectId fileId = getObjectId(gitPath).orElseThrow(() -> new NoSuchFileException(gitPath.toString()));
-
-		final ObjectLoader fileLoader = reader.open(fileId, Constants.OBJ_BLOB);
-
-		if (fileLoader.getType() == Constants.OBJ_TREE) {
-			return new DirectoryChannel();
+		if (!gitObject.fileMode.equals(FileMode.TYPE_FILE)) {
+			throw new IOException("Unexpected file type: " + gitObject.fileMode);
 		}
-		if (fileLoader.getType() != Constants.OBJ_BLOB) {
-			throw new IOException("Unexpected file type: " + fileLoader.getType());
-		}
+
+		final ObjectLoader fileLoader = reader.open(gitObject.objectId, Constants.OBJ_BLOB);
+		verify(fileLoader.getType() == Constants.OBJ_BLOB);
 		final byte[] bytes = fileLoader.getBytes();
 		LOGGER.debug("Read: {}.", new String(bytes, StandardCharsets.UTF_8));
 		return new SeekableInMemoryByteChannel(bytes);
@@ -584,7 +644,6 @@ public class GitRepoFileSystem extends FileSystem {
 		try (TreeWalk treeWalk = new TreeWalk(reader)) {
 			treeWalk.addTree(tree);
 			treeWalk.setRecursive(false);
-			treeWalk.setFilter(NO_SUBTREE_FILTER);
 			while (treeWalk.next()) {
 				final GitPath path = dir.resolve(new GitPath(this, "", JIM_FS.getPath(treeWalk.getNameString())));
 				if (!filter.accept(path)) {
@@ -606,6 +665,32 @@ public class GitRepoFileSystem extends FileSystem {
 				return built.iterator();
 			}
 		};
+	}
+
+	public BasicFileAttributes readAttributes(GitPath gitPath, ImmutableSet<LinkOption> optionsSet) throws IOException {
+		final GitObject gitObject;
+		if (gitPath.toRelativePath().equals(root)) {
+			final String revStr = gitPath.toAbsolutePath().getRevStr();
+			final Optional<RevTree> commitTree = getCommitTree(revStr);
+			if (commitTree.isEmpty()) {
+				throw new NoSuchFileException(gitPath.toString());
+			}
+			gitObject = new GitObject(commitTree.get(), FileMode.TREE);
+		} else {
+			gitObject = getGitObjectNotRoot(gitPath).orElseThrow(() -> new NoSuchFileException(gitPath.toString()));
+		}
+
+		final ObjectLoader fileLoader = reader.open(gitObject.objectId);
+		verify(fileLoader.getType() == gitObject.fileMode.getObjectType(),
+				"Expected " + gitObject.fileMode + " but loaded " + fileLoader.getType());
+
+		final GitBasicFileAttributes gitBasicFileAttributes = new GitBasicFileAttributes(gitObject,
+				fileLoader.getSize());
+		if (!optionsSet.contains(LinkOption.NOFOLLOW_LINKS) && gitBasicFileAttributes.isSymbolicLink()) {
+			throw new UnsupportedOperationException(
+					"Path " + gitPath.toString() + "is a sym link; I do not follow symlinks yet.");
+		}
+		return gitBasicFileAttributes;
 	}
 
 }

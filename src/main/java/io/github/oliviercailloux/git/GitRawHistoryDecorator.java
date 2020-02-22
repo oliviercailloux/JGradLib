@@ -37,7 +37,7 @@ public class GitRawHistoryDecorator<E extends ObjectId> implements GitHistory<E>
 		kept.stream().forEach(builder::addNode);
 
 		/**
-		 * I Did not find any algorithm for this in JGraphT as of Feb, 2020.
+		 * I did not find any algorithm for this in JGraphT as of Feb, 2020.
 		 *
 		 * Roughly speaking, I want a filtered graph that has edges from the original
 		 * one only if a was reachable from b but is not deducible by transitive closure
@@ -49,7 +49,7 @@ public class GitRawHistoryDecorator<E extends ObjectId> implements GitHistory<E>
 			while (!queue.isEmpty()) {
 				final E b = queue.remove();
 				if (predicate.test(b)) {
-					builder.putEdge(a, b);
+					builder.putEdge(b, a);
 				} else {
 					queue.addAll(graph.predecessors(b));
 				}

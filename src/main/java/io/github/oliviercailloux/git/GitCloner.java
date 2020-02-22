@@ -19,9 +19,12 @@ import org.eclipse.jgit.api.ListBranchCommand.ListMode;
 import org.eclipse.jgit.api.PullResult;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.internal.storage.file.FileRepository;
+import org.eclipse.jgit.lib.Constants;
 import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.lib.Ref;
+import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.transport.FetchResult;
+import org.eclipse.jgit.transport.RefSpec;
 import org.eclipse.jgit.transport.RemoteConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -54,6 +57,15 @@ public class GitCloner {
 
 	public void setCheckCommonRefsAgree(boolean checkCommonRefsAgree) {
 		this.checkCommonRefsAgree = checkCommonRefsAgree;
+	}
+
+	public void clone(GitUri gitUri, Repository repo) {
+		try (Git git = Git.wrap(repo)) {
+			git.fetch().setRemote(gitUri.getGitString()).setRefSpecs(new RefSpec("+refs/heads/*:refs/heads/*")).call();
+			maybeCheckCommonRefs(git);
+		} catch (GitAPIException e) {
+			throw new IllegalStateException(e);
+		}
 	}
 
 	public void download(GitUri uri) throws IOException {
@@ -92,6 +104,9 @@ public class GitCloner {
 			} catch (GitAPIException e) {
 				throw new IOException(e);
 			}
+			try (Git git = Git.open(repositoryDirectory.toFile())) {
+				Utils.uncheck(() -> maybeCheckCommonRefs(git));
+			}
 		} else {
 			try (Git git = Git.open(repositoryDirectory.toFile())) {
 				final List<RemoteConfig> remoteList = git.remoteList().call();
@@ -122,23 +137,32 @@ public class GitCloner {
 					throw new IllegalStateException("Unexpected remote.");
 				}
 
-				if (checkCommonRefsAgree) {
-					final List<Ref> branches = git.branchList().setListMode(ListMode.ALL).call();
-					parse(branches);
-
-					final ImmutableMap<String, ObjectId> originRefs = remoteRefs.row("origin");
-					final SetView<String> commonRefShortNames = Sets.intersection(originRefs.keySet(),
-							localRefs.keySet());
-					final ImmutableSet<String> disagreeingRefShortNames = commonRefShortNames.stream()
-							.filter((s) -> !originRefs.get(s).equals(localRefs.get(s)))
-							.collect(ImmutableSet.toImmutableSet());
-					checkState(disagreeingRefShortNames.isEmpty(),
-							String.format("Disagreeing: %s. Origin refs: %s; local refs: %s.", disagreeingRefShortNames,
-									originRefs, localRefs));
-				}
+				maybeCheckCommonRefs(git);
 			} catch (GitAPIException e) {
 				throw new IllegalStateException(e);
 			}
+		}
+	}
+
+	private void maybeCheckCommonRefs(Git git) throws GitAPIException {
+		if (checkCommonRefsAgree) {
+			final List<Ref> branches = git.branchList().setListMode(ListMode.ALL).call();
+			final List<Ref> allRefs = Utils.getOrThrowIO(() -> git.getRepository().getRefDatabase().getRefs());
+			LOGGER.debug("All refs: {}, branches: {}.", allRefs, branches);
+
+			parse(branches);
+
+			final Ref head = Utils.getOrThrowIO(() -> git.getRepository().findRef(Constants.HEAD));
+			checkState(head != null, "Did you forget to create the repository?");
+			checkState(head.getTarget().getName().equals("refs/heads/master"));
+
+			final ImmutableMap<String, ObjectId> originRefs = remoteRefs.row("origin");
+			final SetView<String> commonRefShortNames = Sets.intersection(originRefs.keySet(), localRefs.keySet());
+			final ImmutableSet<String> disagreeingRefShortNames = commonRefShortNames.stream()
+					.filter((s) -> !originRefs.get(s).equals(localRefs.get(s))).collect(ImmutableSet.toImmutableSet());
+			checkState(disagreeingRefShortNames.isEmpty(),
+					String.format("Disagreeing: %s. Origin refs: %s; local refs: %s.", disagreeingRefShortNames,
+							originRefs, localRefs));
 		}
 	}
 
@@ -174,7 +198,7 @@ public class GitCloner {
 				remoteRefsBuilder.put(remoteName, shortName, objectId);
 				break;
 			case "heads":
-				checkState(remoteName == null);
+				checkState(remoteName == null, fullName);
 				localRefsBuilder.put(shortName, objectId);
 				break;
 			default:

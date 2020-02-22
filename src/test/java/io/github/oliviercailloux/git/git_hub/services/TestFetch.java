@@ -243,16 +243,24 @@ public class TestFetch {
 			final GitHubHistory gHH = fetcher.getGitHubHistory(coord);
 			final ImmutableMap<ObjectId, Instant> pushedDates = gHH.getPushedDates();
 			final ImmutableMap<ObjectId, Instant> compPushedDates = gHH.getCorrectedAndCompletedPushedDates();
-			assertEquals(Instant.parse("2016-09-23T13:01:18Z"),
-					pushedDates.get(ObjectId.fromString("c2e245e7a7ca785fe8410213db89f142dda13bcf")));
-			assertEquals(Instant.parse("2016-09-23T13:02:36Z"),
-					pushedDates.get(ObjectId.fromString("cc61d5dd68156cb5429da29c23729d169639a64d")));
+			final ObjectId c50 = ObjectId.fromString("50241f2a198f0eec686b19d235cd50c90614ac03");
+			assertEquals(Instant.parse("2016-09-23T13:00:33Z"), pushedDates.get(c50));
+			final ObjectId cc2 = ObjectId.fromString("c2e245e7a7ca785fe8410213db89f142dda13bcf");
+			assertEquals(Instant.parse("2016-09-23T13:01:18Z"), pushedDates.get(cc2));
+			final ObjectId cc6 = ObjectId.fromString("cc61d5dd68156cb5429da29c23729d169639a64d");
+			assertEquals(Instant.parse("2016-09-23T13:02:36Z"), pushedDates.get(cc6));
 
 			final GitHubHistory filtered = gHH
 					.filter((o) -> compPushedDates.get(o).isBefore(Instant.parse("2016-09-23T13:01:30Z")));
 			assertTrue(gHH.getGraph().nodes().size() >= 164);
 			assertEquals(16, filtered.getGraph().nodes().size());
+			assertTrue(filtered.getGraph().nodes().contains(c50));
+			assertTrue(filtered.getGraph().nodes().contains(cc2));
+			assertFalse(filtered.getGraph().nodes().contains(cc6));
 			assertEquals(16, filtered.getGraph().edges().size());
+			assertEquals(ImmutableSet.of(c50), filtered.getGraph().successors(cc2));
+			assertEquals(ImmutableSet.of(cc2), filtered.getGraph().predecessors(c50));
+			assertEquals(ImmutableSet.of(), filtered.getGraph().predecessors(cc2));
 		}
 	}
 

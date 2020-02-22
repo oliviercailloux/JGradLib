@@ -32,7 +32,8 @@ public class PomPathsSupplier {
 		 * Need to limit depth, otherwise will find
 		 * target/m2e-wtp/web-resources/META-INF/maven/<groupId>/<artifactId>/pom.xml.
 		 */
-		try (Stream<Path> stream = Files.find(root, 7, (p, a) -> p.getFileName().toString().equals("pom.xml"))) {
+		try (Stream<Path> stream = Files.find(root, 7,
+				(p, a) -> p.getNameCount() != 0 && p.getFileName().toString().equals("pom.xml"))) {
 			return stream.collect(ImmutableSet.toImmutableSet());
 		}
 	}

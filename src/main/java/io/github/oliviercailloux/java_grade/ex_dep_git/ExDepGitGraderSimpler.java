@@ -5,7 +5,6 @@ import static io.github.oliviercailloux.java_grade.ex_dep_git.ExDepGitCriterion.
 import static io.github.oliviercailloux.java_grade.ex_dep_git.ExDepGitCriterion.DEP;
 import static io.github.oliviercailloux.java_grade.ex_dep_git.ExDepGitCriterion.FIRST_COMMIT;
 import static io.github.oliviercailloux.java_grade.ex_dep_git.ExDepGitCriterion.MERGE_COMMIT;
-import static io.github.oliviercailloux.java_grade.ex_dep_git.ExDepGitCriterion.ON_TIME;
 import static io.github.oliviercailloux.java_grade.ex_dep_git.ExDepGitCriterion.PARENT_OF_MY_BRANCH;
 
 import java.io.IOException;
@@ -32,9 +31,11 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Sets;
 import com.google.common.graph.Graph;
+import com.google.common.graph.Graphs;
 import com.google.common.graph.ImmutableGraph;
 
 import io.github.oliviercailloux.git.GitCloner;
+import io.github.oliviercailloux.git.GitLocalHistory;
 import io.github.oliviercailloux.git.GitUri;
 import io.github.oliviercailloux.git.fs.GitFileSystemProvider;
 import io.github.oliviercailloux.git.fs.GitRepoFileSystem;
@@ -64,6 +65,8 @@ public class ExDepGitGraderSimpler {
 	private static final Instant DEADLINE = ZonedDateTime.parse("2019-05-20T16:07:00+02:00").toInstant();
 
 	private static final TimePenalizer TIME_PENALIZER = TimePenalizer.linear(0.05d / 20d);
+	public static final ObjectId COMMIT_STARTING = ObjectId.fromString("38da901544294bf2b5784e4de1456905a306a341");
+	public static final ObjectId COMMIT_FOLLOWING = ObjectId.fromString("bba2a8b6fce54999474702b733237c07070ef308");
 
 	public static void main(String[] args) throws Exception {
 		final String prefix = "dep-git";
@@ -129,7 +132,7 @@ public class ExDepGitGraderSimpler {
 		final ImmutableMap.Builder<Instant, IGrade> possibleGradesBuilder = ImmutableMap.builder();
 		try (GitRepoFileSystem fs = new GitFileSystemProvider().newFileSystemFromGitDir(projectDir.resolve(".git"))) {
 			for (Instant acceptUntil : considered) {
-				final GitHubHistory filtered = gitHubHistory
+				final GitLocalHistory filtered = fs.getHistory()
 						.filter(o -> !gitHubHistory.getCommitDate(o).isAfter(acceptUntil));
 				possibleGradesBuilder.put(acceptUntil, grade(coord.getOwner(), fs, filtered));
 				@SuppressWarnings("unused")
@@ -167,7 +170,7 @@ public class ExDepGitGraderSimpler {
 			new GitCloner().download(GitUri.fromGitUri(coord.asURI()), projectDir);
 			try (GitRepoFileSystem fs = new GitFileSystemProvider()
 					.newFileSystemFromGitDir(projectDir.resolve(".git"))) {
-				final GitHubHistory filtered = gitHubHistory
+				final GitLocalHistory filtered = fs.getHistory()
 						.filter(o -> !gitHubHistory.getCommitDate(o).isAfter(lastOnTime));
 				grade = grade(coord.getOwner(), fs, filtered);
 			}
@@ -175,39 +178,49 @@ public class ExDepGitGraderSimpler {
 		return grade;
 	}
 
-	public IGrade grade(String owner, GitRepoFileSystem fs, GitHubHistory history) throws IOException {
+	public IGrade grade(String owner, GitRepoFileSystem fs, GitLocalHistory history) throws IOException {
 		fs.getHistory();
-		final GitHubHistory manual = history
+		LOGGER.debug("Graph history: {}.", history.getGraph().edges());
+		final GitLocalHistory manual = history
 				.filter(o -> !MarkHelper.committerIsGitHub(fs.getCachedHistory().getCommit(o)));
-		if (manual.getGraph().nodes().isEmpty()) {
-			return Mark.zero("Found no manual commit (only commits from GitHub).");
+		LOGGER.debug("Graph manual: {}.", manual.getGraph().edges());
+		final Graph<ObjectId> graph = Utils.asGraph(n -> manual.getGraph().successors(manual.getCommit(n)),
+				ImmutableSet.copyOf(manual.getTips()));
+		LOGGER.debug("Graph copied from manual: {}.", graph.edges());
+
+		if (graph.nodes().isEmpty()) {
+			return Mark.zero("Found no manual commit (not counting commits from GitHub).");
 		}
 
 		final ImmutableMap.Builder<Criterion, IGrade> gradeBuilder = ImmutableMap.builder();
 
-		final long ownWithCorrectIdentity = manual.getGraph().nodes().stream()
-				.filter(o -> !MarkHelper.committerAndAuthorIs(fs.getCachedHistory().getCommit(o), owner)).count();
-		gradeBuilder.put(COMMIT, Mark.given((double) ownWithCorrectIdentity / manual.getGraph().nodes().size(), ""));
+		final Predicate<ObjectId> mine = o -> MarkHelper.committerAndAuthorIs(fs.getCachedHistory().getCommit(o),
+				"Olivier Cailloux");
+		final Predicate<ObjectId> notMine = mine.negate();
+//		final Set<ObjectId> myCommits = Sets.filter(graph.nodes(), mine::test);
+		final Set<ObjectId> notMyCommits = Sets.filter(graph.nodes(), notMine::test);
 
-		final ObjectId startingCommit;
-		final ObjectId followingCommit;
-		startingCommit = fs.getHistory().getCommit(ObjectId.fromString("38da901544294bf2b5784e4de1456905a306a341"));
-		followingCommit = fs.getHistory().getCommit(ObjectId.fromString("bba2a8b6fce54999474702b733237c07070ef308"));
+		final ImmutableList<ObjectId> ownWithCorrectIdentity = graph.nodes().stream()
+				.filter(o -> MarkHelper.committerAndAuthorIs(fs.getCachedHistory().getCommit(o), owner))
+				.collect(ImmutableList.toImmutableList());
+		final long ownWithCorrectIdentityCount = ownWithCorrectIdentity.size();
+		gradeBuilder.put(COMMIT, Mark.binary(ownWithCorrectIdentityCount >= 1, "", ""));
 
-		final Graph<ObjectId> closure = manual.getTransitivelyClosedGraph();
-		final Optional<ObjectId> myBranch = fs.getCommitId(fs.getAbsolutePath("refs/remotes/origin/my-branch", "/"));
+		final Graph<ObjectId> closure = ImmutableGraph.copyOf(Graphs.transitiveClosure(graph));
+		LOGGER.debug("Closure: {}.", closure.edges());
+		final Optional<ObjectId> myBranch = fs.getCommitId(fs.getAbsolutePath("refs/heads/my-branch"));
 
 		{
 			IGrade firstCommitMark = Mark.zero();
-			for (ObjectId commit : manual.getGraph().nodes()) {
-				final boolean childOfStarting = closure.hasEdgeConnecting(commit, startingCommit);
+			for (ObjectId commit : notMyCommits) {
+				final boolean childOfStarting = closure.hasEdgeConnecting(commit, COMMIT_STARTING);
 				final boolean parentOfMyBranch;
 				if (myBranch.isPresent()) {
 					parentOfMyBranch = closure.hasEdgeConnecting(myBranch.get(), commit);
 				} else {
 					parentOfMyBranch = false;
 				}
-				final Mark childGrade = childOfStarting ? Mark.one("child ok") : Mark.zero("child ko");
+				final Mark childGrade = childOfStarting ? Mark.one() : Mark.zero();
 				final Mark parentGrade = Mark.binary(parentOfMyBranch, "", "");
 				final WeightingGrade newMark = WeightingGrade.proportional(CHILD_OF_STARTING, childGrade,
 						PARENT_OF_MY_BRANCH, parentGrade);
@@ -218,12 +231,11 @@ public class ExDepGitGraderSimpler {
 			gradeBuilder.put(FIRST_COMMIT, firstCommitMark);
 		}
 
-		final Predicate<ObjectId> notMine = o -> !MarkHelper.committerAndAuthorIs(fs.getCachedHistory().getCommit(o),
-				"Olivier Cailloux");
 		{
 			Mark mergeCommitMark = Mark.zero();
-			for (ObjectId commitId : Sets.filter(manual.getGraph().nodes(), notMine::test)) {
-				final Set<ObjectId> parents = manual.getGraph().successors(commitId);
+			LOGGER.debug("Testing merge with {}.", notMyCommits);
+			for (ObjectId commitId : notMyCommits) {
+				final Set<ObjectId> parents = graph.successors(commitId);
 				final ImmutableSet<ObjectId> parentsNotMine = parents.stream().filter(notMine)
 						.collect(ImmutableSet.toImmutableSet());
 				final boolean goodStart = parents.size() == 2 && parentsNotMine.size() == 1;
@@ -231,15 +243,17 @@ public class ExDepGitGraderSimpler {
 				final boolean hasExpectedParents;
 				if (goodStart) {
 					final ObjectId parent = parents.iterator().next();
-					hasExpectedParents = parents.contains(followingCommit)
-							&& manual.getGraph().successors(parent).equals(ImmutableSet.of(startingCommit));
+					hasExpectedParents = parents.contains(COMMIT_FOLLOWING)
+							&& graph.successors(parent).equals(ImmutableSet.of(COMMIT_STARTING));
 				} else {
 					hasExpectedParents = false;
 				}
-				final boolean childOfStarting = closure.hasEdgeConnecting(commitId, startingCommit);
+				final boolean childOfStarting = closure.hasEdgeConnecting(commitId, manual.getCommit(COMMIT_STARTING));
 				assert Utils.implies(hasExpectedParents, childOfStarting);
 				final double points = (goodStart && !hasExpectedParents) ? 1d / 4d : (hasExpectedParents ? 1d : 0d);
 				final Mark newMark = Mark.given(points, "");
+				LOGGER.debug("Tested merge with {}. Good start {}, exp par {}, child of st {}.", commitId, goodStart,
+						hasExpectedParents, childOfStarting);
 				if (newMark.getPoints() > mergeCommitMark.getPoints()) {
 					mergeCommitMark = newMark;
 				}
@@ -248,7 +262,7 @@ public class ExDepGitGraderSimpler {
 		}
 
 		{
-			final ImmutableSortedSet<ObjectId> byCommitDate = manual.getGraph().nodes().stream().filter(notMine)
+			final ImmutableSortedSet<ObjectId> byCommitDate = graph.nodes().stream().filter(notMine)
 					.collect(ImmutableSortedSet.toImmutableSortedSet(
 							Comparator.comparing(o -> fs.getCachedHistory().getCommitDateById(o))));
 			/**
@@ -284,7 +298,6 @@ public class ExDepGitGraderSimpler {
 		}
 
 		final ImmutableMap<Criterion, IGrade> subGrades = gradeBuilder.build();
-		return WeightingGrade.from(subGrades,
-				ImmutableMap.of(ON_TIME, -1d, COMMIT, 1d, FIRST_COMMIT, 2d, MERGE_COMMIT, 2d, DEP, 2d));
+		return WeightingGrade.from(subGrades, ImmutableMap.of(COMMIT, 1d, FIRST_COMMIT, 2d, MERGE_COMMIT, 2d, DEP, 2d));
 	}
 }

@@ -4,6 +4,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.net.URI;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -56,11 +57,27 @@ public class Utils {
 		return !a || b;
 	}
 
+	public static void uncheck(Throwing.Runnable runnable) {
+		try {
+			runnable.run();
+		} catch (Throwable e) {
+			throw new IllegalStateException(e);
+		}
+	}
+
 	public static <T, R> Function<T, R> uncheck(Throwing.Function<T, R> function) {
 		return Errors.createRethrowing(IllegalStateException::new).wrap(function);
 	}
 
-	public static <T> T getOrThrow(SupplierThrowingIOException<T> supplier) {
+	public static <T> T getOrThrowIO(SupplierThrowingIOException<T> supplier) {
+		try {
+			return supplier.get();
+		} catch (IOException e) {
+			throw new UncheckedIOException(e);
+		}
+	}
+
+	public static <T> T getOrThrow(Throwing.Supplier<T> supplier) {
 		try {
 			return supplier.get();
 		} catch (Throwable e) {

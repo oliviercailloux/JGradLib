@@ -83,10 +83,9 @@ public class GitPath implements Path {
 		checkArgument(dirAndFile.getFileSystem().provider().getScheme().equals(Jimfs.URI_SCHEME));
 		checkArgument(!revStr.equals("") == dirAndFile.isAbsolute());
 		/**
-		 * TODO should check that in git, revStr may not contain / (assumption can be
-		 * relaxed otherwise)
+		 * TODO should check that in git, revStr may not end with /
 		 */
-		checkArgument(!revStr.contains("/"));
+		checkArgument(!revStr.endsWith("/"));
 		checkArgument(dirAndFile.isAbsolute() == (dirAndFile.getRoot() != null));
 	}
 

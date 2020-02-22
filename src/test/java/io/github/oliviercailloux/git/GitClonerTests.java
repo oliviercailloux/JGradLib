@@ -3,6 +3,7 @@ package io.github.oliviercailloux.git;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -15,7 +16,11 @@ import java.util.List;
 
 import org.eclipse.jgit.api.CommitCommand;
 import org.eclipse.jgit.api.Git;
+import org.eclipse.jgit.internal.storage.dfs.DfsRepository;
+import org.eclipse.jgit.internal.storage.dfs.DfsRepositoryDescription;
+import org.eclipse.jgit.internal.storage.dfs.InMemoryRepository;
 import org.eclipse.jgit.internal.storage.file.FileRepository;
+import org.eclipse.jgit.lib.Constants;
 import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.lib.PersonIdent;
 import org.eclipse.jgit.lib.Ref;
@@ -32,6 +37,8 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.MoreCollectors;
 import com.google.common.graph.Traverser;
 
+import io.github.oliviercailloux.git.fs.GitFileSystemProvider;
+import io.github.oliviercailloux.git.fs.GitRepoFileSystem;
 import io.github.oliviercailloux.git.git_hub.model.GitHubToken;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.git.git_hub.model.v3.CommitGitHubDescription;
@@ -161,6 +168,65 @@ class GitClonerTests {
 
 		final URI uri = gitDirPath.toUri();
 		assertThrows(IllegalStateException.class, () -> new GitCloner().download(GitUri.fromGitUri(uri), workTreePath));
+	}
+
+	@Test
+	void testCloneInMemory() throws Exception {
+		try (DfsRepository repo = new InMemoryRepository(new DfsRepositoryDescription("myrepo"))) {
+			repo.create(true);
+			/**
+			 * TODO why do these fail?
+			 */
+			// new
+			// GitCloner().clone(GitUri.fromGitUri(URI.create("ssh:git@github.com:oliviercailloux/testrel.git")),
+			// repo);
+			// new
+			// GitCloner().clone(GitUri.fromGitUri(URI.create("https://github.com/github/testrepo.git")),
+			// repo);
+			new GitCloner().clone(GitUri.fromGitUri(URI.create("https://github.com/oliviercailloux/testrel.git")),
+					repo);
+			final Ref head = repo.findRef(Constants.HEAD);
+			assertNotNull(head);
+			assertEquals("f33304e950a01e45ce30eb9ba0b64b433ce77644", head.getLeaf().getObjectId().getName());
+			try (GitRepoFileSystem gitFs = new GitFileSystemProvider().newFileSystemFromDfsRepository(repo)) {
+				assertTrue(Files.exists(gitFs.getAbsolutePath("master")));
+				assertTrue(Files.exists(gitFs.getAbsolutePath("master", "Test.html")));
+				assertFalse(Files.exists(gitFs.getAbsolutePath("master", "test.html")));
+				assertTrue(Files.exists(gitFs.getAbsolutePath("dev", "Test.html")));
+				assertTrue(Files.exists(gitFs.getRelativePath("Test.html")));
+				assertFalse(Files.exists(gitFs.getRelativePath("does not exist.txt")));
+				assertFalse(
+						Files.exists(gitFs.getAbsolutePath("FFFFFFFFb0e12c98d1e424a767a91c8d9d2f3f34", "Test.html")));
+				assertFalse(
+						Files.exists(gitFs.getAbsolutePath("c0170a38b0e12c98d1e424a767a91c8d9d2f3f34", "Test.html")));
+				assertTrue(
+						Files.exists(gitFs.getAbsolutePath("c0170a38b0e12c98d1e424a767a91c8d9d2f3f34", "ploum.txt")));
+			}
+		}
+	}
+
+	@Test
+	@EnabledIfEnvironmentVariable(named = "CONTINUOUS_INTEGRATION", matches = "true")
+	void testCloneToFileUsingRepo() throws Exception {
+		final Path gitDir = Path.of("git-test " + Instant.now());
+		Git.init().setBare(true).setDirectory(gitDir.toFile()).call();
+		try (Repository repo = new FileRepository(gitDir.toString())) {
+			new GitCloner().clone(GitUri.fromGitUri(URI.create("https://github.com/oliviercailloux/testrel.git")),
+					repo);
+			final Ref head = repo.findRef("HEAD");
+			assertEquals("f33304e950a01e45ce30eb9ba0b64b433ce77644", head.getLeaf().getObjectId().getName());
+		}
+		try (GitRepoFileSystem gitFs = new GitFileSystemProvider().newFileSystemFromGitDir(gitDir)) {
+			assertTrue(Files.exists(gitFs.getAbsolutePath("master")));
+			assertTrue(Files.exists(gitFs.getAbsolutePath("master", "Test.html")));
+			assertFalse(Files.exists(gitFs.getAbsolutePath("master", "test.html")));
+			assertTrue(Files.exists(gitFs.getAbsolutePath("dev", "Test.html")));
+			assertTrue(Files.exists(gitFs.getRelativePath("Test.html")));
+			assertFalse(Files.exists(gitFs.getRelativePath("does not exist.txt")));
+			assertFalse(Files.exists(gitFs.getAbsolutePath("FFFFFFFFb0e12c98d1e424a767a91c8d9d2f3f34", "Test.html")));
+			assertFalse(Files.exists(gitFs.getAbsolutePath("c0170a38b0e12c98d1e424a767a91c8d9d2f3f34", "Test.html")));
+			assertTrue(Files.exists(gitFs.getAbsolutePath("c0170a38b0e12c98d1e424a767a91c8d9d2f3f34", "ploum.txt")));
+		}
 	}
 
 }
