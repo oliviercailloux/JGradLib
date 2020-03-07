@@ -21,6 +21,9 @@ import io.github.oliviercailloux.utils.Utils;
 
 public class MarkHelper {
 
+	@SuppressWarnings("unused")
+	private static final Logger LOGGER = LoggerFactory.getLogger(MarkHelper.class);
+
 	private final static Pattern HAS_JUNIT_TEST_CONTENT = Pattern
 			.compile("(\\h*@Test)|(org\\.junit\\.jupiter\\.api\\.Assertions)");
 
@@ -42,9 +45,6 @@ public class MarkHelper {
 		 */
 		return HAS_JUNIT_TEST_CONTENT.matcher(f.getContent()).find();
 	}
-
-	@SuppressWarnings("unused")
-	private static final Logger LOGGER = LoggerFactory.getLogger(MarkHelper.class);
 
 	public static FilesSource getTestFiles(FilesSource f) {
 		return f.filter(MarkHelper::isTestFile);

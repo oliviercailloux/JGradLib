@@ -59,7 +59,7 @@ class JsonStudentTest {
 	}
 
 	private StudentOnMyCourse getStudentOnMyCourse2() {
-		final StudentOnMyCourse studentMC = StudentOnMyCourse.with(2, "f2", "l2", "u2");
+		final StudentOnMyCourse studentMC = StudentOnMyCourse.with(2, "f2", "l2", "u2", "e2");
 		return studentMC;
 	}
 
@@ -89,7 +89,7 @@ class JsonStudentTest {
 	}
 
 	private StudentOnMyCourse getStudentOnMyCourse() {
-		final StudentOnMyCourse studentMC = StudentOnMyCourse.with(1, "f", "l", "u");
+		final StudentOnMyCourse studentMC = StudentOnMyCourse.with(1, "f", "l", "u", "e");
 		return studentMC;
 	}
 

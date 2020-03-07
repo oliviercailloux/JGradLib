@@ -2,5 +2,6 @@
     "studentId": 1,
     "myCourseUsername": "u",
     "firstName": "f",
-    "lastName": "l"
+    "lastName": "l",
+    "email": "e"
 }

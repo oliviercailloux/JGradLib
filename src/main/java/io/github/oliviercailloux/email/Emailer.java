@@ -1,15 +1,15 @@
 package io.github.oliviercailloux.email;
 
-import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Map;
+import java.util.Collection;
 import java.util.Properties;
 import java.util.Set;
 
+import javax.mail.FetchProfile;
 import javax.mail.Folder;
 import javax.mail.Message;
 import javax.mail.MessagingException;
@@ -26,12 +26,8 @@ import javax.mail.search.SearchTerm;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
 
-import com.diffplug.common.base.Throwing;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.MoreCollectors;
 
@@ -39,9 +35,9 @@ import io.github.oliviercailloux.utils.Utils;
 import io.github.oliviercailloux.xml.HtmlDocument;
 import io.github.oliviercailloux.xml.XmlUtils;
 
-public class EMailer {
+public class Emailer {
 	@SuppressWarnings("unused")
-	private static final Logger LOGGER = LoggerFactory.getLogger(EMailer.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(Emailer.class);
 
 	public static final String USERNAME = "ocailloux@dauphine.fr";
 
@@ -55,24 +51,21 @@ public class EMailer {
 		}
 	}
 
-	public static Message sendTo(Email email, InternetAddress to) {
-		return send(ImmutableMap.of(email, to)).stream().collect(MoreCollectors.onlyElement());
+	public static Message send(Email email) {
+		return send(ImmutableSet.of(email)).stream().collect(MoreCollectors.onlyElement());
 	}
 
-	public static ImmutableSet<Message> send(Map<Email, InternetAddress> toSend) {
+	public static ImmutableSet<Message> send(Collection<Email> emails) {
 		final Session session = getSmtpSession();
 		final ImmutableSet.Builder<Message> messagesBuilder = ImmutableSet.builder();
 		try (Transport transport = getTransport(session)) {
 			LOGGER.info("Connecting to transport.");
-			transport.connect(USERNAME, getTokenNoExc());
+			transport.connect(USERNAME, getToken());
 			LOGGER.info("Connected to transport.");
-			for (Email email : toSend.keySet()) {
-				final String subject = HtmlDocument.getOnlyElementWithLocalName(email.getDocument(), "title")
-						.getTextContent();
-				final MimeMessage message = getMessage(session, subject, XmlUtils.asString(email.getDocument()),
-						email.getFileName(), email.getFileContent(), email.getFileSubtype());
+			for (Email email : emails) {
+				final MimeMessage message = getMessage(session, email);
 
-				final InternetAddress to = toSend.get(email);
+				final InternetAddress to = email.getTo();
 				final InternetAddress[] toSingleton = new InternetAddress[] { to };
 				/**
 				 * When the address is incorrect (e.g. WRONG@gmail.com), a message delivered
@@ -101,7 +94,7 @@ public class EMailer {
 		final Session session = getImapSession();
 		try (Store store = session.getStore()) {
 			LOGGER.info("Connecting to store.");
-			store.connect(USERNAME, getTokenNoExc());
+			store.connect(USERNAME, getToken());
 			LOGGER.info("Connected to store.");
 			// final Folder root = store.getDefaultFolder();
 			// final ImmutableList<Folder> folders = ImmutableList.copyOf(root.list());
@@ -115,19 +108,47 @@ public class EMailer {
 		}
 	}
 
-	public static void searchIn(SearchTerm term, String folderName) throws NoSuchProviderException, MessagingException {
+	public static ImmutableList<Message> searchIn(SearchTerm term, String folderName)
+			throws NoSuchProviderException, MessagingException {
+		final Session session = getImapSession();
+		final ImmutableList<Message> found;
+		try (Store store = session.getStore()) {
+			LOGGER.info("Connecting.");
+			store.connect(USERNAME, getToken());
+			try (Folder folder = store.getFolder(folderName)) {
+				folder.open(Folder.READ_ONLY);
+				final Message[] asArray = folder.search(term);
+				/**
+				 * As message is lazily filled up, we need to retrieve it before the folder gets
+				 * closed.
+				 */
+				final FetchProfile fp = new FetchProfile();
+				fp.add(FetchProfile.Item.ENVELOPE);
+				fp.add(FetchProfile.Item.CONTENT_INFO);
+				fp.add(FetchProfile.Item.SIZE);
+				fp.add(FetchProfile.Item.FLAGS);
+				folder.fetch(asArray, fp);
+				/**
+				 * Asking for the addresses, even with this fetch order, fails. Not sure if it’s
+				 * a bug. Let’s force fetching headers to avoid this.
+				 */
+				for (Message message : asArray) {
+					message.getAllHeaders();
+				}
+				found = ImmutableList.copyOf(asArray);
+			}
+		}
+		return found;
+	}
+
+	public static ImmutableList<Folder> getFolders() throws NoSuchProviderException, MessagingException {
 		final Session session = getImapSession();
 		try (Store store = session.getStore()) {
 			LOGGER.info("Connecting.");
-			store.connect(USERNAME, getTokenNoExc());
-			try (Folder folder = store.getFolder(folderName)) {
-				// new FromStringTerm("cailloux")
-				final ImmutableList<Message> found = ImmutableList.copyOf(folder.search(term));
-				LOGGER.info("Nb: {}.", found.size());
-				final Throwing.Function<Message, String> function = Message::getSubject;
-				LOGGER.info("Found: {}.", found.stream().limit(1).map(Utils.uncheck(function))
-						.collect(ImmutableList.toImmutableList()));
-				// final Message message = found.get(0);
+			store.connect(USERNAME, getToken());
+			try (Folder root = store.getDefaultFolder()) {
+				final ImmutableList<Folder> folders = ImmutableList.copyOf(root.list());
+				return folders;
 			}
 		}
 	}
@@ -163,8 +184,9 @@ public class EMailer {
 	 * @param subject     not encoded
 	 * @param textContent not encoded
 	 */
-	private static MimeMessage getMessage(Session session, String subject, String textContent, String fileName,
-			String fileContent, String fileSubtype) {
+	private static MimeMessage getMessage(Session session, Email email) {
+		final String subject = HtmlDocument.getOnlyElementWithLocalName(email.getDocument(), "title").getTextContent();
+		final String textContent = XmlUtils.asString(email.getDocument());
 		final String utf8 = StandardCharsets.UTF_8.toString();
 		final MimeMessage message = new MimeMessage(session);
 		try {
@@ -174,12 +196,22 @@ public class EMailer {
 			final MimeBodyPart textPart = new MimeBodyPart();
 			textPart.setText(textContent, utf8, "html");
 
-			final MimeBodyPart filePart = new MimeBodyPart();
-			filePart.setFileName(fileName);
-			filePart.setDisposition(Part.ATTACHMENT);
-			filePart.setText(fileContent, utf8, fileSubtype);
+			final MimeMultipart multipartContent;
+			if (email.hasFile()) {
+				final String fileName = email.getFileName();
+				final String fileContent = email.getFileContent();
+				final String fileSubtype = email.getFileSubtype();
 
-			final MimeMultipart multipartContent = new MimeMultipart(textPart, filePart);
+				final MimeBodyPart filePart = new MimeBodyPart();
+				filePart.setFileName(fileName);
+				filePart.setDisposition(Part.ATTACHMENT);
+				filePart.setText(fileContent, utf8, fileSubtype);
+
+				multipartContent = new MimeMultipart(textPart, filePart);
+			} else {
+				multipartContent = new MimeMultipart(textPart);
+			}
+
 			message.setContent(multipartContent);
 		} catch (MessagingException e) {
 			throw new AssertionError(e);
@@ -195,7 +227,7 @@ public class EMailer {
 		}
 	}
 
-	private static String getToken() throws IOException {
+	private static String getToken() {
 		{
 			final String token = System.getenv("token_dauphine");
 			if (token != null) {
@@ -212,15 +244,7 @@ public class EMailer {
 		if (!Files.exists(path)) {
 			throw new IllegalStateException();
 		}
-		final String content = Files.readString(path);
+		final String content = Utils.getOrThrowIO(() -> Files.readString(path));
 		return content.replaceAll("\n", "");
-	}
-
-	private static String getTokenNoExc() {
-		try {
-			return getToken();
-		} catch (IOException e) {
-			throw new AssertionError(e);
-		}
 	}
 }

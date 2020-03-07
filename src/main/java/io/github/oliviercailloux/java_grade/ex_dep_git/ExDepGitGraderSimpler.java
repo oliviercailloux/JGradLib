@@ -21,6 +21,7 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
 
+import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.lib.ObjectId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,7 +43,9 @@ import io.github.oliviercailloux.git.fs.GitRepoFileSystem;
 import io.github.oliviercailloux.git.git_hub.model.GitHubHistory;
 import io.github.oliviercailloux.git.git_hub.model.GitHubToken;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
+import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinatesWithPrefix;
 import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherQL;
+import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherV3;
 import io.github.oliviercailloux.grade.Criterion;
 import io.github.oliviercailloux.grade.IGrade;
 import io.github.oliviercailloux.grade.Mark;
@@ -54,6 +57,7 @@ import io.github.oliviercailloux.grade.markers.MarkingPredicates;
 import io.github.oliviercailloux.grade.markers.Marks;
 import io.github.oliviercailloux.grade.markers.TimePenalizer;
 import io.github.oliviercailloux.grade.mycourse.json.StudentsReaderFromJson;
+import io.github.oliviercailloux.java_grade.GraderOrchestrator;
 import io.github.oliviercailloux.java_grade.testers.MarkHelper;
 import io.github.oliviercailloux.json.JsonbUtils;
 import io.github.oliviercailloux.utils.Utils;
@@ -62,45 +66,46 @@ public class ExDepGitGraderSimpler {
 
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(ExDepGitGraderSimpler.class);
+
 	private static final Instant DEADLINE = ZonedDateTime.parse("2019-05-20T16:07:00+02:00").toInstant();
 
 	private static final TimePenalizer TIME_PENALIZER = TimePenalizer.linear(0.05d / 20d);
+	private static final String PREFIX = "dep-git";
+
+	private static final Path WORK_DIR = Paths.get("../../Java L3/");
+
+	private static final Path OUT_DIR = Paths.get("");
+
 	public static final ObjectId COMMIT_STARTING = ObjectId.fromString("38da901544294bf2b5784e4de1456905a306a341");
 	public static final ObjectId COMMIT_FOLLOWING = ObjectId.fromString("bba2a8b6fce54999474702b733237c07070ef308");
 
 	public static void main(String[] args) throws Exception {
-		final String prefix = "dep-git";
-//		final ImmutableList<RepositoryCoordinates> repositories = GraderOrchestrator.readRepositories("oliviercailloux-org", prefix);
-		final ImmutableList<RepositoryCoordinates> repositories = ImmutableList
-				.of(RepositoryCoordinates.from("BoBeauf", "dep-git-BoBeauf"));
-
-		final Path srcDir = Paths.get("../../Java L3/");
-		final Path outDir = Paths.get("");
-		final StudentsReaderFromJson usernames = new StudentsReaderFromJson();
-		usernames.read(srcDir.resolve("usernamesGH-manual.json"));
-
-//		final ImmutableMap<StudentOnGitHub, RepositoryCoordinates> repositories = orch.getRepositoriesByStudent();
+		final ImmutableList<RepositoryCoordinatesWithPrefix> repositories;
+		try (GitHubFetcherV3 fetcher = GitHubFetcherV3.using(GitHubToken.getRealInstance())) {
+			repositories = fetcher.getRepositoriesWithPrefix("oliviercailloux-org", PREFIX);
+		}
 
 		final ExDepGitGraderSimpler grader = new ExDepGitGraderSimpler();
-
 		final ImmutableMap<RepositoryCoordinates, IGrade> grades = repositories.stream()
 				.collect(ImmutableMap.toImmutableMap(Function.identity(), Utils.uncheck(r -> grader.grade(r))));
 
-		LOGGER.info("Grades: {}.", grades);
-
-		Files.writeString(outDir.resolve("all grades " + prefix + ".json"),
+		Files.writeString(OUT_DIR.resolve("all grades " + PREFIX + ".json"),
 				JsonbUtils.toJsonObject(grades, JsonGrade.asAdapter()).toString());
-		Files.writeString(outDir.resolve("all grades " + prefix + ".csv"), CsvGrades.asCsv(grades.entrySet().stream()
+
+		final StudentsReaderFromJson usernames = new StudentsReaderFromJson();
+		usernames.read(WORK_DIR.resolve("usernamesGH-manual.json"));
+		Files.writeString(OUT_DIR.resolve("all grades " + PREFIX + ".csv"), CsvGrades.asCsv(grades.entrySet().stream()
 				.filter(e -> e.getValue() instanceof WeightingGrade).collect(ImmutableMap.toImmutableMap(
 						e -> usernames.getStudentOnGitHub(e.getKey().getOwner()), e -> (WeightingGrade) e.getValue())),
 				7d));
 	}
 
-	public ExDepGitGraderSimpler() {
+	ExDepGitGraderSimpler() {
 		// Nothing.
 	}
 
-	public ImmutableMap<Instant, IGrade> getPossibleGrades(RepositoryCoordinates coord) throws IOException {
+	public ImmutableMap<Instant, IGrade> getPossibleGrades(RepositoryCoordinates coord)
+			throws GitAPIException, IOException {
 		final GitHubHistory gitHubHistory;
 		try (GitHubFetcherQL fetcher = GitHubFetcherQL.using(GitHubToken.getRealInstance())) {
 			gitHubHistory = fetcher.getGitHubHistory(coord);
@@ -146,36 +151,18 @@ public class ExDepGitGraderSimpler {
 		return possibleGradesBuilder.build();
 	}
 
-	public IGrade grade(RepositoryCoordinates coord) throws IOException {
-		final GitHubHistory gitHubHistory;
-		try (GitHubFetcherQL fetcher = GitHubFetcherQL.using(GitHubToken.getRealInstance())) {
-			gitHubHistory = fetcher.getGitHubHistory(coord);
-		}
-		final ImmutableGraph<ObjectId> patched = gitHubHistory.getPatchedKnowns();
-		if (!patched.nodes().isEmpty()) {
-			LOGGER.warn("Patched: {}.", patched);
-		}
+	public IGrade grade(RepositoryCoordinates coord) throws IOException, GitAPIException {
+		final Path projectsBaseDir = WORK_DIR.resolve(PREFIX);
+		final Path projectDir = projectsBaseDir.resolve(coord.getRepositoryName());
+		new GitCloner().download(GitUri.fromGitUri(coord.asURI()), projectDir);
 
-		final ImmutableMap<ObjectId, Instant> pushedDates = gitHubHistory.getCorrectedAndCompletedPushedDates();
-		final ImmutableSortedSet<Instant> pushedOnlyDates = ImmutableSortedSet.copyOf(pushedDates.values());
-		final Optional<Instant> lastOnTimeOpt = Optional.ofNullable(pushedOnlyDates.floor(DEADLINE));
-		final IGrade grade;
-		if (!lastOnTimeOpt.isPresent()) {
-			grade = Mark.zero("No commit before " + DEADLINE + ".");
-		} else {
-			final Instant lastOnTime = lastOnTimeOpt.get();
-
-			final Path projectsBaseDir = Paths.get("/home/olivier/Professions/Enseignement/En cours/dep-git");
-			final Path projectDir = projectsBaseDir.resolve(coord.getRepositoryName());
-			new GitCloner().download(GitUri.fromGitUri(coord.asURI()), projectDir);
-			try (GitRepoFileSystem fs = new GitFileSystemProvider()
-					.newFileSystemFromGitDir(projectDir.resolve(".git"))) {
-				final GitLocalHistory filtered = fs.getHistory()
-						.filter(o -> !gitHubHistory.getCommitDate(o).isAfter(lastOnTime));
-				grade = grade(coord.getOwner(), fs, filtered);
-			}
+		try (GitRepoFileSystem fs = new GitFileSystemProvider().newFileSystemFromGitDir(projectDir.resolve(".git"))) {
+			final GitHubHistory gitHubHistory = GraderOrchestrator.getGitHubHistory(coord);
+			final GitLocalHistory filtered = GraderOrchestrator.getFilteredHistory(fs, gitHubHistory, DEADLINE);
+			final IGrade grade = grade(coord.getOwner(), fs, filtered);
+			LOGGER.info("Grade {}: {}.", coord, grade);
+			return grade;
 		}
-		return grade;
 	}
 
 	public IGrade grade(String owner, GitRepoFileSystem fs, GitLocalHistory history) throws IOException {

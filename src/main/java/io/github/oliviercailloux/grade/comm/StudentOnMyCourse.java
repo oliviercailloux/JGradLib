@@ -5,7 +5,6 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.Objects;
 
-import javax.json.JsonObject;
 import javax.json.bind.annotation.JsonbCreator;
 import javax.json.bind.annotation.JsonbProperty;
 import javax.json.bind.annotation.JsonbPropertyOrder;
@@ -15,29 +14,36 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.base.MoreObjects;
 
-import io.github.oliviercailloux.json.JsonbUtils;
-import io.github.oliviercailloux.json.PrintableJsonObject;
-
 @JsonbPropertyOrder({ "studentId", "myCourseUsername", "firstName", "lastName" })
 public class StudentOnMyCourse {
 	@JsonbCreator
 	public static StudentOnMyCourse with(@JsonbProperty("studentId") int id,
 			@JsonbProperty("firstName") String firstName, @JsonbProperty("lastName") String lastName,
-			@JsonbProperty("myCourseUsername") String username) {
-		return new StudentOnMyCourse(id, firstName, lastName, username);
+			@JsonbProperty("myCourseUsername") String username, @JsonbProperty("email") String email) {
+		return new StudentOnMyCourse(id, firstName, lastName, username, email);
+	}
+
+	public static StudentOnMyCourse with(int id, String firstName, String lastName, String username) {
+		/**
+		 * TODO check if this is really needed; and if it is, check that the email can
+		 * be constructed as tentatively indicated here.
+		 */
+		return with(id, firstName, lastName, username, username + "@dauphine.psl.fr MAYBE");
 	}
 
 	private int studentId;
 	private String firstName;
 	private String lastName;
 	private String username;
+	private String email;
 
-	private StudentOnMyCourse(int id, String firstName, String lastName, String username) {
+	private StudentOnMyCourse(int id, String firstName, String lastName, String username, String email) {
 		checkArgument(id > 0);
 		studentId = id;
 		this.firstName = requireNonNull(firstName);
 		this.lastName = requireNonNull(lastName);
 		this.username = requireNonNull(username);
+		this.email = requireNonNull(email);
 	}
 
 	@Override
@@ -72,6 +78,10 @@ public class StudentOnMyCourse {
 
 	public String getMyCourseUsername() {
 		return username;
+	}
+
+	public String getEmail() {
+		return email;
 	}
 
 	@Override

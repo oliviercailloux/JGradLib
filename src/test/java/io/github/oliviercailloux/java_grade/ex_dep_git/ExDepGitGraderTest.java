@@ -34,6 +34,7 @@ class ExDepGitGraderTest {
 	private static final Logger LOGGER = LoggerFactory.getLogger(ExDepGitGraderTest.class);
 
 	@Test
+	@EnabledIfEnvironmentVariable(named = "CONTINUOUS_INTEGRATION", matches = "true")
 	void testGradeBad() throws Exception {
 		final GitUri gitUri = GitUri
 				.fromGitUri(URI.create("https://github.com/oliviercailloux/google-or-tools-java.git"));

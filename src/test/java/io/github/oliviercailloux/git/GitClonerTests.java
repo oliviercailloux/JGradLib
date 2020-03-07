@@ -187,7 +187,7 @@ class GitClonerTests {
 					repo);
 			final Ref head = repo.findRef(Constants.HEAD);
 			assertNotNull(head);
-			assertEquals("f33304e950a01e45ce30eb9ba0b64b433ce77644", head.getLeaf().getObjectId().getName());
+			assertEquals("e26c142665bb9f560d59b18fd80763ef45e29324", head.getLeaf().getObjectId().getName());
 			try (GitRepoFileSystem gitFs = new GitFileSystemProvider().newFileSystemFromDfsRepository(repo)) {
 				assertTrue(Files.exists(gitFs.getAbsolutePath("master")));
 				assertTrue(Files.exists(gitFs.getAbsolutePath("master", "Test.html")));

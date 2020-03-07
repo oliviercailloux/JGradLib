@@ -2,6 +2,7 @@ package io.github.oliviercailloux.git.git_hub.services;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
+import static com.google.common.base.Verify.verify;
 import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
@@ -17,6 +18,8 @@ import java.util.Set;
 import java.util.function.BinaryOperator;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -47,6 +50,7 @@ import com.google.common.collect.MoreCollectors;
 
 import io.github.oliviercailloux.git.git_hub.model.GitHubToken;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
+import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinatesWithPrefix;
 import io.github.oliviercailloux.git.git_hub.model.v3.CommitGitHubDescription;
 import io.github.oliviercailloux.git.git_hub.model.v3.Event;
 import io.github.oliviercailloux.git.git_hub.model.v3.EventType;
@@ -92,6 +96,11 @@ public class GitHubFetcherV3 implements AutoCloseable {
 	 * https://developer.github.com/v3/search/#search-code
 	 */
 	private static final String SEARCH_CODE_URI = "https://api.github.com/search/code";
+
+	/**
+	 * https://developer.github.com/v3/search/#search-repositories
+	 */
+	private static final String SEARCH_REPOSITORIES_URI = "https://api.github.com/search/repositories";
 
 	public static GitHubFetcherV3 using(GitHubToken token) {
 		return new GitHubFetcherV3(token);
@@ -204,18 +213,54 @@ public class GitHubFetcherV3 implements AutoCloseable {
 		}));
 	}
 
-	public ImmutableList<RepositoryCoordinates> getRepositories(String org) {
-		return getRepositories(org, false);
-	}
-
 	public ImmutableList<RepositoryCoordinates> getUserRepositories(String username) {
 		final WebTarget target = client.target(LIST_USER_REPOS).resolveTemplate("username", username);
 		return getContentAsList(target, RepositoryCoordinates::from, false);
 	}
 
-	public ImmutableList<RepositoryCoordinates> getRepositories(String org, boolean truncate) {
+	public ImmutableList<RepositoryCoordinates> getRepositories(String org) {
 		final WebTarget target = client.target(LIST_ORG_REPOS).resolveTemplate("org", org);
-		return getContentAsList(target, RepositoryCoordinates::from, truncate);
+		return getContentAsList(target, RepositoryCoordinates::from, false);
+	}
+
+	public ImmutableList<RepositoryCoordinatesWithPrefix> getRepositoriesWithPrefix(String org, String prefix) {
+		final ImmutableList<RepositoryCoordinates> repositories = searchForRepositories(org, prefix);
+		final Pattern pattern = Pattern.compile(prefix + "-(.*)");
+		final ImmutableList.Builder<RepositoryCoordinatesWithPrefix> builder = ImmutableList.builder();
+		for (RepositoryCoordinates repository : repositories) {
+			final Matcher matcher = pattern.matcher(repository.getRepositoryName());
+			if (matcher.matches()) {
+				final RepositoryCoordinatesWithPrefix prefixed = RepositoryCoordinatesWithPrefix
+						.from(repository.getOwner(), prefix, matcher.group(1));
+				builder.add(prefixed);
+			}
+		}
+		return builder.build();
+	}
+
+	private ImmutableList<RepositoryCoordinates> searchForRepositories(String org, String inName) {
+		checkArgument(!org.contains(" "));
+		checkArgument(!inName.contains(" "));
+		final String searchKeywords = "org:" + org + " " + inName + " in:name";
+		final WebTarget target = client.target(SEARCH_REPOSITORIES_URI).queryParam("q", searchKeywords);
+//		final JsonObject json = getContent(target, JsonObject.class).orElseThrow(IllegalStateException::new);
+//		checkState(!json.getBoolean("incomplete_results"));
+		final Optional<BinaryOperator<JsonObject>> accumulator = Optional.of((v1, v2) -> {
+			final JsonObject v1NoItems = Json.createObjectBuilder(v1).remove("items").build();
+			final JsonObject v2NoItems = Json.createObjectBuilder(v2).remove("items").build();
+			verify(v1NoItems.equals(v2NoItems));
+			final JsonArray v1Items = v1.getJsonArray("items");
+			final JsonArray v2Items = v2.getJsonArray("items");
+			final JsonArray allItems = Json.createArrayBuilder(v1Items).addAll(Json.createArrayBuilder(v2Items))
+					.build();
+			return Json.createObjectBuilder(v1).add("items", allItems).build();
+		});
+		final JsonObject json = getContent(target, JsonObject.class, GIT_HUB_MEDIA_TYPE, accumulator)
+				.orElseThrow(IllegalStateException::new);
+		final JsonArray jsonArray = json.getJsonArray("items");
+		final List<JsonObject> items = jsonArray.stream().map(JsonValue::asJsonObject).collect(Collectors.toList());
+		checkState(json.getInt("total_count") == items.size());
+		return items.stream().map(RepositoryCoordinates::from).collect(ImmutableList.toImmutableList());
 	}
 
 	public Optional<Instant> getLastModification(RepositoryCoordinates repositoryCoordinates, Path path) {
@@ -417,7 +462,7 @@ public class GitHubFetcherV3 implements AutoCloseable {
 		}
 	}
 
-	private List<SearchResult> searchFor(final String searchKeywords) {
+	private List<SearchResult> searchFor(String searchKeywords) {
 		final WebTarget target = client.target(SEARCH_CODE_URI).queryParam("q", searchKeywords);
 		final Optional<SearchResults> respOpt = getContent(target, JsonObject.class).map(SearchResults::from);
 		if (respOpt.isPresent()) {

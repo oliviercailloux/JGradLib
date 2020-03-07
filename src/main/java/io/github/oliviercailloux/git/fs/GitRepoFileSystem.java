@@ -47,7 +47,6 @@ import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.revwalk.RevTree;
 import org.eclipse.jgit.revwalk.RevWalk;
 import org.eclipse.jgit.treewalk.TreeWalk;
-import org.eclipse.jgit.treewalk.filter.TreeFilter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -237,7 +236,7 @@ public class GitRepoFileSystem extends FileSystem {
 	}
 
 	@Override
-	public void close() throws IOException {
+	public void close() {
 		isOpen = false;
 		reader.close();
 		repository.close();

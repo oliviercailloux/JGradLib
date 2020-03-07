@@ -37,6 +37,7 @@ import io.github.oliviercailloux.git.GitLocalHistory;
 import io.github.oliviercailloux.git.git_hub.model.GitHubHistory;
 import io.github.oliviercailloux.git.git_hub.model.GitHubToken;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
+import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinatesWithPrefix;
 import io.github.oliviercailloux.git.git_hub.model.graph_ql.RepositoryWithFiles;
 import io.github.oliviercailloux.git.git_hub.model.graph_ql.RepositoryWithIssuesWithHistory;
 import io.github.oliviercailloux.git.git_hub.model.v3.SearchResult;
@@ -345,6 +346,19 @@ public class TestFetch {
 		}
 	}
 
+	@Test
+	void testSearchForPrefixedRepositories() throws Exception {
+		try (GitHubFetcherV3 rawFetcher = GitHubFetcherV3.using(GitHubToken.getRealInstance())) {
+			final ImmutableList<RepositoryCoordinatesWithPrefix> depGit = rawFetcher
+					.getRepositoriesWithPrefix("oliviercailloux-org", "dep-git");
+			LOGGER.debug("Found: {}.", depGit);
+			assertTrue(20 < depGit.size() && depGit.size() < 50, "" + depGit.size());
+			final ImmutableList<RepositoryCoordinatesWithPrefix> noMatch = rawFetcher
+					.getRepositoriesWithPrefix("oliviercailloux-org", "Invalid-prefix");
+			assertEquals(ImmutableList.of(), noMatch);
+		}
+	}
+
 	public static void main(String[] args) throws Exception {
 		final ImmutableList<RepositoryCoordinates> allCoordinates;
 		try (GitHubFetcherV3 fetcher = GitHubFetcherV3.using(GitHubToken.getRealInstance())) {
@@ -380,7 +394,7 @@ public class TestFetch {
 				checkState(gHH.getGraph().nodes().equals(pushedDatesWithDeductions.keySet()));
 
 				final ImmutableSortedMap<Instant, ImmutableSet<ObjectId>> refsBySortedPushedDates = gHH
-						.getRefsBySortedPushedDates();
+						.getRefsBySortedPushedDates(false);
 				if (!refsBySortedPushedDates.isEmpty()) {
 					final Instant lastPush = refsBySortedPushedDates.lastKey();
 					LOGGER.info("Last commits: {}, {}.", lastPush, refsBySortedPushedDates.get(lastPush));

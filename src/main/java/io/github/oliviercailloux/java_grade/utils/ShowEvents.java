@@ -1,7 +1,5 @@
 package io.github.oliviercailloux.java_grade.utils;
 
-import java.io.IOException;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -16,7 +14,7 @@ public class ShowEvents {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(ShowEvents.class);
 
-	public static void main(String[] args) throws IllegalStateException, IOException {
+	public static void main(String[] args) throws IllegalStateException {
 		final RepositoryCoordinates repo = RepositoryCoordinates.from("oliviercailloux-org", "extractor-aitalibraham");
 		try (GitHubFetcherV3 fetcher = GitHubFetcherV3.using(GitHubToken.getRealInstance())) {
 			final ImmutableList<Event> events = fetcher.getEvents(repo);

@@ -19,13 +19,17 @@ public class HtmlGrade {
 	private static final double DEFAULT_DENOMINATOR = 20d;
 
 	public static Document asHtml(IGrade grade, String title) {
+		return asHtml(grade, title, DEFAULT_DENOMINATOR);
+	}
+
+	public static Document asHtml(IGrade grade, String title, double denominator) {
 		final HtmlDocument document = HtmlDocument.newInstance();
 		document.setTitle(title);
 
 		final String introText = "Hi! This is an automated e-mail containing your grade: " + title;
 		document.getBody().appendChild(document.createParagraph(introText));
 
-		document.getBody().appendChild(getDescription(Criterion.given("Grade"), grade, document, DEFAULT_DENOMINATOR));
+		document.getBody().appendChild(getDescription(Criterion.given("Grade"), grade, document, denominator));
 
 		return document.getDocument();
 	}

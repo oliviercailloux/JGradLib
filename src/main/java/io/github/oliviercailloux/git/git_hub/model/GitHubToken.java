@@ -13,14 +13,16 @@ import java.util.Optional;
 import javax.ws.rs.client.Invocation;
 import javax.ws.rs.core.HttpHeaders;
 
+import io.github.oliviercailloux.utils.Utils;
+
 public class GitHubToken {
 	private static GitHubRealToken instance = null;
 	private static GitHubToken none = null;
 	private String token;
 
-	public static GitHubRealToken getRealInstance() throws IllegalStateException, IOException {
+	public static GitHubRealToken getRealInstance() throws IllegalStateException {
 		if (instance == null) {
-			instance = new GitHubRealToken(getTokenValue());
+			instance = new GitHubRealToken(Utils.getOrThrowIO(GitHubToken::getTokenValue));
 		}
 		return instance;
 	}

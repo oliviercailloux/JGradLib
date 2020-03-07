@@ -52,16 +52,25 @@ public class CsvGrades {
 						Entry::getValue));
 
 		final ImmutableSet<Criterion> allCriteria = asTable.columnKeySet();
+		final boolean enableName = grades.keySet().stream().anyMatch(s -> s.getLastName().isPresent());
 
-		final ImmutableList<String> headers = Streams.concat(Stream.of("Name", "GitHub username"),
-				allCriteria.stream().map(Object::toString), Stream.of("Points"))
+		final Stream<String> firstHeaders;
+		if (enableName) {
+			firstHeaders = Stream.of("Name", "GitHub username");
+		} else {
+			firstHeaders = Stream.of("GitHub username");
+		}
+		final ImmutableList<String> headers = Streams
+				.concat(firstHeaders, allCriteria.stream().map(Object::toString), Stream.of("Points"))
 				.collect(ImmutableList.toImmutableList());
 		writer.writeHeaders(headers);
 
 		for (Entry<StudentOnGitHub, WeightingGrade> studentGrade : grades.entrySet()) {
 			final StudentOnGitHub student = studentGrade.getKey();
 			LOGGER.info("Writing {}.", student);
-			writer.addValue("Name", student.getLastName().orElse("unknown"));
+			if (enableName) {
+				writer.addValue("Name", student.getLastName().orElse("unknown"));
+			}
 			writer.addValue("GitHub username", student.getGitHubUsername());
 
 			final WeightingGrade grade = studentGrade.getValue();
@@ -80,7 +89,9 @@ public class CsvGrades {
 			writer.writeValuesToRow();
 		}
 
-		writer.addValue("Name", "Range");
+		if (enableName) {
+			writer.addValue("Name", "Range");
+		}
 		writer.addValue("GitHub username", "Range");
 
 		for (Criterion criterion : allCriteria) {

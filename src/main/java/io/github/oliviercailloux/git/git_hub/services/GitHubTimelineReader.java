@@ -50,13 +50,7 @@ import io.github.oliviercailloux.utils.Utils;
 public class GitHubTimelineReader {
 	public GitHubTimelineReader() {
 		receivedAt = new LinkedHashMap<>();
-		fetcherSupplier = () -> {
-			try {
-				return GitHubFetcherV3.using(GitHubToken.getRealInstance());
-			} catch (IOException e) {
-				throw new IllegalStateException(e);
-			}
-		};
+		fetcherSupplier = () -> GitHubFetcherV3.using(GitHubToken.getRealInstance());
 		veryFirstBranchEvent = null;
 		createdButNoContent = true;
 		firstPushEvent = null;

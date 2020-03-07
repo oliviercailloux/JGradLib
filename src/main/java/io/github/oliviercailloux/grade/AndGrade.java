@@ -12,7 +12,7 @@ public class AndGrade extends MinGrade implements IGrade {
 	public static AndGrade given(Criterion c1, boolean cond1, Criterion c2, boolean cond2, Criterion c3,
 			boolean cond3) {
 		return new AndGrade(
-				ImmutableMap.of(c1, Mark.ifPasses(cond1), c2, Mark.ifPasses(cond2), c3, Mark.ifPasses(cond3)));
+				ImmutableMap.of(c1, Mark.binary(cond1), c2, Mark.binary(cond2), c3, Mark.binary(cond3)));
 	}
 
 	public static AndGrade given(Map<Criterion, ? extends IGrade> subGrades) {

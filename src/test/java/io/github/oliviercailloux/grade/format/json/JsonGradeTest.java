@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.Resources;
 
@@ -20,6 +21,7 @@ import io.github.oliviercailloux.grade.GradeTestsHelper;
 import io.github.oliviercailloux.grade.IGrade;
 import io.github.oliviercailloux.grade.Mark;
 import io.github.oliviercailloux.grade.WeightingGrade;
+import io.github.oliviercailloux.java_grade.JavaCriterion;
 import io.github.oliviercailloux.json.PrintableJsonObject;
 import io.github.oliviercailloux.json.PrintableJsonObjectFactory;
 
@@ -102,5 +104,18 @@ public class JsonGradeTest {
 				Resources.toString(getClass().getResource("ComplexGrade.json"), StandardCharsets.UTF_8));
 		final IGrade read = JsonGrade.asGrade(jsonComplexGrade);
 		assertEquals(expected, read);
+	}
+
+	@Test
+	void gradeDoubleRead() throws Exception {
+		/**
+		 * This grade was read in the wrong order when using a set instead of a list as
+		 * the json transmission type.
+		 */
+		final PrintableJsonObject jsonGrade = PrintableJsonObjectFactory.wrapPrettyPrintedString(
+				Resources.toString(getClass().getResource("DoubleGrade.json"), StandardCharsets.UTF_8));
+		LOGGER.debug("Wrapped: {}.", jsonGrade);
+		final WeightingGrade read = (WeightingGrade) JsonGrade.asGrade(jsonGrade);
+		assertEquals(ImmutableList.of(JavaCriterion.COMMIT, JavaCriterion.ID), read.getSubGrades().keySet().asList());
 	}
 }

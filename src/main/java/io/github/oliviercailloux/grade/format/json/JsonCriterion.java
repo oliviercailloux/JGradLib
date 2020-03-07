@@ -17,7 +17,7 @@ public class JsonCriterion {
 		final JsonObjectBuilder builder = Json.createObjectBuilder();
 		if (criterion instanceof Enum<?>) {
 			final Enum<?> cEnum = (Enum<?>) criterion;
-			builder.add("class", cEnum.getClass().getCanonicalName());
+			builder.add("class", cEnum.getClass().getName());
 		}
 		builder.add("name", criterion.getName());
 		return PrintableJsonObjectFactory.wrapObject(builder.build());

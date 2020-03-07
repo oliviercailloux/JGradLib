@@ -5,6 +5,9 @@ import static com.google.common.base.Preconditions.checkArgument;
 import javax.json.JsonObject;
 import javax.json.bind.adapter.JsonbAdapter;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.common.math.DoubleMath;
 
 import io.github.oliviercailloux.grade.CriterionGradeWeight;
@@ -15,6 +18,8 @@ import io.github.oliviercailloux.json.JsonbUtils;
 import io.github.oliviercailloux.json.PrintableJsonObject;
 
 public class JsonGrade {
+	@SuppressWarnings("unused")
+	static final Logger LOGGER = LoggerFactory.getLogger(JsonGrade.class);
 
 	public static PrintableJsonObject asJson(IGrade grade) {
 		return JsonbUtils.toJsonObject(grade, JsonCriterion.asAdapter());
@@ -41,6 +46,7 @@ public class JsonGrade {
 
 			@Override
 			public CriterionGradeWeight adaptFromJson(JsonObject obj) throws Exception {
+				LOGGER.debug("Adapting from: {}.", obj);
 				return JsonbUtils.fromJson(obj.toString(), CriterionGradeWeight.class, JsonCriterion.asAdapter(),
 						JsonGrade.asAdapter());
 			}

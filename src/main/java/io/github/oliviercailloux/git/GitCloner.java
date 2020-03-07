@@ -4,7 +4,6 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 
 import java.io.File;
-import java.io.IOException;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -68,19 +67,21 @@ public class GitCloner {
 		}
 	}
 
-	public void download(GitUri uri) throws IOException {
+	public void download(GitUri uri) throws GitAPIException {
 		download(uri, getGitFolderPathInTemp(uri.getRepositoryName()));
 	}
 
-	public void download(GitUri uri, Path workTree) throws IOException {
+	public void download(GitUri uri, Path workTree) throws GitAPIException {
 		download(uri, workTree, false);
 	}
 
-	public void downloadBare(GitUri uri, Path gitDir) throws IOException {
+	public void downloadBare(GitUri uri, Path gitDir) throws GitAPIException {
 		download(uri, gitDir, true);
 	}
 
 	/**
+	 * TODO return the repository.
+	 *
 	 * @param repositoryDirectory GIT_DIR (replacing .git dir) if bare (see
 	 *                            {@link FileRepository}), otherwise, work tree dir,
 	 *                            in which a .git dir will be created (or exists).
@@ -88,7 +89,7 @@ public class GitCloner {
 	 *                            exists, this method will not check whether it is
 	 *                            bare)
 	 */
-	private void download(GitUri uri, Path repositoryDirectory, boolean allowBare) throws IOException {
+	private void download(GitUri uri, Path repositoryDirectory, boolean allowBare) throws GitAPIException {
 		localRefs = null;
 		remoteRefs = null;
 		final boolean exists = Files.exists(repositoryDirectory);
@@ -99,23 +100,24 @@ public class GitCloner {
 			final File dest = repositoryDirectory.toFile();
 			cloneCmd.setDirectory(dest);
 			LOGGER.info("Cloning {} to {}.", uri, dest);
-			try {
-				cloneCmd.call().close();
-			} catch (GitAPIException e) {
-				throw new IOException(e);
-			}
-			try (Git git = Git.open(repositoryDirectory.toFile())) {
+//			try {
+//				cloneCmd.call().close();
+//			} catch (GitAPIException e) {
+//				throw new IOException(e);
+//			}
+//			try (Git git = Git.open(repositoryDirectory.toFile())) {
+			try (Git git = cloneCmd.call()) {
 				Utils.uncheck(() -> maybeCheckCommonRefs(git));
 			}
 		} else {
-			try (Git git = Git.open(repositoryDirectory.toFile())) {
+			try (Git git = Utils.getOrThrowIO(() -> Git.open(repositoryDirectory.toFile()))) {
 				final List<RemoteConfig> remoteList = git.remoteList().call();
 				final Optional<RemoteConfig> origin = remoteList.stream().filter((r) -> r.getName().equals("origin"))
 						.collect(MoreCollectors.toOptional());
 				if (!git.getRepository().isBare() && !git.status().call().isClean()) {
 					throw new IllegalStateException("Can’t update: not clean.");
 				}
-				LOGGER.info("HEAD: {}.", git.getRepository().getFullBranch());
+				LOGGER.debug("HEAD: {}.", Utils.getOrThrowIO(() -> git.getRepository().getFullBranch()));
 				if (origin.isPresent() && origin.get().getURIs().size() == 1
 						&& origin.get().getURIs().get(0).toString().equals(uri.getGitString())) {
 					if (git.getRepository().isBare()) {
@@ -138,8 +140,6 @@ public class GitCloner {
 				}
 
 				maybeCheckCommonRefs(git);
-			} catch (GitAPIException e) {
-				throw new IllegalStateException(e);
 			}
 		}
 	}

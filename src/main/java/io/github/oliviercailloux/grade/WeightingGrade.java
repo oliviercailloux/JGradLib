@@ -2,10 +2,11 @@ package io.github.oliviercailloux.grade;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 import javax.json.bind.annotation.JsonbCreator;
@@ -65,9 +66,21 @@ public class WeightingGrade implements IGrade {
 	 *               sub-grades.
 	 */
 	@JsonbCreator
-	public static WeightingGrade from(@JsonbProperty("subGrades") Set<CriterionGradeWeight> grades) {
+	public static WeightingGrade fromList(@JsonbProperty("subGrades") List<CriterionGradeWeight> grades) {
+		/**
+		 * The list type (rather than set) is required for json to deserialize in the
+		 * right order.
+		 */
+		return from(grades);
+	}
+
+	/**
+	 * @param grades its iteration order is used to determine the order of the
+	 *               sub-grades.
+	 */
+	public static WeightingGrade from(Collection<CriterionGradeWeight> grades) {
 		final Object gr = grades.iterator().next();
-		LOGGER.info("Grade: {}, type: {}.", gr, gr.getClass());
+		LOGGER.debug("Grade: {}, type: {}.", gr, gr.getClass());
 		final ImmutableMap<Criterion, IGrade> gradesByCriterion = grades.stream()
 				.collect(ImmutableMap.toImmutableMap((g) -> g.getCriterion(), (g) -> g.getGrade()));
 		final ImmutableMap<Criterion, Double> weights = grades.stream()
@@ -77,6 +90,12 @@ public class WeightingGrade implements IGrade {
 
 	public static WeightingGrade proportional(Criterion c1, IGrade g1, Criterion c2, IGrade g2) {
 		return WeightingGrade.from(ImmutableMap.of(c1, g1, c2, g2), ImmutableMap.of(c1, 0.5d, c2, 0.5d));
+	}
+
+	public static WeightingGrade proportional(Criterion c1, IGrade g1, Criterion c2, IGrade g2, Criterion c3,
+			IGrade g3) {
+		return WeightingGrade.from(ImmutableMap.of(c1, g1, c2, g2, c3, g3),
+				ImmutableMap.of(c1, 1d / 3d, c2, 1d / 3d, c3, 1d / 3d));
 	}
 
 	private static final double MAX_MARK = 1d;
@@ -122,11 +141,7 @@ public class WeightingGrade implements IGrade {
 
 	@Override
 	public String getComment() {
-		return String.format("Weighted average using weights %s with penalties using weights %s.",
-				weights.entrySet().stream().filter((e) -> e.getValue() > 0d)
-						.collect(ImmutableMap.toImmutableMap((e) -> e.getKey(), (e) -> e.getValue())),
-				weights.entrySet().stream().filter((e) -> e.getValue() < 0d)
-						.collect(ImmutableMap.toImmutableMap((e) -> e.getKey(), (e) -> e.getValue())));
+		return String.format("Weighted average");
 	}
 
 	@JsonbTransient

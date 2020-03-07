@@ -33,6 +33,8 @@ public interface GitHistory<E extends ObjectId> {
 	 * git allows for <a href=
 	 * "https://git-scm.com/docs/git-checkout#Documentation/git-checkout.txt---orphanltnewbranchgt">multiple
 	 * roots</a>.)
+	 *
+	 * @return empty iff the graph is empty.
 	 */
 	public ImmutableSet<E> getRoots();
 
@@ -40,6 +42,8 @@ public interface GitHistory<E extends ObjectId> {
 	 * @return the nodes with no children (no predecessor), from which the
 	 *         “successors” (parent-of) relation starts; the most recent node on
 	 *         each branch.
+	 *
+	 * @return empty iff the graph is empty.
 	 */
 	public ImmutableSet<E> getTips();
 

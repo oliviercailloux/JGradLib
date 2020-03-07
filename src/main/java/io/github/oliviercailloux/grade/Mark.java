@@ -32,8 +32,8 @@ public class Mark implements IGrade {
 		return new Mark(1d, comment);
 	}
 
-	public static Mark ifPasses(boolean passes) {
-		return passes ? one() : zero();
+	public static Mark binary(boolean condition) {
+		return condition ? one() : zero();
 	}
 
 	public static Mark binary(boolean criterion, String okComment, String elseComment) {

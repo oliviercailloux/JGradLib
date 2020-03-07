@@ -19,7 +19,7 @@ public class RepositoryCoordinates {
 
 	private final String repo;
 
-	private RepositoryCoordinates(String owner, String repo) {
+	protected RepositoryCoordinates(String owner, String repo) {
 		this.owner = requireNonNull(owner);
 		this.repo = requireNonNull(repo);
 	}

@@ -195,15 +195,16 @@ public class GitHubHistory extends GitRawHistoryDecorator<ObjectId> implements G
 		return pushedDates;
 	}
 
-	public ImmutableSortedMap<Instant, ImmutableSet<ObjectId>> getRefsBySortedPushedDates() {
+	public ImmutableSortedMap<Instant, ImmutableSet<ObjectId>> getRefsBySortedPushedDates(boolean patchedAndCompleted) {
 //		return ImmutableSortedMap.copyOf(Multimaps.asMap(getRefsByPushedDates()));
 		/** https://github.com/google/guava/issues/3750 */
-		return ImmutableSortedMap.copyOf(Multimaps.asMap(getRefsByPushedDates()).entrySet().stream()
+		return ImmutableSortedMap.copyOf(Multimaps.asMap(getRefsByPushedDates(patchedAndCompleted)).entrySet().stream()
 				.collect(ImmutableMap.toImmutableMap((e) -> e.getKey(), (e) -> ImmutableSet.copyOf(e.getValue()))));
 	}
 
-	public ImmutableSetMultimap<Instant, ObjectId> getRefsByPushedDates() {
-		return pushedDates.asMultimap().inverse();
+	public ImmutableSetMultimap<Instant, ObjectId> getRefsByPushedDates(boolean patchedAndCompleted) {
+		final ImmutableMap<ObjectId, Instant> useDates = patchedAndCompleted ? finalPushedDates : pushedDates;
+		return useDates.asMultimap().inverse();
 	}
 
 	public ImmutableMap<ObjectId, Instant> getCorrectedAndCompletedPushedDates() {

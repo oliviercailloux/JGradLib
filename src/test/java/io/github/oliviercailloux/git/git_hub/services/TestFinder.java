@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.io.IOException;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.Month;
@@ -28,7 +27,7 @@ public class TestFinder {
 	private static final Logger LOGGER = LoggerFactory.getLogger(TestFinder.class);
 
 	@Test
-	public void testFindMyRepo() throws IOException {
+	public void testFindMyRepo() {
 		final Project myProject = Project.from("XMCDA-2.2.1-JAXB");
 		final List<RepositoryWithIssuesWithHistory> repositories;
 		try (GitHubFetcherQL fetcher = GitHubFetcherQL.using(GitHubToken.getRealInstance())) {
@@ -43,7 +42,7 @@ public class TestFinder {
 
 	@Test
 	@EnabledIfEnvironmentVariable(named = "CONTINUOUS_INTEGRATION", matches = "true")
-	public void testFindTooMany() throws IOException {
+	public void testFindTooMany() {
 		final Project myProject = Project.from("Biblio");
 		try (GitHubFetcherQL fetcher = GitHubFetcherQL.using(GitHubToken.getRealInstance())) {
 			/**
@@ -57,7 +56,7 @@ public class TestFinder {
 	}
 
 	@Test
-	public void testHasPom() throws IOException {
+	public void testHasPom() {
 		final Project myProject = Project.from("XMCDA-2.2.1-JAXB");
 		final List<RepositoryWithIssuesWithHistory> found;
 		try (GitHubFetcherQL fetcher = GitHubFetcherQL.using(GitHubToken.getRealInstance())) {
@@ -74,7 +73,7 @@ public class TestFinder {
 
 	@Test
 	@EnabledIfEnvironmentVariable(named = "CONTINUOUS_INTEGRATION", matches = "true")
-	public void testNoFindTooLate() throws IOException {
+	public void testNoFindTooLate() {
 		final Project myProject = Project.from("java-course");
 		try (GitHubFetcherQL finder = GitHubFetcherQL.using(GitHubToken.getRealInstance())) {
 			final List<RepositoryWithIssuesWithHistory> found = finder.find(myProject.getGitHubName(),

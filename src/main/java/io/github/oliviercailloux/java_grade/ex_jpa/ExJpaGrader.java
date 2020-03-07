@@ -62,7 +62,6 @@ import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.grade.AndGrade;
 import io.github.oliviercailloux.grade.Criterion;
 import io.github.oliviercailloux.grade.CriterionGradeWeight;
-import io.github.oliviercailloux.grade.GraderOrchestrator;
 import io.github.oliviercailloux.grade.GradingException;
 import io.github.oliviercailloux.grade.IGrade;
 import io.github.oliviercailloux.grade.Mark;
@@ -80,6 +79,7 @@ import io.github.oliviercailloux.grade.markers.MarkingPredicates;
 import io.github.oliviercailloux.grade.markers.Marks;
 import io.github.oliviercailloux.grade.markers.MavenProjectMarker;
 import io.github.oliviercailloux.grade.mycourse.json.JsonStudentOnGitHub;
+import io.github.oliviercailloux.java_grade.GraderOrchestrator;
 import io.github.oliviercailloux.java_grade.JavaMarks;
 import io.github.oliviercailloux.java_grade.testers.MarkHelper;
 import io.github.oliviercailloux.json.JsonbUtils;
@@ -203,9 +203,9 @@ public class ExJpaGrader {
 						addServletSourcer.existsAndAllMatch(containsPost)));
 
 		gradeBuilder.put(NOT_POLLUTED,
-				Mark.ifPasses(anySourcer.existsAndAllMatch(Predicates.contains(Pattern.compile("Auto-generated"))
+				Mark.binary(anySourcer.existsAndAllMatch(Predicates.contains(Pattern.compile("Auto-generated"))
 						.negate().and(Predicates.contains(Pattern.compile("@see HttpServlet#doGet")).negate()))));
-		gradeBuilder.put(EXC, Mark.ifPasses(anySourcer.noneMatch(
+		gradeBuilder.put(EXC, Mark.binary(anySourcer.noneMatch(
 				Predicates.contains(Pattern.compile("printStackTrace")).or(Predicates.containsPattern("catch\\(")))));
 
 		final ImmutableList<FilesSource> servletSourcers = ImmutableList.of(getServletSourcer, addServletSourcer);
@@ -225,15 +225,15 @@ public class ExJpaGrader {
 
 		final FilesSource applicationClasses = mainSourcer.filter(
 				(f) -> f.getContent().contains("@ApplicationPath") && f.getContent().contains("extends Application"));
-		gradeBuilder.put(JAX_RS_APP, Mark.ifPasses(applicationClasses.asFileContents().size() == 1));
+		gradeBuilder.put(JAX_RS_APP, Mark.binary(applicationClasses.asFileContents().size() == 1));
 		gradeBuilder.put(ONLY_ORIG, Marks.noDerivedFilesGrade(filesReader));
 
 		final FilesSource multiPersistence = filesReader
 				.filterOnPath((p) -> p.getNameCount() <= 6 && p.getFileName().toString().equals("persistence.xml"));
-		gradeBuilder.put(PERSISTENCE, Mark.ifPasses(multiPersistence.getContents()
+		gradeBuilder.put(PERSISTENCE, Mark.binary(multiPersistence.getContents()
 				.containsKey(mavenRelativeRoot.resolve(Paths.get("src/main/resources/META-INF/persistence.xml")))));
 
-		gradeBuilder.put(PERSISTENCE_CONTENTS, Mark.ifPasses(
+		gradeBuilder.put(PERSISTENCE_CONTENTS, Mark.binary(
 				multiPersistence.existsAndAllMatch(Predicates.containsPattern("persistence version=\"2.1\""))));
 //						multiPersistence.existsAndNoneMatch(Predicates.containsPattern("RESOURCE_LOCAL")),
 //						multiPersistence.existsAndAllMatch(Predicates.containsPattern("drop-and-create")),
@@ -242,33 +242,33 @@ public class ExJpaGrader {
 //						multiPersistence.existsAndNoneMatch(Predicates.containsPattern("jta-data-source")),
 //						multiPersistence.existsAndNoneMatch(Predicates.containsPattern("jdbc.driver"))));
 
-		gradeBuilder.put(USING_EM, Mark.ifPasses(!mainSourcer.asFileContents().isEmpty() && mainSourcer
+		gradeBuilder.put(USING_EM, Mark.binary(!mainSourcer.asFileContents().isEmpty() && mainSourcer
 				.anyMatch(Predicates.contains(Pattern.compile("@PersistenceContext" + "[^;]+" + "EntityManager ")))));
 		gradeBuilder.put(TRANSACTIONS,
-				Mark.ifPasses(anySourcer.anyMatch(Predicates.containsPattern("@Transactional"))));
+				Mark.binary(anySourcer.anyMatch(Predicates.containsPattern("@Transactional"))));
 		gradeBuilder.put(ADD_LIMIT,
-				Mark.ifPasses(addServletSourcer.existsAndAllMatch(Predicates.containsPattern("getContentLength"))));
+				Mark.binary(addServletSourcer.existsAndAllMatch(Predicates.containsPattern("getContentLength"))));
 
-		gradeBuilder.put(TEST_EXISTS, Mark.ifPasses(testFiles.getContents().size() >= 1 && testFiles.getContents()
+		gradeBuilder.put(TEST_EXISTS, Mark.binary(testFiles.getContents().size() >= 1 && testFiles.getContents()
 				.keySet().stream().allMatch((p) -> p.startsWith(pomSupplier.getSrcTestJavaFolder()))));
 		gradeBuilder.put(GENERAL_TEST, generalTestMark(mavenProjectMarker));
 		final String travisContent = fullContext.getFilesReader(fullContext.getMainCommit())
 				.getContent(Paths.get(".travis.yml"));
-		gradeBuilder.put(TRAVIS_CONF, Mark.ifPasses(!travisContent.isEmpty()));
+		gradeBuilder.put(TRAVIS_CONF, Mark.binary(!travisContent.isEmpty()));
 		gradeBuilder.put(TRAVIS_OK, Marks.travisConfGrade(travisContent));
 		gradeBuilder.put(TRAVIS_BADGE, JavaMarks.travisBadgeGrade(filesReader, coord.getRepositoryName()));
 		final String manifestContent = fullContext.getFilesReader(fullContext.getMainCommit())
 				.getContent(Paths.get("manifest.yml"));
 		gradeBuilder.put(IBM_MANIFEST,
-				Mark.ifPasses(Pattern.compile("- " + Utils.ANY_REG_EXP + "name: ").matcher(manifestContent).find()
+				Mark.binary(Pattern.compile("- " + Utils.ANY_REG_EXP + "name: ").matcher(manifestContent).find()
 						&& Pattern.compile("path: " + Utils.ANY_REG_EXP + "target/" + Utils.ANY_REG_EXP + "\\.war")
 								.matcher(manifestContent).find()));
 		/**
 		 * −0,5 for incorrectly formatted but quite correct (e.g. puts id as well). Do
 		 * not penalize when incorrect file name because already considered elsewhere.
 		 */
-		gradeBuilder.put(GET_COMMENTS, Mark.ifPasses(!getServletSourcer.asFileContents().isEmpty()));
-		gradeBuilder.put(ADD_COMMENTS, Mark.ifPasses(!addServletSourcer.asFileContents().isEmpty()));
+		gradeBuilder.put(GET_COMMENTS, Mark.binary(!getServletSourcer.asFileContents().isEmpty()));
+		gradeBuilder.put(ADD_COMMENTS, Mark.binary(!addServletSourcer.asFileContents().isEmpty()));
 
 		final ImmutableMap<Criterion, IGrade> subGrades = gradeBuilder.build();
 		final ImmutableMap<Criterion, Double> weights = Arrays.stream(ExJpaCriterion.values())

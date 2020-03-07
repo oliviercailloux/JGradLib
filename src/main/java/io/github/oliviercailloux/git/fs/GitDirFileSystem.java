@@ -53,7 +53,7 @@ public class GitDirFileSystem extends GitRepoFileSystem {
 	}
 
 	@Override
-	public void close() throws IOException {
+	public void close() {
 		super.close();
 		provider().hasBeenClosedEvent(this);
 	}
