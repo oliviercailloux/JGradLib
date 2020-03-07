@@ -13,7 +13,6 @@ import org.eclipse.jgit.api.MergeResult;
 import org.eclipse.jgit.internal.storage.dfs.DfsRepositoryDescription;
 import org.eclipse.jgit.internal.storage.dfs.InMemoryRepository;
 import org.eclipse.jgit.internal.storage.file.FileRepository;
-import org.eclipse.jgit.lib.Constants;
 import org.eclipse.jgit.lib.ObjectInserter;
 import org.eclipse.jgit.lib.Ref;
 import org.eclipse.jgit.lib.Repository;
@@ -41,8 +40,6 @@ class ExDepGitGraderTest {
 		try (Repository repository = new InMemoryRepository(new DfsRepositoryDescription("myrepo"))) {
 			repository.create();
 			new GitCloner().clone(gitUri, repository);
-			assertEquals("2362b2cf9f0a17dfde591941f98b23927fa9d5e2",
-					repository.findRef(Constants.HEAD).getLeaf().getObjectId().getName());
 
 			try (GitRepoFileSystem gitFs = new GitFileSystemProvider().newFileSystemFromRepository(repository)) {
 				final IGrade grade = new ExDepGitGraderSimpler().grade("me", gitFs, gitFs.getHistory());
@@ -65,8 +62,6 @@ class ExDepGitGraderTest {
 		final Path wT = Path.of("git-test " + Instant.now());
 		new GitCloner().download(gitUri, wT);
 		try (Repository repository = new FileRepository(wT.resolve(".git").toString())) {
-			assertEquals("2362b2cf9f0a17dfde591941f98b23927fa9d5e2",
-					repository.findRef(Constants.HEAD).getLeaf().getObjectId().getName());
 
 			try (ObjectInserter inserter = repository.getObjectDatabase().newInserter()) {
 				try (Git git = Git.wrap(repository)) {

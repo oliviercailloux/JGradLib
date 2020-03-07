@@ -1,5 +1,7 @@
 package io.github.oliviercailloux.java_grade.ex;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -21,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
+import com.google.common.collect.UnmodifiableIterator;
 import com.google.common.graph.Graph;
 
 import io.github.oliviercailloux.git.GitCloner;
@@ -76,8 +79,9 @@ public class GitBrGrader {
 
 		final ImmutableList<RepositoryCoordinatesWithPrefix> repositories;
 		try (GitHubFetcherV3 fetcher = GitHubFetcherV3.using(GitHubToken.getRealInstance())) {
-			repositories = fetcher.getRepositoriesWithPrefix("oliviercailloux-org", PREFIX);
+//			repositories = fetcher.getRepositoriesWithPrefix("oliviercailloux-org", PREFIX);
 		}
+		repositories = ImmutableList.of(RepositoryCoordinatesWithPrefix.from("oliviercailloux-org", PREFIX, "av1m"));
 
 		final GitBrGrader grader = new GitBrGrader();
 		final ImmutableMap<String, IGrade> grades = repositories.stream().collect(ImmutableMap
@@ -86,7 +90,6 @@ public class GitBrGrader {
 		final Path outDir = WORK_DIR;
 		Files.writeString(outDir.resolve("all grades " + PREFIX + ".json"),
 				JsonbUtils.toJsonObject(grades, JsonGrade.asAdapter()).toString());
-
 		Summarize.summarize(PREFIX, outDir);
 	}
 
@@ -152,9 +155,15 @@ public class GitBrGrader {
 		final Set<ObjectId> startCandidates = new LinkedHashSet<>();
 		final GitLocalHistory ownHistory = history.filter(c -> ownSet.contains(c));
 		final ImmutableSet<RevCommit> roots = ownHistory.getRoots();
-		LOGGER.debug("Roots: {}.", roots);
+		LOGGER.info("Roots: {}.", roots);
 		ImmutableSet<ObjectId> parentsOfOwnRoots = roots.stream().flatMap(o -> graph.successors(o).stream())
 				.collect(ImmutableSet.toImmutableSet());
+		final UnmodifiableIterator<RevCommit> rootsIterator = roots.iterator();
+//		LOGGER.info("Parents of root 1: {}.",
+//				graph.successors(rootsIterator.next()).stream().collect(ImmutableSet.toImmutableSet()));
+//		LOGGER.info("Parents of root 2: {}.",
+//				graph.successors(rootsIterator.next()).stream().collect(ImmutableSet.toImmutableSet()));
+		LOGGER.info("Parents of roots: {}.", parentsOfOwnRoots);
 		if (parentsOfOwnRoots.size() == 1) {
 			startCandidates.add(parentsOfOwnRoots.iterator().next());
 		}
@@ -162,8 +171,9 @@ public class GitBrGrader {
 		if (parentsOfBr1.size() == 1) {
 			startCandidates.add(parentsOfBr1.iterator().next());
 		}
-		Verify.verify(startCandidates.size() != 2);
+		checkArgument(startCandidates.size() < 2);
 		startCandidates.add(START);
+		LOGGER.info("Start candidates: {}.", startCandidates);
 		final ObjectId effectiveStart = startCandidates.iterator().next();
 		final boolean startedAtStart = effectiveStart.equals(START);
 
@@ -171,6 +181,9 @@ public class GitBrGrader {
 		final Optional<ObjectId> commitA;
 		if (br1.isPresent()) {
 			commitA = br1;
+			Verify.verify(ownSet.contains(commitA.get()));
+			checkArgument(graph.predecessors(effectiveStart).contains(commitA.get()));
+			Verify.verify(childrenOfStart.contains(commitA.get()));
 		} else {
 			final ImmutableSet<ObjectId> matchingForA = childrenOfStart.stream().filter(o -> matchesCommitA(fs, o))
 					.collect(ImmutableSet.toImmutableSet());

@@ -24,6 +24,7 @@ import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -238,7 +239,7 @@ public class TestFetch {
 
 	@Test
 	@EnabledIfEnvironmentVariable(named = "CONTINUOUS_INTEGRATION", matches = "true")
-	public void testGitHubHistoryFiltered() throws Exception {
+	void testGitHubHistoryFiltered() throws Exception {
 		final RepositoryCoordinates coord = RepositoryCoordinates.from("oliviercailloux", "projets");
 		try (GitHubFetcherQL fetcher = GitHubFetcherQL.using(GitHubToken.getRealInstance())) {
 			final GitHubHistory gHH = fetcher.getGitHubHistory(coord);
@@ -262,6 +263,12 @@ public class TestFetch {
 			assertEquals(ImmutableSet.of(c50), filtered.getGraph().successors(cc2));
 			assertEquals(ImmutableSet.of(cc2), filtered.getGraph().predecessors(c50));
 			assertEquals(ImmutableSet.of(), filtered.getGraph().predecessors(cc2));
+
+			final GitHubHistory filteredAgain = filtered.filter(Predicates.alwaysTrue());
+			assertEquals(filtered, filteredAgain);
+
+			final GitHubHistory notReallyFiltered = gHH.filter(Predicates.alwaysTrue());
+			assertEquals(gHH, notReallyFiltered);
 		}
 	}
 

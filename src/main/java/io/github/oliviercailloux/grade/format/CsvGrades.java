@@ -50,6 +50,7 @@ public class CsvGrades {
 		final ImmutableTable<StudentOnGitHub, Criterion, CriterionGradeWeight> asTable = perStudent.entries().stream()
 				.collect(ImmutableTable.toImmutableTable(Entry::getKey, (e) -> e.getValue().getCriterion(),
 						Entry::getValue));
+		LOGGER.debug("From {}, obtained {}, as table {}.", grades, perStudent, asTable);
 
 		final ImmutableSet<Criterion> allCriteria = asTable.columnKeySet();
 		final boolean enableName = grades.keySet().stream().anyMatch(s -> s.getLastName().isPresent());

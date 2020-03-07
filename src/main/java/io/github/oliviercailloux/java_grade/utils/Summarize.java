@@ -27,9 +27,6 @@ public class Summarize {
 	}
 
 	public static void summarize(String prefix, Path outDir) throws IOException {
-		final StudentsReaderFromJson usernames = new StudentsReaderFromJson();
-		usernames.read(WORK_DIR.resolve("usernames.json"));
-
 		@SuppressWarnings("all")
 		final Type type = new HashMap<RepositoryCoordinates, IGrade>() {
 		}.getClass().getGenericSuperclass();
@@ -37,10 +34,14 @@ public class Summarize {
 		final Map<String, IGrade> grades = JsonbUtils.fromJson(
 				Files.readString(WORK_DIR.resolve("all grades " + prefix + ".json")), type, JsonGrade.asAdapter());
 
-		Files.writeString(
-				outDir.resolve("all grades " + prefix + ".csv"), CsvGrades.asCsv(grades.entrySet().stream()
-						.filter(e -> e.getValue() instanceof WeightingGrade).collect(ImmutableMap.toImmutableMap(
-								e -> usernames.getStudentOnGitHub(e.getKey()), e -> (WeightingGrade) e.getValue())),
+		final StudentsReaderFromJson usernames = new StudentsReaderFromJson();
+		usernames.read(WORK_DIR.resolve("usernames.json"));
+
+		final Path outFile = outDir.resolve("all grades " + prefix + ".csv");
+		Files.writeString(outFile,
+				CsvGrades.asCsv(grades.entrySet().stream().filter(e -> e.getValue() instanceof WeightingGrade)
+						.collect(ImmutableMap.toImmutableMap(e -> usernames.getStudentOnGitHub(e.getKey()),
+								e -> (WeightingGrade) e.getValue())),
 						10d));
 	}
 }

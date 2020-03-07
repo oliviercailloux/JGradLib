@@ -34,7 +34,6 @@ import com.google.common.graph.EndpointPair;
 import com.google.common.graph.Graph;
 import com.google.common.graph.GraphBuilder;
 import com.google.common.graph.ImmutableGraph;
-import com.google.common.graph.ImmutableGraph.Builder;
 import com.google.common.graph.MutableGraph;
 import com.google.common.graph.SuccessorsFunction;
 
@@ -123,7 +122,7 @@ public class Utils {
 	public static <E> Graph<E> asGraph(SuccessorsFunction<E> successorsFunction, Set<E> tips) {
 		checkNotNull(successorsFunction);
 		checkNotNull(tips);
-		checkArgument(tips.stream().allMatch((t) -> t != null));
+		checkArgument(tips.stream().allMatch(t -> t != null));
 
 		final Queue<E> toConsider = new LinkedList<>(tips);
 		final Set<E> seen = new LinkedHashSet<>(tips);
@@ -150,14 +149,22 @@ public class Utils {
 		if (graph instanceof ImmutableGraph) {
 			return (ImmutableGraph<E>) graph;
 		}
-		final Builder<E> builder = GraphBuilder.from(graph).immutable();
+		Function<E, E> transformer = Function.identity();
+		return asImmutableGraph(graph, transformer);
+	}
+
+	public static <E, F> ImmutableGraph<F> asImmutableGraph(Graph<E> graph, Function<E, F> transformer) {
+		final GraphBuilder<Object> startBuilder = graph.isDirected() ? GraphBuilder.directed()
+				: GraphBuilder.undirected();
+		startBuilder.allowsSelfLoops(graph.allowsSelfLoops());
+		final ImmutableGraph.Builder<F> builder = startBuilder.immutable();
 		final Set<E> nodes = graph.nodes();
 		for (E node : nodes) {
-			builder.addNode(node);
+			builder.addNode(transformer.apply(node));
 		}
 		final Set<EndpointPair<E>> edges = graph.edges();
 		for (EndpointPair<E> edge : edges) {
-			builder.putEdge(edge);
+			builder.putEdge(transformer.apply(edge.source()), transformer.apply(edge.target()));
 		}
 		return builder.build();
 	}

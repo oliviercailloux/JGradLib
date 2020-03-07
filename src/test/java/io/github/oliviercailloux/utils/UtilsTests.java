@@ -31,6 +31,5 @@ class UtilsTests {
 	@EnabledIfEnvironmentVariable(named = "CONTINUOUS_INTEGRATION", matches = "true")
 	void testFindEnds() throws Exception {
 		assertEquals(ImmutableSet.of(), FindEnds.withPrefix("commit").getEnded());
-		assertEquals(ImmutableSet.of(), FindEnds.withPrefix("git-br").getEnded());
 	}
 }
