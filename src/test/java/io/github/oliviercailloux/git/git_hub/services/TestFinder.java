@@ -11,7 +11,6 @@ import java.time.ZoneOffset;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,7 +40,6 @@ public class TestFinder {
 	}
 
 	@Test
-	@EnabledIfEnvironmentVariable(named = "CONTINUOUS_INTEGRATION", matches = "true")
 	public void testFindTooMany() {
 		final Project myProject = Project.from("Biblio");
 		try (GitHubFetcherQL fetcher = GitHubFetcherQL.using(GitHubToken.getRealInstance())) {
@@ -72,7 +70,6 @@ public class TestFinder {
 	}
 
 	@Test
-	@EnabledIfEnvironmentVariable(named = "CONTINUOUS_INTEGRATION", matches = "true")
 	public void testNoFindTooLate() {
 		final Project myProject = Project.from("java-course");
 		try (GitHubFetcherQL finder = GitHubFetcherQL.using(GitHubToken.getRealInstance())) {

@@ -6,7 +6,6 @@ import java.net.URI;
 import java.util.Map;
 
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -28,7 +27,6 @@ class UtilsTests {
 	}
 
 	@Test
-	@EnabledIfEnvironmentVariable(named = "CONTINUOUS_INTEGRATION", matches = "true")
 	void testFindEnds() throws Exception {
 		assertEquals(ImmutableSet.of(), FindEnds.withPrefix("commit").getEnded());
 	}

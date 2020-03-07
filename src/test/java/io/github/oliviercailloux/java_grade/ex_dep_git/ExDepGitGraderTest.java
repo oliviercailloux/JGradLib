@@ -17,7 +17,6 @@ import org.eclipse.jgit.lib.ObjectInserter;
 import org.eclipse.jgit.lib.Ref;
 import org.eclipse.jgit.lib.Repository;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,7 +32,6 @@ class ExDepGitGraderTest {
 	private static final Logger LOGGER = LoggerFactory.getLogger(ExDepGitGraderTest.class);
 
 	@Test
-	@EnabledIfEnvironmentVariable(named = "CONTINUOUS_INTEGRATION", matches = "true")
 	void testGradeBad() throws Exception {
 		final GitUri gitUri = GitUri
 				.fromGitUri(URI.create("https://github.com/oliviercailloux/google-or-tools-java.git"));
@@ -49,7 +47,6 @@ class ExDepGitGraderTest {
 	}
 
 	@Test
-	@EnabledIfEnvironmentVariable(named = "CONTINUOUS_INTEGRATION", matches = "true")
 	void testGradeFull() throws Exception {
 		final GitUri gitUri = GitUri
 				.fromGitUri(URI.create("https://github.com/oliviercailloux/google-or-tools-java.git"));

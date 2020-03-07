@@ -9,7 +9,6 @@ import java.math.BigDecimal;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.odftoolkit.simple.SpreadsheetDocument;
 import org.odftoolkit.simple.table.Cell;
 import org.odftoolkit.simple.table.Table;
@@ -34,7 +33,6 @@ import io.github.oliviercailloux.students_project_following.Functionality;
 import io.github.oliviercailloux.students_project_following.Project;
 import io.github.oliviercailloux.utils.Utils;
 
-@EnabledIfEnvironmentVariable(named = "CONTINUOUS_INTEGRATION", matches = "true")
 public class TestWrite {
 
 	@SuppressWarnings("unused")

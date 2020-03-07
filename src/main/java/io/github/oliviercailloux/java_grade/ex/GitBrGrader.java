@@ -23,7 +23,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
-import com.google.common.collect.UnmodifiableIterator;
 import com.google.common.graph.Graph;
 
 import io.github.oliviercailloux.git.GitCloner;
@@ -158,7 +157,7 @@ public class GitBrGrader {
 		LOGGER.info("Roots: {}.", roots);
 		ImmutableSet<ObjectId> parentsOfOwnRoots = roots.stream().flatMap(o -> graph.successors(o).stream())
 				.collect(ImmutableSet.toImmutableSet());
-		final UnmodifiableIterator<RevCommit> rootsIterator = roots.iterator();
+//		final UnmodifiableIterator<RevCommit> rootsIterator = roots.iterator();
 //		LOGGER.info("Parents of root 1: {}.",
 //				graph.successors(rootsIterator.next()).stream().collect(ImmutableSet.toImmutableSet()));
 //		LOGGER.info("Parents of root 2: {}.",

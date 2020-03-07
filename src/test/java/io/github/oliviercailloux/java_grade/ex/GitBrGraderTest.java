@@ -19,7 +19,6 @@ import org.eclipse.jgit.lib.Ref;
 import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,7 +38,6 @@ class GitBrGraderTest {
 	private static final Logger LOGGER = LoggerFactory.getLogger(GitBrGraderTest.class);
 
 	@Test
-//	@EnabledIfEnvironmentVariable(named = "CONTINUOUS_INTEGRATION", matches = "true")
 	void testGradeBad() throws Exception {
 		final GitUri gitUri = GitUri
 				.fromGitUri(URI.create("https://github.com/oliviercailloux/Assisted-Board-Games.git"));
@@ -55,7 +53,6 @@ class GitBrGraderTest {
 	}
 
 	@Test
-	@EnabledIfEnvironmentVariable(named = "CONTINUOUS_INTEGRATION", matches = "true")
 	void testGradeFull() throws Exception {
 		final GitUri gitUri = GitUri
 				.fromGitUri(URI.create("https://github.com/oliviercailloux/Assisted-Board-Games.git"));

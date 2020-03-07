@@ -16,7 +16,6 @@ import org.eclipse.jgit.lib.PersonIdent;
 import org.eclipse.jgit.lib.Ref;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 
 import com.google.common.base.Verify;
 import com.google.common.collect.ImmutableSet;
@@ -53,7 +52,6 @@ class GitUtilsTests {
 	}
 
 	@Test
-	@EnabledIfEnvironmentVariable(named = "CONTINUOUS_INTEGRATION", matches = "true")
 	void testUsingJustCreated() throws Exception {
 		final Path gitDirPath = Utils.getTempDirectory().resolve("Just created " + Instant.now()).resolve(".git");
 		Git.init().setGitDir(gitDirPath.toFile()).call().close();
@@ -64,7 +62,6 @@ class GitUtilsTests {
 	}
 
 	@Test
-	@EnabledIfEnvironmentVariable(named = "CONTINUOUS_INTEGRATION", matches = "true")
 	void testUsingBareClone() throws Exception {
 		final GitUri testRel = GitUri.fromGitUri(URI.create("ssh:git@github.com:oliviercailloux/testrel.git"));
 		final Path repoBarePath = Utils.getTempDirectory().resolve("testrel cloned bare " + Instant.now());
@@ -78,7 +75,6 @@ class GitUtilsTests {
 	}
 
 	@Test
-	@EnabledIfEnvironmentVariable(named = "CONTINUOUS_INTEGRATION", matches = "true")
 	void testUsingClone() throws Exception {
 		final GitUri testRel = GitUri.fromGitUri(URI.create("ssh:git@github.com:oliviercailloux/testrel.git"));
 		final Path workTreePath = Utils.getTempDirectory().resolve("testrel cloned " + Instant.now());

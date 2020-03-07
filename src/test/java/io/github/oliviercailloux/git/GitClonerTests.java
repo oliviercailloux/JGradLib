@@ -27,7 +27,6 @@ import org.eclipse.jgit.lib.Ref;
 import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -50,7 +49,6 @@ class GitClonerTests {
 	private static final Logger LOGGER = LoggerFactory.getLogger(GitClonerTests.class);
 
 	@Test
-	@EnabledIfEnvironmentVariable(named = "CONTINUOUS_INTEGRATION", matches = "true")
 	void testUpdate() throws Exception {
 		final ImmutableList<ObjectId> shas;
 		try (GitHubFetcherV3 fetcher = GitHubFetcherV3.using(GitHubToken.getRealInstance())) {
@@ -123,7 +121,6 @@ class GitClonerTests {
 	}
 
 	@Test
-	@EnabledIfEnvironmentVariable(named = "CONTINUOUS_INTEGRATION", matches = "true")
 	void testCloneBare() throws Exception {
 		final Path gitDirPath = Utils.getTempDirectory()
 				.resolve("testrel cloned " + Utils.ISO_BASIC_UTC_FORMATTER.format(Instant.now()));
@@ -206,7 +203,6 @@ class GitClonerTests {
 	}
 
 	@Test
-	@EnabledIfEnvironmentVariable(named = "CONTINUOUS_INTEGRATION", matches = "true")
 	void testCloneToFileUsingRepo() throws Exception {
 		final Path gitDir = Path.of("git-test " + Instant.now());
 		Git.init().setBare(true).setDirectory(gitDir.toFile()).call();

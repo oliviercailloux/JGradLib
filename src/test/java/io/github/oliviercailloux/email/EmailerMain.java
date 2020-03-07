@@ -23,7 +23,6 @@ import javax.mail.search.RecipientStringTerm;
 import javax.mail.search.RecipientTerm;
 
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
@@ -88,7 +87,6 @@ public class EmailerMain {
 	}
 
 	@Test
-	@EnabledIfEnvironmentVariable(named = "CONTINUOUS_INTEGRATION", matches = "true")
 	void testSearch() throws Exception {
 		final ImmutableList<Message> toCailGmailBroad = Emailer
 				.searchIn(new RecipientStringTerm(RecipientType.TO, "olivier.cailloux@gmail.com"), "Éléments envoyés");
