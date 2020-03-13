@@ -59,26 +59,25 @@ public class Utils {
 	public static void uncheck(Throwing.Runnable runnable) {
 		try {
 			runnable.run();
+		} catch (IOException e) {
+			throw new UncheckedIOException(e);
 		} catch (Throwable e) {
 			throw new IllegalStateException(e);
 		}
 	}
 
 	public static <T, R> Function<T, R> uncheck(Throwing.Function<T, R> function) {
-		return Errors.createRethrowing(IllegalStateException::new).wrap(function);
-	}
-
-	public static <T> T getOrThrowIO(SupplierThrowingIOException<T> supplier) {
-		try {
-			return supplier.get();
-		} catch (IOException e) {
-			throw new UncheckedIOException(e);
-		}
+		return Errors.createRethrowing(e -> (e instanceof IOException) ? new UncheckedIOException((IOException) e)
+				: new IllegalStateException(e)).wrap(function);
 	}
 
 	public static <T> T getOrThrow(Throwing.Supplier<T> supplier) {
 		try {
 			return supplier.get();
+		} catch (IOException e) {
+			throw new UncheckedIOException(e);
+		} catch (RuntimeException e) {
+			throw e;
 		} catch (Throwable e) {
 			throw new IllegalStateException(e);
 		}

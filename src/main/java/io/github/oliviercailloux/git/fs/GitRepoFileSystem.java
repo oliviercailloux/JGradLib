@@ -271,7 +271,7 @@ public class GitRepoFileSystem extends FileSystem {
 			throw new ClosedFileSystemException();
 		}
 
-		Utils.getOrThrowIO(() -> getHistory());
+		Utils.getOrThrow(() -> getHistory());
 
 		final Comparator<Path> compareWithoutTies = Comparator.comparing((p) -> ((GitPath) p),
 				getPathLexicographicTemporalComparator());
@@ -288,7 +288,7 @@ public class GitRepoFileSystem extends FileSystem {
 			throw new ClosedFileSystemException();
 		}
 
-		Utils.getOrThrowIO(() -> getHistory());
+		Utils.getOrThrow(() -> getHistory());
 
 		final Comparator<GitPath> compareWithoutTies = getPathLexicographicTemporalComparator();
 
@@ -378,9 +378,15 @@ public class GitRepoFileSystem extends FileSystem {
 		 * empty, dirAndFile is considered as slash. If revStr is empty, and the list of
 		 * dirAndFile is not empty, then dirAndFile must not start with /. If revStr is
 		 * empty, and dirAndFile is empty, dirAndFile is considered as "".
+		 *
+		 * TODO change this, this is complicated and unclear: intuition and endsWith
+		 * suggest that the path corresponding to the simple string "ploum.txt" should
+		 * transform to a relative path. We should simply decide that this is an
+		 * absolute path, thus containing a revStr, iff the first component starts with
+		 * slash.
 		 */
 		checkArgument(!first.startsWith("/"));
-		checkArgument(first.isEmpty() || first.contains("//") || first.endsWith("/"));
+		checkArgument(first.isEmpty() || first.contains("//") || first.endsWith("/"), first);
 		final int startDoubleSlash = first.indexOf("//");
 		Verify.verify(startDoubleSlash != 0);
 		final String revStr;

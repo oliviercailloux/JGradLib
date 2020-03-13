@@ -73,6 +73,69 @@ public class GitHubHistory extends GitRawHistoryDecorator<ObjectId> implements G
 		return new GitHubHistory(raw, pushedDates);
 	}
 
+	/**
+	 * Starting with nodes with no predecessor, computes the change to be brought to
+	 * the given initial map so that children have weakly “smaller” values (meaning,
+	 * not “greater” values) that their parents, proposing only changes that “lower”
+	 * the initial values.
+	 *
+	 * Words such as “greater” or “smallest” are understood as defined by the given
+	 * comparator.
+	 *
+	 * @return for a given key oid, indicates as value which is the oid that should
+	 *         give its date, if the date of the key oid is to be changed (is itself
+	 *         iff not to be changed). For each key oid, the value is the ancestor
+	 *         (including itself) whose date value is “smallest”.
+	 */
+	private static ImmutableMap<ObjectId, ObjectId> getLoweringPatchForNonIncreasing(Graph<ObjectId> graph,
+			Map<ObjectId, Instant> initial, Comparator<Instant> comparator) {
+		final Map<ObjectId, ObjectId> originatorOfDate = new LinkedHashMap<>();
+		final Set<ObjectId> nodes = graph.nodes();
+		final Map<ObjectId, Instant> modifiedPushedDates = new LinkedHashMap<>(initial);
+
+		final Queue<ObjectId> visitNext = new ArrayDeque<>();
+		final Multiset<ObjectId> remainingVisits = HashMultiset.create();
+		for (ObjectId node : nodes) {
+			final int nbIncoming = graph.predecessors(node).size();
+			remainingVisits.add(node, nbIncoming);
+			if (nbIncoming == 0) {
+				visitNext.add(node);
+				originatorOfDate.put(node, node);
+			}
+		}
+		verify(nodes.isEmpty() || !visitNext.isEmpty());
+
+		while (!visitNext.isEmpty()) {
+			final ObjectId predecessor = visitNext.remove();
+			verify(originatorOfDate.containsKey(predecessor));
+			final Instant predecessorDate = modifiedPushedDates.get(predecessor);
+			final Set<ObjectId> successors = graph.successors(predecessor);
+			for (ObjectId successor : successors) {
+				final Instant successorDate = modifiedPushedDates.get(successor);
+				/**
+				 * Ensures the value associated to this successor is the “smallest” one among
+				 * all ancestors of this successor seen so far and the original value of this
+				 * successor.
+				 */
+				final boolean change = comparator.compare(predecessorDate, successorDate) < 0;
+				if (change) {
+					modifiedPushedDates.put(successor, predecessorDate);
+					originatorOfDate.put(successor, originatorOfDate.get(predecessor));
+				}
+
+				final int before = remainingVisits.remove(successor, 1);
+				if (before == 1) {
+					visitNext.add(successor);
+					if (!originatorOfDate.containsKey(successor)) {
+						originatorOfDate.put(successor, successor);
+					}
+				}
+			}
+		}
+		verify(originatorOfDate.keySet().equals(nodes));
+		return ImmutableMap.copyOf(originatorOfDate);
+	}
+
 	private final ImmutableMap<ObjectId, Instant> pushedDates;
 	private ImmutableMap<ObjectId, Instant> finalPushedDates;
 	private ImmutableGraph<ObjectId> patchedKnowns;
@@ -126,69 +189,6 @@ public class GitHubHistory extends GitRawHistoryDecorator<ObjectId> implements G
 				.allMatch((o) -> !pushedDates.containsKey(o)));
 		finalPushedDates = nodes.stream().collect(
 				ImmutableMap.toImmutableMap(Function.identity(), (n) -> modifiedPushedDates.get(unknownsPatch.get(n))));
-	}
-
-	/**
-	 * Starting with nodes with no predecessor, computes the change to be brought to
-	 * the given initial map so that children have weakly “smaller” values (meaning,
-	 * not “greater” values) that their parents, proposing only changes that “lower”
-	 * the initial values.
-	 *
-	 * Words such as “greater” or “smallest” are understood as defined by the given
-	 * comparator.
-	 *
-	 * @return for a given key oid, indicates as value which is the oid that should
-	 *         give its date, if the date of the key oid is to be changed (is itself
-	 *         iff not to be changed). For each key oid, the value is the ancestor
-	 *         (including itself) whose date value is “smallest”.
-	 */
-	private static ImmutableMap<ObjectId, ObjectId> getLoweringPatchForNonIncreasing(Graph<ObjectId> graph,
-			Map<ObjectId, Instant> initial, Comparator<Instant> comparator) {
-		final Map<ObjectId, ObjectId> originatorOfDate = new LinkedHashMap<>();
-		final Set<ObjectId> nodes = graph.nodes();
-		final Map<ObjectId, Instant> modifiedPushedDates = new LinkedHashMap<>(initial);
-
-		final Queue<ObjectId> visitNext = new ArrayDeque<>();
-		final Multiset<ObjectId> remainingVisits = HashMultiset.create();
-		for (ObjectId node : nodes) {
-			final int nbIncoming = graph.predecessors(node).size();
-			remainingVisits.add(node, nbIncoming);
-			if (nbIncoming == 0) {
-				visitNext.add(node);
-				originatorOfDate.put(node, node);
-			}
-		}
-		verify(!visitNext.isEmpty());
-
-		while (!visitNext.isEmpty()) {
-			final ObjectId predecessor = visitNext.remove();
-			verify(originatorOfDate.containsKey(predecessor));
-			final Instant predecessorDate = modifiedPushedDates.get(predecessor);
-			final Set<ObjectId> successors = graph.successors(predecessor);
-			for (ObjectId successor : successors) {
-				final Instant successorDate = modifiedPushedDates.get(successor);
-				/**
-				 * Ensures the value associated to this successor is the “smallest” one among
-				 * all ancestors of this successor seen so far and the original value of this
-				 * successor.
-				 */
-				final boolean change = comparator.compare(predecessorDate, successorDate) < 0;
-				if (change) {
-					modifiedPushedDates.put(successor, predecessorDate);
-					originatorOfDate.put(successor, originatorOfDate.get(predecessor));
-				}
-
-				final int before = remainingVisits.remove(successor, 1);
-				if (before == 1) {
-					visitNext.add(successor);
-					if (!originatorOfDate.containsKey(successor)) {
-						originatorOfDate.put(successor, successor);
-					}
-				}
-			}
-		}
-		verify(originatorOfDate.keySet().equals(nodes));
-		return ImmutableMap.copyOf(originatorOfDate);
 	}
 
 	public ImmutableMap<ObjectId, Instant> getPushedDates() {

@@ -46,7 +46,7 @@ public class HtmlGrade {
 				+ " / " + formatter.format(denominator);
 		final String comment = grade.getComment();
 		final String thisGradeText;
-		if (comment.isEmpty() || grade instanceof WeightingGrade) {
+		if (comment.isEmpty()) {
 			thisGradeText = startGradeText;
 		} else {
 			thisGradeText = startGradeText + " (" + comment + ")";

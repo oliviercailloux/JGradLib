@@ -6,6 +6,7 @@ import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
+import java.util.Map;
 import java.util.Optional;
 
 import org.eclipse.jgit.api.Git;
@@ -23,30 +24,45 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Maps;
+import com.google.common.graph.Graph;
+import com.google.common.graph.ImmutableGraph;
 
 import io.github.oliviercailloux.git.GitCloner;
+import io.github.oliviercailloux.git.GitLocalHistory;
 import io.github.oliviercailloux.git.GitUri;
 import io.github.oliviercailloux.git.fs.GitFileSystemProvider;
 import io.github.oliviercailloux.git.fs.GitRepoFileSystem;
+import io.github.oliviercailloux.git.git_hub.model.GitHubHistory;
 import io.github.oliviercailloux.grade.IGrade;
 import io.github.oliviercailloux.grade.format.json.JsonGrade;
 import io.github.oliviercailloux.json.JsonbUtils;
+import io.github.oliviercailloux.utils.Utils;
 
-class GitBrGraderTest {
+public class GitBrGraderTests {
 
 	@SuppressWarnings("unused")
-	private static final Logger LOGGER = LoggerFactory.getLogger(GitBrGraderTest.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(GitBrGraderTests.class);
+
+	public static <E extends ObjectId> GitHubHistory getMinGitHubHistory(Graph<E> graph) {
+		final ImmutableGraph<ObjectId> graphO = Utils.asImmutableGraph(graph, o -> o);
+		final Map<ObjectId, Instant> asMap = Maps.asMap(graphO.nodes(), o -> Instant.MIN);
+		final GitHubHistory fakeGitHubHistory = GitHubHistory.given(graphO, asMap, asMap);
+		return fakeGitHubHistory;
+	}
 
 	@Test
 	void testGradeBad() throws Exception {
 		final GitUri gitUri = GitUri
 				.fromGitUri(URI.create("https://github.com/oliviercailloux/Assisted-Board-Games.git"));
 		try (Repository repository = new InMemoryRepository(new DfsRepositoryDescription("myrepo"))) {
-			repository.create();
+			repository.create(true);
 			new GitCloner().clone(gitUri, repository);
 
 			try (GitRepoFileSystem gitFs = new GitFileSystemProvider().newFileSystemFromRepository(repository)) {
-				final IGrade grade = new GitBrGrader().grade("me", gitFs, gitFs.getHistory());
+				final GitLocalHistory history = gitFs.getHistory();
+				final GitHubHistory fakeGitHubHistory = GitBrGraderTests.getMinGitHubHistory(history.getGraph());
+				final IGrade grade = new GitBrGrader().grade("me", gitFs, fakeGitHubHistory);
 				assertEquals(0d, grade.getPoints(), grade.toString());
 			}
 		}
@@ -103,7 +119,9 @@ class GitBrGraderTest {
 
 				final GitBrGrader grader = new GitBrGrader();
 				grader.branchPrefix = "heads";
-				final IGrade grade = grader.grade("teststudent", gitFs, gitFs.getHistory());
+				final GitHubHistory fakeGitHubHistory = GitBrGraderTests
+						.getMinGitHubHistory(gitFs.getHistory().getGraph());
+				final IGrade grade = grader.grade("teststudent", gitFs, fakeGitHubHistory);
 				Files.writeString(Path.of("grade.json"),
 						JsonbUtils.toJsonObject(grade, JsonGrade.asAdapter()).toString());
 				assertEquals(1d, grade.getPoints(), grade.toString());

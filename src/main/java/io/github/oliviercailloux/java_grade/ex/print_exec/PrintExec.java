@@ -1,11 +1,17 @@
 package io.github.oliviercailloux.java_grade.ex.print_exec;
 
+/**
+ *
+ * A solution to the exercice of the same name (except the class should be in
+ * the default package).
+ *
+ */
 public class PrintExec {
 	public static void main(String[] args) {
-//		proceed(args);
-		proceed(new String[] { "Google/lib1/", "/home/user/Java/Google/other lib/", "GitHub/lib1/",
-				"MyProject/MySubProject/", "MyProject/", "MyMainClass", "true" });
-		proceed(new String[] { "MyProject/", "MyMainClass", "true" });
+		proceed(args);
+//		proceed(new String[] { "Google/lib1/", "/home/user/Java/Google/other lib/", "GitHub/lib1/",
+//				"MyProject/MySubProject/", "MyProject/", "MyMainClass", "true" });
+//		proceed(new String[] { "MyProject/", "MyMainClass", "true" });
 	}
 
 	public static void proceed(String[] args) {

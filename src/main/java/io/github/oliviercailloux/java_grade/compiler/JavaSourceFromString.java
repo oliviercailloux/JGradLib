@@ -1,5 +1,7 @@
 package io.github.oliviercailloux.java_grade.compiler;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
 import java.net.URI;
 
 import javax.tools.SimpleJavaFileObject;
@@ -24,8 +26,8 @@ class JavaSourceFromString extends SimpleJavaFileObject {
 	 *             object
 	 */
 	JavaSourceFromString(String name, String code) {
-//		super(URI.create("string:///" + name.replace('.', '/') + Kind.SOURCE.extension), Kind.SOURCE);
-		super(URI.create("string:///" + name), Kind.SOURCE);
+		super(URI.create("string:///" + name.replace('.', '/') + Kind.SOURCE.extension), Kind.SOURCE);
+		checkArgument(!name.contains("/"));
 		this.code = code;
 	}
 

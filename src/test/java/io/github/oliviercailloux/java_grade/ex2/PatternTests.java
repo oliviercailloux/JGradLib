@@ -6,7 +6,7 @@ import java.util.regex.Pattern;
 
 import org.junit.jupiter.api.Test;
 
-class PatternTest {
+class PatternTests {
 
 	@Test
 	void test() {

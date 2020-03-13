@@ -110,29 +110,36 @@ public class GitCloner {
 				Utils.uncheck(() -> maybeCheckCommonRefs(git));
 			}
 		} else {
-			try (Git git = Utils.getOrThrowIO(() -> Git.open(repositoryDirectory.toFile()))) {
+			try (Git git = Utils.getOrThrow(() -> Git.open(repositoryDirectory.toFile()))) {
 				final List<RemoteConfig> remoteList = git.remoteList().call();
 				final Optional<RemoteConfig> origin = remoteList.stream().filter((r) -> r.getName().equals("origin"))
 						.collect(MoreCollectors.toOptional());
 				if (!git.getRepository().isBare() && !git.status().call().isClean()) {
 					throw new IllegalStateException("Can’t update: not clean.");
 				}
-				LOGGER.debug("HEAD: {}.", Utils.getOrThrowIO(() -> git.getRepository().getFullBranch()));
+				final String fullBranch = Utils.getOrThrow(() -> git.getRepository().getFullBranch());
+				LOGGER.debug("HEAD: {}.", fullBranch);
 				if (origin.isPresent() && origin.get().getURIs().size() == 1
 						&& origin.get().getURIs().get(0).toString().equals(uri.getGitString())) {
+					final FetchResult fetchResult = git.fetch().call();
 					if (git.getRepository().isBare()) {
-						final FetchResult result = git.fetch().call();
-						final String messages = result.getMessages();
+						final String messages = fetchResult.getMessages();
 						if (!messages.isEmpty()) {
 							LOGGER.error("Fetch result: {}.", messages);
 							throw new IllegalStateException("Fetch failed (perhaps)");
 						}
 					} else {
-						final PullResult result = git.pull().call();
-						if (!result.isSuccessful()) {
-							LOGGER.error("Merge failed with results: {}, {}, {}.", result.getFetchResult(),
-									result.getMergeResult(), result.getRebaseResult());
-							throw new IllegalStateException("Merge failed");
+						final Ref r = fetchResult.getAdvertisedRef(fullBranch);
+						if (r == null) {
+							/** Happens with a repository on GitHub that has never been pushed to. */
+							LOGGER.info("Did not pull, remote server did not advertise {}.", fullBranch);
+						} else {
+							final PullResult pullResult = git.pull().call();
+							if (!pullResult.isSuccessful()) {
+								LOGGER.error("Pull failed with results: {}, {}, {}.", pullResult.getFetchResult(),
+										pullResult.getMergeResult(), pullResult.getRebaseResult());
+								throw new IllegalStateException("Merge failed");
+							}
 						}
 					}
 				} else {
@@ -147,12 +154,12 @@ public class GitCloner {
 	private void maybeCheckCommonRefs(Git git) throws GitAPIException {
 		if (checkCommonRefsAgree) {
 			final List<Ref> branches = git.branchList().setListMode(ListMode.ALL).call();
-			final List<Ref> allRefs = Utils.getOrThrowIO(() -> git.getRepository().getRefDatabase().getRefs());
+			final List<Ref> allRefs = Utils.getOrThrow(() -> git.getRepository().getRefDatabase().getRefs());
 			LOGGER.debug("All refs: {}, branches: {}.", allRefs, branches);
 
 			parse(branches);
 
-			final Ref head = Utils.getOrThrowIO(() -> git.getRepository().findRef(Constants.HEAD));
+			final Ref head = Utils.getOrThrow(() -> git.getRepository().findRef(Constants.HEAD));
 			checkState(head != null, "Did you forget to create the repository?");
 			checkState(head.getTarget().getName().equals("refs/heads/master"));
 

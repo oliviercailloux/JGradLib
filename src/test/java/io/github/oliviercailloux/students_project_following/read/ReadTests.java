@@ -22,10 +22,10 @@ import com.google.common.io.CharStreams;
 
 import io.github.oliviercailloux.students_project_following.Functionality;
 
-public class TestRead {
+public class ReadTests {
 
 	@SuppressWarnings("unused")
-	private static final Logger LOGGER = LoggerFactory.getLogger(TestRead.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(ReadTests.class);
 	private static Asciidoctor asciidoctor;
 
 	@BeforeAll

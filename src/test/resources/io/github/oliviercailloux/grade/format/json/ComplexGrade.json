@@ -1,6 +1,6 @@
 {
     "points": 0.58,
-    "comment": "Weighted average",
+    "comment": "Complex grade",
     "subGrades": [
         {
             "criterion": {
@@ -8,7 +8,7 @@
             },
             "grade": {
                 "points": 1.0,
-                "comment": "Weighted average",
+                "comment": "A comment",
                 "subGrades": [
                     {
                         "criterion": {

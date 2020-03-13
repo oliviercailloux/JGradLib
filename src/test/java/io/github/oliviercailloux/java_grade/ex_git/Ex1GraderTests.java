@@ -8,7 +8,7 @@ import org.junit.jupiter.api.Test;
 
 import io.github.oliviercailloux.java_grade.ex_git.ExGitGrader;
 
-class Ex1GraderTest {
+class Ex1GraderTests {
 
 	@Test
 	void testPenalty() {

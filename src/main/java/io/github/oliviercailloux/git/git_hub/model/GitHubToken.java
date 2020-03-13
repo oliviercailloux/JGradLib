@@ -22,7 +22,7 @@ public class GitHubToken {
 
 	public static GitHubRealToken getRealInstance() throws IllegalStateException {
 		if (instance == null) {
-			instance = new GitHubRealToken(Utils.getOrThrowIO(GitHubToken::getTokenValue));
+			instance = new GitHubRealToken(Utils.getOrThrow(GitHubToken::getTokenValue));
 		}
 		return instance;
 	}

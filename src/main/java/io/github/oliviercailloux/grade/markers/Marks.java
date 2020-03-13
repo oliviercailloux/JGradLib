@@ -2,6 +2,7 @@ package io.github.oliviercailloux.grade.markers;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
@@ -36,6 +37,7 @@ import io.github.oliviercailloux.grade.context.GitFullContext;
 import io.github.oliviercailloux.grade.context.PomContext;
 import io.github.oliviercailloux.grade.contexters.MavenManager;
 import io.github.oliviercailloux.grade.contexters.PomSupplier;
+import io.github.oliviercailloux.utils.Utils;
 
 /**
  *
@@ -49,6 +51,15 @@ import io.github.oliviercailloux.grade.contexters.PomSupplier;
  *
  */
 public class Marks {
+	public static enum MarksCriterion implements Criterion {
+		FILE_EXISTS, FILE_CONTENTS_MATCH_EXACTLY, FILE_CONTENTS_MATCH_APPROXIMATELY;
+
+		@Override
+		public String getName() {
+			return toString();
+		}
+	}
+
 	public static IGrade packageGroupIdGrade(FilesSource wholeSource, PomSupplier pomSupplier, PomContext pomContext) {
 		final List<String> groupIdElements = pomContext.getGroupIdElements();
 		if (groupIdElements.isEmpty()) {
@@ -264,6 +275,25 @@ public class Marks {
 			comment = "";
 		}
 		return Mark.given(Booleans.countTrue(pass), comment);
+	}
+
+	public static IGrade fileMatchesGrade(Path file, String exactTarget, Pattern approximateTarget) {
+		final boolean exists = Files.exists(file);
+		final String content = exists ? Utils.getOrThrow(() -> Files.readString(file)) : "";
+		final boolean matchesExactly = exists && content.stripTrailing().equals(exactTarget);
+		final boolean matchesApproximately = exists && (matchesExactly || approximateTarget.matcher(content).matches());
+		final Mark matchesExactlyMark = exists
+				? Mark.binary(matchesExactly, "", String.format("Expected \"%s\", found \"%s\".", exactTarget, content))
+				: Mark.zero();
+		return WeightingGrade.from(ImmutableList.of(
+				CriterionGradeWeight.from(MarksCriterion.FILE_EXISTS, Mark.binary(exists), 0.5d),
+				CriterionGradeWeight.from(MarksCriterion.FILE_CONTENTS_MATCH_APPROXIMATELY,
+						Mark.binary(matchesApproximately), 0.4d),
+				CriterionGradeWeight.from(MarksCriterion.FILE_CONTENTS_MATCH_EXACTLY, matchesExactlyMark, 0.1d)));
+	}
+
+	public static Pattern extend(String basis) {
+		return Pattern.compile("[\\h\\v]*\"?" + basis + "\"?[\\h\\v]*", Pattern.CASE_INSENSITIVE);
 	}
 
 }

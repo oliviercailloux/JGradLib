@@ -41,7 +41,6 @@ public class Summarize {
 		Files.writeString(outFile,
 				CsvGrades.asCsv(grades.entrySet().stream().filter(e -> e.getValue() instanceof WeightingGrade)
 						.collect(ImmutableMap.toImmutableMap(e -> usernames.getStudentOnGitHub(e.getKey()),
-								e -> (WeightingGrade) e.getValue())),
-						10d));
+								e -> (WeightingGrade) e.getValue()))));
 	}
 }

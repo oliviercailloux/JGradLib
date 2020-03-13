@@ -152,6 +152,9 @@ public class ExObjectsGrader {
 				.filterOnPath((p) -> !p.endsWith(".DS_Store"));
 		gradeBuilder.put(PREFIX, prefixMark(p53MainSrcPath, p53MainSources));
 
+		/**
+		 * This will not work now that asJavaSource has changed, required "/", now ".".
+		 */
 		final ImmutableList<? extends JavaFileObject> srcToCompile = p53MainSources
 				.filterOnPath((p) -> p.getName(p.getNameCount() - 1).toString().endsWith(".java")).asFileContents()
 				.stream().map((fc) -> SimpleCompiler.asJavaSource(p53MainSrcPath, fc))

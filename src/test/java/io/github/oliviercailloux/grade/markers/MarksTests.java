@@ -4,21 +4,25 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.nio.file.FileSystem;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.regex.Pattern;
 
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.jimfs.Jimfs;
 
 import io.github.oliviercailloux.grade.IGrade;
 import io.github.oliviercailloux.grade.context.FilesSource;
 import io.github.oliviercailloux.grade.contexters.PomContexter;
 import io.github.oliviercailloux.grade.contexters.PomSupplier;
 
-class MarksTest {
+class MarksTests {
 
 	@Test
 	void testPrefixExpectTwoButOnlyOne() {
@@ -76,6 +80,31 @@ class MarksTest {
 				FilesSource.fromMemory(ImmutableMap.of(Paths.get("src", "main", "java", "aa", "file.txt"), "content")),
 				getPomSupplier(), getPomContexter("aa"));
 		assertEquals(1d, mark.getPoints());
+	}
+
+	@Test
+	void testFileMatching() throws Exception {
+		try (FileSystem fs = Jimfs.newFileSystem()) {
+			final Path file = fs.getPath("file.txt");
+			final String exactTarget = "Hello, world";
+			final Pattern approximateTarget = Pattern.compile("[\\h\\v]*\"?Hello,?\\h*world\"?[\\h\\v]*",
+					Pattern.CASE_INSENSITIVE);
+
+			Files.writeString(file, "Hello, world");
+			assertEquals(1.0d, Marks.fileMatchesGrade(file, exactTarget, approximateTarget).getPoints());
+
+			Files.writeString(file, "Hello, world \n");
+			assertEquals(1.0d, Marks.fileMatchesGrade(file, exactTarget, approximateTarget).getPoints());
+
+			Files.writeString(file, "  hello world \r\n");
+			assertEquals(0.9d, Marks.fileMatchesGrade(file, exactTarget, approximateTarget).getPoints());
+
+			Files.writeString(file, "phello world \r\n");
+			assertEquals(0.5d, Marks.fileMatchesGrade(file, exactTarget, approximateTarget).getPoints());
+
+			assertEquals(0d, Marks.fileMatchesGrade(fs.getPath("nonexistentfile.txt"), exactTarget, approximateTarget)
+					.getPoints());
+		}
 	}
 
 }

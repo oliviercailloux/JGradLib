@@ -28,7 +28,7 @@ public class GradeTestsHelper {
 		final Criterion criterion = Criterion.given(criterionName);
 		final ImmutableMap<Criterion, IGrade> subMarks = ImmutableMap.of(criterion, Mark.given(1d, ""));
 		final ImmutableMap<Criterion, Double> weights = ImmutableMap.of(criterion, 1d);
-		final WeightingGrade grade = WeightingGrade.from(subMarks, weights);
+		final WeightingGrade grade = WeightingGrade.from(subMarks, weights, "A comment");
 		return grade;
 	}
 
@@ -39,7 +39,7 @@ public class GradeTestsHelper {
 		final Criterion criterion2 = Criterion.given("C2");
 		final ImmutableMap<Criterion, Double> weights = ImmutableMap.of(criterion1, 2d, criterion2, 3d);
 		final ImmutableMap<Criterion, IGrade> subGrades = ImmutableMap.of(criterion1, subGrade1, criterion2, subGrade2);
-		final WeightingGrade composite = WeightingGrade.from(subGrades, weights);
+		final WeightingGrade composite = WeightingGrade.from(subGrades, weights, "Complex grade");
 		return composite;
 	}
 

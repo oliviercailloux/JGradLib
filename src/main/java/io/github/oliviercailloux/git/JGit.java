@@ -1,4 +1,4 @@
-package io.github.oliviercailloux.git.fs;
+package io.github.oliviercailloux.git;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
@@ -29,9 +29,9 @@ public class JGit {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(JGit.class);
 
-	public static ImmutableList<ObjectId> createBasicRepo(Repository repo) throws IOException {
-		repo.create(true);
-		final ObjectDatabase objectDatabase = repo.getObjectDatabase();
+	public static ImmutableList<ObjectId> createBasicRepo(Repository repository) throws IOException {
+		repository.create(true);
+		final ObjectDatabase objectDatabase = repository.getObjectDatabase();
 		try (ObjectInserter inserter = objectDatabase.newInserter()) {
 			final PersonIdent personIdent = new PersonIdent("Me", "email");
 			final ImmutableList.Builder<ObjectId> builder = ImmutableList.builder();
@@ -45,18 +45,15 @@ public class JGit {
 
 			final ImmutableList<ObjectId> commits = builder.build();
 
-			final RefUpdate updateRef = repo.updateRef("refs/heads/master");
-			updateRef.setNewObjectId(commits.get(commits.size() - 1));
-			final Result updateResult = updateRef.update();
-			Verify.verify(updateResult == Result.NEW, updateResult.toString());
+			setMaster(repository, commits.get(commits.size() - 1));
 
 			return commits;
 		}
 	}
 
-	public static ImmutableList<ObjectId> createRepoWithSubDir(Repository repo) throws IOException {
-		repo.create(true);
-		final ObjectDatabase objectDatabase = repo.getObjectDatabase();
+	public static ImmutableList<ObjectId> createRepoWithSubDir(Repository repository) throws IOException {
+		repository.create(true);
+		final ObjectDatabase objectDatabase = repository.getObjectDatabase();
 		try (ObjectInserter inserter = objectDatabase.newInserter()) {
 			final PersonIdent personIdent = new PersonIdent("Me", "email");
 			final ImmutableList.Builder<ObjectId> builder = ImmutableList.builder();
@@ -77,10 +74,7 @@ public class JGit {
 
 			final ImmutableList<ObjectId> commits = builder.build();
 
-			final RefUpdate updateRef = repo.updateRef("refs/heads/master");
-			updateRef.setNewObjectId(commits.get(commits.size() - 1));
-			final Result updateResult = updateRef.update();
-			Verify.verify(updateResult == Result.NEW, updateResult.toString());
+			setMaster(repository, commits.get(commits.size() - 1));
 
 			return commits;
 		}
@@ -135,6 +129,13 @@ public class JGit {
 		final ObjectId inserted = inserter.insert(treeFormatter);
 		inserter.flush();
 		return inserted;
+	}
+
+	public static void setMaster(Repository repository, ObjectId newId) throws IOException {
+		final RefUpdate updateRef = repository.updateRef("refs/heads/master");
+		updateRef.setNewObjectId(newId);
+		final Result updateResult = updateRef.update();
+		Verify.verify(updateResult == Result.NEW, updateResult.toString());
 	}
 
 }

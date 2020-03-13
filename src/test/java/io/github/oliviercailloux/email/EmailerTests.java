@@ -42,11 +42,11 @@ import io.github.oliviercailloux.utils.Utils;
 import io.github.oliviercailloux.xml.HtmlDocument;
 import io.github.oliviercailloux.xml.XmlUtils;
 
-public class EmailerMain {
+public class EmailerTests {
 	public static final String SENT_FOLDER = "Éléments envoyés";
 	public static final String TRASH_FOLDER = "Éléments supprimés";
 	@SuppressWarnings("unused")
-	private static final Logger LOGGER = LoggerFactory.getLogger(EmailerMain.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(EmailerTests.class);
 
 	public static void main(String[] args) throws Exception {
 		final Document doc1 = getTestDocument("First document");
@@ -88,12 +88,12 @@ public class EmailerMain {
 
 	@Test
 	void testSearch() throws Exception {
-		final ImmutableList<Message> toCailGmailBroad = Emailer
+		final ImmutableSet<Message> toCailGmailBroad = Emailer
 				.searchIn(new RecipientStringTerm(RecipientType.TO, "olivier.cailloux@gmail.com"), "Éléments envoyés");
 		assertTrue(20 < toCailGmailBroad.size(), "" + toCailGmailBroad.size());
 		assertTrue(toCailGmailBroad.size() < 30);
 
-		final ImmutableList<Message> toCail = Emailer.searchIn(new RecipientStringTerm(RecipientType.TO, "cailloux"),
+		final ImmutableSet<Message> toCail = Emailer.searchIn(new RecipientStringTerm(RecipientType.TO, "cailloux"),
 				"Éléments envoyés");
 		assertTrue(50 < toCail.size(), "" + toCail.size());
 		assertTrue(toCail.size() < 100);
@@ -102,7 +102,7 @@ public class EmailerMain {
 		final ImmutableSet<Integer> toCailSet = ImmutableSet.copyOf(toCailList);
 		assertEquals(toCailList.size(), toCailSet.size());
 
-		final ImmutableList<Message> toCailGmail = Emailer.searchIn(new RecipientTerm(RecipientType.TO,
+		final ImmutableSet<Message> toCailGmail = Emailer.searchIn(new RecipientTerm(RecipientType.TO,
 				new InternetAddress("olivier.cailloux@gmail.com", "Olivier Cailloux")), "Éléments envoyés");
 		assertTrue(20 < toCailGmail.size());
 		assertTrue(toCailGmail.size() < 50);
@@ -111,7 +111,7 @@ public class EmailerMain {
 		final ImmutableSet<Integer> toCailGmailSet = ImmutableSet.copyOf(toCailGmailList);
 		assertEquals(toCailGmailList.size(), toCailGmailSet.size());
 
-		final ImmutableList<Message> toCailDauphineBroad = Emailer.searchIn(
+		final ImmutableSet<Message> toCailDauphineBroad = Emailer.searchIn(
 				new RecipientStringTerm(RecipientType.TO, "olivier.cailloux@dauphine.fr"), "Éléments envoyés");
 		/** Seems like this is sometimes empty (and it shouldn’t). */
 		assertTrue(toCailDauphineBroad.isEmpty());
@@ -122,7 +122,7 @@ public class EmailerMain {
 		final ImmutableSet<Integer> toCailDauphineBroadSet = ImmutableSet.copyOf(toCailDauphineBroadList);
 		assertEquals(toCailDauphineBroadList.size(), toCailDauphineBroadSet.size());
 
-		final ImmutableList<Message> toCailDauphine = Emailer.searchIn(new RecipientTerm(RecipientType.TO,
+		final ImmutableSet<Message> toCailDauphine = Emailer.searchIn(new RecipientTerm(RecipientType.TO,
 				new InternetAddress("olivier.cailloux@dauphine.fr", "Olivier Cailloux")), "Éléments envoyés");
 		/** Shouldn’t be empty. */
 		assertTrue(toCailDauphine.isEmpty());
@@ -156,6 +156,19 @@ public class EmailerMain {
 //						.collect(ImmutableList.toImmutableList()));
 	}
 
+	@Test
+	void testSearchSentTo() throws Exception {
+		final ImmutableSet<Message> toMe = Emailer.searchSentToIn(
+				new InternetAddress("olivier.cailloux@dauphine.fr", "Olivier Cailloux"), "Éléments envoyés");
+		assertTrue(7 <= toMe.size());
+		assertTrue(toMe.size() <= 30);
+		final ImmutableSet<Integer> numbers = toMe.stream().map(Message::getMessageNumber)
+				.collect(ImmutableSet.toImmutableSet());
+		assertEquals(toMe.size(), numbers.size());
+		LOGGER.debug("Numbers: {}.", numbers);
+		assertTrue(toMe.stream().anyMatch(m -> m.getMessageNumber() == 6068), numbers.toString());
+	}
+
 	/**
 	 * https://github.com/eclipse-ee4j/mail/issues/425
 	 */
@@ -170,6 +183,7 @@ public class EmailerMain {
 		props.setProperty("mail.user", "ocailloux@dauphine.fr");
 		props.setProperty("mail.imap.ssl.enable", "true");
 		props.setProperty("mail.imap.ssl.checkserveridentity", "true");
+//		props.setProperty("mail.debug", "true");
 		final Session session = Session.getInstance(props);
 		try (Store store = session.getStore()) {
 			LOGGER.info("Connecting.");
@@ -179,6 +193,7 @@ public class EmailerMain {
 				final Message[] messages6068 = folder.getMessages(6068, 6068);
 				assertEquals(1, messages6068.length);
 				final Message messageToDauphine = messages6068[0];
+				messageToDauphine.getAllHeaders();
 
 				final Address[] recipients = messageToDauphine.getRecipients(RecipientType.TO);
 				assertEquals(1, recipients.length);
@@ -214,6 +229,11 @@ public class EmailerMain {
 					/** Should fail! */
 					assertEquals(0, messagesToThatRecipient.length);
 				}
+				{
+					final Message[] messagesToThatRecipientStringTerm = folder
+							.search(new RecipientStringTerm(RecipientType.TO, "Olivier Cailloux"));
+					assertTrue(messagesToThatRecipientStringTerm.length > 10);
+				}
 			}
 		}
 	}
@@ -235,7 +255,7 @@ public class EmailerMain {
 		if (!Files.exists(path)) {
 			throw new IllegalStateException();
 		}
-		final String content = Utils.getOrThrowIO(() -> Files.readString(path));
+		final String content = Utils.getOrThrow(() -> Files.readString(path));
 		return content.replaceAll("\n", "");
 	}
 

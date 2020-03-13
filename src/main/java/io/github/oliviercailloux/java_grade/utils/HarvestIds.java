@@ -42,7 +42,7 @@ public class HarvestIds {
 		if (!Files.exists(idPath)) {
 			return Optional.empty();
 		}
-		final List<String> lines = Utils.getOrThrowIO(() -> Files.readAllLines(idPath));
+		final List<String> lines = Utils.getOrThrow(() -> Files.readAllLines(idPath));
 		final ImmutableList<String> nonEmptyLines = lines.stream().filter(l -> !l.isBlank())
 				.collect(ImmutableList.toImmutableList());
 		LOGGER.info("File content: {}.", nonEmptyLines);
@@ -105,7 +105,7 @@ public class HarvestIds {
 		final Path projectDir = projectsBaseDir.resolve(coord.getRepositoryName());
 		new GitCloner().download(GitUri.fromGitUri(coord.asURI()), projectDir);
 		try (GitRepoFileSystem fs = Utils
-				.getOrThrowIO(() -> new GitFileSystemProvider().newFileSystemFromGitDir(projectDir.resolve(".git")))) {
+				.getOrThrow(() -> new GitFileSystemProvider().newFileSystemFromGitDir(projectDir.resolve(".git")))) {
 			return getId(fs);
 		}
 	}

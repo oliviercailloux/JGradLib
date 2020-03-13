@@ -58,7 +58,7 @@ public class FindEnds {
 		final Path projectDir = projectsBaseDir.resolve(coord.getRepositoryName());
 		Utils.uncheck(() -> new GitCloner().download(GitUri.fromGitUri(coord.asURI()), projectDir));
 
-		try (Git git = Utils.getOrThrowIO(() -> Git.open(projectDir.resolve(".git").toFile()))) {
+		try (Git git = Utils.getOrThrow(() -> Git.open(projectDir.resolve(".git").toFile()))) {
 			final List<Ref> remoteRefs = Utils.getOrThrow(() -> git.branchList().setListMode(ListMode.REMOTE).call());
 			LOGGER.info("Remote refs for {}: {}.", coord, remoteRefs);
 			return remoteRefs.stream().anyMatch(r -> r.getName().equals("refs/remotes/origin/END"));

@@ -19,7 +19,7 @@ import io.github.oliviercailloux.git.FileContent;
 import io.github.oliviercailloux.grade.context.FilesSource;
 import io.github.oliviercailloux.java_grade.testers.MarkHelper;
 
-class GradingTest {
+class GradingTests {
 
 	@Test
 	void testJunitDiscovery() {
@@ -57,7 +57,7 @@ class GradingTest {
 	}
 
 	@SuppressWarnings("unused")
-	private static final Logger LOGGER = LoggerFactory.getLogger(GradingTest.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(GradingTests.class);
 
 	@Test
 	void testGroupIdDiscovery() throws Exception {

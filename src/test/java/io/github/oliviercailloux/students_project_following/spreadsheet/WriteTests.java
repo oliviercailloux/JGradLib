@@ -33,10 +33,10 @@ import io.github.oliviercailloux.students_project_following.Functionality;
 import io.github.oliviercailloux.students_project_following.Project;
 import io.github.oliviercailloux.utils.Utils;
 
-public class TestWrite {
+public class WriteTests {
 
 	@SuppressWarnings("unused")
-	private static final Logger LOGGER = LoggerFactory.getLogger(TestWrite.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(WriteTests.class);
 
 	public void debugRead() throws Exception {
 		try (SpreadsheetDocument doc = SpreadsheetDocument.loadDocument("out.ods")) {

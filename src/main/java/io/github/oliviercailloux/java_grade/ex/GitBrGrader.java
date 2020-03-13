@@ -7,10 +7,15 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Instant;
+import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.lib.ObjectId;
@@ -23,7 +28,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
-import com.google.common.graph.Graph;
+import com.google.common.graph.ImmutableGraph;
 
 import io.github.oliviercailloux.git.GitCloner;
 import io.github.oliviercailloux.git.GitLocalHistory;
@@ -41,6 +46,7 @@ import io.github.oliviercailloux.grade.IGrade;
 import io.github.oliviercailloux.grade.Mark;
 import io.github.oliviercailloux.grade.WeightingGrade;
 import io.github.oliviercailloux.grade.format.json.JsonGrade;
+import io.github.oliviercailloux.grade.markers.Marks;
 import io.github.oliviercailloux.java_grade.GraderOrchestrator;
 import io.github.oliviercailloux.java_grade.JavaCriterion;
 import io.github.oliviercailloux.java_grade.testers.MarkHelper;
@@ -78,23 +84,24 @@ public class GitBrGrader {
 
 		final ImmutableList<RepositoryCoordinatesWithPrefix> repositories;
 		try (GitHubFetcherV3 fetcher = GitHubFetcherV3.using(GitHubToken.getRealInstance())) {
-//			repositories = fetcher.getRepositoriesWithPrefix("oliviercailloux-org", PREFIX);
+			repositories = fetcher.getRepositoriesWithPrefix("oliviercailloux-org", PREFIX);
 		}
-		repositories = ImmutableList.of(RepositoryCoordinatesWithPrefix.from("oliviercailloux-org", PREFIX, "av1m"));
+//		repositories = ImmutableList
+//				.of(RepositoryCoordinatesWithPrefix.from("oliviercailloux-org", PREFIX, "…"));
 
 		final GitBrGrader grader = new GitBrGrader();
-		final ImmutableMap<String, IGrade> grades = repositories.stream().collect(ImmutableMap
-				.toImmutableMap(RepositoryCoordinatesWithPrefix::getUsername, Utils.uncheck(r -> grader.grade(r))));
-
-		final Path outDir = WORK_DIR;
-		Files.writeString(outDir.resolve("all grades " + PREFIX + ".json"),
-				JsonbUtils.toJsonObject(grades, JsonGrade.asAdapter()).toString());
-		Summarize.summarize(PREFIX, outDir);
+		final Map<String, IGrade> gradesB = new LinkedHashMap<>();
+		for (RepositoryCoordinatesWithPrefix repository : repositories) {
+			gradesB.put(repository.getUsername(), grader.grade(repository));
+			final Path outDir = WORK_DIR;
+			Files.writeString(outDir.resolve("all grades " + PREFIX + ".json"),
+					JsonbUtils.toJsonObject(gradesB, JsonGrade.asAdapter()).toString());
+			Summarize.summarize(PREFIX, outDir);
+		}
 	}
 
 	GitBrGrader() {
 		branchPrefix = "origin";
-		// Nothing.
 	}
 
 	public IGrade grade(RepositoryCoordinatesWithPrefix coord) throws IOException, GitAPIException {
@@ -104,21 +111,35 @@ public class GitBrGrader {
 
 		try (GitRepoFileSystem fs = new GitFileSystemProvider().newFileSystemFromGitDir(projectDir.resolve(".git"))) {
 			final GitHubHistory gitHubHistory = GraderOrchestrator.getGitHubHistory(coord);
-			final GitLocalHistory filtered = GraderOrchestrator.getFilteredHistory(fs, gitHubHistory, DEADLINE);
-			final IGrade grade = grade(coord.getUsername(), fs, filtered);
+			final IGrade grade = grade(coord.getUsername(), fs, gitHubHistory);
 			LOGGER.info("Grade {}: {}.", coord, grade);
 			return grade;
 		}
 	}
 
-	public IGrade grade(String owner, GitRepoFileSystem fs, GitLocalHistory history) throws IOException {
+	public IGrade grade(String owner, GitRepoFileSystem fs, GitHubHistory gitHubHistory) throws IOException {
+		final GitLocalHistory filtered = GraderOrchestrator.getFilteredHistory(fs, gitHubHistory, DEADLINE);
+		final Set<ObjectId> keptIds = ImmutableSet.copyOf(filtered.getGraph().nodes());
+		final Set<ObjectId> allIds = gitHubHistory.getGraph().nodes();
+		Verify.verify(allIds.containsAll(keptIds));
+		final Set<ObjectId> excludedIds = Sets.difference(allIds, keptIds);
+		final String comment;
+		if (excludedIds.isEmpty()) {
+			comment = "";
+		} else {
+			comment = "Excluded the following commits (pushed too late): "
+					+ excludedIds.stream()
+							.map(o -> o.getName().substring(0, 7) + " (" + gitHubHistory
+									.getCorrectedAndCompletedPushedDates().get(o).atZone(ZoneId.systemDefault()) + ")")
+							.collect(Collectors.joining("; "));
+		}
+
+		LOGGER.debug("Graph filtered history: {}.", filtered.getGraph().edges());
 		fs.getHistory();
-		LOGGER.debug("Graph history: {}.", history.getGraph().edges());
-		final GitLocalHistory manual = history
+		final GitLocalHistory manual = filtered
 				.filter(o -> !MarkHelper.committerIsGitHub(fs.getCachedHistory().getCommit(o)));
 		LOGGER.debug("Graph manual: {}.", manual.getGraph().edges());
-		final Graph<ObjectId> graph = Utils.asGraph(n -> manual.getGraph().successors(manual.getCommit(n)),
-				ImmutableSet.copyOf(manual.getTips()));
+		final ImmutableGraph<ObjectId> graph = Utils.asImmutableGraph(manual.getGraph(), o -> o);
 		LOGGER.debug("Graph copied from manual: {}.", graph.edges());
 
 		if (graph.nodes().isEmpty()) {
@@ -132,36 +153,30 @@ public class GitBrGrader {
 
 		final ImmutableMap.Builder<Criterion, IGrade> gradeBuilder = ImmutableMap.builder();
 
-		final ImmutableList<ObjectId> ownWithCorrectIdentity = graph.nodes().stream()
-				.filter(o -> MarkHelper.committerAndAuthorIs(fs.getCachedHistory().getCommit(o), owner))
-				.collect(ImmutableList.toImmutableList());
-		gradeBuilder.put(JavaCriterion.ID, Mark.binary(ownWithCorrectIdentity.size() >= 1));
+		final GitLocalHistory ownHistory = filtered
+				.filter(o -> MarkHelper.committerAndAuthorIs(fs.getCachedHistory().getCommit(o), owner));
+		final ImmutableGraph<RevCommit> ownGraph = ownHistory.getGraph();
+		gradeBuilder.put(JavaCriterion.ID, Mark.binary(ownGraph.nodes().size() >= 1));
 
-		if (!graph.nodes().containsAll(ownWithCorrectIdentity)) {
+		if (!graph.nodes().containsAll(ownGraph.nodes())) {
 			LOGGER.warn("Risk of accessing a commit beyond deadline (e.g. master!).");
 		}
 
-		final ImmutableSet<ObjectId> ownSet = ImmutableSet.copyOf(ownWithCorrectIdentity);
-
+		@SuppressWarnings("unlikely-arg-type")
 		final Optional<ObjectId> br1 = fs.getCommitId(fs.getAbsolutePath(branchPrefix + "/br1"))
-				.filter(o -> ownSet.contains(o));
+				.filter(o -> ownGraph.nodes().contains(o));
+		@SuppressWarnings("unlikely-arg-type")
 		final Optional<ObjectId> br2 = fs.getCommitId(fs.getAbsolutePath(branchPrefix + "/br2"))
-				.filter(o -> ownSet.contains(o));
+				.filter(o -> ownGraph.nodes().contains(o));
+		@SuppressWarnings("unlikely-arg-type")
 		final Optional<ObjectId> br3 = fs.getCommitId(fs.getAbsolutePath(branchPrefix + "/br3"))
-				.filter(o -> ownSet.contains(o));
+				.filter(o -> ownGraph.nodes().contains(o));
 
-//		final MutableGraph<ObjectId> ownGraph = Graphs.inducedSubgraph(graph, ownWithCorrectIdentity);
 		final Set<ObjectId> startCandidates = new LinkedHashSet<>();
-		final GitLocalHistory ownHistory = history.filter(c -> ownSet.contains(c));
 		final ImmutableSet<RevCommit> roots = ownHistory.getRoots();
 		LOGGER.info("Roots: {}.", roots);
-		ImmutableSet<ObjectId> parentsOfOwnRoots = roots.stream().flatMap(o -> graph.successors(o).stream())
-				.collect(ImmutableSet.toImmutableSet());
-//		final UnmodifiableIterator<RevCommit> rootsIterator = roots.iterator();
-//		LOGGER.info("Parents of root 1: {}.",
-//				graph.successors(rootsIterator.next()).stream().collect(ImmutableSet.toImmutableSet()));
-//		LOGGER.info("Parents of root 2: {}.",
-//				graph.successors(rootsIterator.next()).stream().collect(ImmutableSet.toImmutableSet()));
+		ImmutableSet<ObjectId> parentsOfOwnRoots = roots.stream()
+				.flatMap(o -> filtered.getGraph().successors(o).stream()).collect(ImmutableSet.toImmutableSet());
 		LOGGER.info("Parents of roots: {}.", parentsOfOwnRoots);
 		if (parentsOfOwnRoots.size() == 1) {
 			startCandidates.add(parentsOfOwnRoots.iterator().next());
@@ -176,23 +191,36 @@ public class GitBrGrader {
 		final ObjectId effectiveStart = startCandidates.iterator().next();
 		final boolean startedAtStart = effectiveStart.equals(START);
 
-		final Set<ObjectId> childrenOfStart = Sets.intersection(graph.predecessors(effectiveStart), ownSet);
+		final RevCommit effectiveStartRev = filtered.getCommit(effectiveStart);
+		final Set<RevCommit> predecessorsOfEffectiveStart = filtered.getGraph().predecessors(effectiveStartRev);
+		final Set<ObjectId> childrenOfStart = ImmutableSet
+				.copyOf(Sets.intersection(predecessorsOfEffectiveStart, ownGraph.nodes()));
 		final Optional<ObjectId> commitA;
 		if (br1.isPresent()) {
 			commitA = br1;
-			Verify.verify(ownSet.contains(commitA.get()));
-			checkArgument(graph.predecessors(effectiveStart).contains(commitA.get()));
+			@SuppressWarnings("unlikely-arg-type")
+			final boolean contained = ownGraph.nodes().contains(commitA.get());
+			Verify.verify(contained);
+			@SuppressWarnings("unlikely-arg-type")
+			final boolean containsA = predecessorsOfEffectiveStart.contains(commitA.get());
+			checkArgument(containsA);
 			Verify.verify(childrenOfStart.contains(commitA.get()));
 		} else {
-			final ImmutableSet<ObjectId> matchingForA = childrenOfStart.stream().filter(o -> matchesCommitA(fs, o))
+			final ImmutableSet<ObjectId> matchingForA = childrenOfStart.stream()
+					.filter(o -> getAContentGrade(fs, Optional.of(o)).getPoints() >= 0.9d)
 					.collect(ImmutableSet.toImmutableSet());
+			final ImmutableSet<ObjectId> matchingForB = childrenOfStart.stream()
+					.filter(o -> getBContentGrade(fs, Optional.of(o)).getPoints() >= 0.9d)
+					.collect(ImmutableSet.toImmutableSet());
+			Verify.verify(Sets.intersection(matchingForA, matchingForB).isEmpty());
+
 			if (matchingForA.size() != 1) {
 				final ImmutableSet<ObjectId> mightBeA;
 				if (matchingForA.size() > 1) {
 					mightBeA = matchingForA;
 					LOGGER.warn("Multiple candidates for A (all matching): {}.", mightBeA);
 				} else {
-					mightBeA = ImmutableSet.copyOf(childrenOfStart);
+					mightBeA = ImmutableSet.copyOf(Sets.difference(childrenOfStart, matchingForB));
 					if (mightBeA.size() > 1) {
 						LOGGER.warn("Multiple candidates for A (none matching): {}.", mightBeA);
 					}
@@ -202,45 +230,32 @@ public class GitBrGrader {
 				commitA = Optional.of(matchingForA.iterator().next());
 			}
 		}
-		Verify.verify(Utils.implies(commitA.isEmpty(), childrenOfStart.isEmpty()), String.format(
-				"Commit A: %s; childrenOfStart: %s, effective start: %s.", commitA, childrenOfStart, effectiveStart));
-
-		final boolean contentA;
-		if (commitA.isPresent()) {
-			contentA = matchesCommitA(fs, commitA.get());
-		} else {
-			contentA = false;
-		}
+		Verify.verify(Utils.implies(commitA.isEmpty(), childrenOfStart.isEmpty() || childrenOfStart.size() == 1),
+				String.format("Commit A: %s; childrenOfStart: %s, effective start: %s.", commitA, childrenOfStart,
+						effectiveStart));
 
 		final WeightingGrade gradeA = WeightingGrade.from(ImmutableList.of(
 				CriterionGradeWeight.from(GitBrCriterion.COMMIT_A_START,
 						Mark.binary(startedAtStart && commitA.isPresent()), 0.2d),
 				CriterionGradeWeight.from(GitBrCriterion.COMMIT_A_EXISTS, Mark.binary(commitA.isPresent()), 0.4d),
-				CriterionGradeWeight.from(GitBrCriterion.COMMIT_A_CONTENTS, Mark.binary(contentA), 0.4d)));
+				CriterionGradeWeight.from(GitBrCriterion.COMMIT_A_CONTENTS, getAContentGrade(fs, commitA), 0.4d)));
 		gradeBuilder.put(GitBrCriterion.COMMIT_A, gradeA);
 
 		final Set<ObjectId> childrenOfStartNotA = commitA.isEmpty() ? childrenOfStart
 				: Sets.difference(childrenOfStart, ImmutableSet.of(commitA.get()));
 		final Optional<ObjectId> commitB = childrenOfStartNotA.isEmpty() ? Optional.empty()
 				: Optional.of(childrenOfStartNotA.iterator().next());
-		Verify.verify(commitB.isEmpty() == (childrenOfStart.isEmpty() || childrenOfStart.size() == 1));
-
-		final boolean contentB;
-		if (commitB.isPresent()) {
-			contentB = matchesCommitB(fs, commitB.get());
-		} else {
-			contentB = false;
-		}
+		Verify.verify(Utils.implies(commitB.isEmpty(), childrenOfStart.isEmpty() || childrenOfStart.size() == 1));
 
 		final WeightingGrade gradeB = WeightingGrade.from(ImmutableList.of(
 				CriterionGradeWeight.from(GitBrCriterion.COMMIT_B_START,
 						Mark.binary(startedAtStart && commitB.isPresent()), 0.2d),
 				CriterionGradeWeight.from(GitBrCriterion.COMMIT_B_EXISTS, Mark.binary(commitB.isPresent()), 0.4d),
-				CriterionGradeWeight.from(GitBrCriterion.COMMIT_B_CONTENTS, Mark.binary(contentB), 0.4d)));
+				CriterionGradeWeight.from(GitBrCriterion.COMMIT_B_CONTENTS, getBContentGrade(fs, commitB), 0.4d)));
 		gradeBuilder.put(GitBrCriterion.COMMIT_B, gradeB);
 
-		final Optional<RevCommit> revCommitB = commitB.map(history::getCommit);
-		final Set<RevCommit> childrenOfB = revCommitB.map(c -> history.getGraph().predecessors(c))
+		final Optional<RevCommit> revCommitB = commitB.map(filtered::getCommit);
+		final Set<RevCommit> childrenOfB = revCommitB.map(c -> filtered.getGraph().predecessors(c))
 				.orElse(ImmutableSet.of());
 		final Optional<ObjectId> commitC;
 		if (childrenOfB.size() == 1) {
@@ -252,25 +267,18 @@ public class GitBrGrader {
 			commitC = Optional.empty();
 		}
 
-		final boolean contentC;
-		if (commitC.isPresent()) {
-			contentC = matchesCommitC(fs, commitC.get());
-		} else {
-			contentC = false;
-		}
-
 		final WeightingGrade gradeC = WeightingGrade.from(ImmutableList.of(
 				CriterionGradeWeight.from(GitBrCriterion.COMMIT_C_START,
 						Mark.binary(startedAtStart && commitC.isPresent()), 0.2d),
 				CriterionGradeWeight.from(GitBrCriterion.COMMIT_C_EXISTS, Mark.binary(commitC.isPresent()), 0.4d),
-				CriterionGradeWeight.from(GitBrCriterion.COMMIT_C_CONTENTS, Mark.binary(contentC), 0.4d)));
+				CriterionGradeWeight.from(GitBrCriterion.COMMIT_C_CONTENTS, getCContentGrade(fs, commitC), 0.4d)));
 		gradeBuilder.put(GitBrCriterion.COMMIT_C, gradeC);
 
-		final Optional<RevCommit> revCommitC = commitC.map(history::getCommit);
-		final Set<RevCommit> childrenOfC = revCommitC.map(c -> history.getGraph().predecessors(c))
+		final Optional<RevCommit> revCommitC = commitC.map(filtered::getCommit);
+		final Set<RevCommit> childrenOfC = revCommitC.map(c -> filtered.getGraph().predecessors(c))
 				.orElse(ImmutableSet.of());
-		final Optional<RevCommit> revCommitA = commitA.map(history::getCommit);
-		final Set<RevCommit> childrenOfA = revCommitA.map(c -> history.getGraph().predecessors(c))
+		final Optional<RevCommit> revCommitA = commitA.map(filtered::getCommit);
+		final Set<RevCommit> childrenOfA = revCommitA.map(c -> filtered.getGraph().predecessors(c))
 				.orElse(ImmutableSet.of());
 
 		final Set<RevCommit> candidatesD = Sets.intersection(childrenOfC, childrenOfA);
@@ -284,18 +292,11 @@ public class GitBrGrader {
 			commitD = Optional.empty();
 		}
 
-		final boolean contentD;
-		if (commitD.isPresent()) {
-			contentD = matchesCommitD(fs, commitD.get());
-		} else {
-			contentD = false;
-		}
-
 		final WeightingGrade gradeD = WeightingGrade.from(ImmutableList.of(
 				CriterionGradeWeight.from(GitBrCriterion.COMMIT_D_START,
 						Mark.binary(startedAtStart && commitD.isPresent()), 0.2d),
 				CriterionGradeWeight.from(GitBrCriterion.COMMIT_D_EXISTS, Mark.binary(commitD.isPresent()), 0.4d),
-				CriterionGradeWeight.from(GitBrCriterion.COMMIT_D_CONTENTS, Mark.binary(contentD), 0.4d)));
+				CriterionGradeWeight.from(GitBrCriterion.COMMIT_D_CONTENTS, getDContentGrade(fs, commitD), 0.4d)));
 		gradeBuilder.put(GitBrCriterion.COMMIT_D, gradeD);
 
 		final WeightingGrade gradeBranches = WeightingGrade.proportional(GitBrCriterion.BR_1,
@@ -309,34 +310,64 @@ public class GitBrGrader {
 		builder.put(JavaCriterion.ID, 1d);
 		builder.put(GitBrCriterion.COMMIT_A, 2d);
 		builder.put(GitBrCriterion.COMMIT_B, 2d);
-		builder.put(GitBrCriterion.COMMIT_C, 2d);
-		builder.put(GitBrCriterion.COMMIT_D, 2d);
-		builder.put(GitBrCriterion.BR, 4d);
-		return WeightingGrade.from(subGrades, builder.build());
+		builder.put(GitBrCriterion.COMMIT_C, 1.5d);
+		builder.put(GitBrCriterion.COMMIT_D, 1.5d);
+		builder.put(GitBrCriterion.BR, 2d);
+		return WeightingGrade.from(subGrades, builder.build(), comment);
 	}
 
-	private boolean matchesCommitA(GitRepoFileSystem fs, ObjectId commit) {
-		final GitPath fileA = fs.getAbsolutePath(commit.getName(), "hello.txt");
-		return Files.exists(fileA)
-				&& Utils.getOrThrowIO(() -> Files.readString(fileA)).replace("\"", "").strip().equals("first try");
+	private IGrade getAContentGrade(GitRepoFileSystem fs, Optional<ObjectId> commit) {
+		final IGrade grade;
+		if (commit.isPresent()) {
+			final GitPath file = fs.getAbsolutePath(commit.get().getName(), "hello.txt");
+			final String exactTarget = "first try";
+			grade = Marks.fileMatchesGrade(file, exactTarget, Marks.extend(exactTarget));
+		} else {
+			grade = Mark.zero();
+		}
+
+		return grade;
 	}
 
-	private boolean matchesCommitB(GitRepoFileSystem fs, ObjectId commit) {
-		final GitPath fileB = fs.getAbsolutePath(commit.getName(), "hello.txt");
-		return Files.exists(fileB)
-				&& Utils.getOrThrowIO(() -> Files.readString(fileB)).replace("\"", "").strip().equals("second try");
+	private IGrade getBContentGrade(GitRepoFileSystem fs, Optional<ObjectId> commit) {
+		final IGrade grade;
+		if (commit.isPresent()) {
+			final GitPath file = fs.getAbsolutePath(commit.get().getName(), "hello.txt");
+			final String exactTarget = "second try";
+			grade = Marks.fileMatchesGrade(file, exactTarget, Marks.extend(exactTarget));
+		} else {
+			grade = Mark.zero();
+		}
+
+		return grade;
 	}
 
-	private boolean matchesCommitC(GitRepoFileSystem fs, ObjectId commit) {
-		final GitPath fileC = fs.getAbsolutePath(commit.getName(), "supplements.txt");
-		return Files.exists(fileC)
-				&& Utils.getOrThrowIO(() -> Files.readString(fileC)).replace("\"", "").strip().equals("Hello, world");
+	private IGrade getCContentGrade(GitRepoFileSystem fs, Optional<ObjectId> commit) {
+		final IGrade grade;
+		if (commit.isPresent()) {
+			final GitPath file = fs.getAbsolutePath(commit.get().getName(), "supplements.txt");
+			final String exactTarget = "Hello, world";
+			final Pattern approximateTarget = Marks.extend("Hello,?\\h*world");
+			grade = Marks.fileMatchesGrade(file, exactTarget, approximateTarget);
+		} else {
+			grade = Mark.zero();
+		}
+
+		return grade;
 	}
 
-	private boolean matchesCommitD(GitRepoFileSystem fs, ObjectId commit) {
-		final GitPath fileD = fs.getAbsolutePath(commit.getName(), "hello.txt");
-		return Files.exists(fileD) && Utils.getOrThrowIO(() -> Files.readString(fileD)).replace("\"", "").strip()
-				.equals("first try\nsecond try");
+	private IGrade getDContentGrade(GitRepoFileSystem fs, Optional<ObjectId> commit) {
+		final IGrade grade;
+		if (commit.isPresent()) {
+			final GitPath file = fs.getAbsolutePath(commit.get().getName(), "hello.txt");
+			final String exactTarget = "first try\nsecond try";
+			final Pattern approximateTarget = Marks.extend("first try[\\h\\v]*second try");
+			grade = Marks.fileMatchesGrade(file, exactTarget, approximateTarget);
+		} else {
+			grade = Mark.zero();
+		}
+
+		return grade;
 	}
 
 }

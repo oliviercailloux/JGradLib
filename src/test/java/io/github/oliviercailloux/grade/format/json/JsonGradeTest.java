@@ -62,7 +62,7 @@ public class JsonGradeTest {
 		final Criterion criterion = Criterion.given("criterion");
 		final ImmutableMap<Criterion, Mark> subMarks = ImmutableMap.of(criterion, Mark.given(1d, ""));
 		final ImmutableMap<Criterion, Double> weights = ImmutableMap.of(criterion, 1d);
-		final WeightingGrade expected = WeightingGrade.from(subMarks, weights);
+		final WeightingGrade expected = WeightingGrade.from(subMarks, weights, "A comment");
 
 		final String json = Resources.toString(this.getClass().getResource("SingletonGrade.json"),
 				StandardCharsets.UTF_8);

@@ -7,6 +7,7 @@ import java.text.NumberFormat;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.slf4j.Logger;
@@ -79,10 +80,7 @@ public class CsvGrades {
 			for (CriterionGradeWeight cgw : marks) {
 				final Criterion criterion = cgw.getCriterion();
 				Verify.verify(allCriteria.contains(criterion));
-				final IGrade mark = cgw.getGrade();
-				final double points = mark.getPoints();
-				final double pointsSigned = cgw.getWeight() > 0d ? points : 1d - points;
-				final double pointsScaled = pointsSigned * cgw.getWeight() * denominator;
+				final double pointsScaled = getPointsScaled(cgw, denominator);
 				writer.addValue(criterion.getName(), formatter.format(pointsScaled));
 			}
 
@@ -90,18 +88,57 @@ public class CsvGrades {
 			writer.writeValuesToRow();
 		}
 
-		if (enableName) {
-			writer.addValue("Name", "Range");
-		}
-		writer.addValue("GitHub username", "Range");
+		{
+//			if (enableName) {
+//				writer.addValue("Name", "Range");
+//			}
+			writer.addValue("GitHub username", "Range");
 
-		for (Criterion criterion : allCriteria) {
-			final double weight = asTable.column(criterion).values().stream().map(CriterionGradeWeight::getWeight)
-					.distinct().collect(MoreCollectors.onlyElement());
-			writer.addValue(criterion.getName(), "[0, " + formatter.format(weight * denominator) + "]");
+			for (Criterion criterion : allCriteria) {
+				final double weight = asTable.column(criterion).values().stream().map(CriterionGradeWeight::getWeight)
+						.distinct().collect(MoreCollectors.onlyElement());
+				writer.addValue(criterion.getName(), "[0, " + formatter.format(weight * denominator) + "]");
+			}
+			writer.addValue("Points", "[0," + formatter.format(denominator) + "]");
+			writer.writeValuesToRow();
 		}
-		writer.addValue("Points", "[0," + formatter.format(denominator) + "]");
-		writer.writeValuesToRow();
+
+		{
+			writer.addValue("GitHub username", "Average");
+			for (Criterion criterion : allCriteria) {
+				final double average = asTable.column(criterion).values().stream()
+						.collect(Collectors.averagingDouble(c -> getPointsScaled(c, denominator)));
+				writer.addValue(criterion.getName(), formatter.format(average));
+			}
+			final double averageOfTotalScore = grades.values().stream()
+					.collect(Collectors.averagingDouble(g -> g.getPoints() * denominator));
+			writer.addValue("Points", formatter.format(averageOfTotalScore));
+			writer.writeValuesToRow();
+		}
+
+		{
+			writer.addValue("GitHub username", "Nb > 0");
+			for (Criterion criterion : allCriteria) {
+				final int nb = Math.toIntExact(
+						asTable.column(criterion).values().stream().filter(c -> c.getGrade().getPoints() > 0d).count());
+				writer.addValue(criterion.getName(), formatter.format(nb));
+			}
+			final int nb = Math.toIntExact(grades.values().stream().filter(g -> g.getPoints() > 0d).count());
+			writer.addValue("Points", formatter.format(nb));
+			writer.writeValuesToRow();
+		}
+
+		{
+			writer.addValue("GitHub username", "Nb MAX");
+			for (Criterion criterion : allCriteria) {
+				final int nb = Math.toIntExact(asTable.column(criterion).values().stream()
+						.filter(c -> c.getGrade().getPoints() == 1d).count());
+				writer.addValue(criterion.getName(), formatter.format(nb));
+			}
+			final int nb = Math.toIntExact(grades.values().stream().filter(g -> g.getPoints() == 1d).count());
+			writer.addValue("Points", formatter.format(nb));
+			writer.writeValuesToRow();
+		}
 
 		writer.close();
 
@@ -140,5 +177,12 @@ public class CsvGrades {
 						parent.getWeight() * cwg.getWeight()));
 		final Stream<CriterionGradeWeight> flatmappedChildren = mapped.flatMap((cwg) -> asContextualizedStream(cwg));
 		return Stream.concat(itself, flatmappedChildren);
+	}
+
+	private static double getPointsScaled(CriterionGradeWeight cgw, double denominator) {
+		final double points = cgw.getGrade().getPoints();
+		final double pointsSigned = cgw.getWeight() > 0d ? points : 1d - points;
+		final double pointsScaled = pointsSigned * cgw.getWeight() * denominator;
+		return pointsScaled;
 	}
 }

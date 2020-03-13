@@ -35,7 +35,7 @@ public class SendEmails {
 	private static final Logger LOGGER = LoggerFactory.getLogger(SendEmails.class);
 
 	private static final Path WORK_DIR = Paths.get("../../Java L3/");
-	private static final String PREFIX = "commit";
+	private static final String PREFIX = "git-br";
 
 	public static void main(String[] args) throws Exception {
 		@SuppressWarnings("all")
@@ -53,19 +53,23 @@ public class SendEmails {
 		final Map<String, IGrade> grades = JsonbUtils.fromJson(
 				Files.readString(WORK_DIR.resolve("all grades " + PREFIX + ".json")), type, JsonGrade.asAdapter());
 
-		final ImmutableSet<Email> emails = grades.entrySet().stream()
+		final Map<String, IGrade> gradesFiltered = grades.entrySet().stream().filter(e -> e.getKey().equals("…"))
+				.collect(ImmutableMap.toImmutableMap(Map.Entry::getKey, Map.Entry::getValue));
+//		final Map<String, IGrade> gradesFiltered = grades;
+
+		final ImmutableSet<Email> emails = gradesFiltered.entrySet().stream()
 				.map(e -> asEmail(usernames.get(e.getKey()), e.getValue())).collect(ImmutableSet.toImmutableSet());
 //
 		final ImmutableSet<Email> effectiveEmails = emails;
 //		final ImmutableSet<Email> effectiveEmails = emails.stream().limit(1).collect(ImmutableSet.toImmutableSet());
-//		LOGGER.info("Prepared {}.", effectiveEmails);
+		LOGGER.info("Prepared {}.", effectiveEmails);
 
 		final ImmutableSet<Message> sent = Emailer.send(effectiveEmails);
 		LOGGER.info("Sent {} messages.", sent.size());
 	}
 
 	private static Email asEmail(StudentOnGitHubKnown student, IGrade grade) {
-		final Document doc = HtmlGrade.asHtml(grade, "Grade " + PREFIX, 1);
+		final Document doc = HtmlGrade.asHtml(grade, "Grade " + PREFIX, 20);
 //		final String emailStr = student.asStudentOnMyCourse().getEmail();
 		final String emailStr = "olivier.cailloux@INVALIDdauphine.fr";
 		final InternetAddress address = Utils

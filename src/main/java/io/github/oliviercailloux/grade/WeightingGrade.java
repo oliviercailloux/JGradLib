@@ -1,6 +1,7 @@
 package io.github.oliviercailloux.grade;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkNotNull;
 
 import java.util.Collection;
 import java.util.List;
@@ -58,7 +59,12 @@ public class WeightingGrade implements IGrade {
 	 *                is not used).
 	 */
 	public static WeightingGrade from(Map<Criterion, ? extends IGrade> grades, Map<Criterion, Double> weights) {
-		return new WeightingGrade(grades, weights);
+		return from(grades, weights, "");
+	}
+
+	public static WeightingGrade from(Map<Criterion, ? extends IGrade> grades, Map<Criterion, Double> weights,
+			String comment) {
+		return new WeightingGrade(grades, weights, comment);
 	}
 
 	/**
@@ -66,36 +72,50 @@ public class WeightingGrade implements IGrade {
 	 *               sub-grades.
 	 */
 	@JsonbCreator
-	public static WeightingGrade fromList(@JsonbProperty("subGrades") List<CriterionGradeWeight> grades) {
+	public static WeightingGrade fromList(@JsonbProperty("subGrades") List<CriterionGradeWeight> grades,
+			@JsonbProperty("comment") String comment) {
 		/**
 		 * The list type (rather than set) is required for json to deserialize in the
 		 * right order.
 		 */
-		return from(grades);
+		return from(grades, comment);
+	}
+
+	public static WeightingGrade from(Collection<CriterionGradeWeight> grades) {
+		return from(grades, "");
 	}
 
 	/**
 	 * @param grades its iteration order is used to determine the order of the
 	 *               sub-grades.
 	 */
-	public static WeightingGrade from(Collection<CriterionGradeWeight> grades) {
+	public static WeightingGrade from(Collection<CriterionGradeWeight> grades, String comment) {
 		final Object gr = grades.iterator().next();
 		LOGGER.debug("Grade: {}, type: {}.", gr, gr.getClass());
 		final ImmutableMap<Criterion, IGrade> gradesByCriterion = grades.stream()
 				.collect(ImmutableMap.toImmutableMap((g) -> g.getCriterion(), (g) -> g.getGrade()));
 		final ImmutableMap<Criterion, Double> weights = grades.stream()
 				.collect(ImmutableMap.toImmutableMap((g) -> g.getCriterion(), (g) -> g.getWeight()));
-		return new WeightingGrade(gradesByCriterion, weights);
+		return new WeightingGrade(gradesByCriterion, weights, comment);
 	}
 
 	public static WeightingGrade proportional(Criterion c1, IGrade g1, Criterion c2, IGrade g2) {
-		return WeightingGrade.from(ImmutableMap.of(c1, g1, c2, g2), ImmutableMap.of(c1, 0.5d, c2, 0.5d));
+		return proportional(c1, g1, c2, g2, "");
+	}
+
+	public static WeightingGrade proportional(Criterion c1, IGrade g1, Criterion c2, IGrade g2, String comment) {
+		return WeightingGrade.from(ImmutableMap.of(c1, g1, c2, g2), ImmutableMap.of(c1, 0.5d, c2, 0.5d), comment);
 	}
 
 	public static WeightingGrade proportional(Criterion c1, IGrade g1, Criterion c2, IGrade g2, Criterion c3,
 			IGrade g3) {
+		return proportional(c1, g1, c2, g2, c3, g3, "");
+	}
+
+	public static WeightingGrade proportional(Criterion c1, IGrade g1, Criterion c2, IGrade g2, Criterion c3, IGrade g3,
+			String comment) {
 		return WeightingGrade.from(ImmutableMap.of(c1, g1, c2, g2, c3, g3),
-				ImmutableMap.of(c1, 1d / 3d, c2, 1d / 3d, c3, 1d / 3d));
+				ImmutableMap.of(c1, 1d / 3d, c2, 1d / 3d, c3, 1d / 3d), comment);
 	}
 
 	private static final double MAX_MARK = 1d;
@@ -110,7 +130,9 @@ public class WeightingGrade implements IGrade {
 	 */
 	private final ImmutableMap<Criterion, Double> weights;
 
-	private WeightingGrade(Map<Criterion, ? extends IGrade> subGrades, Map<Criterion, Double> weights) {
+	private final String comment;
+
+	private WeightingGrade(Map<Criterion, ? extends IGrade> subGrades, Map<Criterion, Double> weights, String comment) {
 		checkArgument(weights.values().stream().allMatch((d) -> d != 0d && Double.isFinite(d)));
 		checkArgument(weights.values().stream().anyMatch((d) -> d > 0d));
 		checkArgument(subGrades.values().stream().allMatch((g) -> 0d <= g.getPoints() && g.getPoints() <= 1d));
@@ -125,6 +147,7 @@ public class WeightingGrade implements IGrade {
 		this.weights = subGrades.keySet().stream().collect(ImmutableMap.toImmutableMap((c) -> c,
 				(c) -> weights.get(c) > 0d ? weights.get(c) / sumPosWeights : weights.get(c)));
 		this.subGrades = ImmutableMap.copyOf(subGrades);
+		this.comment = checkNotNull(comment);
 	}
 
 	@Override
@@ -141,7 +164,7 @@ public class WeightingGrade implements IGrade {
 
 	@Override
 	public String getComment() {
-		return String.format("Weighted average");
+		return comment;
 	}
 
 	@JsonbTransient

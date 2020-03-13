@@ -26,17 +26,17 @@ import io.github.oliviercailloux.git.fs.GitFileSystemProvider;
 import io.github.oliviercailloux.git.fs.GitRepoFileSystem;
 import io.github.oliviercailloux.grade.IGrade;
 
-class ExDepGitGraderTest {
+class ExDepGitGraderTests {
 
 	@SuppressWarnings("unused")
-	private static final Logger LOGGER = LoggerFactory.getLogger(ExDepGitGraderTest.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(ExDepGitGraderTests.class);
 
 	@Test
 	void testGradeBad() throws Exception {
 		final GitUri gitUri = GitUri
 				.fromGitUri(URI.create("https://github.com/oliviercailloux/google-or-tools-java.git"));
 		try (Repository repository = new InMemoryRepository(new DfsRepositoryDescription("myrepo"))) {
-			repository.create();
+			repository.create(true);
 			new GitCloner().clone(gitUri, repository);
 
 			try (GitRepoFileSystem gitFs = new GitFileSystemProvider().newFileSystemFromRepository(repository)) {

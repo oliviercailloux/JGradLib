@@ -25,43 +25,14 @@ import io.github.oliviercailloux.grade.GradingException;
 
 public class MavenManager {
 
-	public boolean test(Path pom) throws GradingException {
-		return command(pom, "test");
-	}
-
-	private boolean command(Path pom, String goal) throws GradingException {
-		InvocationRequest request = new DefaultInvocationRequest();
-		request.setInputStream(new ByteArrayInputStream(new byte[] {}));
-		final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-		request.setOutputHandler(new PrintStreamHandler(new PrintStream(baos), true));
-		request.setPomFile(pom.toFile());
-		request.setGoals(ImmutableList.of(goal));
-//		if (!enableTests) {
-//			final Properties properties = new Properties();
-//			properties.setProperty("skipTests", "true");
-//			request.setProperties(properties);
-//		}
-		Invoker invoker = new DefaultInvoker();
-		invoker.setLocalRepositoryDirectory(new File("/home/olivier/.m2/repository"));
-		invoker.setMavenHome(new File("/usr/share/maven"));
-		final InvocationResult result;
-		try {
-			result = invoker.execute(request);
-		} catch (MavenInvocationException e) {
-			throw new GradingException(e);
-		}
-
-		output = new String(baos.toByteArray(), StandardCharsets.UTF_8);
-		LOGGER.debug("Maven output: {}.", output);
-
-		return (result.getExitCode() == 0);
-	}
-
+	@SuppressWarnings("unused")
+	private static final Logger LOGGER = LoggerFactory.getLogger(MavenManager.class);
 	public String getOutput() {
 		checkState(output != null);
 		return output;
 	}
 
+	private String output;
 	public MavenManager() {
 		output = null;
 	}
@@ -70,7 +41,35 @@ public class MavenManager {
 		return command(pom, "compile");
 	}
 
-	@SuppressWarnings("unused")
-	private static final Logger LOGGER = LoggerFactory.getLogger(MavenManager.class);
-	private String output;
+	public boolean test(Path pom) throws GradingException {
+		return command(pom, "test");
+	}
+
+	private boolean command(Path pom, String goal) throws GradingException {
+			InvocationRequest request = new DefaultInvocationRequest();
+			request.setInputStream(new ByteArrayInputStream(new byte[] {}));
+			final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+			request.setOutputHandler(new PrintStreamHandler(new PrintStream(baos), true));
+			request.setPomFile(pom.toFile());
+			request.setGoals(ImmutableList.of(goal));
+	//		if (!enableTests) {
+	//			final Properties properties = new Properties();
+	//			properties.setProperty("skipTests", "true");
+	//			request.setProperties(properties);
+	//		}
+			Invoker invoker = new DefaultInvoker();
+			invoker.setLocalRepositoryDirectory(new File("/home/olivier/.m2/repository"));
+			invoker.setMavenHome(new File("/usr/share/maven"));
+			final InvocationResult result;
+			try {
+				result = invoker.execute(request);
+			} catch (MavenInvocationException e) {
+				throw new GradingException(e);
+			}
+	
+			output = new String(baos.toByteArray(), StandardCharsets.UTF_8);
+			LOGGER.debug("Maven output: {}.", output);
+	
+			return (result.getExitCode() == 0);
+		}
 }

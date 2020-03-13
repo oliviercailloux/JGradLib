@@ -3,9 +3,12 @@ package io.github.oliviercailloux.java_grade.testers;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.lang.management.ManagementFactory;
 import java.lang.management.OperatingSystemMXBean;
 import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.util.regex.Pattern;
 
@@ -17,7 +20,6 @@ import com.sun.management.UnixOperatingSystemMXBean;
 
 import io.github.oliviercailloux.git.FileContent;
 import io.github.oliviercailloux.grade.context.FilesSource;
-import io.github.oliviercailloux.utils.Utils;
 
 public class MarkHelper {
 
@@ -76,9 +78,16 @@ public class MarkHelper {
 	}
 
 	public static String getContentOrEmpty(Path path) {
-		if (!Files.exists(path)) {
+		try {
+			return Files.readString(path);
+		} catch (@SuppressWarnings("unused") NoSuchFileException e) {
 			return "";
+		} catch (IOException e) {
+			throw new UncheckedIOException(e);
 		}
-		return Utils.getOrThrowIO(() -> Files.readString(path));
+//		if (!Files.exists(path)) {
+//			return "";
+//		}
+//		return Utils.getOrThrow(() -> Files.readString(path));
 	}
 }
