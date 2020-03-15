@@ -38,6 +38,7 @@ import io.github.oliviercailloux.grade.GradeTestsHelper;
 import io.github.oliviercailloux.grade.WeightingGrade;
 import io.github.oliviercailloux.grade.format.HtmlGrade;
 import io.github.oliviercailloux.grade.format.json.JsonGrade;
+import io.github.oliviercailloux.java_grade.utils.SendEmails;
 import io.github.oliviercailloux.utils.Utils;
 import io.github.oliviercailloux.xml.HtmlDocument;
 import io.github.oliviercailloux.xml.XmlUtils;
@@ -236,6 +237,16 @@ public class EmailerTests {
 				}
 			}
 		}
+	}
+
+	@Test
+	void testRetrieve() throws Exception {
+		final ImmutableSet<Message> toMe = Emailer.searchSentToIn(
+				new InternetAddress("olivier.cailloux@INVALIDdauphine.fr", "Olivier Cailloux"), "Éléments envoyés");
+		assertTrue(toMe.size() >= 30);
+		final Message message = toMe.iterator().next();
+		LOGGER.info(message.getContentType());
+		SendEmails.getJsonData(message);
 	}
 
 	private static String getToken() {

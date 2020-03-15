@@ -33,7 +33,8 @@ public class JsonGrade {
 		final WeightingGrade grade = JsonbUtils.fromJson(json.toString(), WeightingGrade.class,
 				JsonCriterion.asAdapter(), toCriterionGradeWeightAdapter());
 		final double sourcePoints = json.getJsonNumber("points").doubleValue();
-		checkArgument(DoubleMath.fuzzyEquals(sourcePoints, grade.getPoints(), 1e-4));
+		checkArgument(DoubleMath.fuzzyEquals(sourcePoints, grade.getPoints(), 1e-4),
+				"Computed " + grade.getPoints() + "; read " + sourcePoints + " - " + json);
 		return grade;
 	}
 

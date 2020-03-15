@@ -1,5 +1,6 @@
 package io.github.oliviercailloux.java_grade.utils;
 
+import java.io.IOException;
 import java.lang.reflect.Type;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -7,17 +8,24 @@ import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 import javax.mail.Message;
+import javax.mail.MessagingException;
 import javax.mail.internet.InternetAddress;
+import javax.mail.internet.MimeBodyPart;
+import javax.mail.internet.MimeMessage;
+import javax.mail.internet.MimeMultipart;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.MoreCollectors;
 
 import io.github.oliviercailloux.email.Email;
 import io.github.oliviercailloux.email.Emailer;
@@ -28,6 +36,7 @@ import io.github.oliviercailloux.grade.format.HtmlGrade;
 import io.github.oliviercailloux.grade.format.json.JsonGrade;
 import io.github.oliviercailloux.grade.mycourse.json.JsonStudentOnGitHubKnown;
 import io.github.oliviercailloux.json.JsonbUtils;
+import io.github.oliviercailloux.json.PrintableJsonObject;
 import io.github.oliviercailloux.utils.Utils;
 
 public class SendEmails {
@@ -36,6 +45,10 @@ public class SendEmails {
 
 	private static final Path WORK_DIR = Paths.get("../../Java L3/");
 	private static final String PREFIX = "git-br";
+
+	public static final String FILE_NAME = "data.json";
+
+	public static final String MIME_SUBTYPE = "json";
 
 	public static void main(String[] args) throws Exception {
 		@SuppressWarnings("all")
@@ -74,8 +87,51 @@ public class SendEmails {
 		final String emailStr = "olivier.cailloux@INVALIDdauphine.fr";
 		final InternetAddress address = Utils
 				.getOrThrow(() -> new InternetAddress(emailStr, student.getFirstName() + " " + student.getLastName()));
-		final Email email = Email.withDocumentAndFile(doc, "data.json", JsonGrade.asJson(grade).toString(), "json",
+		final Email email = Email.withDocumentAndFile(doc, FILE_NAME, JsonGrade.asJson(grade).toString(), MIME_SUBTYPE,
 				address);
 		return email;
+	}
+
+	public static String getLastEmailTo(InternetAddress recipient) {
+		final ImmutableSet<Message> sent = Utils
+				.getOrThrow(() -> Emailer.searchSentToIn(recipient, "Éléments envoyés"));
+
+	}
+
+	public static Optional<PrintableJsonObject> getJsonData(Message source) {
+		try {
+			if (!(source instanceof MimeMessage)) {
+				return Optional.empty();
+			}
+			LOGGER.info("Content type: {}.", source.getContentType());
+			LOGGER.info("Is mime type? {}.", source.isMimeType("multipart/mixed"));
+			if (!source.isMimeType("multipart/mixed")) {
+				return Optional.empty();
+			}
+
+			final MimeMessage mimeSource = (MimeMessage) source;
+			final ImmutableList<MimeBodyPart> parts = getParts(mimeSource);
+			final Optional<MimeBodyPart> matchingPart = parts.stream()
+					.filter(p -> Utils.getOrThrow(() -> p.isMimeType("text/" + MIME_SUBTYPE)))
+					.filter(p -> Utils.getOrThrow(() -> p.getFileName().equals(FILE_NAME)))
+					.collect(MoreCollectors.toOptional());
+			final Optional<Object> content = matchingPart.map(Utils.uncheck(MimeBodyPart::getContent));
+			LOGGER.info("Content: {}.", content);
+			return null;
+		} catch (IOException | MessagingException e) {
+			throw new IllegalStateException(e);
+		}
+	}
+
+	private static ImmutableList<MimeBodyPart> getParts(final MimeMessage source)
+			throws IOException, MessagingException {
+		final MimeMultipart multipart = (MimeMultipart) source.getContent();
+		final ImmutableList.Builder<MimeBodyPart> partsBuilder = ImmutableList.<MimeBodyPart>builder();
+		for (int i = 0; i < multipart.getCount(); ++i) {
+			final MimeBodyPart part = (MimeBodyPart) multipart.getBodyPart(i);
+			partsBuilder.add(part);
+		}
+		final ImmutableList<MimeBodyPart> parts = partsBuilder.build();
+		return parts;
 	}
 }

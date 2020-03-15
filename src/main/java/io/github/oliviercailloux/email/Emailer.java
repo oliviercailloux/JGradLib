@@ -11,6 +11,7 @@ import java.nio.file.Paths;
 import java.util.Collection;
 import java.util.Properties;
 import java.util.Set;
+import java.util.function.Consumer;
 import java.util.stream.Stream;
 
 import javax.mail.FetchProfile;
@@ -351,5 +352,18 @@ public class Emailer {
 		}
 		final String content = Utils.getOrThrow(() -> Files.readString(path));
 		return content.replaceAll("\n", "");
+	}
+
+	public static void actOn(String folderName, Consumer<Folder> consumer)
+			throws NoSuchProviderException, MessagingException {
+		final Session session = getImapSession();
+		try (Store store = session.getStore()) {
+			LOGGER.info("Connecting.");
+			store.connect(USERNAME, getToken());
+			try (Folder folder = store.getFolder(folderName)) {
+				folder.open(Folder.READ_ONLY);
+				consumer.accept(folder);
+			}
+		}
 	}
 }
