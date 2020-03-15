@@ -165,76 +165,68 @@ public class Emailer {
 		final ImmutableSet<Message> personalSearch;
 		final ImmutableSet<Message> addressSearch;
 		final ImmutableSet<Message> fullAddressSearch;
-		{
-			final Session session = getImapSession();
-			try (Store store = session.getStore()) {
-				LOGGER.info("Connecting.");
-				store.connect(USERNAME, getToken());
-				try (Folder folder = store.getFolder(folderName)) {
-					folder.open(Folder.READ_ONLY);
-					partialAddressSearch = searchIn(
-							new RecipientStringTerm(RecipientType.TO, getPart(address.getAddress())), folder);
-					personalSearch = searchIn(new RecipientStringTerm(RecipientType.TO, address.getPersonal()), folder);
+		final Session session = getImapSession();
+		try (Store store = session.getStore()) {
+			LOGGER.info("Connecting.");
+			store.connect(USERNAME, getToken());
+			try (Folder folder = store.getFolder(folderName)) {
+				folder.open(Folder.READ_ONLY);
+				partialAddressSearch = searchIn(
+						new RecipientStringTerm(RecipientType.TO, getPart(address.getAddress())), folder);
+				personalSearch = searchIn(new RecipientStringTerm(RecipientType.TO, address.getPersonal()), folder);
 
-					addressSearch = searchIn(new RecipientStringTerm(RecipientType.TO, address.getAddress()), folder);
-					fullAddressSearch = searchIn(new RecipientTerm(RecipientType.TO, address), folder);
+				addressSearch = searchIn(new RecipientStringTerm(RecipientType.TO, address.getAddress()), folder);
+				fullAddressSearch = searchIn(new RecipientTerm(RecipientType.TO, address), folder);
+			}
+
+			Verify.verify(partialAddressSearch.containsAll(addressSearch));
+			Verify.verify(addressSearch.containsAll(fullAddressSearch));
+			Verify.verify(personalSearch.containsAll(fullAddressSearch));
+
+			final ImmutableSet<Integer> partialNumbers = partialAddressSearch.stream().map(Message::getMessageNumber)
+					.collect(ImmutableSet.toImmutableSet());
+			Verify.verify(partialAddressSearch.size() == partialNumbers.size());
+			final ImmutableSet<Integer> fullNumbers = fullAddressSearch.stream().map(Message::getMessageNumber)
+					.collect(ImmutableSet.toImmutableSet());
+			Verify.verify(fullAddressSearch.size() == fullNumbers.size());
+
+			final ImmutableSet.Builder<Message> candidatesBuilder = ImmutableSet.<Message>builder();
+			candidatesBuilder.addAll(partialAddressSearch);
+			personalSearch.stream().filter(m -> !partialNumbers.contains(m.getMessageNumber()))
+					.forEachOrdered(candidatesBuilder::add);
+			final ImmutableSet<Message> candidates = candidatesBuilder.build();
+
+			final ImmutableSet<Message> matching = candidates.stream()
+					.filter(m -> Stream.of(Utils.getOrThrow(() -> m.getRecipients(RecipientType.TO)))
+							.map(a -> (InternetAddress) a).anyMatch(Predicates.equalTo(address)))
+					.collect(ImmutableSet.toImmutableSet());
+
+			final ImmutableSet<Integer> matchingNumbers = matching.stream().map(Message::getMessageNumber)
+					.collect(ImmutableSet.toImmutableSet());
+
+			{
+				final ImmutableSet<Integer> personalNumbers = personalSearch.stream().map(Message::getMessageNumber)
+						.collect(ImmutableSet.toImmutableSet());
+				Verify.verify(personalSearch.size() == personalNumbers.size());
+				final ImmutableSet<Integer> candidatesNumbers = candidates.stream().map(Message::getMessageNumber)
+						.collect(ImmutableSet.toImmutableSet());
+				Verify.verify(candidates.size() == candidatesNumbers.size());
+				final Set<Integer> candidatesNumbersByUnionOnNumbers = Sets.union(partialNumbers, personalNumbers);
+				Verify.verify(candidatesNumbers.equals(candidatesNumbersByUnionOnNumbers));
+				assertEquals(matching.size(), matchingNumbers.size());
+			}
+
+			final Set<Integer> missed = Sets.difference(matchingNumbers, fullNumbers);
+			if (!missed.isEmpty()) {
+				if (fullAddressSearch.isEmpty()) {
+					LOGGER.warn("Search initially missed everything: {} (has been extended).", missed);
+				} else {
+					LOGGER.warn("Search initially missed {} (has been extended).", missed);
 				}
 			}
+
+			return matching;
 		}
-
-		/**
-		 * In general, this should hold:
-		 * partialAddressSearch.containsAll(addressSearch);
-		 * addressSearch.containsAll(fullAddressSearch);
-		 * personalSearch.containsAll(fullAddressSearch). In the special case of (my?)
-		 * Exchange server, the following holds. (Most of the remaining code is thus
-		 * actually not useful in this special case.)
-		 */
-		Verify.verify(addressSearch.isEmpty());
-		Verify.verify(fullAddressSearch.isEmpty());
-
-		final ImmutableSet<Integer> partialNumbers = partialAddressSearch.stream().map(Message::getMessageNumber)
-				.collect(ImmutableSet.toImmutableSet());
-		Verify.verify(partialAddressSearch.size() == partialNumbers.size());
-		final ImmutableSet<Integer> fullNumbers = fullAddressSearch.stream().map(Message::getMessageNumber)
-				.collect(ImmutableSet.toImmutableSet());
-		Verify.verify(fullAddressSearch.size() == fullNumbers.size());
-
-		final ImmutableSet.Builder<Message> candidatesBuilder = ImmutableSet.<Message>builder();
-		candidatesBuilder.addAll(partialAddressSearch);
-		personalSearch.stream().filter(m -> !partialNumbers.contains(m.getMessageNumber()))
-				.forEachOrdered(candidatesBuilder::add);
-		final ImmutableSet<Message> candidates = candidatesBuilder.build();
-
-		final ImmutableSet<Message> matching = candidates.stream()
-				.filter(m -> Stream.of(Utils.getOrThrow(() -> m.getRecipients(RecipientType.TO)))
-						.map(a -> (InternetAddress) a).anyMatch(Predicates.equalTo(address)))
-				.collect(ImmutableSet.toImmutableSet());
-
-		final ImmutableSet<Integer> matchingNumbers = matching.stream().map(Message::getMessageNumber)
-				.collect(ImmutableSet.toImmutableSet());
-
-		{
-			final ImmutableSet<Integer> personalNumbers = personalSearch.stream().map(Message::getMessageNumber)
-					.collect(ImmutableSet.toImmutableSet());
-			Verify.verify(personalSearch.size() == personalNumbers.size());
-			final ImmutableSet<Integer> candidatesNumbers = candidates.stream().map(Message::getMessageNumber)
-					.collect(ImmutableSet.toImmutableSet());
-			Verify.verify(candidates.size() == candidatesNumbers.size());
-			final Set<Integer> candidatesNumbersByUnionOnNumbers = Sets.union(partialNumbers, personalNumbers);
-			Verify.verify(candidatesNumbers.equals(candidatesNumbersByUnionOnNumbers));
-			assertEquals(matching.size(), matchingNumbers.size());
-		}
-
-//		final Set<Integer> missed = Sets.difference(matchingNumbers, fullNumbers);
-//		if (!missed.isEmpty()) {
-//			if (fullAddressSearch.isEmpty()) {
-//				LOGGER.debug("Search initially missed everything: {} (has been extended).", missed);
-//			} else {
-//				LOGGER.debug("Search initially missed {} (has been extended).", missed);
-//			}
-//		}
-		return matching;
 	}
 
 	private static String getPart(String addressString) {
