@@ -53,7 +53,7 @@ import io.github.oliviercailloux.grade.format.json.JsonGrade;
 import io.github.oliviercailloux.grade.markers.MarkingPredicates;
 import io.github.oliviercailloux.grade.markers.Marks;
 import io.github.oliviercailloux.java_grade.GraderOrchestrator;
-import io.github.oliviercailloux.java_grade.testers.MarkHelper;
+import io.github.oliviercailloux.java_grade.testers.JavaMarkHelper;
 import io.github.oliviercailloux.json.JsonbUtils;
 import io.github.oliviercailloux.utils.Utils;
 
@@ -244,7 +244,7 @@ public class ExDepGitGrader {
 				.filter((c) -> !c.getAuthorIdent().getName().equals("Olivier Cailloux"))
 				.collect(ImmutableList.toImmutableList());
 		LOGGER.info("All: {}; own: {}.", GitUtils.toOIds(commits), GitUtils.toOIds(commitsOwn));
-		final Predicate<? super RevCommit> byGH = MarkHelper::committerIsGitHub;
+		final Predicate<? super RevCommit> byGH = JavaMarkHelper::committerIsGitHub;
 		LOGGER.info("GH: {}.", GitUtils.toOIds(commits.stream().filter(byGH).collect(ImmutableList.toImmutableList())));
 		commitsManual = commitsOwn.stream().filter(byGH.negate()).collect(ImmutableList.toImmutableList());
 		final String comment = (!commitsOwn.isEmpty() ? "Own: " + GitUtils.toOIds(commitsOwn) + ". " : "")

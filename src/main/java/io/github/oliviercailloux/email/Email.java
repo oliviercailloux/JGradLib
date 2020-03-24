@@ -13,6 +13,8 @@ import org.w3c.dom.Document;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Strings;
 
+import io.github.oliviercailloux.xml.HtmlDocument;
+
 public class Email {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(Email.class);
@@ -43,6 +45,10 @@ public class Email {
 	private final String fileName;
 	private final String fileContent;
 	private final String fileSubtype;
+
+	public String getSubject() {
+		return HtmlDocument.getOnlyElementWithLocalName(getDocument(), "title").getTextContent();
+	}
 
 	public Document getDocument() {
 		return document;

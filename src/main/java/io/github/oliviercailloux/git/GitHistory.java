@@ -41,7 +41,7 @@ public interface GitHistory<E extends ObjectId> {
 	/**
 	 * @return the nodes with no children (no predecessor), from which the
 	 *         “successors” (parent-of) relation starts; the most recent node on
-	 *         each branch.
+	 *         each branch of the tree (not meaning branch in the git sense here).
 	 *
 	 * @return empty iff the graph is empty.
 	 */

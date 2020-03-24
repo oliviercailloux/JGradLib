@@ -55,7 +55,7 @@ import io.github.oliviercailloux.grade.context.FilesSource;
 import io.github.oliviercailloux.grade.context.GitFullContext;
 import io.github.oliviercailloux.grade.contexters.FullContextInitializer;
 import io.github.oliviercailloux.grade.markers.Marks;
-import io.github.oliviercailloux.java_grade.testers.MarkHelper;
+import io.github.oliviercailloux.java_grade.testers.JavaMarkHelper;
 
 public class ExGitGrader {
 	private double maxGrade;
@@ -108,7 +108,7 @@ public class ExGitGrader {
 		final FilesSource firstRootCommitReader = fullContext.getFilesReader(firstRootCommitOpt);
 
 		final ImmutableSet<RevCommit> byGitHub = history.getGraph().nodes().stream()
-				.filter(MarkHelper::committerIsGitHub).collect(ImmutableSet.toImmutableSet());
+				.filter(JavaMarkHelper::committerIsGitHub).collect(ImmutableSet.toImmutableSet());
 		{
 			final Mark mark;
 			if (!byGitHub.isEmpty()) {

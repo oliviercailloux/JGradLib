@@ -1,7 +1,7 @@
 package io.github.oliviercailloux.email;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static com.google.common.base.Verify.verify;
 
 import java.io.UnsupportedEncodingException;
 import java.nio.charset.StandardCharsets;
@@ -11,7 +11,7 @@ import java.nio.file.Paths;
 import java.util.Collection;
 import java.util.Properties;
 import java.util.Set;
-import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.stream.Stream;
 
 import javax.mail.FetchProfile;
@@ -43,7 +43,6 @@ import com.google.common.collect.MoreCollectors;
 import com.google.common.collect.Sets;
 
 import io.github.oliviercailloux.utils.Utils;
-import io.github.oliviercailloux.xml.HtmlDocument;
 import io.github.oliviercailloux.xml.XmlUtils;
 
 public class Emailer {
@@ -124,32 +123,34 @@ public class Emailer {
 			store.connect(USERNAME, getToken());
 			try (Folder folder = store.getFolder(folderName)) {
 				folder.open(Folder.READ_ONLY);
-				found = searchIn(term, folder);
+				found = searchIn(term, folder, true);
 			}
 		}
 		return found;
 	}
 
-	private static ImmutableSet<Message> searchIn(SearchTerm term, Folder folder) throws MessagingException {
+	public static ImmutableSet<Message> searchIn(SearchTerm term, Folder folder, boolean cache) {
 		final ImmutableSet<Message> found;
-		final Message[] asArray = folder.search(term);
-		/**
-		 * As message is lazily filled up, we need to retrieve it before the folder gets
-		 * closed.
-		 */
-		final FetchProfile fp = new FetchProfile();
-		fp.add(FetchProfile.Item.ENVELOPE);
-		fp.add(FetchProfile.Item.CONTENT_INFO);
-		fp.add(FetchProfile.Item.SIZE);
-		fp.add(FetchProfile.Item.FLAGS);
-		folder.fetch(asArray, fp);
-		/**
-		 * Asking for the addresses, even with this fetch order, fails. Bugs seem common
-		 * in this area, see https://javaee.github.io/javamail/FAQ#imapserverbug, though
-		 * this may not be a bug. Anyway, let’s force fetching headers to avoid this.
-		 */
-		for (Message message : asArray) {
-			message.getAllHeaders();
+		final Message[] asArray = Utils.getOrThrow(() -> folder.search(term));
+		if (cache) {
+			/**
+			 * As message is lazily filled up, we need to retrieve it before the folder gets
+			 * closed.
+			 */
+			final FetchProfile fp = new FetchProfile();
+			fp.add(FetchProfile.Item.ENVELOPE);
+			fp.add(FetchProfile.Item.CONTENT_INFO);
+			fp.add(FetchProfile.Item.SIZE);
+			fp.add(FetchProfile.Item.FLAGS);
+			Utils.uncheck(() -> folder.fetch(asArray, fp));
+			/**
+			 * Asking for the addresses, even with this fetch order, fails. Bugs seem common
+			 * in this area, see https://javaee.github.io/javamail/FAQ#imapserverbug, though
+			 * this may not be a bug. Anyway, let’s force fetching headers to avoid this.
+			 */
+			for (Message message : asArray) {
+				Utils.uncheck(() -> message.getAllHeaders());
+			}
 		}
 		found = ImmutableSet.copyOf(asArray);
 		return found;
@@ -157,6 +158,18 @@ public class Emailer {
 
 	public static ImmutableSet<Message> searchSentToIn(InternetAddress address, String folderName)
 			throws NoSuchProviderException, MessagingException {
+		final Session session = getImapSession();
+		try (Store store = session.getStore()) {
+			LOGGER.info("Connecting.");
+			store.connect(USERNAME, getToken());
+			try (Folder folder = store.getFolder(folderName)) {
+				folder.open(Folder.READ_ONLY);
+				return searchSentToIn(address, folder);
+			}
+		}
+	}
+
+	public static ImmutableSet<Message> searchSentToIn(InternetAddress address, Folder folder) {
 		/**
 		 * Because of bugs in some IMAP servers, we extend the search by searching on
 		 * only parts of the addresses, then filter the results.
@@ -165,71 +178,63 @@ public class Emailer {
 		final ImmutableSet<Message> personalSearch;
 		final ImmutableSet<Message> addressSearch;
 		final ImmutableSet<Message> fullAddressSearch;
-		final Session session = getImapSession();
-		try (Store store = session.getStore()) {
-			LOGGER.info("Connecting.");
-			store.connect(USERNAME, getToken());
-			try (Folder folder = store.getFolder(folderName)) {
-				folder.open(Folder.READ_ONLY);
-				partialAddressSearch = searchIn(
-						new RecipientStringTerm(RecipientType.TO, getPart(address.getAddress())), folder);
-				personalSearch = searchIn(new RecipientStringTerm(RecipientType.TO, address.getPersonal()), folder);
+		partialAddressSearch = searchIn(new RecipientStringTerm(RecipientType.TO, getPart(address.getAddress())),
+				folder, true);
+		personalSearch = searchIn(new RecipientStringTerm(RecipientType.TO, address.getPersonal()), folder, true);
 
-				addressSearch = searchIn(new RecipientStringTerm(RecipientType.TO, address.getAddress()), folder);
-				fullAddressSearch = searchIn(new RecipientTerm(RecipientType.TO, address), folder);
-			}
+		addressSearch = searchIn(new RecipientStringTerm(RecipientType.TO, address.getAddress()), folder, true);
+		fullAddressSearch = searchIn(new RecipientTerm(RecipientType.TO, address), folder, true);
 
-			Verify.verify(partialAddressSearch.containsAll(addressSearch));
-			Verify.verify(addressSearch.containsAll(fullAddressSearch));
-			Verify.verify(personalSearch.containsAll(fullAddressSearch));
+		Verify.verify(partialAddressSearch.containsAll(addressSearch));
+		Verify.verify(addressSearch.containsAll(fullAddressSearch));
+		Verify.verify(personalSearch.containsAll(fullAddressSearch));
 
-			final ImmutableSet<Integer> partialNumbers = partialAddressSearch.stream().map(Message::getMessageNumber)
+		final ImmutableSet<Integer> partialNumbers = partialAddressSearch.stream().map(Message::getMessageNumber)
+				.collect(ImmutableSet.toImmutableSet());
+		Verify.verify(partialAddressSearch.size() == partialNumbers.size());
+		final ImmutableSet<Integer> fullNumbers = fullAddressSearch.stream().map(Message::getMessageNumber)
+				.collect(ImmutableSet.toImmutableSet());
+		Verify.verify(fullAddressSearch.size() == fullNumbers.size());
+
+		final ImmutableSet.Builder<Message> candidatesBuilder = ImmutableSet.<Message>builder();
+		candidatesBuilder.addAll(partialAddressSearch);
+		personalSearch.stream().filter(m -> !partialNumbers.contains(m.getMessageNumber()))
+				.forEachOrdered(candidatesBuilder::add);
+		final ImmutableSet<Message> candidates = candidatesBuilder.build();
+
+		final ImmutableSet<Message> matching = candidates.stream()
+				.filter(m -> Stream.of(Utils.getOrThrow(() -> m.getRecipients(RecipientType.TO)))
+						.map(a -> (InternetAddress) a).anyMatch(Predicates.equalTo(address)))
+				.collect(ImmutableSet.toImmutableSet());
+
+		final ImmutableSet<Integer> matchingNumbers = matching.stream().map(Message::getMessageNumber)
+				.collect(ImmutableSet.toImmutableSet());
+
+		{
+			final ImmutableSet<Integer> personalNumbers = personalSearch.stream().map(Message::getMessageNumber)
 					.collect(ImmutableSet.toImmutableSet());
-			Verify.verify(partialAddressSearch.size() == partialNumbers.size());
-			final ImmutableSet<Integer> fullNumbers = fullAddressSearch.stream().map(Message::getMessageNumber)
+			Verify.verify(personalSearch.size() == personalNumbers.size());
+			final ImmutableSet<Integer> candidatesNumbers = candidates.stream().map(Message::getMessageNumber)
 					.collect(ImmutableSet.toImmutableSet());
-			Verify.verify(fullAddressSearch.size() == fullNumbers.size());
-
-			final ImmutableSet.Builder<Message> candidatesBuilder = ImmutableSet.<Message>builder();
-			candidatesBuilder.addAll(partialAddressSearch);
-			personalSearch.stream().filter(m -> !partialNumbers.contains(m.getMessageNumber()))
-					.forEachOrdered(candidatesBuilder::add);
-			final ImmutableSet<Message> candidates = candidatesBuilder.build();
-
-			final ImmutableSet<Message> matching = candidates.stream()
-					.filter(m -> Stream.of(Utils.getOrThrow(() -> m.getRecipients(RecipientType.TO)))
-							.map(a -> (InternetAddress) a).anyMatch(Predicates.equalTo(address)))
-					.collect(ImmutableSet.toImmutableSet());
-
-			final ImmutableSet<Integer> matchingNumbers = matching.stream().map(Message::getMessageNumber)
-					.collect(ImmutableSet.toImmutableSet());
-
-			{
-				final ImmutableSet<Integer> personalNumbers = personalSearch.stream().map(Message::getMessageNumber)
-						.collect(ImmutableSet.toImmutableSet());
-				Verify.verify(personalSearch.size() == personalNumbers.size());
-				final ImmutableSet<Integer> candidatesNumbers = candidates.stream().map(Message::getMessageNumber)
-						.collect(ImmutableSet.toImmutableSet());
-				Verify.verify(candidates.size() == candidatesNumbers.size());
-				final Set<Integer> candidatesNumbersByUnionOnNumbers = Sets.union(partialNumbers, personalNumbers);
-				Verify.verify(candidatesNumbers.equals(candidatesNumbersByUnionOnNumbers));
-				assertEquals(matching.size(), matchingNumbers.size());
-			}
-
-			final Set<Integer> missed = Sets.difference(matchingNumbers, fullNumbers);
-			if (!missed.isEmpty()) {
-				if (fullAddressSearch.isEmpty()) {
-					LOGGER.warn("Search initially missed everything: {} (has been extended).", missed);
-				} else {
-					LOGGER.warn("Search initially missed {} (has been extended).", missed);
-				}
-			}
-
-			return matching;
+			Verify.verify(candidates.size() == candidatesNumbers.size());
+			final Set<Integer> candidatesNumbersByUnionOnNumbers = Sets.union(partialNumbers, personalNumbers);
+			Verify.verify(candidatesNumbers.equals(candidatesNumbersByUnionOnNumbers));
+			verify(matching.size() == matchingNumbers.size());
 		}
+
+		final Set<Integer> missed = Sets.difference(matchingNumbers, fullNumbers);
+		if (!missed.isEmpty()) {
+			if (fullAddressSearch.isEmpty()) {
+				LOGGER.warn("Search initially missed everything: {} (has been extended).", missed);
+			} else {
+				LOGGER.warn("Search initially missed {} (has been extended).", missed);
+			}
+		}
+
+		return matching;
 	}
 
-	private static String getPart(String addressString) {
+	public static String getPart(String addressString) {
 		final String[] split = addressString.split("@");
 		checkArgument(split.length == 2);
 		final String username = split[0];
@@ -283,7 +288,7 @@ public class Emailer {
 	 * @param textContent not encoded
 	 */
 	private static MimeMessage getMessage(Session session, Email email) {
-		final String subject = HtmlDocument.getOnlyElementWithLocalName(email.getDocument(), "title").getTextContent();
+		final String subject = email.getSubject();
 		final String textContent = XmlUtils.asString(email.getDocument());
 		final String utf8 = StandardCharsets.UTF_8.toString();
 		final MimeMessage message = new MimeMessage(session);
@@ -346,7 +351,7 @@ public class Emailer {
 		return content.replaceAll("\n", "");
 	}
 
-	public static void actOn(String folderName, Consumer<Folder> consumer)
+	public static <T> T fromFolder(String folderName, Function<Folder, T> function)
 			throws NoSuchProviderException, MessagingException {
 		final Session session = getImapSession();
 		try (Store store = session.getStore()) {
@@ -354,7 +359,7 @@ public class Emailer {
 			store.connect(USERNAME, getToken());
 			try (Folder folder = store.getFolder(folderName)) {
 				folder.open(Folder.READ_ONLY);
-				consumer.accept(folder);
+				return function.apply(folder);
 			}
 		}
 	}

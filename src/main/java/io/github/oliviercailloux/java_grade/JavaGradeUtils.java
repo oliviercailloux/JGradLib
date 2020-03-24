@@ -2,7 +2,12 @@ package io.github.oliviercailloux.java_grade;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.charset.MalformedInputException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.FileSystems;
+import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.util.regex.Matcher;
@@ -13,6 +18,7 @@ import com.google.common.collect.ImmutableList;
 
 import io.github.oliviercailloux.git.FileContent;
 import io.github.oliviercailloux.grade.GradingException;
+import io.github.oliviercailloux.utils.Utils;
 
 public class JavaGradeUtils {
 	/**
@@ -58,5 +64,17 @@ public class JavaGradeUtils {
 			substracted = Path.of("");
 		}
 		return substracted;
+	}
+
+	public static String read(Path sourcePath) {
+		String content;
+		try {
+			content = Files.readString(sourcePath);
+		} catch (@SuppressWarnings("unused") MalformedInputException e) {
+			content = Utils.getOrThrow(() -> Files.readString(sourcePath, StandardCharsets.ISO_8859_1));
+		} catch (IOException e) {
+			throw new UncheckedIOException(e);
+		}
+		return content;
 	}
 }

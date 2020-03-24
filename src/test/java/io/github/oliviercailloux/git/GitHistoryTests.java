@@ -30,7 +30,7 @@ import com.google.common.graph.ImmutableGraph;
 import io.github.oliviercailloux.git.GitLocalHistory.GitRaw;
 import io.github.oliviercailloux.git.GitRawHistoryDecorator.GitRawHistory;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
-import io.github.oliviercailloux.java_grade.testers.MarkHelper;
+import io.github.oliviercailloux.java_grade.testers.JavaMarkHelper;
 import io.github.oliviercailloux.utils.Utils;
 
 class GitHistoryTests {
@@ -76,7 +76,7 @@ class GitHistoryTests {
 			LOGGER.info("Nb nodes before filtering: {}, edges: {}.", history.getGraph().nodes().size(),
 					history.getGraph().edges().size());
 			LOGGER.info("Graph before: {}.", history.getGraph().edges());
-			final GitLocalHistory manual = history.filter(o -> !MarkHelper.committerIsGitHub(basic.getCommit(o)));
+			final GitLocalHistory manual = history.filter(o -> !JavaMarkHelper.committerIsGitHub(basic.getCommit(o)));
 			LOGGER.info("Nb nodes after filtering: {}, edges: {}.", manual.getGraph().nodes().size(),
 					manual.getGraph().edges().size());
 			LOGGER.debug("Graph manual: {}.", manual.getGraph().edges());

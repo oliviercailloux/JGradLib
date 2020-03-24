@@ -25,19 +25,27 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
 /**
- * containing positive points only and strictly positive and strictly negative
- * weights (one per sub-grade). May order the grades (we may not want all
- * positive then all negative but interleaving!). The positive weights are
+ * containing positive points only and at one weights per sub-grade, at least
+ * one of which must be strictly positive. May order the grades (we may not want
+ * all positive then all negative but interleaving!). The positive weights are
  * normalized internally. The negative weights must be in [−1, 0). A negative
  * weight represents the prop. of the total points that can be lost on the
  * corresponding criterion. Example: weight is −2/20, grade is 1 (means no
  * penalty) or 0.5 (means −1/20) or 0 (means −2/20). A sub grade in the map may
  * be an AdditiveGrade (even if it’s a penalty).
  *
+ * This object authorizes zero weight because this can convey useful
+ * information. Assume a grade is a weighted sum of two exercices, with a weight
+ * that depends on something that can become zero for some students. Then the
+ * information of how good the second sub-grade is is useful, even if the weight
+ * is zero. (I had a case where a student could re-do an exercice, but the
+ * second attempt would have a low weight if the second attempt differed much
+ * from her first attempt, and possibly being zero; to prevent students from
+ * simply submitting a friend’s solution instead of correcting their own.)
+ *
  * {weights: Map<CriterionAndPoints, Double>} (non empty, all non null), this
- * implementation has only the (normalized) weights and the marks, and generates
- * the comment (a string repr of the weights and saying that it is a weighted
- * average with penalty) and the points.
+ * implementation has only the (normalized) weights and the marks and a comment,
+ * and generates the points.
  *
  * As the penalty has an absolute meaning, it is necessary that this object
  * knows the best possible marks. As a convention, it is considered to be one
@@ -133,7 +141,7 @@ public class WeightingGrade implements IGrade {
 	private final String comment;
 
 	private WeightingGrade(Map<Criterion, ? extends IGrade> subGrades, Map<Criterion, Double> weights, String comment) {
-		checkArgument(weights.values().stream().allMatch((d) -> d != 0d && Double.isFinite(d)));
+		checkArgument(weights.values().stream().allMatch((d) -> Double.isFinite(d)));
 		checkArgument(weights.values().stream().anyMatch((d) -> d > 0d));
 		checkArgument(subGrades.values().stream().allMatch((g) -> 0d <= g.getPoints() && g.getPoints() <= 1d));
 		checkArgument(subGrades.keySet().equals(weights.keySet()),
@@ -183,8 +191,8 @@ public class WeightingGrade implements IGrade {
 	}
 
 	/**
-	 * @return the weights, such that the positive weights sum to one, with no zero
-	 *         weights, and not empty. Iterates in the order of the sub-grades.
+	 * @return the weights, such that the positive weights sum to one, and not
+	 *         empty. Iterates in the order of the sub-grades.
 	 */
 	@JsonbTransient
 	public ImmutableMap<Criterion, Double> getWeights() {

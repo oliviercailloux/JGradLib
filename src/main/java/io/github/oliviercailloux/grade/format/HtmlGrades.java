@@ -5,6 +5,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 import java.text.NumberFormat;
 import java.util.Locale;
+import java.util.Map;
 
 import org.w3c.dom.Document;
 import org.w3c.dom.DocumentFragment;
@@ -15,7 +16,7 @@ import io.github.oliviercailloux.grade.IGrade;
 import io.github.oliviercailloux.grade.WeightingGrade;
 import io.github.oliviercailloux.xml.HtmlDocument;
 
-public class HtmlGrade {
+public class HtmlGrades {
 	private static final double DEFAULT_DENOMINATOR = 20d;
 
 	public static Document asHtml(IGrade grade, String title) {
@@ -30,6 +31,20 @@ public class HtmlGrade {
 		document.getBody().appendChild(document.createParagraph(introText));
 
 		document.getBody().appendChild(getDescription(Criterion.given("Grade"), grade, document, denominator));
+
+		return document.getDocument();
+	}
+
+	public static Document asHtml(Map<String, IGrade> grades, String generalTitle, double denominator) {
+		final HtmlDocument document = HtmlDocument.newInstance();
+		document.setTitle(generalTitle);
+		document.getBody().appendChild(document.createTitle1(generalTitle));
+
+		for (String key : grades.keySet()) {
+			final IGrade grade = grades.get(key);
+			document.getBody().appendChild(document.createTitle2(key));
+			document.getBody().appendChild(getDescription(Criterion.given("Grade"), grade, document, denominator));
+		}
 
 		return document.getDocument();
 	}
@@ -66,7 +81,7 @@ public class HtmlGrade {
 					subWeight = 1d;
 				}
 				final DocumentFragment description;
-				if (subWeight > 0d) {
+				if (subWeight >= 0d) {
 					description = getDescription(subCriterion, grade.getSubGrades().get(subCriterion), document,
 							denominator * subWeight);
 				} else {
@@ -81,7 +96,7 @@ public class HtmlGrade {
 
 	private static DocumentFragment getDescriptionOfPenalty(Criterion criterion, IGrade grade, HtmlDocument document,
 			double denominator) {
-		checkArgument(denominator > 0d);
+		checkArgument(denominator >= 0d);
 
 		final NumberFormat formatter = NumberFormat.getNumberInstance(Locale.ENGLISH);
 

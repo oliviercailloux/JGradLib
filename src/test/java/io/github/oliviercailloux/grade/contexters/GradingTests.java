@@ -17,7 +17,7 @@ import com.google.common.collect.ImmutableSet;
 
 import io.github.oliviercailloux.git.FileContent;
 import io.github.oliviercailloux.grade.context.FilesSource;
-import io.github.oliviercailloux.java_grade.testers.MarkHelper;
+import io.github.oliviercailloux.java_grade.testers.JavaMarkHelper;
 
 class GradingTests {
 
@@ -44,7 +44,7 @@ class GradingTests {
 		expected.remove(t1.getPath());
 		expected.remove(t2.getPath());
 
-		final FilesSource testFiles = MarkHelper.getTestFiles(FilesSource.fromMemory(filesMap));
+		final FilesSource testFiles = JavaMarkHelper.getTestFiles(FilesSource.fromMemory(filesMap));
 		final ImmutableMap<Path, String> contents = testFiles.getContents();
 
 		LOGGER.info("Expected: {}.", expected);

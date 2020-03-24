@@ -118,6 +118,18 @@ public class HtmlDocument {
 		return p;
 	}
 
+	public Element createTitle1(String content) {
+		final Element el = createXhtmlElement("h1");
+		el.appendChild(document.createTextNode(content));
+		return el;
+	}
+
+	public Element createTitle2(String content) {
+		final Element el = createXhtmlElement("h2");
+		el.appendChild(document.createTextNode(content));
+		return el;
+	}
+
 	public String asString() {
 		return XmlUtils.asString(document);
 	}

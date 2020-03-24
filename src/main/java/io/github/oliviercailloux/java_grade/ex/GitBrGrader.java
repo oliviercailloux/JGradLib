@@ -49,7 +49,7 @@ import io.github.oliviercailloux.grade.format.json.JsonGrade;
 import io.github.oliviercailloux.grade.markers.Marks;
 import io.github.oliviercailloux.java_grade.GraderOrchestrator;
 import io.github.oliviercailloux.java_grade.JavaCriterion;
-import io.github.oliviercailloux.java_grade.testers.MarkHelper;
+import io.github.oliviercailloux.java_grade.testers.JavaMarkHelper;
 import io.github.oliviercailloux.java_grade.utils.Summarize;
 import io.github.oliviercailloux.json.JsonbUtils;
 import io.github.oliviercailloux.supann.QueriesHelper;
@@ -137,7 +137,7 @@ public class GitBrGrader {
 		LOGGER.debug("Graph filtered history: {}.", filtered.getGraph().edges());
 		fs.getHistory();
 		final GitLocalHistory manual = filtered
-				.filter(o -> !MarkHelper.committerIsGitHub(fs.getCachedHistory().getCommit(o)));
+				.filter(o -> !JavaMarkHelper.committerIsGitHub(fs.getCachedHistory().getCommit(o)));
 		LOGGER.debug("Graph manual: {}.", manual.getGraph().edges());
 		final ImmutableGraph<ObjectId> graph = Utils.asImmutableGraph(manual.getGraph(), o -> o);
 		LOGGER.debug("Graph copied from manual: {}.", graph.edges());
@@ -154,7 +154,7 @@ public class GitBrGrader {
 		final ImmutableMap.Builder<Criterion, IGrade> gradeBuilder = ImmutableMap.builder();
 
 		final GitLocalHistory ownHistory = filtered
-				.filter(o -> MarkHelper.committerAndAuthorIs(fs.getCachedHistory().getCommit(o), owner));
+				.filter(o -> JavaMarkHelper.committerAndAuthorIs(fs.getCachedHistory().getCommit(o), owner));
 		final ImmutableGraph<RevCommit> ownGraph = ownHistory.getGraph();
 		gradeBuilder.put(JavaCriterion.ID, Mark.binary(ownGraph.nodes().size() >= 1));
 

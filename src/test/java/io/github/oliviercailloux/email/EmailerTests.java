@@ -4,11 +4,13 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.io.UnsupportedEncodingException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Properties;
 
 import javax.json.Json;
@@ -29,6 +31,7 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.MoreCollectors;
 import com.google.common.collect.Sets;
@@ -36,7 +39,7 @@ import com.google.common.collect.Sets.SetView;
 
 import io.github.oliviercailloux.grade.GradeTestsHelper;
 import io.github.oliviercailloux.grade.WeightingGrade;
-import io.github.oliviercailloux.grade.format.HtmlGrade;
+import io.github.oliviercailloux.grade.format.HtmlGrades;
 import io.github.oliviercailloux.grade.format.json.JsonGrade;
 import io.github.oliviercailloux.java_grade.utils.SendEmails;
 import io.github.oliviercailloux.utils.Utils;
@@ -50,6 +53,10 @@ public class EmailerTests {
 	private static final Logger LOGGER = LoggerFactory.getLogger(EmailerTests.class);
 
 	public static void main(String[] args) throws Exception {
+		sendDummyEmails();
+	}
+
+	static void sendDummyEmails() throws UnsupportedEncodingException {
 		final Document doc1 = getTestDocument("First document");
 		LOGGER.info("Doc1: {}.", XmlUtils.asString(doc1));
 		final InternetAddress to1 = new InternetAddress("olivier.cailloux@gmail.com", "O.C");
@@ -57,7 +64,7 @@ public class EmailerTests {
 				Json.createObjectBuilder().add("jsonint", 1).build().toString(), "json", to1);
 
 		final WeightingGrade grade = GradeTestsHelper.getComplexGradeWithPenalty();
-		final Document doc2 = HtmlGrade.asHtml(grade, "Ze grade");
+		final Document doc2 = HtmlGrades.asHtml(grade, "Ze grade");
 		final InternetAddress to2 = new InternetAddress("oliviercailloux@gmail.com", "OC");
 		final Email email2 = Email.withDocumentAndFile(doc2, "data.json", JsonGrade.asJson(grade).toString(), "json",
 				to2);
@@ -241,12 +248,12 @@ public class EmailerTests {
 
 	@Test
 	void testRetrieve() throws Exception {
-		final ImmutableSet<Message> toMe = Emailer.searchSentToIn(
-				new InternetAddress("olivier.cailloux@INVALIDdauphine.fr", "Olivier Cailloux"), "Éléments envoyés");
-		assertTrue(toMe.size() >= 30);
-		final Message message = toMe.iterator().next();
-		LOGGER.info(message.getContentType());
-		SendEmails.getJsonData(message);
+		assertEquals(Optional.empty(), SendEmails.getLastGradeTo(
+				new InternetAddress("olivier.cailloux@INVALIDdauphine.fr", "Olivier Cailloux"), "git-br"));
+		assertEquals(ImmutableMap.of(), SendEmails
+				.getAllLatestGradesTo(new InternetAddress("olivier.cailloux@INVALIDdauphine.fr", "Olivier Cailloux")));
+//		assertEquals(ImmutableSet.of("commit", "git-br"), SendEmails
+//				.getAllLatestGradesTo(new InternetAddress("…@dauphine.eu", "…")).keySet());
 	}
 
 	private static String getToken() {

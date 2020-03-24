@@ -44,7 +44,7 @@ import io.github.oliviercailloux.grade.contexters.ContextInitializer;
 import io.github.oliviercailloux.grade.contexters.FullContextInitializer;
 import io.github.oliviercailloux.grade.markers.Marks;
 import io.github.oliviercailloux.grade.markers.MavenProjectMarker;
-import io.github.oliviercailloux.java_grade.testers.MarkHelper;
+import io.github.oliviercailloux.java_grade.testers.JavaMarkHelper;
 
 public class ExJUnitGrader {
 	private GitLocalHistory history;
@@ -115,8 +115,8 @@ public class ExJUnitGrader {
 			}
 		}
 
-		final Predicate<RevCommit> gitHub = MarkHelper::committerIsGitHub;
-		final Predicate<RevCommit> cail = c -> MarkHelper.committerAndAuthorIs(c, "Olivier Cailloux");
+		final Predicate<RevCommit> gitHub = JavaMarkHelper::committerIsGitHub;
+		final Predicate<RevCommit> cail = c -> JavaMarkHelper.committerAndAuthorIs(c, "Olivier Cailloux");
 		final ImmutableSet<RevCommit> byOwn = history.getGraph().nodes().stream().filter(gitHub.or(cail).negate())
 				.collect(ImmutableSet.toImmutableSet());
 		{

@@ -41,7 +41,7 @@ public class ArgumentsParser {
 		checkArgument(!command.endsWith(" "));
 
 		final Matcher matcher = Pattern.compile(" [^\" ][^ ]+\" ").matcher(command);
-		if (matcher.find()) {
+		if (matcher.find() || command.codePoints().filter(i -> i == '\"').count() == 1) {
 			effectiveCommand = command.replace("\"", "");
 			LOGGER.warn("Illegal quoting: {}, using {} instead.", command, effectiveCommand);
 		} else {

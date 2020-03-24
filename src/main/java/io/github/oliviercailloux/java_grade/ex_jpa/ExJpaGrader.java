@@ -81,7 +81,7 @@ import io.github.oliviercailloux.grade.markers.MavenProjectMarker;
 import io.github.oliviercailloux.grade.mycourse.json.JsonStudentOnGitHub;
 import io.github.oliviercailloux.java_grade.GraderOrchestrator;
 import io.github.oliviercailloux.java_grade.JavaMarks;
-import io.github.oliviercailloux.java_grade.testers.MarkHelper;
+import io.github.oliviercailloux.java_grade.testers.JavaMarkHelper;
 import io.github.oliviercailloux.json.JsonbUtils;
 import io.github.oliviercailloux.utils.Utils;
 
@@ -312,7 +312,7 @@ public class ExJpaGrader {
 			comment += "Maven tests pass";
 		} else {
 			if (mavenProjectMarker.getTestFiles().getContents().keySet().stream()
-					.anyMatch(MarkHelper::isSurefireTestFile)) {
+					.anyMatch(JavaMarkHelper::isSurefireTestFile)) {
 				comment += "Maven tests do not pass";
 			} else {
 				comment += "No Surefire tests found among " + mavenProjectMarker.getTestFiles().getContents().keySet();

@@ -72,21 +72,21 @@ public class StudentsReaderFromJson {
 	private Map<Integer, String> readIdsToMyCourseUsernames() {
 		idsToMyCourseUsernames = json.stream().sequential().map(JsonValue::asJsonObject).collect(
 				ImmutableMap.toImmutableMap((o) -> o.getInt("studentId"), (o) -> o.getString("myCourseUsername")));
-		LOGGER.info("Got: {}.", idsToMyCourseUsernames);
+		LOGGER.debug("Got: {}.", idsToMyCourseUsernames);
 		return idsToMyCourseUsernames;
 	}
 
 	private Map<Integer, String> readIdsToStudentFirstNames() {
 		idsToFirstNames = json.stream().sequential().map(JsonValue::asJsonObject)
 				.collect(ImmutableMap.toImmutableMap((o) -> o.getInt("studentId"), (o) -> o.getString("firstName")));
-		LOGGER.info("Got: {}.", idsToFirstNames);
+		LOGGER.debug("Got: {}.", idsToFirstNames);
 		return idsToFirstNames;
 	}
 
 	private Map<Integer, String> readIdsToStudentLastNames() {
 		idsToLastNames = json.stream().sequential().map(JsonValue::asJsonObject)
 				.collect(ImmutableMap.toImmutableMap((o) -> o.getInt("studentId"), (o) -> o.getString("lastName")));
-		LOGGER.info("Got: {}.", idsToLastNames);
+		LOGGER.debug("Got: {}.", idsToLastNames);
 		return idsToLastNames;
 	}
 
@@ -94,7 +94,7 @@ public class StudentsReaderFromJson {
 		idsNotSubmitted = json.stream().sequential().map(JsonValue::asJsonObject)
 				.filter(o -> !o.getBoolean("submittedGitHubUsername", true)).map((o) -> o.getInt("studentId"))
 				.collect(ImmutableSet.toImmutableSet());
-		LOGGER.info("Got: {}.", idsNotSubmitted);
+		LOGGER.debug("Got: {}.", idsNotSubmitted);
 		return idsNotSubmitted;
 	}
 
@@ -102,7 +102,7 @@ public class StudentsReaderFromJson {
 		gitHubUsernamesToIds = json.stream().sequential().map(JsonValue::asJsonObject)
 				.filter((o) -> !o.isNull("gitHubUsername")).collect(ImmutableMap
 						.toImmutableMap((o) -> o.getString("gitHubUsername"), (o) -> o.getInt("studentId")));
-		LOGGER.info("Got: {}.", gitHubUsernamesToIds);
+		LOGGER.debug("Got: {}.", gitHubUsernamesToIds);
 		return gitHubUsernamesToIds;
 	}
 

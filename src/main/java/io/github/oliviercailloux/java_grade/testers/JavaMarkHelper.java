@@ -21,10 +21,10 @@ import com.sun.management.UnixOperatingSystemMXBean;
 import io.github.oliviercailloux.git.FileContent;
 import io.github.oliviercailloux.grade.context.FilesSource;
 
-public class MarkHelper {
+public class JavaMarkHelper {
 
 	@SuppressWarnings("unused")
-	private static final Logger LOGGER = LoggerFactory.getLogger(MarkHelper.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(JavaMarkHelper.class);
 
 	private final static Pattern HAS_JUNIT_TEST_CONTENT = Pattern
 			.compile("(\\h*@Test)|(org\\.junit\\.jupiter\\.api\\.Assertions)");
@@ -49,7 +49,7 @@ public class MarkHelper {
 	}
 
 	public static FilesSource getTestFiles(FilesSource f) {
-		return f.filter(MarkHelper::isTestFile);
+		return f.filter(JavaMarkHelper::isTestFile);
 	}
 
 	/**

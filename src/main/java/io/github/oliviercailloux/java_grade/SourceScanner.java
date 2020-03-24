@@ -1,12 +1,9 @@
-package io.github.oliviercailloux.java_grade.ex.print_exec;
+package io.github.oliviercailloux.java_grade;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Verify.verify;
 
-import java.io.IOException;
-import java.io.UncheckedIOException;
-import java.nio.charset.MalformedInputException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.regex.Matcher;
@@ -18,12 +15,15 @@ import com.google.common.collect.ImmutableSet;
 import io.github.oliviercailloux.utils.Utils;
 
 public class SourceScanner {
-	private static final Pattern PACKAGE_PATTERN = Pattern.compile("package (?<packageName>.*);");
+	private static final Pattern PACKAGE_PATTERN = Pattern.compile("^\\h*package\\h+(?<packageName>[^\\h]*)\\h*;");
 
 	public static ImmutableSet<SourceClass> scan(Path start) {
+		checkNotNull(start);
 		final ImmutableSet<Path> javaPaths;
-		try (Stream<Path> found = Utils
-				.getOrThrow(() -> Files.find(start, 30, (p, a) -> p.getFileName().toString().endsWith(".java")))) {
+		try (Stream<Path> found = Utils.getOrThrow(() -> Files.find(start, 30,
+				(p, a) -> p.getFileName() == null ? false : p.getFileName().toString().endsWith(".java")))) {
+			verify(found != null);
+			assert found != null;
 			javaPaths = found.collect(ImmutableSet.toImmutableSet());
 		}
 		return javaPaths.stream().map(SourceScanner::asSourceClass).collect(ImmutableSet.toImmutableSet());
@@ -31,24 +31,12 @@ public class SourceScanner {
 
 	public static SourceClass asSourceClass(Path sourcePath) {
 		final String shortClassNameFromFileName = sourcePath.getFileName().toString().replace(".java", "");
-		String content = read(sourcePath);
+		String content = JavaGradeUtils.read(sourcePath);
 		final Matcher matcher = PACKAGE_PATTERN.matcher(content);
 		final boolean found = matcher.find();
 		final String packageName = found ? matcher.group("packageName") : "";
 		checkArgument(!matcher.find());
 		return new SourceClass(sourcePath, packageName, shortClassNameFromFileName);
-	}
-
-	protected static String read(Path sourcePath) {
-		String content;
-		try {
-			content = Files.readString(sourcePath);
-		} catch (@SuppressWarnings("unused") MalformedInputException e) {
-			content = Utils.getOrThrow(() -> Files.readString(sourcePath, StandardCharsets.ISO_8859_1));
-		} catch (IOException e) {
-			throw new UncheckedIOException(e);
-		}
-		return content;
 	}
 
 	public static class SourceClass {

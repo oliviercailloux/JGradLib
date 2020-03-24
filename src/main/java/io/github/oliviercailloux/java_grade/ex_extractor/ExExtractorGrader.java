@@ -37,7 +37,7 @@ import io.github.classgraph.ClassInfoList;
 import io.github.classgraph.ScanResult;
 import io.github.oliviercailloux.grade.GradingException;
 import io.github.oliviercailloux.grade.Mark;
-import io.github.oliviercailloux.java_grade.testers.MarkHelper;
+import io.github.oliviercailloux.java_grade.testers.JavaMarkHelper;
 
 public class ExExtractorGrader {
 
@@ -138,14 +138,14 @@ public class ExExtractorGrader {
 			final StringWriter output = new StringWriter();
 			instance.setStripper(throwingStripper());
 			boolean thrown = false;
-			final int openBefore = MarkHelper.getOpenFileDescriptorCount();
+			final int openBefore = JavaMarkHelper.getOpenFileDescriptorCount();
 			try {
 				instance.writeText(input, output);
 			} catch (IOException e) {
 				assert e.getMessage().equals("Ad-hoc exception");
 				thrown = true;
 			}
-			final int openAfter = MarkHelper.getOpenFileDescriptorCount();
+			final int openAfter = JavaMarkHelper.getOpenFileDescriptorCount();
 			final String obtained = output.toString();
 			if (!thrown && !obtained.toString().isEmpty()) {
 				throw new GradingException(String.format("Did not throw, but yet obtained text: '%s'.", obtained));

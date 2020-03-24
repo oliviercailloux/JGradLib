@@ -11,7 +11,7 @@ import org.slf4j.LoggerFactory;
 
 import com.diffplug.common.base.Predicates;
 
-import io.github.oliviercailloux.java_grade.testers.MarkHelper;
+import io.github.oliviercailloux.java_grade.testers.JavaMarkHelper;
 
 public class MarkingPredicates {
 	@SuppressWarnings("unused")
@@ -28,7 +28,7 @@ public class MarkingPredicates {
 	}
 
 	public static Predicate<Path> pathContainsOnce(Pattern pattern) {
-		return Predicates.compose(containsOnce(pattern), MarkHelper::getContentOrEmpty);
+		return Predicates.compose(containsOnce(pattern), JavaMarkHelper::getContentOrEmpty);
 	}
 
 	public static Predicate<Path> startsWithPathRelativeTo(Optional<Path> relativeTo, Path start) {

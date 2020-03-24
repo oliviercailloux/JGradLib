@@ -58,7 +58,7 @@ import io.github.oliviercailloux.grade.markers.Marks;
 import io.github.oliviercailloux.grade.markers.TimePenalizer;
 import io.github.oliviercailloux.grade.mycourse.json.StudentsReaderFromJson;
 import io.github.oliviercailloux.java_grade.GraderOrchestrator;
-import io.github.oliviercailloux.java_grade.testers.MarkHelper;
+import io.github.oliviercailloux.java_grade.testers.JavaMarkHelper;
 import io.github.oliviercailloux.json.JsonbUtils;
 import io.github.oliviercailloux.utils.Utils;
 
@@ -169,7 +169,7 @@ public class ExDepGitGraderSimpler {
 		fs.getHistory();
 		LOGGER.debug("Graph history: {}.", history.getGraph().edges());
 		final GitLocalHistory manual = history
-				.filter(o -> !MarkHelper.committerIsGitHub(fs.getCachedHistory().getCommit(o)));
+				.filter(o -> !JavaMarkHelper.committerIsGitHub(fs.getCachedHistory().getCommit(o)));
 		LOGGER.debug("Graph manual: {}.", manual.getGraph().edges());
 		final Graph<ObjectId> graph = Utils.asGraph(n -> manual.getGraph().successors(manual.getCommit(n)),
 				ImmutableSet.copyOf(manual.getTips()));
@@ -181,14 +181,14 @@ public class ExDepGitGraderSimpler {
 
 		final ImmutableMap.Builder<Criterion, IGrade> gradeBuilder = ImmutableMap.builder();
 
-		final Predicate<ObjectId> mine = o -> MarkHelper.committerAndAuthorIs(fs.getCachedHistory().getCommit(o),
+		final Predicate<ObjectId> mine = o -> JavaMarkHelper.committerAndAuthorIs(fs.getCachedHistory().getCommit(o),
 				"Olivier Cailloux");
 		final Predicate<ObjectId> notMine = mine.negate();
 //		final Set<ObjectId> myCommits = Sets.filter(graph.nodes(), mine::test);
 		final Set<ObjectId> notMyCommits = Sets.filter(graph.nodes(), notMine::test);
 
 		final ImmutableList<ObjectId> ownWithCorrectIdentity = graph.nodes().stream()
-				.filter(o -> MarkHelper.committerAndAuthorIs(fs.getCachedHistory().getCommit(o), owner))
+				.filter(o -> JavaMarkHelper.committerAndAuthorIs(fs.getCachedHistory().getCommit(o), owner))
 				.collect(ImmutableList.toImmutableList());
 		final long ownWithCorrectIdentityCount = ownWithCorrectIdentity.size();
 		gradeBuilder.put(COMMIT, Mark.binary(ownWithCorrectIdentityCount >= 1, "", ""));

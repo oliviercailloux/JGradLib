@@ -16,7 +16,7 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.ImmutableSet;
 
 import io.github.oliviercailloux.grade.markers.MarkingPredicates;
-import io.github.oliviercailloux.java_grade.testers.MarkHelper;
+import io.github.oliviercailloux.java_grade.testers.JavaMarkHelper;
 import io.github.oliviercailloux.utils.Utils;
 
 public class PomPathsSupplier {
@@ -121,7 +121,7 @@ public class PomPathsSupplier {
 						+ "<groupId>org\\.junit\\.jupiter</groupId>" + Utils.ANY_REG_EXP
 						+ "<artifactId>junit-jupiter-engine</artifactId>" + Utils.ANY_REG_EXP + "<version>5\\.[234]\\."
 						+ Utils.ANY_REG_EXP + "</version>" + Utils.ANY_REG_EXP + "<scope>test</scope>"));
-		return containsOnce.test(MarkHelper.getContentOrEmpty(getForcedPom()));
+		return containsOnce.test(JavaMarkHelper.getContentOrEmpty(getForcedPom()));
 	}
 
 }

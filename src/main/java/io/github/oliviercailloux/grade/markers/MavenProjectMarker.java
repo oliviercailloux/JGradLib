@@ -13,7 +13,7 @@ import io.github.oliviercailloux.grade.context.GitFullContext;
 import io.github.oliviercailloux.grade.contexters.MavenManager;
 import io.github.oliviercailloux.grade.contexters.PomContexter;
 import io.github.oliviercailloux.grade.contexters.PomSupplier;
-import io.github.oliviercailloux.java_grade.testers.MarkHelper;
+import io.github.oliviercailloux.java_grade.testers.JavaMarkHelper;
 
 public class MavenProjectMarker {
 
@@ -40,7 +40,7 @@ public class MavenProjectMarker {
 
 	public FilesSource getTestFiles() {
 		if (testFiles == null) {
-			testFiles = MarkHelper.getTestFiles(filesReader);
+			testFiles = JavaMarkHelper.getTestFiles(filesReader);
 		}
 		return testFiles;
 	}
@@ -71,7 +71,7 @@ public class MavenProjectMarker {
 	public boolean doTestsExistAndPass() {
 		if (testsExistAndPass == null) {
 			final MavenManager mavenManager = new MavenManager();
-			testsExistAndPass = getTestFiles().getContents().keySet().stream().anyMatch(MarkHelper::isSurefireTestFile)
+			testsExistAndPass = getTestFiles().getContents().keySet().stream().anyMatch(JavaMarkHelper::isSurefireTestFile)
 					&& pomSupplier.getMavenRelativeRoot().isPresent() && mavenManager.test(
 							projectDirectory.resolve(pomSupplier.getMavenRelativeRoot().get().resolve("pom.xml")));
 		}

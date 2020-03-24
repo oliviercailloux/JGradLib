@@ -41,6 +41,13 @@ public class CsvGrades {
 	}
 
 	public static String asCsv(Map<StudentOnGitHub, WeightingGrade> grades, double denominator) {
+		return asCsv(grades, denominator, true);
+	}
+
+	/**
+	 * Must disable printing range when weight is dynamic (varies per student).
+	 */
+	public static String asCsv(Map<StudentOnGitHub, WeightingGrade> grades, double denominator, boolean printRange) {
 		final NumberFormat formatter = NumberFormat.getNumberInstance(Locale.FRENCH);
 		final StringWriter stringWriter = new StringWriter();
 		final CsvWriter writer = new CsvWriter(stringWriter, new CsvWriterSettings());
@@ -69,7 +76,7 @@ public class CsvGrades {
 
 		for (Entry<StudentOnGitHub, WeightingGrade> studentGrade : grades.entrySet()) {
 			final StudentOnGitHub student = studentGrade.getKey();
-			LOGGER.info("Writing {}.", student);
+			LOGGER.debug("Writing {}.", student);
 			if (enableName) {
 				writer.addValue("Name", student.getLastName().orElse("unknown"));
 			}
@@ -88,16 +95,14 @@ public class CsvGrades {
 			writer.writeValuesToRow();
 		}
 
-		{
-//			if (enableName) {
-//				writer.addValue("Name", "Range");
-//			}
+		if (printRange) {
 			writer.addValue("GitHub username", "Range");
 
 			for (Criterion criterion : allCriteria) {
 				final double weight = asTable.column(criterion).values().stream().map(CriterionGradeWeight::getWeight)
 						.distinct().collect(MoreCollectors.onlyElement());
-				writer.addValue(criterion.getName(), "[0, " + formatter.format(weight * denominator) + "]");
+				final String interval = weight == 0d ? "{0}" : "[0, " + formatter.format(weight * denominator) + "]";
+				writer.addValue(criterion.getName(), interval);
 			}
 			writer.addValue("Points", "[0," + formatter.format(denominator) + "]");
 			writer.writeValuesToRow();
@@ -181,7 +186,7 @@ public class CsvGrades {
 
 	private static double getPointsScaled(CriterionGradeWeight cgw, double denominator) {
 		final double points = cgw.getGrade().getPoints();
-		final double pointsSigned = cgw.getWeight() > 0d ? points : 1d - points;
+		final double pointsSigned = cgw.getWeight() >= 0d ? points : 1d - points;
 		final double pointsScaled = pointsSigned * cgw.getWeight() * denominator;
 		return pointsScaled;
 	}

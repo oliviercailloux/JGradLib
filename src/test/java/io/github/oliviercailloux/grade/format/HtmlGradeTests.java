@@ -23,7 +23,7 @@ class HtmlGradeTests {
 	@Test
 	void testComplexGrade() throws Exception {
 		final WeightingGrade grade = GradeTestsHelper.getComplexGradeWithPenalty();
-		final Document document = HtmlGrade.asHtml(grade, "Ze grade");
+		final Document document = HtmlGrades.asHtml(grade, "Ze grade");
 //		XmlUtils.validate(document);
 		final String written = XmlUtils.asString(document);
 		LOGGER.info("Complex grade: {}.", written);
@@ -36,7 +36,7 @@ class HtmlGradeTests {
 	@Test
 	void testEclecticGrade() throws Exception {
 		final IGrade grade = GradeTestsHelper.getEclecticWeightedGrade();
-		final Document document = HtmlGrade.asHtml(grade, "Ze grade");
+		final Document document = HtmlGrades.asHtml(grade, "Ze grade");
 //		XmlUtils.validate(document);
 		final String written = XmlUtils.asString(document);
 		LOGGER.info("Eclectic grade: {}.", written);
