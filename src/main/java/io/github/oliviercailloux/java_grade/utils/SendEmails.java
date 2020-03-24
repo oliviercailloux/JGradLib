@@ -62,21 +62,6 @@ import io.github.oliviercailloux.json.JsonbUtils;
 import io.github.oliviercailloux.utils.Utils;
 
 public class SendEmails {
-	@SuppressWarnings("serial")
-	private static class PreciseSubjectTerm extends SearchTerm {
-		private final String subject;
-
-		private PreciseSubjectTerm(String subject) {
-			this.subject = checkNotNull(subject);
-		}
-
-		@Override
-		public boolean match(Message msg) {
-			return Utils.getOrThrow(msg::getSubject).equals(subject);
-		}
-
-	}
-
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(SendEmails.class);
 
@@ -193,51 +178,6 @@ public class SendEmails {
 	public static Optional<IGrade> getLastGradeTo(InternetAddress recipient, String prefix) {
 		final ImmutableMap<String, IGrade> allGrades = getAllLatestGradesTo(recipient);
 		return Optional.ofNullable(allGrades.get(prefix));
-		/**
-		 * The version below is more efficient as it filters on the server. But I don’t
-		 * think it will change much, and in any case we’d better reuse the logic of
-		 * #getAll… by adding optional search term filters.
-		 */
-//		try {
-//			final SearchTerm fullAddressTerm = new RecipientTerm(RecipientType.TO, recipient);
-//			/**
-//			 * Because of bugs in the IMAP server, we have to relax the search on the
-//			 * address part.
-//			 */
-//			final SearchTerm partialAddressTerm = new RecipientStringTerm(RecipientType.TO,
-//					Emailer.getPart(recipient.getAddress()));
-//			final SearchTerm personalTerm = new RecipientStringTerm(RecipientType.TO, recipient.getPersonal());
-//			final String subject = "Grade " + prefix;
-//			final SearchTerm preciseSubjectTerm = new PreciseSubjectTerm(subject);
-//			final SearchTerm subjectTerm = new SubjectTerm(subject);
-//			final AndTerm fullTerm = new AndTerm(
-//					new SearchTerm[] { fullAddressTerm, personalTerm, preciseSubjectTerm });
-//			final AndTerm truncatedTerm = new AndTerm(
-//					new SearchTerm[] { partialAddressTerm, personalTerm, subjectTerm });
-//
-//			return Emailer.fromFolder("Éléments envoyés", f -> {
-//				final ImmutableSet<Message> candidates = Emailer.searchIn(truncatedTerm, f, false);
-//				/**
-//				 * Because of bugs in the IMAP server, we have to filter again on the personal;
-//				 * and because the subject pattern is only a pattern, it could match "Re: …".
-//				 */
-//				final ImmutableSortedSet<Message> matching = candidates.stream()
-//						.filter(m -> Utils.getOrThrow(() -> m.match(fullTerm))).collect(ImmutableSortedSet
-//								.toImmutableSortedSet(Comparator.comparing(Utils.uncheck(Message::getSentDate))));
-//				final Optional<Message> message = matching.descendingSet().stream().findFirst();
-//				if (message.isPresent()) {
-//					try {
-//						LOGGER.info("Searching for messages sent to {}; found message to {}, sent {}.",
-//								recipient.getPersonal(), message.get().getAllRecipients(), message.get().getSentDate());
-//					} catch (MessagingException e) {
-//						throw new IllegalStateException(e);
-//					}
-//				}
-//				return message.map(m -> getGrade(m).get());
-//			});
-//		} catch (MessagingException e) {
-//			throw new IllegalStateException(e);
-//		}
 	}
 
 	public static Optional<IGrade> getGrade(Message source) {
