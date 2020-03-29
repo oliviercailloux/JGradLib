@@ -1,7 +1,6 @@
 package io.github.oliviercailloux.email;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -342,36 +341,6 @@ public class EmailerTests {
 				.getAllLatestGradesTo(new InternetAddress("olivier.cailloux@INVALIDdauphine.fr", "Olivier Cailloux")));
 //		assertEquals(ImmutableSet.of("commit", "git-br"), SendEmails
 //				.getAllLatestGradesTo(new InternetAddress("…@dauphine.eu", "…")).keySet());
-	}
-
-	@Test
-	void testSearchGmail() throws Exception {
-		final ImmutableSet<Message> toCailLamBroad = Emailer.searchIn(
-				new RecipientStringTerm(RecipientType.TO, "<olivier.cailloux@lamsade.dauphine.fr>"), "Grades");
-		assertTrue(toCailLamBroad.size() == 1, "" + toCailLamBroad.size());
-
-		final ImmutableSet<Message> toCail = Emailer.searchIn(new RecipientStringTerm(RecipientType.TO, "cailloux"),
-				"Grades");
-		assertTrue(toCailLamBroad.size() < toCail.size(), "" + toCail.size());
-		assertTrue(toCail.size() < 100, "" + toCail.size());
-		final ImmutableList<Integer> toCailList = toCail.stream().map(Utils.uncheck(Message::getMessageNumber))
-				.collect(ImmutableList.toImmutableList());
-		final ImmutableSet<Integer> toCailSet = ImmutableSet.copyOf(toCailList);
-		assertEquals(toCailList.size(), toCailSet.size());
-
-		final ImmutableSet<Message> toCailGmail = Emailer.searchIn(new RecipientTerm(RecipientType.TO,
-				new InternetAddress("olivier.cailloux@gmail.com", "Olivier Cailloux")), "Grades");
-		assertTrue(toCailGmail.isEmpty());
-
-		final ImmutableSet<Message> toCailLam = Emailer.searchIn(new RecipientTerm(RecipientType.TO,
-				new InternetAddress("olivier.cailloux@lamsade.dauphine.fr", "Olivier CAILLOUX")), "Grades");
-		assertTrue(20 < toCailLam.size(), "" + toCailLam.size());
-		assertTrue(toCailLam.size() < 40, "" + toCailLam.size());
-		final ImmutableList<Integer> toCailDauphineList = toCailLam.stream()
-				.map(Utils.uncheck(Message::getMessageNumber)).collect(ImmutableList.toImmutableList());
-		final ImmutableSet<Integer> toCailDauphineSet = ImmutableSet.copyOf(toCailDauphineList);
-		assertEquals(toCailDauphineList.size(), toCailDauphineSet.size());
-		assertTrue(toCailSet.containsAll(toCailDauphineSet));
 	}
 
 }

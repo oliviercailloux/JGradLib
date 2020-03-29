@@ -118,11 +118,11 @@ public class Emailer {
 
 	public static ImmutableSet<Message> searchIn(SearchTerm term, String folderName)
 			throws NoSuchProviderException, MessagingException {
-		final Session session = getGmailImapSession();
+		final Session session = getOutlookImapSession();
 		final ImmutableSet<Message> found;
 		try (Store store = session.getStore()) {
 			LOGGER.info("Connecting.");
-			store.connect(USERNAME_GMAIL, getGmailToken());
+			store.connect(USERNAME_DAUPHINE, getDauphineToken());
 			try (Folder folder = store.getFolder(folderName)) {
 				folder.open(Folder.READ_ONLY);
 				found = searchIn(term, folder, true);
@@ -258,7 +258,7 @@ public class Emailer {
 		}
 	}
 
-	private static Session getOutlookImapSession() {
+	static Session getOutlookImapSession() {
 		final Properties props = new Properties();
 		props.setProperty("mail.store.protocol", "imap");
 		props.setProperty("mail.host", "outlook.office365.com");
@@ -271,7 +271,7 @@ public class Emailer {
 		return session;
 	}
 
-	private static Session getGmailImapSession() {
+	static Session getGmailImapSession() {
 		final Properties props = new Properties();
 		props.setProperty("mail.store.protocol", "imap");
 		props.setProperty("mail.host", "imap.gmail.com");
