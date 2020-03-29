@@ -49,7 +49,9 @@ public class Emailer {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(Emailer.class);
 
-	public static final String USERNAME = "ocailloux@dauphine.fr";
+	public static final String USERNAME_DAUPHINE = "ocailloux@dauphine.fr";
+
+	public static final String USERNAME_GMAIL = "olivier.cailloux";
 
 	public static final InternetAddress FROM = asInternetAddress("olivier.cailloux@dauphine.fr", "Olivier Cailloux");
 
@@ -70,7 +72,7 @@ public class Emailer {
 		final ImmutableSet.Builder<Message> messagesBuilder = ImmutableSet.builder();
 		try (Transport transport = getTransport(session)) {
 			LOGGER.info("Connecting to transport.");
-			transport.connect(USERNAME, getToken());
+			transport.connect(USERNAME_DAUPHINE, getDauphineToken());
 			LOGGER.info("Connected to transport.");
 			for (Email email : emails) {
 				final MimeMessage message = getMessage(session, email);
@@ -97,10 +99,10 @@ public class Emailer {
 
 	public static void saveInto(Set<Message> messages, String folderName)
 			throws NoSuchProviderException, MessagingException {
-		final Session session = getImapSession();
+		final Session session = getOutlookImapSession();
 		try (Store store = session.getStore()) {
 			LOGGER.info("Connecting to store.");
-			store.connect(USERNAME, getToken());
+			store.connect(USERNAME_DAUPHINE, getDauphineToken());
 			LOGGER.info("Connected to store.");
 			// final Folder root = store.getDefaultFolder();
 			// final ImmutableList<Folder> folders = ImmutableList.copyOf(root.list());
@@ -116,11 +118,11 @@ public class Emailer {
 
 	public static ImmutableSet<Message> searchIn(SearchTerm term, String folderName)
 			throws NoSuchProviderException, MessagingException {
-		final Session session = getImapSession();
+		final Session session = getGmailImapSession();
 		final ImmutableSet<Message> found;
 		try (Store store = session.getStore()) {
 			LOGGER.info("Connecting.");
-			store.connect(USERNAME, getToken());
+			store.connect(USERNAME_GMAIL, getGmailToken());
 			try (Folder folder = store.getFolder(folderName)) {
 				folder.open(Folder.READ_ONLY);
 				found = searchIn(term, folder, true);
@@ -158,10 +160,10 @@ public class Emailer {
 
 	public static ImmutableSet<Message> searchSentToIn(InternetAddress address, String folderName)
 			throws NoSuchProviderException, MessagingException {
-		final Session session = getImapSession();
+		final Session session = getOutlookImapSession();
 		try (Store store = session.getStore()) {
 			LOGGER.info("Connecting.");
-			store.connect(USERNAME, getToken());
+			store.connect(USERNAME_DAUPHINE, getDauphineToken());
 			try (Folder folder = store.getFolder(folderName)) {
 				folder.open(Folder.READ_ONLY);
 				return searchSentToIn(address, folder);
@@ -245,10 +247,10 @@ public class Emailer {
 	}
 
 	public static ImmutableList<Folder> getFolders() throws NoSuchProviderException, MessagingException {
-		final Session session = getImapSession();
+		final Session session = getOutlookImapSession();
 		try (Store store = session.getStore()) {
 			LOGGER.info("Connecting.");
-			store.connect(USERNAME, getToken());
+			store.connect(USERNAME_DAUPHINE, getDauphineToken());
 			try (Folder root = store.getDefaultFolder()) {
 				final ImmutableList<Folder> folders = ImmutableList.copyOf(root.list());
 				return folders;
@@ -256,16 +258,29 @@ public class Emailer {
 		}
 	}
 
-	private static Session getImapSession() {
+	private static Session getOutlookImapSession() {
 		final Properties props = new Properties();
 		props.setProperty("mail.store.protocol", "imap");
 		props.setProperty("mail.host", "outlook.office365.com");
 		props.setProperty("mail.imap.connectiontimeout", "2000");
 		props.setProperty("mail.imap.timeout", "60*1000");
 		props.setProperty("mail.imap.connectionpooltimeout", "10");
-		props.setProperty("mail.user", USERNAME);
 		props.setProperty("mail.imap.ssl.enable", "true");
 		props.setProperty("mail.imap.ssl.checkserveridentity", "true");
+		final Session session = Session.getInstance(props);
+		return session;
+	}
+
+	private static Session getGmailImapSession() {
+		final Properties props = new Properties();
+		props.setProperty("mail.store.protocol", "imap");
+		props.setProperty("mail.host", "imap.gmail.com");
+		props.setProperty("mail.imap.connectiontimeout", "2000");
+		props.setProperty("mail.imap.timeout", "60*1000");
+		props.setProperty("mail.imap.connectionpooltimeout", "10");
+		props.setProperty("mail.imap.ssl.enable", "true");
+		props.setProperty("mail.imap.ssl.checkserveridentity", "true");
+//		props.setProperty("mail.debug", "true");
 		final Session session = Session.getInstance(props);
 		return session;
 	}
@@ -277,7 +292,7 @@ public class Emailer {
 		props.put("mail.smtp.port", "587");
 		props.setProperty("mail.store.protocol", "smtp");
 		props.setProperty("mail.host", "outlook.office365.com");
-		props.setProperty("mail.user", USERNAME);
+		props.setProperty("mail.user", USERNAME_DAUPHINE);
 		final Session session = Session.getInstance(props);
 		return session;
 	}
@@ -330,7 +345,7 @@ public class Emailer {
 		}
 	}
 
-	private static String getToken() {
+	static String getDauphineToken() {
 		{
 			final String token = System.getenv("token_dauphine");
 			if (token != null) {
@@ -351,12 +366,33 @@ public class Emailer {
 		return content.replaceAll("\n", "");
 	}
 
+	static String getGmailToken() {
+		{
+			final String token = System.getenv("token_gmail");
+			if (token != null) {
+				return token;
+			}
+		}
+		{
+			final String token = System.getProperty("token_gmail");
+			if (token != null) {
+				return token;
+			}
+		}
+		final Path path = Paths.get("token_gmail.txt");
+		if (!Files.exists(path)) {
+			throw new IllegalStateException();
+		}
+		final String content = Utils.getOrThrow(() -> Files.readString(path));
+		return content.replaceAll("\n", "");
+	}
+
 	public static <T> T fromFolder(String folderName, Function<Folder, T> function)
 			throws NoSuchProviderException, MessagingException {
-		final Session session = getImapSession();
+		final Session session = getOutlookImapSession();
 		try (Store store = session.getStore()) {
 			LOGGER.info("Connecting.");
-			store.connect(USERNAME, getToken());
+			store.connect(USERNAME_DAUPHINE, getDauphineToken());
 			try (Folder folder = store.getFolder(folderName)) {
 				folder.open(Folder.READ_ONLY);
 				return function.apply(folder);
