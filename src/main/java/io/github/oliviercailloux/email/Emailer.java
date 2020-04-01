@@ -8,12 +8,14 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Properties;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
+import javax.mail.Address;
 import javax.mail.FetchProfile;
 import javax.mail.Folder;
 import javax.mail.Message;
@@ -28,6 +30,10 @@ import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeBodyPart;
 import javax.mail.internet.MimeMessage;
 import javax.mail.internet.MimeMultipart;
+import javax.mail.search.AndTerm;
+import javax.mail.search.FromStringTerm;
+import javax.mail.search.FromTerm;
+import javax.mail.search.OrTerm;
 import javax.mail.search.RecipientStringTerm;
 import javax.mail.search.RecipientTerm;
 import javax.mail.search.SearchTerm;
@@ -54,6 +60,8 @@ public class Emailer {
 	public static final String USERNAME_GMAIL = "olivier.cailloux";
 
 	public static final InternetAddress FROM = asInternetAddress("olivier.cailloux@dauphine.fr", "Olivier Cailloux");
+
+	private static final boolean DO_CHECK = true;
 
 	private static InternetAddress asInternetAddress(String address, String personal) {
 		try {
@@ -155,7 +163,142 @@ public class Emailer {
 			}
 		}
 		found = ImmutableSet.copyOf(asArray);
+		verify(found.size() == asArray.length);
 		return found;
+	}
+
+	public static ImmutableSet<Message> searchIn(SearchTerm term, Folder folder) {
+		if (DO_CHECK) {
+			getAllTerms(term).filter(s -> s instanceof RecipientTerm).map(s -> (RecipientTerm) s)
+					.forEach(t -> getAndCheck(t, folder));
+		}
+		final Message[] asArray = Utils.getOrThrow(() -> folder.search(enlarge(term)));
+		return ImmutableSet.copyOf(asArray);
+	}
+
+	private static Stream<SearchTerm> getAllTerms(SearchTerm term) {
+		if (term instanceof AndTerm) {
+			final AndTerm andTerm = (AndTerm) term;
+			return Arrays.stream(andTerm.getTerms()).flatMap(Emailer::getAllTerms);
+		} else if (term instanceof OrTerm) {
+			final OrTerm orTerm = (OrTerm) term;
+			return Arrays.stream(orTerm.getTerms()).flatMap(Emailer::getAllTerms);
+		} else {
+			return Stream.of(term);
+		}
+	}
+
+	private static SearchTerm enlarge(SearchTerm term) {
+		if (term instanceof FromTerm) {
+			final FromTerm fromTerm = (FromTerm) term;
+			final Address address = fromTerm.getAddress();
+			final String stringAddress;
+			if (address instanceof InternetAddress) {
+				InternetAddress iAddress = (InternetAddress) address;
+				stringAddress = iAddress.getAddress();
+			} else {
+				stringAddress = address.toString();
+			}
+			return new FromStringTerm(getPart(stringAddress));
+		} else if (term instanceof RecipientTerm) {
+			final RecipientTerm rTerm = (RecipientTerm) term;
+			final RecipientType type = rTerm.getRecipientType();
+			final Address address = rTerm.getAddress();
+			final String stringAddress;
+			if (address instanceof InternetAddress) {
+				InternetAddress iAddress = (InternetAddress) address;
+				stringAddress = iAddress.getAddress();
+			} else {
+				stringAddress = address.toString();
+			}
+			return new RecipientStringTerm(type, getPart(stringAddress));
+		} else if (term instanceof FromStringTerm) {
+			final FromStringTerm fromTerm = (FromStringTerm) term;
+			final boolean ignoreCase = fromTerm.getIgnoreCase();
+			verify(ignoreCase,
+					"I don’t know how you created a FromStringTerm that considers case, and I can’t create one myself.");
+			final String pattern = fromTerm.getPattern();
+			return new FromStringTerm(getPart(pattern));
+		} else if (term instanceof RecipientStringTerm) {
+			final RecipientStringTerm rTerm = (RecipientStringTerm) term;
+			final RecipientType type = rTerm.getRecipientType();
+			final boolean ignoreCase = rTerm.getIgnoreCase();
+			verify(ignoreCase,
+					"I don’t know how you created a FromStringTerm that considers case, and I can’t create one myself.");
+			final String pattern = rTerm.getPattern();
+			return new RecipientStringTerm(type, getPart(pattern));
+		} else if (term instanceof AndTerm) {
+			final AndTerm andTerm = (AndTerm) term;
+			final ImmutableList<SearchTerm> enlargedTerms = Arrays.stream(andTerm.getTerms()).map(Emailer::enlarge)
+					.collect(ImmutableList.toImmutableList());
+			return new AndTerm(enlargedTerms.toArray(new SearchTerm[enlargedTerms.size()]));
+		} else if (term instanceof OrTerm) {
+			final OrTerm orTerm = (OrTerm) term;
+			final ImmutableList<SearchTerm> enlargedTerms = Arrays.stream(orTerm.getTerms()).map(Emailer::enlarge)
+					.collect(ImmutableList.toImmutableList());
+			return new OrTerm(enlargedTerms.toArray(new SearchTerm[enlargedTerms.size()]));
+		} else {
+			return term;
+		}
+	}
+
+	/**
+	 * Checks that enlarging the search term returns all possible matches by looking
+	 * for other search queries and filtering manually. To be used by scanning the
+	 * tree of criteria before querying effectively.
+	 *
+	 * Note that this logic (and hence this check) will hopefully work under
+	 * Outlook, but might fail under Gmail, because Gmail (sometimes?) finds less
+	 * results when searching for sub-strings, not more.
+	 */
+	private static ImmutableSet<Message> getAndCheck(RecipientTerm searchTerm, Folder folder) {
+		final Address address = searchTerm.getAddress();
+		checkArgument(address instanceof InternetAddress);
+		final InternetAddress iAddress = (InternetAddress) address;
+
+		final ImmutableSet<Message> partialAddressSearch = searchIn(
+				new RecipientStringTerm(RecipientType.TO, getPart(iAddress.getAddress())), folder, false);
+		final ImmutableSet<Integer> partialAddressNumbers = partialAddressSearch.stream().map(Message::getMessageNumber)
+				.collect(ImmutableSet.toImmutableSet());
+		verify(partialAddressSearch.size() == partialAddressNumbers.size());
+
+		final ImmutableSet<Message> personalSearch = searchIn(
+				new RecipientStringTerm(RecipientType.TO, iAddress.getPersonal()), folder, false);
+		final ImmutableSet<Integer> personalNumbers = personalSearch.stream().map(Message::getMessageNumber)
+				.collect(ImmutableSet.toImmutableSet());
+		verify(personalSearch.size() == personalNumbers.size());
+
+		final ImmutableSet<Integer> addressNumbers = searchMessageNumbers(
+				new RecipientStringTerm(RecipientType.TO, iAddress.getAddress()), folder);
+		final ImmutableSet<Integer> fullAddressNumbers = searchMessageNumbers(
+				new RecipientTerm(RecipientType.TO, iAddress), folder);
+
+		verify(personalNumbers.containsAll(fullAddressNumbers));
+		verify(partialAddressNumbers.containsAll(addressNumbers));
+		verify(addressNumbers.containsAll(fullAddressNumbers));
+
+		final ImmutableSet<Message> matching = partialAddressSearch.stream().filter(searchTerm::match)
+				.collect(ImmutableSet.toImmutableSet());
+		final ImmutableSet<Integer> matchingNumbers = matching.stream().map(Message::getMessageNumber)
+				.collect(ImmutableSet.toImmutableSet());
+
+		final ImmutableSet<Message> matchingAmongPersonal = personalSearch.stream().filter(searchTerm::match)
+				.collect(ImmutableSet.toImmutableSet());
+		final ImmutableSet<Integer> matchingAmongPersonalNumbers = matchingAmongPersonal.stream()
+				.map(Message::getMessageNumber).collect(ImmutableSet.toImmutableSet());
+		verify(matchingAmongPersonal.size() == matchingAmongPersonalNumbers.size());
+
+		verify(matchingNumbers.containsAll(matchingAmongPersonalNumbers));
+
+		return matching;
+	}
+
+	private static ImmutableSet<Integer> searchMessageNumbers(SearchTerm term, Folder folder) {
+		final Message[] asArray = Utils.getOrThrow(() -> folder.search(term));
+		final ImmutableSet<Integer> messageNumbers = Arrays.stream(asArray).map(Message::getMessageNumber)
+				.collect(ImmutableSet.toImmutableSet());
+		verify(asArray.length == messageNumbers.size());
+		return messageNumbers;
 	}
 
 	public static ImmutableSet<Message> searchSentToIn(InternetAddress address, String folderName)
@@ -183,13 +326,14 @@ public class Emailer {
 		partialAddressSearch = searchIn(new RecipientStringTerm(RecipientType.TO, getPart(address.getAddress())),
 				folder, true);
 		personalSearch = searchIn(new RecipientStringTerm(RecipientType.TO, address.getPersonal()), folder, true);
+		final ImmutableSet<Integer> personalNumbers = personalSearch.stream().map(Message::getMessageNumber)
+				.collect(ImmutableSet.toImmutableSet());
 
 		addressSearch = searchIn(new RecipientStringTerm(RecipientType.TO, address.getAddress()), folder, true);
 		fullAddressSearch = searchIn(new RecipientTerm(RecipientType.TO, address), folder, true);
 
 		Verify.verify(partialAddressSearch.containsAll(addressSearch));
 		Verify.verify(addressSearch.containsAll(fullAddressSearch));
-		Verify.verify(personalSearch.containsAll(fullAddressSearch));
 
 		final ImmutableSet<Integer> partialNumbers = partialAddressSearch.stream().map(Message::getMessageNumber)
 				.collect(ImmutableSet.toImmutableSet());
@@ -198,13 +342,7 @@ public class Emailer {
 				.collect(ImmutableSet.toImmutableSet());
 		Verify.verify(fullAddressSearch.size() == fullNumbers.size());
 
-		final ImmutableSet.Builder<Message> candidatesBuilder = ImmutableSet.<Message>builder();
-		candidatesBuilder.addAll(partialAddressSearch);
-		personalSearch.stream().filter(m -> !partialNumbers.contains(m.getMessageNumber()))
-				.forEachOrdered(candidatesBuilder::add);
-		final ImmutableSet<Message> candidates = candidatesBuilder.build();
-
-		final ImmutableSet<Message> matching = candidates.stream()
+		final ImmutableSet<Message> matching = partialAddressSearch.stream()
 				.filter(m -> Stream.of(Utils.getOrThrow(() -> m.getRecipients(RecipientType.TO)))
 						.map(a -> (InternetAddress) a).anyMatch(Predicates.equalTo(address)))
 				.collect(ImmutableSet.toImmutableSet());
@@ -213,16 +351,14 @@ public class Emailer {
 				.collect(ImmutableSet.toImmutableSet());
 
 		{
-			final ImmutableSet<Integer> personalNumbers = personalSearch.stream().map(Message::getMessageNumber)
+			final ImmutableSet<Integer> candidatesNumbers = partialAddressSearch.stream().map(Message::getMessageNumber)
 					.collect(ImmutableSet.toImmutableSet());
-			Verify.verify(personalSearch.size() == personalNumbers.size());
-			final ImmutableSet<Integer> candidatesNumbers = candidates.stream().map(Message::getMessageNumber)
-					.collect(ImmutableSet.toImmutableSet());
-			Verify.verify(candidates.size() == candidatesNumbers.size());
+			Verify.verify(partialAddressSearch.size() == candidatesNumbers.size());
 			final Set<Integer> candidatesNumbersByUnionOnNumbers = Sets.union(partialNumbers, personalNumbers);
 			Verify.verify(candidatesNumbers.equals(candidatesNumbersByUnionOnNumbers));
 			verify(matching.size() == matchingNumbers.size());
 		}
+		// personalSearch, filter manually then check that there’s no new result.
 
 		final Set<Integer> missed = Sets.difference(matchingNumbers, fullNumbers);
 		if (!missed.isEmpty()) {

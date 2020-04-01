@@ -18,6 +18,7 @@ import javax.mail.Message.RecipientType;
 import javax.mail.Session;
 import javax.mail.Store;
 import javax.mail.internet.InternetAddress;
+import javax.mail.search.AndTerm;
 import javax.mail.search.RecipientStringTerm;
 import javax.mail.search.RecipientTerm;
 
@@ -115,6 +116,23 @@ public class EmailerTests {
 				.map(Utils.uncheck(Message::getMessageNumber)).collect(ImmutableList.toImmutableList());
 		final ImmutableSet<Integer> toCailGmailSet = ImmutableSet.copyOf(toCailGmailList);
 		assertEquals(toCailGmailList.size(), toCailGmailSet.size());
+
+		final ImmutableSet<Message> toOverleaf = Emailer
+				.searchIn(new RecipientStringTerm(RecipientType.TO, "support@overleaf"), "Éléments envoyés");
+		final ImmutableSet<Integer> toOverleafNumbers = toOverleaf.stream()
+				.map(Utils.uncheck(Message::getMessageNumber)).collect(ImmutableSet.toImmutableSet());
+		final ImmutableSet<Message> toCailDauphineWorking = Emailer
+				.searchIn(new RecipientStringTerm(RecipientType.TO, "olivier.cailloux@dauphine"), "Éléments envoyés");
+		final ImmutableSet<Integer> toCailDauphineNumbers = toCailDauphineWorking.stream()
+				.map(Utils.uncheck(Message::getMessageNumber)).collect(ImmutableSet.toImmutableSet());
+		final ImmutableSet<Message> orMatch = Emailer
+				.searchIn(
+						new AndTerm(new RecipientStringTerm(RecipientType.TO, "support@overleaf"),
+								new RecipientStringTerm(RecipientType.TO, "olivier.cailloux@dauphine")),
+						"Éléments envoyés");
+		final ImmutableSet<Integer> orMatchNumbers = orMatch.stream().map(Utils.uncheck(Message::getMessageNumber))
+				.collect(ImmutableSet.toImmutableSet());
+		assertEquals(Sets.intersection(toOverleafNumbers, toCailDauphineNumbers), orMatchNumbers);
 
 		final ImmutableSet<Message> toCailDauphineBroad = Emailer.searchIn(
 				new RecipientStringTerm(RecipientType.TO, "olivier.cailloux@dauphine.fr"), "Éléments envoyés");
