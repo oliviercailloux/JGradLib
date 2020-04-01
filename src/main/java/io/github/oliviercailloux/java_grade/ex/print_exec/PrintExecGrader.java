@@ -219,7 +219,7 @@ public class PrintExecGrader {
 	}
 
 	public IGrade grade(String owner, GitRepoFileSystem fs, GitHubHistory gitHubHistory) throws IOException {
-		final IGrade first = gradePart(owner, fs, gitHubHistory, deadlines, this::getFirstTestGrade);
+		final IGrade first = gradePart(owner, fs, gitHubHistory, deadlines.apply(owner), this::getFirstTestGrade);
 		final Optional<SourceClass> firstSource = printExecSource;
 		final IGrade previous = grades1.get(owner);
 		/**
@@ -231,7 +231,7 @@ public class PrintExecGrader {
 			LOGGER.warn("New grading is better: {} ⇐ {}.", first.getPoints(), previous.getPoints());
 		}
 
-		final IGrade second = gradePart(owner, fs, gitHubHistory, s -> DEADLINE2, this::getSecondTestGrade);
+		final IGrade second = gradePart(owner, fs, gitHubHistory, DEADLINE2, this::getSecondTestGrade);
 		final Optional<SourceClass> secondSource = printExecSource;
 		if (firstSource.isEmpty()) {
 			verify(secondSource.isEmpty());
@@ -259,15 +259,13 @@ public class PrintExecGrader {
 		return aggregated;
 	}
 
-	private IGrade gradePart(String owner, GitRepoFileSystem fs, GitHubHistory gitHubHistory,
-			@SuppressWarnings("hiding") Function<String, Instant> deadlines, Supplier<IGrade> testGrader)
-			throws IOException {
+	private IGrade gradePart(String owner, GitRepoFileSystem fs, GitHubHistory gitHubHistory, Instant deadline,
+			Supplier<IGrade> testGrader) throws IOException {
 		printExecSource = null;
 		compileDir = null;
 		printExecClassName = null;
 
-		final GitLocalHistory filtered = GraderOrchestrator.getFilteredHistory(fs, gitHubHistory,
-				deadlines.apply(owner));
+		final GitLocalHistory filtered = GraderOrchestrator.getFilteredHistory(fs, gitHubHistory, deadline);
 		final Set<ObjectId> keptIds = ImmutableSet.copyOf(filtered.getGraph().nodes());
 		final Set<ObjectId> allIds = gitHubHistory.getGraph().nodes();
 		Verify.verify(allIds.containsAll(keptIds));
