@@ -41,7 +41,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableList.Builder;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Maps;
 import com.google.common.collect.MoreCollectors;
 import com.google.common.collect.Sets;
 import com.google.common.collect.Streams;
@@ -68,7 +67,6 @@ import io.github.oliviercailloux.grade.Mark;
 import io.github.oliviercailloux.grade.WeightingGrade;
 import io.github.oliviercailloux.grade.contexters.ProcessRunner;
 import io.github.oliviercailloux.grade.contexters.ProcessRunner.ProcessOutput;
-import io.github.oliviercailloux.grade.format.CsvGrades;
 import io.github.oliviercailloux.grade.format.HtmlGrades;
 import io.github.oliviercailloux.grade.format.json.JsonGrade;
 import io.github.oliviercailloux.grade.markers.MarkHelper;
@@ -80,7 +78,6 @@ import io.github.oliviercailloux.java_grade.SourceScanner;
 import io.github.oliviercailloux.java_grade.SourceScanner.SourceClass;
 import io.github.oliviercailloux.java_grade.compiler.SimpleCompiler;
 import io.github.oliviercailloux.java_grade.testers.JavaMarkHelper;
-import io.github.oliviercailloux.java_grade.utils.Summarize;
 import io.github.oliviercailloux.json.JsonbUtils;
 import io.github.oliviercailloux.supann.QueriesHelper;
 import io.github.oliviercailloux.utils.Utils;
@@ -102,8 +99,8 @@ public class PrintExecGrader {
 
 	private static final String PREFIX = "print-exec";
 
-	private static final Instant DEADLINE = ZonedDateTime.parse("2020-03-05T14:47:24+01:00").toInstant();
-	private static final Instant DEADLINE2 = ZonedDateTime.parse("2020-03-23T00:00:00+01:00").toInstant();
+	private static final Instant DEADLINE = ZonedDateTime.parse("2020-04-01T13:53:00+01:00").toInstant();
+	private static final Instant DEADLINE2 = ZonedDateTime.parse("2020-04-01T15:53:00+01:00").toInstant();
 
 	private static final Path WORK_DIR = Paths.get("../../Java L3/");
 
@@ -120,8 +117,8 @@ public class PrintExecGrader {
 		final Type type = new HashMap<RepositoryCoordinates, IGrade>() {
 		}.getClass().getGenericSuperclass();
 
-		final Map<String, IGrade> grades1Read = JsonbUtils.fromJson(
-				Files.readString(WORK_DIR.resolve("all grades print-exec-1.json")), type, JsonGrade.asAdapter());
+//		final Map<String, IGrade> grades1Read = JsonbUtils.fromJson(
+//				Files.readString(WORK_DIR.resolve("all grades print-exec-1.json")), type, JsonGrade.asAdapter());
 
 		final ImmutableMap.Builder<String, Double> weightsBuilder = ImmutableMap.builder();
 		final ImmutableMap.Builder<String, Integer> nbLinesBuilder = ImmutableMap.builder();
@@ -142,7 +139,7 @@ public class PrintExecGrader {
 
 		final PrintExecGrader grader = new PrintExecGrader(
 				s -> s.equals("…") ? ZonedDateTime.parse("2020-03-18T16:00:00+01:00").toInstant() : DEADLINE);
-		grader.grades1 = grades1Read;
+//		grader.grades1 = grades1Read;
 		grader.weights = weights;
 		grader.nbLines = nbLines;
 
@@ -152,9 +149,9 @@ public class PrintExecGrader {
 			final IGrade grade = grader.grade(repository);
 			grades.put(repository.getUsername(), grade);
 			final Path outDir = WORK_DIR;
-			Files.writeString(outDir.resolve("all grades " + PREFIX + ".json"),
+			Files.writeString(outDir.resolve("all grades new " + PREFIX + ".json"),
 					JsonbUtils.toJsonObject(grades, JsonGrade.asAdapter()).toString());
-			Summarize.summarize(PREFIX, outDir, false);
+//			Summarize.summarize(PREFIX, outDir, false);
 			final Document doc = HtmlGrades.asHtml(grade, "print exec");
 			Files.writeString(Path.of("grade.html"), XmlUtils.asString(doc));
 		}
@@ -165,19 +162,19 @@ public class PrintExecGrader {
 		final ImmutableMap<String, IGrade> grades1Output = grades.entrySet().stream()
 				.collect(ImmutableMap.toImmutableMap(e -> e.getKey(),
 						e -> ((WeightingGrade) e.getValue()).getSubGrades().get(PrintExecCriterion.FIRST_ATTEMPT)));
-		verify(grades1Output.equals(Maps.filterKeys(grades1Read, grades::containsKey)));
+//		verify(grades1Output.equals(Maps.filterKeys(grades1Read, grades::containsKey)));
 		final ImmutableMap<String, IGrade> grades2Output = grades.entrySet().stream()
 				.collect(ImmutableMap.toImmutableMap(e -> e.getKey(),
 						e -> ((WeightingGrade) e.getValue()).getSubGrades().get(PrintExecCriterion.SECOND_ATTEMPT)));
 
-		Files.writeString(WORK_DIR.resolve("all grades print-exec 1.csv"),
-				CsvGrades.asCsv(grades1Output.entrySet().stream().filter(e -> e.getValue() instanceof WeightingGrade)
-						.collect(ImmutableMap.toImmutableMap(e -> usernames.getStudentOnGitHub(e.getKey()),
-								e -> (WeightingGrade) e.getValue()))));
-		Files.writeString(WORK_DIR.resolve("all grades print-exec 2.csv"),
-				CsvGrades.asCsv(grades2Output.entrySet().stream().filter(e -> e.getValue() instanceof WeightingGrade)
-						.collect(ImmutableMap.toImmutableMap(e -> usernames.getStudentOnGitHub(e.getKey()),
-								e -> (WeightingGrade) e.getValue()))));
+//		Files.writeString(WORK_DIR.resolve("all grades print-exec 1.csv"),
+//				CsvGrades.asCsv(grades1Output.entrySet().stream().filter(e -> e.getValue() instanceof WeightingGrade)
+//						.collect(ImmutableMap.toImmutableMap(e -> usernames.getStudentOnGitHub(e.getKey()),
+//								e -> (WeightingGrade) e.getValue()))));
+//		Files.writeString(WORK_DIR.resolve("all grades print-exec 2.csv"),
+//				CsvGrades.asCsv(grades2Output.entrySet().stream().filter(e -> e.getValue() instanceof WeightingGrade)
+//						.collect(ImmutableMap.toImmutableMap(e -> usernames.getStudentOnGitHub(e.getKey()),
+//								e -> (WeightingGrade) e.getValue()))));
 	}
 
 	private final Function<String, Instant> deadlines;
@@ -221,15 +218,15 @@ public class PrintExecGrader {
 	public IGrade grade(String owner, GitRepoFileSystem fs, GitHubHistory gitHubHistory) throws IOException {
 		final IGrade first = gradePart(owner, fs, gitHubHistory, deadlines.apply(owner), this::getFirstTestGrade);
 		final Optional<SourceClass> firstSource = printExecSource;
-		final IGrade previous = grades1.get(owner);
+//		final IGrade previous = grades1.get(owner);
 		/**
 		 * In general, the grades will differ as the comment about the ignored commits
 		 * changes. But the points should be the same or should be better previously,
 		 * thanks to manual corrections.
 		 */
-		if (first.getPoints() > previous.getPoints()) {
-			LOGGER.warn("New grading is better: {} ⇐ {}.", first.getPoints(), previous.getPoints());
-		}
+//		if (first.getPoints() > previous.getPoints()) {
+//			LOGGER.warn("New grading is better: {} ⇐ {}.", first.getPoints(), previous.getPoints());
+//		}
 
 		final IGrade second = gradePart(owner, fs, gitHubHistory, DEADLINE2, this::getSecondTestGrade);
 		final Optional<SourceClass> secondSource = printExecSource;
@@ -253,7 +250,7 @@ public class PrintExecGrader {
 		final double w1 = 1 - w2;
 		final int nbL = nbLines.get(owner);
 		final WeightingGrade aggregated = WeightingGrade.fromList(
-				ImmutableList.of(CriterionGradeWeight.from(PrintExecCriterion.FIRST_ATTEMPT, previous, w1),
+				ImmutableList.of(CriterionGradeWeight.from(PrintExecCriterion.FIRST_ATTEMPT, first, w1),
 						CriterionGradeWeight.from(PrintExecCriterion.SECOND_ATTEMPT, second, w2)),
 				"Nb lines modified: " + nbL);
 		return aggregated;
@@ -432,7 +429,8 @@ public class PrintExecGrader {
 			final ImmutableList<String> parsedJavac = ArgumentsParser.parse(firstLine);
 			final PrintExecCommand javacCommand = PrintExecCommand.parse(parsedJavac);
 			final boolean javac = javacCommand.getCommand().equals("javac");
-			final boolean cpDot = javacCommand.getClasspathEntries().contains(".");
+			final boolean cpDot = javacCommand.getClasspathEntries().contains(".")
+					|| javacCommand.getClasspathEntries().isEmpty();
 			final boolean cpDirs = javacCommand.getClasspathEntries().containsAll(folders);
 			/**
 			 * We want to grant those points only if something non-trivial has been

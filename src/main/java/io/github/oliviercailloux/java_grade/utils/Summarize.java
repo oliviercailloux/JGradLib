@@ -28,11 +28,11 @@ public class Summarize {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(Summarize.class);
 
-	private static final Path WORK_DIR = Paths.get("../../Java L3/");
+	private static final Path READ_DIR = Paths.get("../../Java L3/");
 	private static final String PREFIX = "print-exec";
 
 	public static void main(String[] args) throws Exception {
-		summarize(PREFIX, WORK_DIR, false);
+		summarize(PREFIX, Paths.get("../../Java L3/"), false);
 	}
 
 	public static void summarize(String prefix, Path outDir) throws IOException {
@@ -46,11 +46,11 @@ public class Summarize {
 
 		LOGGER.info("Reading grades.");
 		final Map<String, IGrade> grades = JsonbUtils.fromJson(
-				Files.readString(WORK_DIR.resolve("all grades " + prefix + ".json")), type, JsonGrade.asAdapter());
+				Files.readString(READ_DIR.resolve("all grades " + prefix + ".json")), type, JsonGrade.asAdapter());
 
 		LOGGER.info("Reading usernames.");
 		final StudentsReaderFromJson usernames = new StudentsReaderFromJson();
-		usernames.read(WORK_DIR.resolve("usernames.json"));
+		usernames.read(READ_DIR.resolve("usernames.json"));
 
 		LOGGER.info("Writing grades CSV.");
 		Files.writeString(outDir.resolve("all grades " + prefix + ".csv"), CsvGrades.asCsv(grades.entrySet().stream()

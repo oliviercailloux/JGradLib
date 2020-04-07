@@ -51,6 +51,13 @@ import com.google.common.collect.Sets;
 import io.github.oliviercailloux.utils.Utils;
 import io.github.oliviercailloux.xml.XmlUtils;
 
+/**
+ *
+ * TODO Consider using https://protonmail.com/fr/ instead.
+ *
+ * @author Olivier Cailloux
+ *
+ */
 public class Emailer {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(Emailer.class);

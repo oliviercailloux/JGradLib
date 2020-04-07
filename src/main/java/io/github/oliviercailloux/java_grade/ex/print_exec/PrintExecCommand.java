@@ -2,6 +2,7 @@ package io.github.oliviercailloux.java_grade.ex.print_exec;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Verify.verify;
 
 import java.util.Iterator;
 import java.util.List;
@@ -32,16 +33,16 @@ public class PrintExecCommand {
 			case "-cp":
 			case "-classpath":
 			case "--class-path":
-				Verify.verify(!classpathUsed);
+				verify(!classpathUsed);
 				classpathUsed = true;
 				classpathArgument = iterator.hasNext() ? iterator.next() : "";
-				Verify.verify(!classpathArgument.startsWith("-"));
+				verify(!classpathArgument.startsWith("-"));
 				break;
 			case "-d":
 				dUsed = true;
-				Verify.verify(dArgument == null);
+				verify(dArgument == null);
 				dArgument = iterator.hasNext() ? iterator.next() : "";
-				Verify.verify(!dArgument.startsWith("-"));
+				verify(!dArgument.startsWith("-"));
 				break;
 			case "":
 				break;
@@ -51,7 +52,7 @@ public class PrintExecCommand {
 			}
 		}
 		if (!classpathUsed) {
-			Verify.verify(classpathArgument == null);
+			verify(classpathArgument == null);
 			classpathArgument = "";
 		}
 		assert classpathArgument != null;
@@ -61,7 +62,7 @@ public class PrintExecCommand {
 		}
 		assert dArgument != null;
 
-		Verify.verify(!(classpathArgument.contains(":") && classpathArgument.contains(";")));
+		verify(!(classpathArgument.contains(":") && classpathArgument.contains(";")));
 		final String splitOn;
 		if (classpathArgument.contains(";")) {
 			splitOn = ";";
@@ -70,7 +71,7 @@ public class PrintExecCommand {
 		}
 		final ImmutableList<String> classpathEntries = Stream.of(classpathArgument.split(splitOn))
 				.filter(s -> !s.isEmpty()).collect(ImmutableList.toImmutableList());
-		Verify.verify(!classpathEntries.stream().anyMatch(String::isEmpty), "Arg: " + classpathArgument);
+		verify(!classpathEntries.stream().anyMatch(String::isEmpty), "Arg: " + classpathArgument);
 
 		return new PrintExecCommand(commandItself, classpathUsed, classpathArgument, classpathEntries, dUsed, dArgument,
 				otherArguments.build());
