@@ -8,7 +8,6 @@ import static com.google.common.base.Verify.verify;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SeekableByteChannel;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.AccessDeniedException;
 import java.nio.file.AccessMode;
 import java.nio.file.ClosedFileSystemException;
@@ -348,6 +347,10 @@ public class GitRepoFileSystem extends FileSystem {
 
 	@Override
 	public GitPath getPath(String first, String... more) {
+		/** Ugly (sob)… */
+		if (!first.isEmpty() && !first.contains("//") && !first.endsWith("/")) {
+			return getRelativePath(first, more);
+		}
 		return getPath(first, Arrays.asList(more));
 	}
 
@@ -388,21 +391,21 @@ public class GitRepoFileSystem extends FileSystem {
 		checkArgument(!first.startsWith("/"));
 		checkArgument(first.isEmpty() || first.contains("//") || first.endsWith("/"), first);
 		final int startDoubleSlash = first.indexOf("//");
-		Verify.verify(startDoubleSlash != 0);
+		verify(startDoubleSlash != 0);
 		final String revStr;
 		if (startDoubleSlash == -1) {
 			revStr = first.isEmpty() ? "" : first.substring(0, first.length() - 1);
 		} else {
 			revStr = first.substring(0, startDoubleSlash);
 		}
-		Verify.verify(!revStr.startsWith("/"));
-		Verify.verify(!revStr.endsWith("/"));
+		verify(!revStr.startsWith("/"));
+		verify(!revStr.endsWith("/"));
 		final String restFirst;
 		if (startDoubleSlash == -1) {
 			restFirst = "";
 		} else {
 			restFirst = first.substring(startDoubleSlash + 1, first.length());
-			Verify.verify(restFirst.startsWith("/"));
+			verify(restFirst.startsWith("/"));
 		}
 
 		final ImmutableList<String> dirAndFile = ImmutableList.<String>builder().add(restFirst).addAll(more).build()
@@ -634,7 +637,10 @@ public class GitRepoFileSystem extends FileSystem {
 		final ObjectLoader fileLoader = reader.open(gitObject.objectId, Constants.OBJ_BLOB);
 		verify(fileLoader.getType() == Constants.OBJ_BLOB);
 		final byte[] bytes = fileLoader.getBytes();
-		LOGGER.debug("Read: {}.", new String(bytes, StandardCharsets.UTF_8));
+		/**
+		 * Should not log here: if the charset is not UTF-8, this messes up the output.
+		 */
+//		LOGGER.debug("Read: {}.", new String(bytes, StandardCharsets.UTF_8));
 		return new SeekableInMemoryByteChannel(bytes);
 	}
 

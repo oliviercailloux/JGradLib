@@ -16,6 +16,7 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -51,6 +52,9 @@ import io.github.oliviercailloux.utils.Utils;
  *
  */
 public class Marks {
+	@SuppressWarnings("unused")
+	private static final Logger LOGGER = LoggerFactory.getLogger(Marks.class);
+
 	public static enum MarksCriterion implements Criterion {
 		FILE_EXISTS, FILE_CONTENTS_MATCH_EXACTLY, FILE_CONTENTS_MATCH_APPROXIMATELY;
 
@@ -122,8 +126,23 @@ public class Marks {
 				comments.stream().collect(Collectors.joining(" ")));
 	}
 
-	@SuppressWarnings("unused")
-	private static final Logger LOGGER = LoggerFactory.getLogger(Marks.class);
+	public static IGrade noDerivedFilesGrade(Path projectRoot) {
+		final ImmutableSet<Path> forbidden = ImmutableSet.of(projectRoot.resolve(".classpath"),
+				projectRoot.resolve(".project"), projectRoot.resolve(".settings/"), projectRoot.resolve("target/"),
+				projectRoot.resolve("bin/"), projectRoot.resolve(".DS_Store"));
+
+		final boolean contains;
+		try (Stream<Path> entries = Utils.getOrThrow(() -> Files.list(projectRoot))) {
+			contains = entries.findAny().isPresent();
+		}
+
+		final boolean noForbidden;
+		try (Stream<Path> entries = Utils.getOrThrow(() -> Files.list(projectRoot))) {
+			noForbidden = entries.noneMatch(forbidden::contains);
+		}
+
+		return Mark.binary(contains && noForbidden);
+	}
 
 	/**
 	 * The project must be checked out at the version to be tested, at the path

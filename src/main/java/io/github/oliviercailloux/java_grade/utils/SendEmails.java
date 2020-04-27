@@ -46,6 +46,8 @@ import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.MoreCollectors;
 import com.google.common.collect.Multimaps;
 import com.google.common.io.CharStreams;
+import com.google.common.math.Quantiles;
+import com.google.common.math.Stats;
 
 import io.github.oliviercailloux.email.Email;
 import io.github.oliviercailloux.email.Emailer;
@@ -60,176 +62,18 @@ import io.github.oliviercailloux.grade.format.json.JsonGrade;
 import io.github.oliviercailloux.grade.mycourse.json.JsonStudentOnGitHubKnown;
 import io.github.oliviercailloux.json.JsonbUtils;
 import io.github.oliviercailloux.utils.Utils;
+import io.github.oliviercailloux.xml.XmlUtils;
 
 public class SendEmails {
-	@SuppressWarnings("unused")
-	private static final Logger LOGGER = LoggerFactory.getLogger(SendEmails.class);
-
-	private static final Path WORK_DIR = Paths.get("../../Java L3/");
-	private static final String PREFIX = "print-exec";
-
 	public static final String FILE_NAME = "data.json";
 
 	public static final String MIME_SUBTYPE = "json";
+	@SuppressWarnings("unused")
+	private static final Logger LOGGER = LoggerFactory.getLogger(SendEmails.class);
 
-	public static void main(String[] args) throws Exception {
-		@SuppressWarnings("all")
-		final Type typeSet = new HashSet<StudentOnGitHubKnown>() {
-		}.getClass().getGenericSuperclass();
-		final Set<StudentOnGitHubKnown> usernamesAsSet = JsonbUtils.fromJson(
-				Files.readString(WORK_DIR.resolve("usernames.json")), typeSet, JsonStudentOnGitHubKnown.asAdapter());
+	private static final String PREFIX = "string-files-fake";
 
-		final ImmutableMap<String, StudentOnGitHubKnown> usernames = usernamesAsSet.stream()
-				.collect(ImmutableMap.toImmutableMap(s -> s.getGitHubUsername(), s -> s));
-
-		@SuppressWarnings("all")
-		final Type type = new HashMap<RepositoryCoordinates, IGrade>() {
-		}.getClass().getGenericSuperclass();
-		final Map<String, IGrade> grades = JsonbUtils.fromJson(
-				Files.readString(WORK_DIR.resolve("all grades " + PREFIX + ".json")), type, JsonGrade.asAdapter());
-
-//		final Map<String, IGrade> gradesFiltered = grades.entrySet().stream().limit(5)
-//				.collect(ImmutableMap.toImmutableMap(Map.Entry::getKey, Map.Entry::getValue));
-//		final Map<String, IGrade> gradesFiltered = grades.entrySet().stream().filter(e -> e.getKey().equals("…"))
-//				.collect(ImmutableMap.toImmutableMap(Map.Entry::getKey, Map.Entry::getValue));
-		final Map<String, IGrade> gradesFiltered = grades;
-
-		final Map<String, Optional<IGrade>> lastGrades = gradesFiltered.keySet().stream()
-				.collect(ImmutableMap.toImmutableMap(l -> l, l -> getLastGradeTo(asAddress(usernames.get(l)), PREFIX)));
-
-		for (String login : lastGrades.keySet()) {
-			final Optional<IGrade> lastGrade = lastGrades.get(login);
-			if (lastGrade.isPresent()) {
-				LOGGER.info("Diff {}: {}.", login, getDiff(lastGrade.get(), gradesFiltered.get(login)));
-			} else {
-				LOGGER.info("Not found {}.", login);
-			}
-		}
-
-		final Map<String, IGrade> gradesDiffering = gradesFiltered.entrySet().stream()
-				.filter(e -> lastGrades.get(e.getKey()).filter(g -> g.equals(e.getValue())).isEmpty())
-				.collect(ImmutableMap.toImmutableMap(Map.Entry::getKey, Map.Entry::getValue));
-
-		final ImmutableSet<Email> emails = gradesDiffering.entrySet().stream()
-				.map(e -> asEmail(usernames.get(e.getKey()), e.getValue())).collect(ImmutableSet.toImmutableSet());
-
-		final ImmutableSet<Email> effectiveEmails = emails;
-//		final ImmutableSet<Email> effectiveEmails = emails.stream().limit(1).collect(ImmutableSet.toImmutableSet());
-		LOGGER.info("Prepared {}.", effectiveEmails);
-
-		final ImmutableSet<Message> sent = Emailer.send(effectiveEmails);
-		LOGGER.info("Sent {} messages.", sent.size());
-	}
-
-	private static String getDiff(IGrade grade1, IGrade grade2) {
-		if (grade1.equals(grade2)) {
-			return "";
-		}
-		if (ImmutableSet.of(grade1.getClass(), grade2.getClass())
-				.equals(ImmutableSet.of(Mark.class, WeightingGrade.class))) {
-			return "Different types.";
-		}
-
-		String diff = "";
-		if (!grade1.getComment().equals(grade2.getComment())) {
-			diff += "First: '" + grade1.getComment() + "'; Second: '" + grade2.getComment() + "'. ";
-		}
-		if (grade1 instanceof Mark) {
-			if (grade1.getPoints() != grade2.getPoints()) {
-				diff += "First: " + grade1.getPoints() + "; Second: " + grade2.getPoints() + ". ";
-			}
-		} else if (grade1 instanceof WeightingGrade) {
-			final ImmutableMap<Criterion, IGrade> subGrades1 = grade1.getSubGrades();
-			final ImmutableMap<Criterion, IGrade> subGrades2 = grade2.getSubGrades();
-			checkArgument(subGrades1.keySet().equals(subGrades2.keySet()));
-			for (Criterion criterion : subGrades1.keySet()) {
-				final IGrade subGrade1 = subGrades1.get(criterion);
-				final IGrade subGrade2 = subGrades2.get(criterion);
-				final String subDiff = getDiff(subGrade1, subGrade2);
-				if (!subDiff.isEmpty()) {
-					diff += criterion + ": [" + subDiff + "] ";
-				}
-			}
-		} else {
-			throw new IllegalArgumentException("Unsupported type.");
-		}
-
-		Verify.verify(!diff.isEmpty(), String.format("Grade1: %s, Grade2: %s.", grade1, grade2));
-		return diff;
-	}
-
-	private static Email asEmail(StudentOnGitHubKnown student, IGrade grade) {
-		final Document doc = HtmlGrades.asHtml(grade, "Grade " + PREFIX, 20);
-		final InternetAddress address = asAddress(student);
-		final Email email = Email.withDocumentAndFile(doc, FILE_NAME, JsonGrade.asJson(grade).toString(), MIME_SUBTYPE,
-				address);
-		return email;
-	}
-
-	private static InternetAddress asAddress(StudentOnGitHubKnown student) {
-		checkNotNull(student);
-		final String emailStr = student.asStudentOnMyCourse().getEmail();
-//		final String emailStr = "olivier.cailloux@INVALIDdauphine.fr";
-		final InternetAddress address = Utils
-				.getOrThrow(() -> new InternetAddress(emailStr, student.getFirstName() + " " + student.getLastName()));
-		return address;
-	}
-
-	public static Optional<IGrade> getLastGradeTo(InternetAddress recipient, String prefix) {
-		final ImmutableMap<String, IGrade> allGrades = getAllLatestGradesTo(recipient);
-		return Optional.ofNullable(allGrades.get(prefix));
-	}
-
-	public static Optional<IGrade> getGrade(Message source) {
-		try {
-			if (!(source instanceof MimeMessage)) {
-				return Optional.empty();
-			}
-			LOGGER.debug("Content type: {}.", source.getContentType());
-			if (!source.isMimeType("multipart/mixed")) {
-				return Optional.empty();
-			}
-
-			final MimeMessage mimeSource = (MimeMessage) source;
-			final ImmutableList<MimeBodyPart> parts = getParts(mimeSource);
-			final Optional<MimeBodyPart> matchingPart = parts.stream()
-					.filter(p -> Utils.getOrThrow(() -> p.isMimeType("text/" + MIME_SUBTYPE)))
-					.filter(p -> Utils.getOrThrow(() -> p.getFileName().equals(FILE_NAME)))
-					.collect(MoreCollectors.toOptional());
-			final Optional<IGrade> grade = matchingPart.map(SendEmails::getGrade);
-			return grade;
-		} catch (IOException e) {
-			throw new UncheckedIOException(e);
-		} catch (MessagingException e) {
-			throw new IllegalStateException(e);
-		}
-	}
-
-	private static IGrade getGrade(MimeBodyPart part) {
-		final IGrade grade;
-		try (InputStreamReader reader = new InputStreamReader((InputStream) part.getContent(),
-				StandardCharsets.UTF_8)) {
-			final String content = CharStreams.toString(reader);
-			grade = JsonbUtils.fromJson(content, IGrade.class, JsonGrade.asAdapter());
-		} catch (IOException e) {
-			throw new UncheckedIOException(e);
-		} catch (MessagingException e) {
-			throw new IllegalStateException(e);
-		}
-		return grade;
-	}
-
-	private static ImmutableList<MimeBodyPart> getParts(final MimeMessage source)
-			throws IOException, MessagingException {
-		final MimeMultipart multipart = (MimeMultipart) source.getContent();
-		final ImmutableList.Builder<MimeBodyPart> partsBuilder = ImmutableList.<MimeBodyPart>builder();
-		for (int i = 0; i < multipart.getCount(); ++i) {
-			final MimeBodyPart part = (MimeBodyPart) multipart.getBodyPart(i);
-			partsBuilder.add(part);
-		}
-		final ImmutableList<MimeBodyPart> parts = partsBuilder.build();
-		return parts;
-	}
+	private static final Path WORK_DIR = Paths.get("../../Java L3/");
 
 	public static ImmutableSetMultimap<String, IGrade> getAllGradesTo(InternetAddress recipient) {
 		try {
@@ -270,5 +114,178 @@ public class SendEmails {
 	public static ImmutableMap<String, IGrade> getAllLatestGradesTo(InternetAddress recipient) {
 		return Multimaps.asMap(getAllGradesTo(recipient)).entrySet().stream().collect(ImmutableMap.toImmutableMap(
 				Map.Entry::getKey, e -> ((ImmutableSet<IGrade>) e.getValue()).asList().reverse().get(0)));
+	}
+
+	public static Optional<IGrade> getGrade(Message source) {
+		try {
+			if (!(source instanceof MimeMessage)) {
+				return Optional.empty();
+			}
+			LOGGER.debug("Content type: {}.", source.getContentType());
+			if (!source.isMimeType("multipart/mixed")) {
+				return Optional.empty();
+			}
+
+			final MimeMessage mimeSource = (MimeMessage) source;
+			final ImmutableList<MimeBodyPart> parts = getParts(mimeSource);
+			final Optional<MimeBodyPart> matchingPart = parts.stream()
+					.filter(p -> Utils.getOrThrow(() -> p.isMimeType("text/" + MIME_SUBTYPE)))
+					.filter(p -> Utils.getOrThrow(() -> p.getFileName().equals(FILE_NAME)))
+					.collect(MoreCollectors.toOptional());
+			final Optional<IGrade> grade = matchingPart.map(SendEmails::getGrade);
+			return grade;
+		} catch (IOException e) {
+			throw new UncheckedIOException(e);
+		} catch (MessagingException e) {
+			throw new IllegalStateException(e);
+		}
+	}
+
+	public static Optional<IGrade> getLastGradeTo(InternetAddress recipient, String prefix) {
+		final ImmutableMap<String, IGrade> allGrades = getAllLatestGradesTo(recipient);
+		return Optional.ofNullable(allGrades.get(prefix));
+	}
+
+	public static void main(String[] args) throws Exception {
+		@SuppressWarnings("all")
+		final Type typeSet = new HashSet<StudentOnGitHubKnown>() {
+		}.getClass().getGenericSuperclass();
+		final Set<StudentOnGitHubKnown> usernamesAsSet = JsonbUtils.fromJson(
+				Files.readString(WORK_DIR.resolve("usernames.json")), typeSet, JsonStudentOnGitHubKnown.asAdapter());
+
+		final ImmutableMap<String, StudentOnGitHubKnown> usernames = usernamesAsSet.stream()
+				.collect(ImmutableMap.toImmutableMap(s -> s.getGitHubUsername(), s -> s));
+
+		@SuppressWarnings("all")
+		final Type type = new HashMap<RepositoryCoordinates, IGrade>() {
+		}.getClass().getGenericSuperclass();
+		final Map<String, IGrade> grades = JsonbUtils.fromJson(
+				Files.readString(WORK_DIR.resolve("all grades " + PREFIX + ".json")), type, JsonGrade.asAdapter());
+
+//		final Map<String, IGrade> gradesFiltered = grades.entrySet().stream().limit(1)
+//				.collect(ImmutableMap.toImmutableMap(Map.Entry::getKey, Map.Entry::getValue));
+//		final Map<String, IGrade> gradesFiltered = grades.entrySet().stream().filter(e -> e.getKey().equals("…"))
+//				.collect(ImmutableMap.toImmutableMap(Map.Entry::getKey, Map.Entry::getValue));
+		final Map<String, IGrade> gradesFiltered = grades;
+
+		final ImmutableList<Double> points = grades.values().stream().map(IGrade::getPoints)
+				.collect(ImmutableList.toImmutableList());
+		final Stats stats = Stats.of(points);
+		final Map<Integer, Double> quartiles = Quantiles.quartiles().indexes(1, 2, 3).compute(points);
+
+		final Map<String, Optional<IGrade>> lastGrades = gradesFiltered.keySet().stream()
+				.collect(ImmutableMap.toImmutableMap(l -> l, l -> getLastGradeTo(asAddress(usernames.get(l)), PREFIX)));
+
+		for (String login : lastGrades.keySet()) {
+			final Optional<IGrade> lastGrade = lastGrades.get(login);
+			if (lastGrade.isPresent()) {
+				LOGGER.info("Diff {}: {}.", login, getDiff(lastGrade.get(), gradesFiltered.get(login)));
+			} else {
+				LOGGER.info("Not found {}.", login);
+			}
+		}
+
+		final Map<String, IGrade> gradesDiffering = gradesFiltered.entrySet().stream()
+				.filter(e -> lastGrades.get(e.getKey()).filter(g -> g.equals(e.getValue())).isEmpty())
+				.collect(ImmutableMap.toImmutableMap(Map.Entry::getKey, Map.Entry::getValue));
+
+		final ImmutableSet<Email> emails = gradesDiffering.entrySet().stream()
+				.map(e -> asEmail(usernames.get(e.getKey()), e.getValue(), stats, quartiles))
+				.collect(ImmutableSet.toImmutableSet());
+
+		final ImmutableSet<Email> effectiveEmails = emails;
+//		final ImmutableSet<Email> effectiveEmails = emails.stream().limit(1).collect(ImmutableSet.toImmutableSet());
+		LOGGER.info("Prepared first doc {}.", XmlUtils.asString(effectiveEmails.iterator().next().getDocument()));
+		LOGGER.info("Prepared {}.", effectiveEmails);
+
+		final ImmutableSet<Message> sent = Emailer.send(effectiveEmails);
+		LOGGER.info("Sent {} messages.", sent.size());
+	}
+
+	private static InternetAddress asAddress(StudentOnGitHubKnown student) {
+		checkNotNull(student);
+		final String emailStr = student.asStudentOnMyCourse().getEmail();
+//		final String emailStr = "olivier.cailloux@INVALIDdauphine.fr";
+		final InternetAddress address = Utils
+				.getOrThrow(() -> new InternetAddress(emailStr, student.getFirstName() + " " + student.getLastName()));
+		return address;
+	}
+
+	private static Email asEmail(StudentOnGitHubKnown student, IGrade grade, Stats stats,
+			Map<Integer, Double> quartiles) {
+		final HtmlGrades htmler = HtmlGrades.newInstance();
+		htmler.setTitle("Grade " + PREFIX);
+		if (stats.count() >= 20) {
+			htmler.setStats(stats);
+			htmler.setQuantiles(quartiles);
+		}
+		final Document doc = htmler.asHtml(grade);
+		final InternetAddress address = asAddress(student);
+		final Email email = Email.withDocumentAndFile(doc, FILE_NAME, JsonGrade.asJson(grade).toString(), MIME_SUBTYPE,
+				address);
+		return email;
+	}
+
+	private static String getDiff(IGrade grade1, IGrade grade2) {
+		if (grade1.equals(grade2)) {
+			return "";
+		}
+		if (ImmutableSet.of(grade1.getClass(), grade2.getClass())
+				.equals(ImmutableSet.of(Mark.class, WeightingGrade.class))) {
+			return "Different types.";
+		}
+
+		String diff = "";
+		if (!grade1.getComment().equals(grade2.getComment())) {
+			diff += "First: '" + grade1.getComment() + "'; Second: '" + grade2.getComment() + "'. ";
+		}
+		if (grade1 instanceof Mark) {
+			if (grade1.getPoints() != grade2.getPoints()) {
+				diff += "First: " + grade1.getPoints() + "; Second: " + grade2.getPoints() + ". ";
+			}
+		} else if (grade1 instanceof WeightingGrade) {
+			final ImmutableMap<Criterion, IGrade> subGrades1 = grade1.getSubGrades();
+			final ImmutableMap<Criterion, IGrade> subGrades2 = grade2.getSubGrades();
+			checkArgument(subGrades1.keySet().equals(subGrades2.keySet()));
+			for (Criterion criterion : subGrades1.keySet()) {
+				final IGrade subGrade1 = subGrades1.get(criterion);
+				final IGrade subGrade2 = subGrades2.get(criterion);
+				final String subDiff = getDiff(subGrade1, subGrade2);
+				if (!subDiff.isEmpty()) {
+					diff += criterion + ": [" + subDiff + "] ";
+				}
+			}
+		} else {
+			throw new IllegalArgumentException("Unsupported type.");
+		}
+
+		Verify.verify(!diff.isEmpty(), String.format("Grade1: %s, Grade2: %s.", grade1, grade2));
+		return diff;
+	}
+
+	private static IGrade getGrade(MimeBodyPart part) {
+		final IGrade grade;
+		try (InputStreamReader reader = new InputStreamReader((InputStream) part.getContent(),
+				StandardCharsets.UTF_8)) {
+			final String content = CharStreams.toString(reader);
+			grade = JsonbUtils.fromJson(content, IGrade.class, JsonGrade.asAdapter());
+		} catch (IOException e) {
+			throw new UncheckedIOException(e);
+		} catch (MessagingException e) {
+			throw new IllegalStateException(e);
+		}
+		return grade;
+	}
+
+	private static ImmutableList<MimeBodyPart> getParts(final MimeMessage source)
+			throws IOException, MessagingException {
+		final MimeMultipart multipart = (MimeMultipart) source.getContent();
+		final ImmutableList.Builder<MimeBodyPart> partsBuilder = ImmutableList.<MimeBodyPart>builder();
+		for (int i = 0; i < multipart.getCount(); ++i) {
+			final MimeBodyPart part = (MimeBodyPart) multipart.getBodyPart(i);
+			partsBuilder.add(part);
+		}
+		final ImmutableList<MimeBodyPart> parts = partsBuilder.build();
+		return parts;
 	}
 }

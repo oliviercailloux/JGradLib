@@ -64,7 +64,7 @@ public class Emailer {
 
 	public static final String USERNAME_DAUPHINE = "ocailloux@dauphine.fr";
 
-	public static final String USERNAME_GMAIL = "olivier.cailloux";
+	public static final String USERNAME_OTHERS = "olivier.cailloux";
 
 	public static final InternetAddress FROM = asInternetAddress("olivier.cailloux@dauphine.fr", "Olivier Cailloux");
 
@@ -428,6 +428,20 @@ public class Emailer {
 		return session;
 	}
 
+	static Session getZohoImapSession() {
+		final Properties props = new Properties();
+		props.setProperty("mail.store.protocol", "imap");
+		props.setProperty("mail.host", "imap.zoho.eu");
+		props.setProperty("mail.imap.connectiontimeout", "2000");
+		props.setProperty("mail.imap.timeout", "60*1000");
+		props.setProperty("mail.imap.connectionpooltimeout", "10");
+		props.setProperty("mail.imap.ssl.enable", "true");
+		props.setProperty("mail.imap.ssl.checkserveridentity", "true");
+		// props.setProperty("mail.debug", "true");
+		final Session session = Session.getInstance(props);
+		return session;
+	}
+
 	private static Session getSmtpSession() {
 		final Properties props = new Properties();
 		props.put("mail.smtp.auth", "true");
@@ -523,6 +537,27 @@ public class Emailer {
 			}
 		}
 		final Path path = Paths.get("token_gmail.txt");
+		if (!Files.exists(path)) {
+			throw new IllegalStateException();
+		}
+		final String content = Utils.getOrThrow(() -> Files.readString(path));
+		return content.replaceAll("\n", "");
+	}
+
+	static String getZohoToken() {
+		{
+			final String token = System.getenv("token_zoho");
+			if (token != null) {
+				return token;
+			}
+		}
+		{
+			final String token = System.getProperty("token_zoho");
+			if (token != null) {
+				return token;
+			}
+		}
+		final Path path = Paths.get("token_zoho.txt");
 		if (!Files.exists(path)) {
 			throw new IllegalStateException();
 		}

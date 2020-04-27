@@ -4,12 +4,15 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.net.URI;
+import java.nio.file.CopyOption;
+import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.AbstractMap.SimpleImmutableEntry;
@@ -168,6 +171,30 @@ public class Utils {
 			builder.putEdge(transformer.apply(edge.source()), transformer.apply(edge.target()));
 		}
 		return builder.build();
+	}
+
+	/**
+	 * Thx https://stackoverflow.com/a/60621544.
+	 */
+	public static void copyRecursively(Path source, Path target, CopyOption... options) throws IOException {
+		// TODO AccessController.checkPermission(new FilePermission("<<ALL FILES>>",
+		// "read"));
+		Files.walkFileTree(source, new SimpleFileVisitor<Path>() {
+
+			@Override
+			public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
+				LOGGER.debug("Pre-visiting directory {}.", dir);
+				Files.createDirectories(target.resolve(source.relativize(dir).toString()));
+				return FileVisitResult.CONTINUE;
+			}
+
+			@Override
+			public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+				LOGGER.debug("Copying {}.", file);
+				Files.copy(file, target.resolve(source.relativize(file).toString()), options);
+				return FileVisitResult.CONTINUE;
+			}
+		});
 	}
 
 }

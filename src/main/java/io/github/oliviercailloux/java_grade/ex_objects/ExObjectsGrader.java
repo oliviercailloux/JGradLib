@@ -47,7 +47,7 @@ import io.github.oliviercailloux.grade.context.GitFullContext;
 import io.github.oliviercailloux.grade.contexters.FilesSourceUtils;
 import io.github.oliviercailloux.grade.contexters.FullContextInitializer;
 import io.github.oliviercailloux.grade.markers.Marks;
-import io.github.oliviercailloux.java_grade.compiler.SimpleCompiler;
+import io.github.oliviercailloux.java_grade.bytecode.SimpleCompiler;
 
 public class ExObjectsGrader {
 

@@ -2,28 +2,17 @@ package io.github.oliviercailloux.java_grade.ex.print_exec;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
-import static com.google.common.base.Verify.verify;
 
 import java.io.IOException;
-import java.io.StringReader;
-import java.lang.reflect.Type;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.time.Instant;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
-import java.util.function.Function;
 import java.util.function.Predicate;
-import java.util.function.Supplier;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import javax.tools.Diagnostic;
@@ -42,12 +31,8 @@ import com.google.common.collect.ImmutableList.Builder;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.MoreCollectors;
-import com.google.common.collect.Sets;
 import com.google.common.collect.Streams;
 import com.google.common.graph.ImmutableGraph;
-import com.univocity.parsers.common.record.Record;
-import com.univocity.parsers.csv.CsvParser;
-import com.univocity.parsers.csv.CsvParserSettings;
 
 import io.github.oliviercailloux.git.GitCloner;
 import io.github.oliviercailloux.git.GitLocalHistory;
@@ -55,9 +40,7 @@ import io.github.oliviercailloux.git.GitUri;
 import io.github.oliviercailloux.git.fs.GitFileSystemProvider;
 import io.github.oliviercailloux.git.fs.GitPath;
 import io.github.oliviercailloux.git.fs.GitRepoFileSystem;
-import io.github.oliviercailloux.git.git_hub.model.GitHubHistory;
 import io.github.oliviercailloux.git.git_hub.model.GitHubToken;
-import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinatesWithPrefix;
 import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherV3;
 import io.github.oliviercailloux.grade.Criterion;
@@ -67,16 +50,16 @@ import io.github.oliviercailloux.grade.Mark;
 import io.github.oliviercailloux.grade.WeightingGrade;
 import io.github.oliviercailloux.grade.contexters.ProcessRunner;
 import io.github.oliviercailloux.grade.contexters.ProcessRunner.ProcessOutput;
+import io.github.oliviercailloux.grade.format.CsvGrades;
 import io.github.oliviercailloux.grade.format.HtmlGrades;
 import io.github.oliviercailloux.grade.format.json.JsonGrade;
 import io.github.oliviercailloux.grade.markers.MarkHelper;
 import io.github.oliviercailloux.grade.mycourse.json.StudentsReaderFromJson;
-import io.github.oliviercailloux.java_grade.GraderOrchestrator;
 import io.github.oliviercailloux.java_grade.JavaCriterion;
 import io.github.oliviercailloux.java_grade.JavaGradeUtils;
-import io.github.oliviercailloux.java_grade.SourceScanner;
-import io.github.oliviercailloux.java_grade.SourceScanner.SourceClass;
-import io.github.oliviercailloux.java_grade.compiler.SimpleCompiler;
+import io.github.oliviercailloux.java_grade.bytecode.SimpleCompiler;
+import io.github.oliviercailloux.java_grade.bytecode.SourceScanner;
+import io.github.oliviercailloux.java_grade.bytecode.SourceScanner.SourceClass;
 import io.github.oliviercailloux.java_grade.testers.JavaMarkHelper;
 import io.github.oliviercailloux.json.JsonbUtils;
 import io.github.oliviercailloux.supann.QueriesHelper;
@@ -97,90 +80,52 @@ public class PrintExecGrader {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(PrintExecGrader.class);
 
-	private static final String PREFIX = "print-exec";
-
-	private static final Instant DEADLINE = ZonedDateTime.parse("2020-04-01T13:53:00+01:00").toInstant();
-	private static final Instant DEADLINE2 = ZonedDateTime.parse("2020-04-01T15:53:00+01:00").toInstant();
+	private static final Path READ_DIR = Paths.get("../../Java L3/");
 
 	private static final Path WORK_DIR = Paths.get("../../Java L3/");
+
+	private static final Path COMPILE_BASE_DIR = Utils.getTempDirectory().resolve("Compil");
 
 	public static void main(String[] args) throws Exception {
 		QueriesHelper.setDefaultAuthenticator();
 
 		final ImmutableList<RepositoryCoordinatesWithPrefix> repositories;
 		try (GitHubFetcherV3 fetcher = GitHubFetcherV3.using(GitHubToken.getRealInstance())) {
-			repositories = fetcher.getRepositoriesWithPrefix("oliviercailloux-org", PREFIX);
+			repositories = fetcher.getRepositoriesWithPrefix("oliviercailloux-org", "print-exec");
 		}
-//		repositories = ImmutableList.of(RepositoryCoordinatesWithPrefix.from("oliviercailloux-org", PREFIX, "…"));
+//		repositories = ImmutableList.of(RepositoryCoordinatesWithPrefix.from("oliviercailloux-org", "print-exec", "…"));
 
-		@SuppressWarnings("all")
-		final Type type = new HashMap<RepositoryCoordinates, IGrade>() {
-		}.getClass().getGenericSuperclass();
+		final PrintExecGrader grader = new PrintExecGrader();
 
-//		final Map<String, IGrade> grades1Read = JsonbUtils.fromJson(
-//				Files.readString(WORK_DIR.resolve("all grades print-exec-1.json")), type, JsonGrade.asAdapter());
+		final StudentsReaderFromJson usernames = new StudentsReaderFromJson();
+		usernames.read(READ_DIR.resolve("usernames.json"));
 
-		final ImmutableMap.Builder<String, Double> weightsBuilder = ImmutableMap.builder();
-		final ImmutableMap.Builder<String, Integer> nbLinesBuilder = ImmutableMap.builder();
-		final CsvParserSettings settings = new CsvParserSettings();
-		settings.setHeaderExtractionEnabled(true);
-		final CsvParser parser = new CsvParser(settings);
-		for (Record record : parser
-				.parseAllRecords(new StringReader(Files.readString(WORK_DIR.resolve("print-exec weights.csv"))))) {
-			final String username = record.getString("GitHub username");
-			LOGGER.debug("Read from CSV: {}.", username);
-			final int lineCount = record.getInt("Modified lines");
-			final double weight = record.getDouble("Weight second print exec");
-			nbLinesBuilder.put(username, lineCount);
-			weightsBuilder.put(username, weight);
-		}
-		final ImmutableMap<String, Double> weights = weightsBuilder.build();
-		final ImmutableMap<String, Integer> nbLines = nbLinesBuilder.build();
-
-		final PrintExecGrader grader = new PrintExecGrader(
-				s -> s.equals("…") ? ZonedDateTime.parse("2020-03-18T16:00:00+01:00").toInstant() : DEADLINE);
-//		grader.grades1 = grades1Read;
-		grader.weights = weights;
-		grader.nbLines = nbLines;
+		final Path outDir = WORK_DIR;
+		final String prefix = "print-exec-fake";
 
 		final Map<String, IGrade> grades = new LinkedHashMap<>();
 		for (RepositoryCoordinatesWithPrefix repository : repositories) {
 			LOGGER.info("With {}.", repository);
-			final IGrade grade = grader.grade(repository);
+			final Path projectsBaseDir = outDir.resolve(prefix);
+			final IGrade grade = grader.grade(repository, projectsBaseDir);
 			grades.put(repository.getUsername(), grade);
-			final Path outDir = WORK_DIR;
-			Files.writeString(outDir.resolve("all grades new " + PREFIX + ".json"),
+			Files.writeString(outDir.resolve("all grades " + prefix + ".json"),
 					JsonbUtils.toJsonObject(grades, JsonGrade.asAdapter()).toString());
-//			Summarize.summarize(PREFIX, outDir, false);
-			final Document doc = HtmlGrades.asHtml(grade, "print exec");
+			final Document doc = HtmlGrades.asHtml(grade, prefix);
 			Files.writeString(Path.of("grade.html"), XmlUtils.asString(doc));
 		}
 
-		final StudentsReaderFromJson usernames = new StudentsReaderFromJson();
-		usernames.read(WORK_DIR.resolve("usernames.json"));
+		LOGGER.info("Writing grades CSV.");
+		Files.writeString(
+				outDir.resolve("all grades " + prefix + ".csv"), CsvGrades.asCsv(grades.entrySet().stream()
+						.filter(e -> e.getValue() instanceof WeightingGrade).collect(ImmutableMap.toImmutableMap(
+								e -> usernames.getStudentOnGitHub(e.getKey()), e -> (WeightingGrade) e.getValue())),
+						20d));
 
-		final ImmutableMap<String, IGrade> grades1Output = grades.entrySet().stream()
-				.collect(ImmutableMap.toImmutableMap(e -> e.getKey(),
-						e -> ((WeightingGrade) e.getValue()).getSubGrades().get(PrintExecCriterion.FIRST_ATTEMPT)));
-//		verify(grades1Output.equals(Maps.filterKeys(grades1Read, grades::containsKey)));
-		final ImmutableMap<String, IGrade> grades2Output = grades.entrySet().stream()
-				.collect(ImmutableMap.toImmutableMap(e -> e.getKey(),
-						e -> ((WeightingGrade) e.getValue()).getSubGrades().get(PrintExecCriterion.SECOND_ATTEMPT)));
-
-//		Files.writeString(WORK_DIR.resolve("all grades print-exec 1.csv"),
-//				CsvGrades.asCsv(grades1Output.entrySet().stream().filter(e -> e.getValue() instanceof WeightingGrade)
-//						.collect(ImmutableMap.toImmutableMap(e -> usernames.getStudentOnGitHub(e.getKey()),
-//								e -> (WeightingGrade) e.getValue()))));
-//		Files.writeString(WORK_DIR.resolve("all grades print-exec 2.csv"),
-//				CsvGrades.asCsv(grades2Output.entrySet().stream().filter(e -> e.getValue() instanceof WeightingGrade)
-//						.collect(ImmutableMap.toImmutableMap(e -> usernames.getStudentOnGitHub(e.getKey()),
-//								e -> (WeightingGrade) e.getValue()))));
+		LOGGER.info("Writing grades Html.");
+		final Document doc = HtmlGrades.asHtml(grades, "All grades " + prefix, 20d);
+		Files.writeString(outDir.resolve("all grades " + prefix + ".html"), XmlUtils.asString(doc));
 	}
-
-	private final Function<String, Instant> deadlines;
-	Map<String, IGrade> grades1;
-	ImmutableMap<String, Double> weights;
-	ImmutableMap<String, Integer> nbLines;
 
 	private Path compileDir;
 
@@ -191,99 +136,31 @@ public class PrintExecGrader {
 	final List<String> diffCommands;
 
 	PrintExecGrader() {
-		this(s -> DEADLINE);
-	}
-
-	PrintExecGrader(Function<String, Instant> deadlines) {
 		compileDir = null;
 		printExecClassName = null;
-		this.deadlines = deadlines;
 		printExecSource = null;
 		diffCommands = new ArrayList<>();
 	}
 
-	public IGrade grade(RepositoryCoordinatesWithPrefix coord) throws IOException, GitAPIException {
-		final Path projectsBaseDir = WORK_DIR.resolve(PREFIX);
+	public IGrade grade(RepositoryCoordinatesWithPrefix coord, Path projectsBaseDir)
+			throws IOException, GitAPIException {
 		final Path projectDir = projectsBaseDir.resolve(coord.getRepositoryName());
 		new GitCloner().download(GitUri.fromGitUri(coord.asURI()), projectDir);
 
 		try (GitRepoFileSystem fs = new GitFileSystemProvider().newFileSystemFromGitDir(projectDir.resolve(".git"))) {
-			final GitHubHistory gitHubHistory = GraderOrchestrator.getGitHubHistory(coord);
-			final IGrade grade = grade(coord.getUsername(), fs, gitHubHistory);
+			final IGrade grade = grade(coord.getUsername(), fs, COMPILE_BASE_DIR);
 			LOGGER.debug("Grade {}: {}.", coord, grade);
 			return grade;
 		}
 	}
 
-	public IGrade grade(String owner, GitRepoFileSystem fs, GitHubHistory gitHubHistory) throws IOException {
-		final IGrade first = gradePart(owner, fs, gitHubHistory, deadlines.apply(owner), this::getFirstTestGrade);
-		final Optional<SourceClass> firstSource = printExecSource;
-//		final IGrade previous = grades1.get(owner);
-		/**
-		 * In general, the grades will differ as the comment about the ignored commits
-		 * changes. But the points should be the same or should be better previously,
-		 * thanks to manual corrections.
-		 */
-//		if (first.getPoints() > previous.getPoints()) {
-//			LOGGER.warn("New grading is better: {} ⇐ {}.", first.getPoints(), previous.getPoints());
-//		}
-
-		final IGrade second = gradePart(owner, fs, gitHubHistory, DEADLINE2, this::getSecondTestGrade);
-		final Optional<SourceClass> secondSource = printExecSource;
-		if (firstSource.isEmpty()) {
-			verify(secondSource.isEmpty());
-		}
-		final double w2;
-		if (firstSource.isEmpty() || secondSource.isEmpty()) {
-			w2 = 0;
-		} else {
-			final String command = "cd ../print-exec-" + owner + "; git diff "
-					+ firstSource.get().getPath().getRoot().toString().substring(0, 6) + ":"
-					+ firstSource.get().getPath().getFileName() + " "
-					+ secondSource.get().getPath().getRoot().toString().substring(0, 6) + ":"
-					+ secondSource.get().getPath().getFileName();
-			diffCommands.add(command);
-			LOGGER.debug(command);
-			final double weight = weights.get(owner);
-			w2 = weight;
-		}
-		final double w1 = 1 - w2;
-		final int nbL = nbLines.get(owner);
-		final WeightingGrade aggregated = WeightingGrade.fromList(
-				ImmutableList.of(CriterionGradeWeight.from(PrintExecCriterion.FIRST_ATTEMPT, first, w1),
-						CriterionGradeWeight.from(PrintExecCriterion.SECOND_ATTEMPT, second, w2)),
-				"Nb lines modified: " + nbL);
-		return aggregated;
-	}
-
-	private IGrade gradePart(String owner, GitRepoFileSystem fs, GitHubHistory gitHubHistory, Instant deadline,
-			Supplier<IGrade> testGrader) throws IOException {
+	private IGrade grade(String owner, GitRepoFileSystem fs, Path compileBaseDir) throws IOException {
 		printExecSource = null;
 		compileDir = null;
 		printExecClassName = null;
 
-		final GitLocalHistory filtered = GraderOrchestrator.getFilteredHistory(fs, gitHubHistory, deadline);
-		final Set<ObjectId> keptIds = ImmutableSet.copyOf(filtered.getGraph().nodes());
-		final Set<ObjectId> allIds = gitHubHistory.getGraph().nodes();
-		Verify.verify(allIds.containsAll(keptIds));
-		final Set<ObjectId> excludedIds = Sets.difference(allIds, keptIds);
-		final String comment;
-		if (excludedIds.isEmpty()) {
-			comment = "";
-		} else {
-			comment = "Excluded the following commits (pushed too late): "
-					+ excludedIds.stream()
-							.map(o -> o.getName().substring(0, 7) + " ("
-									+ gitHubHistory.getCorrectedAndCompletedPushedDates().get(o)
-											.atZone(ZoneId.systemDefault())
-									+ ")")
-							.collect(Collectors.joining("; "))
-					+ ".";
-		}
-
-		LOGGER.debug("Graph filtered history: {}.", filtered.getGraph().edges());
 		fs.getHistory();
-		final GitLocalHistory manual = filtered
+		final GitLocalHistory manual = fs.getCachedHistory()
 				.filter(o -> !JavaMarkHelper.committerIsGitHub(fs.getCachedHistory().getCommit(o)));
 		LOGGER.debug("Graph manual: {}.", manual.getGraph().edges());
 		final ImmutableGraph<ObjectId> graph = Utils.asImmutableGraph(manual.getGraph(), o -> o);
@@ -291,18 +168,12 @@ public class PrintExecGrader {
 
 		if (graph.nodes().isEmpty()) {
 			printExecSource = Optional.empty();
-			return Mark.zero(comment + (comment.isEmpty() ? "" : " ")
-					+ "Found no manual commit (not counting commits from GitHub).");
+			return Mark.zero("Found no manual commit (not counting commits from GitHub).");
 		}
-
-		final Set<RevCommit> unfiltered = fs.getHistory().getGraph().nodes();
-		@SuppressWarnings("unlikely-arg-type")
-		final boolean containsAll = unfiltered.containsAll(graph.nodes());
-		Verify.verify(containsAll);
 
 		final ImmutableMap.Builder<Criterion, IGrade> gradeBuilder = ImmutableMap.builder();
 
-		final GitLocalHistory ownHistory = filtered
+		final GitLocalHistory ownHistory = fs.getCachedHistory()
 				.filter(o -> JavaMarkHelper.committerAndAuthorIs(fs.getCachedHistory().getCommit(o), owner));
 		final ImmutableGraph<RevCommit> ownGraph = ownHistory.getGraph();
 		gradeBuilder.put(JavaCriterion.ID, Mark.binary(ownGraph.nodes().size() >= 1));
@@ -311,7 +182,7 @@ public class PrintExecGrader {
 			LOGGER.warn("Risk of accessing a commit beyond deadline (e.g. master!).");
 		}
 
-		final ImmutableSet<RevCommit> tips = filtered.getTips();
+		final ImmutableSet<RevCommit> tips = fs.getCachedHistory().getTips();
 		final GitPath master = fs.getRelativePath("");
 		final ObjectId masterId = fs.getCommitId(master).get();
 		final ImmutableSet<RevCommit> bestTips = MarkHelper.findBestMatches(tips,
@@ -343,7 +214,7 @@ public class PrintExecGrader {
 				.map(p -> JavaGradeUtils.read(p).replaceAll("package .*", "")).orElse("");
 		printExecClassName = printExecSource.map(SourceClass::getShortClassName).orElse("");
 		LOGGER.info("Print exec class name: {}.", printExecClassName);
-		compileDir = WORK_DIR.resolve("En cours").resolve(owner);
+		compileDir = compileBaseDir.resolve(owner);
 		final Path targetClass = compileDir.resolve(printExecClassName + ".class");
 		if (Files.exists(targetClass)) {
 			Files.delete(targetClass);
@@ -357,7 +228,7 @@ public class PrintExecGrader {
 
 		final IGrade testsGrade;
 		if (diags.isEmpty()) {
-			testsGrade = testGrader.get();
+			testsGrade = getSecondTestGrade();
 		} else {
 			testsGrade = Mark.zero();
 		}
@@ -368,10 +239,10 @@ public class PrintExecGrader {
 		weightsBuilder.put(PrintExecCriterion.FULL_CLASS_NAME, 0.5d);
 		weightsBuilder.put(PrintExecCriterion.COMPILES, 0.5d);
 		weightsBuilder.put(PrintExecCriterion.TESTS, 18.5d);
-		return WeightingGrade.from(gradeBuilder.build(), weightsBuilder.build(), comment);
+		return WeightingGrade.from(gradeBuilder.build(), weightsBuilder.build());
 	}
 
-	private IGrade getFirstTestGrade() {
+	IGrade getFirstTestGrade() {
 		final IGrade testsGrade;
 		final ImmutableMap.Builder<Criterion, IGrade> testsGradeBuilder = ImmutableMap.builder();
 		testsGradeBuilder.put(PrintExecCriterion.TEST_TWO_ARGS,
@@ -423,6 +294,7 @@ public class PrintExecGrader {
 		}
 		final String firstLine = lines.size() >= 1 ? lines.get(0).strip() : "";
 		final String secondLine = lines.size() >= 2 ? lines.get(1).strip() : "";
+		LOGGER.debug("Seen: “{}”, “{}”.", firstLine, secondLine);
 
 		final WeightingGrade javacGrade;
 		{
@@ -455,7 +327,8 @@ public class PrintExecGrader {
 				destGrade = Mark.binary(javacCommand.hasD()
 						&& (javacCommand.getDArgument().equals("bin") || javacCommand.getDArgument().equals("bin/")));
 			} else {
-				destGrade = javacCommand.isDUsed() ? Mark.zero() : Mark.given(cpGrade.getPoints(), "Ok, used CP mark");
+				destGrade = (javacCommand.isDUsed() && !javacCommand.getDArgument().equals(".")) ? Mark.zero()
+						: Mark.given(cpGrade.getPoints(), "Ok, used CP mark");
 			}
 			final boolean fileNameArg = javacCommand.getLastArgument().equals(classDir + className + ".java");
 			final IGrade argsGrade = WeightingGrade

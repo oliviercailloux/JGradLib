@@ -274,7 +274,7 @@ public class EmailerTests {
 		final Session session = Session.getInstance(props);
 		try (Store store = session.getStore()) {
 			LOGGER.info("Connecting.");
-			store.connect(Emailer.USERNAME_GMAIL, Emailer.getGmailToken());
+			store.connect(Emailer.USERNAME_OTHERS, Emailer.getGmailToken());
 			try (Folder folder = store.getFolder("Grades")) {
 				folder.open(Folder.READ_ONLY);
 				final Message[] messages31 = folder.getMessages(31, 31);
@@ -346,6 +346,92 @@ public class EmailerTests {
 							.search(new RecipientStringTerm(RecipientType.TO, "Olivier CAILLOUX"));
 					assertEquals(1, Arrays.stream(messagesToThatRecipientStringTerm)
 							.filter(m -> m.getMessageNumber() == 31).count());
+				}
+			}
+		}
+	}
+
+	@Test
+	void testZoho() throws Exception {
+		final Properties props = new Properties();
+		props.setProperty("mail.store.protocol", "imap");
+		props.setProperty("mail.host", "imap.zoho.eu");
+		props.setProperty("mail.imap.connectiontimeout", "2000");
+		props.setProperty("mail.imap.timeout", "60*1000");
+		props.setProperty("mail.imap.connectionpooltimeout", "10");
+		props.setProperty("mail.imap.ssl.enable", "true");
+		props.setProperty("mail.imap.ssl.checkserveridentity", "true");
+		// props.setProperty("mail.debug", "true");
+		final Session session = Session.getInstance(props);
+		try (Store store = session.getStore()) {
+			LOGGER.info("Connecting.");
+			store.connect(Emailer.USERNAME_OTHERS, Emailer.getZohoToken());
+			try (Folder folder = store.getFolder("Grades")) {
+				folder.open(Folder.READ_ONLY);
+				final Message[] messages31 = folder.getMessages(37, 37);
+				assertEquals(1, messages31.length);
+				final Message messageToCAILLOUX = messages31[0];
+
+				final Address[] recipients = messageToCAILLOUX.getRecipients(RecipientType.TO);
+				assertEquals(1, recipients.length);
+				final InternetAddress recipient = (InternetAddress) recipients[0];
+				assertEquals("olivier.cailloux@lamsade.dauphine.fr", recipient.getAddress());
+				LOGGER.info(String.format("Message %s dated %s to %s.", messageToCAILLOUX.getMessageNumber(),
+						messageToCAILLOUX.getSentDate(), recipient));
+				{
+					final Message[] messagesToPartialRecipientStringTerm = folder
+							.search(new RecipientStringTerm(RecipientType.TO, "olivier.cailloux"));
+					assertNotEquals(0, messagesToPartialRecipientStringTerm.length);
+					assertEquals(1, Arrays.stream(messagesToPartialRecipientStringTerm)
+							.filter(m -> m.getMessageNumber() == 37).count());
+				}
+				{
+					final Message[] messagesToPartialRecipientStringTerm = folder
+							.search(new RecipientStringTerm(RecipientType.TO, "olivier.cailloux@lamsade.dauphine."));
+					assertEquals(1, messagesToPartialRecipientStringTerm.length);
+				}
+				{
+					final Message[] messagesToThatRecipientStringTerm = folder.search(
+							new RecipientStringTerm(RecipientType.TO, " <olivier.cailloux@lamsade.dauphine.fr>"));
+					for (Message message : messagesToThatRecipientStringTerm) {
+						LOGGER.info(String.format("Message %s dated %s to %s.", message.getMessageNumber(),
+								message.getSentDate(), message.getAllRecipients()[0]));
+					}
+					assertEquals(1, Arrays.stream(messagesToThatRecipientStringTerm)
+							.filter(m -> m.getMessageNumber() == 37).count());
+				}
+				{
+					final Message[] messagesToThatRecipientStringTerm = folder
+							.search(new RecipientStringTerm(RecipientType.TO, "Olivier CAILLOUX <"));
+					assertEquals(1, Arrays.stream(messagesToThatRecipientStringTerm)
+							.filter(m -> m.getMessageNumber() == 37).count());
+				}
+				{
+					final Message[] messagesToThatRecipientStringTerm = folder
+							.search(new RecipientStringTerm(RecipientType.TO, "Olivier CAILLOUX <o"));
+					assertEquals(0, messagesToThatRecipientStringTerm.length);
+				}
+				{
+					final Message[] messagesToThatRecipientStringTerm = folder.search(new RecipientStringTerm(
+							RecipientType.TO, "Olivier CAILLOUX <olivier.cailloux@lamsade.dauphine.fr>"));
+					assertEquals(1, messagesToThatRecipientStringTerm.length);
+				}
+				{
+					final Message[] messagesToThatRecipient = folder
+							.search(new RecipientTerm(RecipientType.TO, recipient));
+					assertEquals(1, messagesToThatRecipient.length);
+				}
+				{
+					final Message[] messagesToThatRecipientStringTerm = folder
+							.search(new RecipientStringTerm(RecipientType.TO, "olivier.cailloux@lamsade.dauphine.fr"));
+					assertEquals(1, Arrays.stream(messagesToThatRecipientStringTerm)
+							.filter(m -> m.getMessageNumber() == 37).count());
+				}
+				{
+					final Message[] messagesToThatRecipientStringTerm = folder
+							.search(new RecipientStringTerm(RecipientType.TO, "Olivier CAILLOUX"));
+					assertEquals(1, Arrays.stream(messagesToThatRecipientStringTerm)
+							.filter(m -> m.getMessageNumber() == 37).count());
 				}
 			}
 		}

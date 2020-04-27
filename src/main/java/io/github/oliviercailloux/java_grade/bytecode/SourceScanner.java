@@ -1,4 +1,4 @@
-package io.github.oliviercailloux.java_grade;
+package io.github.oliviercailloux.java_grade.bytecode;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -12,6 +12,7 @@ import java.util.stream.Stream;
 
 import com.google.common.collect.ImmutableSet;
 
+import io.github.oliviercailloux.java_grade.JavaGradeUtils;
 import io.github.oliviercailloux.utils.Utils;
 
 public class SourceScanner {

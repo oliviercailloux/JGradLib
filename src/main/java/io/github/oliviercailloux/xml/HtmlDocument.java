@@ -2,6 +2,8 @@ package io.github.oliviercailloux.xml;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import java.net.URI;
+
 import javax.xml.XMLConstants;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -9,6 +11,7 @@ import javax.xml.parsers.ParserConfigurationException;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.w3c.dom.Attr;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -112,6 +115,17 @@ public class HtmlDocument {
 		return document.createElementNS(XHTML_NAME_SPACE, localName);
 	}
 
+	public Element createAnchor(URI href, String text) {
+		final Element a = createXhtmlElement("a");
+		{
+			final Attr hrefAttr = document.createAttribute("href");
+			hrefAttr.setValue(href.toString());
+			a.setAttributeNode(hrefAttr);
+		}
+		a.appendChild(document.createTextNode(text));
+		return a;
+	}
+
 	public Element createParagraph(String content) {
 		final Element p = createXhtmlElement("p");
 		p.appendChild(document.createTextNode(content));
@@ -128,6 +142,10 @@ public class HtmlDocument {
 		final Element el = createXhtmlElement("h2");
 		el.appendChild(document.createTextNode(content));
 		return el;
+	}
+
+	public Text createTextNode(String data) {
+		return document.createTextNode(checkNotNull(data));
 	}
 
 	public String asString() {

@@ -13,7 +13,7 @@ public enum JavaCriterion implements Criterion {
 	/**
 	 * Commit exists that uses the right identity.
 	 */
-	ID, COMPILE;
+	ID, COMPILE, NO_WARNINGS, NO_DERIVED_FILES;
 
 	@Override
 	public String getName() {

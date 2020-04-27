@@ -1,4 +1,4 @@
-package io.github.oliviercailloux.java_grade;
+package io.github.oliviercailloux.java_grade.bytecode;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -9,6 +9,8 @@ import java.nio.file.Path;
 import org.junit.jupiter.api.Test;
 
 import com.google.common.jimfs.Jimfs;
+
+import io.github.oliviercailloux.java_grade.bytecode.SourceScanner;
 
 public class SourceScannerTests {
 	@Test

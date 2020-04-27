@@ -10,8 +10,15 @@
 	</parent>
 	<artifactId>st-projects</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-
+	<properties>
+		<maven.compiler.showWarnings>true</maven.compiler.showWarnings>
+	</properties>
 	<dependencies>
+		<dependency>
+			<groupId>io.vavr</groupId>
+			<artifactId>vavr</artifactId>
+			<version>0.10.2</version>
+		</dependency>
 		<dependency>
 			<groupId>com.github.marschall</groupId>
 			<artifactId>memoryfilesystem</artifactId>
@@ -45,7 +52,7 @@
 		<dependency>
 			<groupId>io.github.classgraph</groupId>
 			<artifactId>classgraph</artifactId>
-			<version>4.4.7</version>
+			<version>4.8.77</version>
 		</dependency>
 		<dependency>
 			<groupId>com.univocity</groupId>
@@ -154,6 +161,11 @@
 			<groupId>io.github.oliviercailloux</groupId>
 			<artifactId>supann</artifactId>
 			<version>0.0.1-SNAPSHOT</version>
+		</dependency>
+		<dependency>
+			<groupId>org.eclipse.jdt</groupId>
+			<artifactId>ecj</artifactId>
+			<version>3.21.0</version>
 		</dependency>
 
 		<dependency>

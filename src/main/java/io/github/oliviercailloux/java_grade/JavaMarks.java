@@ -1,6 +1,9 @@
 package io.github.oliviercailloux.java_grade;
 
 import java.nio.file.Paths;
+import java.util.Arrays;
+import java.util.concurrent.Callable;
+import java.util.function.Predicate;
 import java.util.regex.Pattern;
 
 import org.slf4j.Logger;

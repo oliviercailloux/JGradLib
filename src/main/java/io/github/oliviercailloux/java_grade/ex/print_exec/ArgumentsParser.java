@@ -2,7 +2,6 @@ package io.github.oliviercailloux.java_grade.ex.print_exec;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.slf4j.Logger;
@@ -26,11 +25,11 @@ public class ArgumentsParser {
 	}
 
 	private PeekingIterator<Integer> iterator;
-	private String effectiveCommand;
+	private boolean legalQuoting;
 
 	ArgumentsParser() {
 		iterator = null;
-		effectiveCommand = null;
+		legalQuoting = false;
 	}
 
 	/**
@@ -39,22 +38,20 @@ public class ArgumentsParser {
 	public ImmutableList<String> parseCommand(String command) {
 		checkArgument(!command.startsWith(" "));
 		checkArgument(!command.endsWith(" "));
+		checkArgument(!(command.contains("\"") && command.contains("'")));
 
-		final String commandSpaced;
-		if (command.startsWith("javac\"")) {
-			commandSpaced = "javac " + command.substring(5);
-		} else {
-			commandSpaced = command;
+		LOGGER.debug("Parsing {}.", command);
+
+		final boolean pblHouston = Pattern.compile(" [^\" ][^ ]+\" ").matcher(command).find();
+		final boolean quoteNotSpaced = Pattern.compile("[^ ]'[^ ]").matcher(command).find();
+		final long countQuotes = command.codePoints().filter(i -> i == '\"').count();
+		final boolean quotesEven = countQuotes % 2 == 0;
+		legalQuoting = !pblHouston && !quoteNotSpaced && quotesEven;
+		if (!legalQuoting) {
+			return ImmutableList.of(command);
 		}
 
-		final Matcher matcher = Pattern.compile(" [^\" ][^ ]+\" ").matcher(commandSpaced);
-		if (matcher.find() || commandSpaced.codePoints().filter(i -> i == '\"').count() == 1) {
-			effectiveCommand = commandSpaced.replace("\"", "");
-			LOGGER.warn("Illegal quoting: {}, using {} instead.", commandSpaced, effectiveCommand);
-		} else {
-			effectiveCommand = commandSpaced;
-		}
-		iterator = Iterators.peekingIterator(effectiveCommand.chars().iterator());
+		iterator = Iterators.peekingIterator(command.chars().iterator());
 
 		final ImmutableList.Builder<String> builder = ImmutableList.builder();
 		while (iterator.hasNext()) {
@@ -72,7 +69,7 @@ public class ArgumentsParser {
 		boolean inQuote;
 
 		final int first = iterator.peek();
-		if (first == '"') {
+		if (first == '"' || first == '\'') {
 			inQuote = true;
 			iterator.next();
 		} else {
@@ -82,7 +79,7 @@ public class ArgumentsParser {
 		final StringBuilder builder = new StringBuilder();
 		while (iterator.hasNext()) {
 			final int current = iterator.peek();
-			if (current == '"') {
+			if (current == '"' || current == '\'') {
 				inQuote = !inQuote;
 				iterator.next();
 				break;
@@ -93,7 +90,7 @@ public class ArgumentsParser {
 			builder.append(Character.toChars(current));
 			iterator.next();
 		}
-		checkArgument(!inQuote, "Incorrect quoting in '" + effectiveCommand + "'.");
+		checkArgument(!inQuote, "Incorrect quoting.");
 
 		return builder.toString();
 	}

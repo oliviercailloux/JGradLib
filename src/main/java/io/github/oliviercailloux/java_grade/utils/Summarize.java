@@ -29,10 +29,9 @@ public class Summarize {
 	private static final Logger LOGGER = LoggerFactory.getLogger(Summarize.class);
 
 	private static final Path READ_DIR = Paths.get("../../Java L3/");
-	private static final String PREFIX = "print-exec";
 
 	public static void main(String[] args) throws Exception {
-		summarize(PREFIX, Paths.get("../../Java L3/"), false);
+		summarize("coffee", Paths.get("../../Java L3/"), false);
 	}
 
 	public static void summarize(String prefix, Path outDir) throws IOException {
@@ -59,7 +58,7 @@ public class Summarize {
 				20d, printRange));
 
 		LOGGER.info("Writing grades Html.");
-		final Document doc = HtmlGrades.asHtml(grades, "All grades " + PREFIX, 20d);
+		final Document doc = HtmlGrades.asHtml(grades, "All grades " + prefix, 20d);
 		Files.writeString(outDir.resolve("all grades " + prefix + ".html"), XmlUtils.asString(doc));
 	}
 }

@@ -4,8 +4,11 @@ import static com.google.common.base.Preconditions.checkArgument;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.FileSystem;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
-import java.util.Map;
+import java.util.stream.Stream;
 
 import org.eclipse.jgit.lib.CommitBuilder;
 import org.eclipse.jgit.lib.Constants;
@@ -23,7 +26,8 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Verify;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
+import com.google.common.jimfs.Configuration;
+import com.google.common.jimfs.Jimfs;
 
 public class JGit {
 	@SuppressWarnings("unused")
@@ -32,15 +36,21 @@ public class JGit {
 	public static ImmutableList<ObjectId> createBasicRepo(Repository repository) throws IOException {
 		repository.create(true);
 		final ObjectDatabase objectDatabase = repository.getObjectDatabase();
-		try (ObjectInserter inserter = objectDatabase.newInserter()) {
+
+		try (FileSystem jimFs = Jimfs.newFileSystem(Configuration.unix());
+				ObjectInserter inserter = objectDatabase.newInserter()) {
+			final Path workDir = jimFs.getPath("");
 			final PersonIdent personIdent = new PersonIdent("Me", "email");
 			final ImmutableList.Builder<ObjectId> builder = ImmutableList.builder();
-			final ObjectId commitStart = insertCommit(inserter, personIdent,
-					ImmutableMap.of("file1.txt", "Hello, world"), ImmutableList.of(), "First commit");
+
+			Files.writeString(workDir.resolve("file1.txt"), "Hello, world");
+			final ObjectId commitStart = insertCommit(inserter, personIdent, workDir, ImmutableList.of(),
+					"First commit");
 			builder.add(commitStart);
-			final ObjectId commitNext = insertCommit(inserter, personIdent,
-					ImmutableMap.of("file1.txt", "Hello, world", "file2.txt", "Hello again"),
-					ImmutableList.of(commitStart), "Second commit");
+
+			Files.writeString(workDir.resolve("file2.txt"), "Hello again");
+			final ObjectId commitNext = insertCommit(inserter, personIdent, workDir, ImmutableList.of(commitStart),
+					"Second commit");
 			builder.add(commitNext);
 
 			final ImmutableList<ObjectId> commits = builder.build();
@@ -54,21 +64,27 @@ public class JGit {
 	public static ImmutableList<ObjectId> createRepoWithSubDir(Repository repository) throws IOException {
 		repository.create(true);
 		final ObjectDatabase objectDatabase = repository.getObjectDatabase();
-		try (ObjectInserter inserter = objectDatabase.newInserter()) {
+		try (FileSystem jimFs = Jimfs.newFileSystem(Configuration.unix());
+				ObjectInserter inserter = objectDatabase.newInserter()) {
+			final Path workDir = jimFs.getPath("");
 			final PersonIdent personIdent = new PersonIdent("Me", "email");
 			final ImmutableList.Builder<ObjectId> builder = ImmutableList.builder();
-			final ObjectId commitStart = insertCommit(inserter, personIdent,
-					ImmutableMap.of("file1.txt", "Hello, world"), ImmutableList.of(), "First commit");
+
+			Files.writeString(workDir.resolve("file1.txt"), "Hello, world");
+			final ObjectId commitStart = insertCommit(inserter, personIdent, workDir, ImmutableList.of(),
+					"First commit");
 			builder.add(commitStart);
-			final ObjectId commitNext = insertCommit(inserter, personIdent,
-					ImmutableMap.of("file1.txt", "Hello, world", "file2.txt", "Hello again"),
-					ImmutableList.of(commitStart), "Second commit");
+
+			Files.writeString(workDir.resolve("file2.txt"), "Hello again");
+			final ObjectId commitNext = insertCommit(inserter, personIdent, workDir, ImmutableList.of(commitStart),
+					"Second commit");
 			builder.add(commitNext);
-			final ObjectId subTree = insertTree(inserter, ImmutableMap.of("file.txt", "Hello from sub dir"));
-			final ObjectId treeRoot = insertTree(inserter,
-					ImmutableMap.of("file1.txt", "Hello, world", "file2.txt", "I insist"),
-					ImmutableMap.of("dir", subTree));
-			final ObjectId commitThird = insertCommit(inserter, personIdent, treeRoot, ImmutableList.of(commitNext),
+
+			Files.writeString(workDir.resolve("file2.txt"), "I insist");
+			final Path subDirectory = workDir.resolve("dir");
+			Files.createDirectory(subDirectory);
+			Files.writeString(subDirectory.resolve("file.txt"), "Hello from sub dir");
+			final ObjectId commitThird = insertCommit(inserter, personIdent, workDir, ImmutableList.of(commitNext),
 					"Third commit");
 			builder.add(commitThird);
 
@@ -80,9 +96,9 @@ public class JGit {
 		}
 	}
 
-	public static ObjectId insertCommit(ObjectInserter inserter, PersonIdent personIdent, Map<String, String> files,
+	public static ObjectId insertCommit(ObjectInserter inserter, PersonIdent personIdent, Path directory,
 			List<ObjectId> parents, String commitMessage) throws IOException {
-		final ObjectId treeId = insertTree(inserter, files);
+		final ObjectId treeId = insertTree(inserter, directory);
 		return insertCommit(inserter, personIdent, treeId, parents, commitMessage);
 	}
 
@@ -102,32 +118,41 @@ public class JGit {
 		return commitId;
 	}
 
-	public static ObjectId insertTree(ObjectInserter inserter, Map<String, String> files) throws IOException {
-		return insertTree(inserter, files, ImmutableMap.of());
-	}
+	/**
+	 * Inserts a tree containing the content of the given directory.
+	 * <p>
+	 * Does not flush the inserter.
+	 */
+	public static ObjectId insertTree(ObjectInserter inserter, Path directory) throws IOException {
+		checkArgument(Files.isDirectory(directory));
 
-	public static ObjectId insertTree(ObjectInserter inserter, Map<String, String> files,
-			Map<String, ObjectId> subTrees) throws IOException {
 		/**
 		 * TODO TreeFormatter says that the entries must come in the <i>right</i> order;
 		 * what’s that?
 		 */
 		final TreeFormatter treeFormatter = new TreeFormatter();
-		for (String fileName : files.keySet()) {
-			/**
-			 * See TreeFormatter: “This formatter does not process subtrees”.
-			 */
-			checkArgument(!fileName.contains("/"));
-			final String fileContent = files.get(fileName);
-			final ObjectId fileOId = inserter.insert(Constants.OBJ_BLOB, fileContent.getBytes(StandardCharsets.UTF_8));
-			treeFormatter.append(fileName, FileMode.REGULAR_FILE, fileOId);
+
+		/** See TreeFormatter: “This formatter does not process subtrees”. */
+		try (Stream<Path> content = Files.list(directory);) {
+			for (Path relEntry : (Iterable<Path>) content::iterator) {
+				final String entryName = relEntry.getFileName().toString();
+				/** Work around Jimfs bug, see https://github.com/google/jimfs/issues/105 . */
+				final Path entry = relEntry.toAbsolutePath();
+				if (Files.isRegularFile(entry)) {
+					final String fileContent = Files.readString(entry);
+					final ObjectId fileOId = inserter.insert(Constants.OBJ_BLOB,
+							fileContent.getBytes(StandardCharsets.UTF_8));
+					treeFormatter.append(entryName, FileMode.REGULAR_FILE, fileOId);
+				} else if (Files.isDirectory(entry)) {
+					final ObjectId tree = insertTree(inserter, entry);
+					treeFormatter.append(entryName, FileMode.TREE, tree);
+				} else {
+					throw new IllegalArgumentException("Unknown entry: " + entry);
+				}
+			}
 		}
-		for (String treeName : subTrees.keySet()) {
-			final ObjectId tree = subTrees.get(treeName);
-			treeFormatter.append(treeName, FileMode.TREE, tree);
-		}
+
 		final ObjectId inserted = inserter.insert(treeFormatter);
-		inserter.flush();
 		return inserted;
 	}
 

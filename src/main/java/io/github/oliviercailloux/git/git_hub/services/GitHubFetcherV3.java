@@ -12,6 +12,7 @@ import java.net.URL;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -46,6 +47,7 @@ import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.MoreCollectors;
 
 import io.github.oliviercailloux.git.git_hub.model.GitHubToken;
@@ -235,7 +237,12 @@ public class GitHubFetcherV3 implements AutoCloseable {
 				builder.add(prefixed);
 			}
 		}
-		return builder.build();
+		final ImmutableList<RepositoryCoordinatesWithPrefix> prefixed = builder.build();
+		final Comparator<RepositoryCoordinatesWithPrefix> byName = Comparator
+				.comparing(RepositoryCoordinatesWithPrefix::getRepositoryName);
+		final ImmutableSortedSet<RepositoryCoordinatesWithPrefix> sortedRepositories = ImmutableSortedSet.copyOf(byName,
+				prefixed);
+		return sortedRepositories.asList();
 	}
 
 	private ImmutableList<RepositoryCoordinates> searchForRepositories(String org, String inName) {

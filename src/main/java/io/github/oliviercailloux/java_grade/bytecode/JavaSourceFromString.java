@@ -1,4 +1,4 @@
-package io.github.oliviercailloux.java_grade.compiler;
+package io.github.oliviercailloux.java_grade.bytecode;
 
 import static com.google.common.base.Preconditions.checkArgument;
 

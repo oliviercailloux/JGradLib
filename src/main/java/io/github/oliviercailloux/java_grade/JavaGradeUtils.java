@@ -10,6 +10,11 @@ import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
+import java.util.Arrays;
+import java.util.Optional;
+import java.util.concurrent.Callable;
+import java.util.function.Predicate;
+import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -19,6 +24,7 @@ import com.google.common.collect.ImmutableList;
 import io.github.oliviercailloux.git.FileContent;
 import io.github.oliviercailloux.grade.GradingException;
 import io.github.oliviercailloux.utils.Utils;
+import io.vavr.control.Try;
 
 public class JavaGradeUtils {
 	/**
@@ -76,5 +82,17 @@ public class JavaGradeUtils {
 			throw new UncheckedIOException(e);
 		}
 		return content;
+	}
+
+	@SafeVarargs
+	public static <T> boolean doesThrow(Callable<T> callable, Predicate<Exception>... andSatisfies) {
+		boolean satisfies;
+		try {
+			callable.call();
+			satisfies = false;
+		} catch (Exception exc) {
+			satisfies = Arrays.stream(andSatisfies).allMatch(p -> p.test(exc));
+		}
+		return satisfies;
 	}
 }

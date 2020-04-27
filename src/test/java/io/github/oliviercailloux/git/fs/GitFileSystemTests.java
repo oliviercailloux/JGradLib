@@ -56,7 +56,9 @@ public class GitFileSystemTests {
 			assertEquals("master//truc/chose", gitFs.getPath("master//truc", "chose").toString());
 			assertEquals("chose/truc", gitFs.getPath("", "chose//truc").toString());
 
-			assertThrows(IllegalArgumentException.class, () -> gitFs.getPath("master").toString());
+			/** Should think about this… */
+			assertEquals("truc", gitFs.getPath("truc").toString());
+
 			assertThrows(IllegalArgumentException.class, () -> gitFs.getPath("chose/truc").toString());
 			assertThrows(IllegalArgumentException.class, () -> gitFs.getPath("master", "/truc").toString());
 			assertThrows(IllegalArgumentException.class, () -> gitFs.getPath("master", "//truc").toString());
@@ -199,16 +201,16 @@ public class GitFileSystemTests {
 			JGit.createRepoWithSubDir(repo);
 			try (GitRepoFileSystem gitFs = new GitFileSystemProvider().newFileSystemFromDfsRepository(repo)) {
 				assertEquals(
-						ImmutableList.of(gitFs.getRoot(), gitFs.getRelativePath("file1.txt"),
+						ImmutableSet.of(gitFs.getRoot(), gitFs.getRelativePath("file1.txt"),
 								gitFs.getRelativePath("file2.txt"), gitFs.getRelativePath("dir"),
 								gitFs.getRelativePath("dir", "file.txt")),
 						Files.find(gitFs.getRelativePath(""), 4, (p, a) -> true)
-								.collect(ImmutableList.toImmutableList()));
+								.collect(ImmutableSet.toImmutableSet()));
 				assertEquals(
-						ImmutableList.of(gitFs.getAbsolutePath("master", "/dir"),
+						ImmutableSet.of(gitFs.getAbsolutePath("master", "/dir"),
 								gitFs.getAbsolutePath("master", "/dir", "file.txt")),
 						Files.find(gitFs.getAbsolutePath("master", "/dir"), 4, (p, a) -> true)
-								.collect(ImmutableList.toImmutableList()));
+								.collect(ImmutableSet.toImmutableSet()));
 			}
 		}
 	}
