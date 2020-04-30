@@ -1,10 +1,8 @@
-package io.github.oliviercailloux.email;
+package io.github.oliviercailloux.grade.comm;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
-
-import javax.mail.internet.InternetAddress;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -13,23 +11,24 @@ import org.w3c.dom.Document;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Strings;
 
+import io.github.oliviercailloux.email.EmailAddress;
 import io.github.oliviercailloux.xml.HtmlDocument;
 
 public class Email {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(Email.class);
-	private InternetAddress to;
+	private EmailAddress to;
 
-	public static Email withDocument(Document document, InternetAddress to) {
+	public static Email withDocument(Document document, EmailAddress to) {
 		return new Email(document, null, null, null, to);
 	}
 
 	public static Email withDocumentAndFile(Document document, String fileName, String fileContent, String fileSubtype,
-			InternetAddress to) {
+			EmailAddress to) {
 		return new Email(document, fileName, fileContent, fileSubtype, to);
 	}
 
-	private Email(Document document, String fileName, String fileContent, String fileSubtype, InternetAddress to) {
+	private Email(Document document, String fileName, String fileContent, String fileSubtype, EmailAddress to) {
 		this.document = document;
 		this.fileName = Strings.emptyToNull(fileName);
 		this.fileContent = Strings.emptyToNull(fileContent);
@@ -77,7 +76,7 @@ public class Email {
 		return fileSubtype;
 	}
 
-	public InternetAddress getTo() {
+	public EmailAddress getTo() {
 		return to;
 	}
 

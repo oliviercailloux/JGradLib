@@ -296,10 +296,6 @@ public class StringFilesGrader {
 				final Path reference = jimfs.getPath("subdir/");
 				Try.of(() -> instance.setReferenceFolder(reference));
 				final String relative = "dir/file.txt";
-				/**
-				 * Need to compare strings, not paths, because of
-				 * https://github.com/google/jimfs/issues/105 .
-				 */
 				final Try<String> pathAbs = Try.of(() -> instance.getAbsolutePath(relative));
 				gradeBuilder.put(LocalCriterion.ABS_ON_JIM_PLUS_FILE, Mark.binary(pathAbs.isSuccess() && Strings
 						.nullToEmpty(pathAbs.get()).equals(reference.resolve(relative).toAbsolutePath().toString())));

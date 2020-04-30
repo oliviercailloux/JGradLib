@@ -137,7 +137,8 @@ public class JGit {
 			for (Path relEntry : (Iterable<Path>) content::iterator) {
 				final String entryName = relEntry.getFileName().toString();
 				/** Work around Jimfs bug, see https://github.com/google/jimfs/issues/105 . */
-				final Path entry = relEntry.toAbsolutePath();
+//				final Path entry = relEntry.toAbsolutePath();
+				final Path entry = relEntry;
 				if (Files.isRegularFile(entry)) {
 					final String fileContent = Files.readString(entry);
 					final ObjectId fileOId = inserter.insert(Constants.OBJ_BLOB,

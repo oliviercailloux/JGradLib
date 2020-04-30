@@ -16,7 +16,6 @@ import java.util.function.Function;
 import java.util.stream.Stream;
 
 import javax.mail.Address;
-import javax.mail.FetchProfile;
 import javax.mail.Folder;
 import javax.mail.Message;
 import javax.mail.Message.RecipientType;
@@ -48,6 +47,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.MoreCollectors;
 import com.google.common.collect.Sets;
 
+import io.github.oliviercailloux.grade.comm.Email;
 import io.github.oliviercailloux.utils.Utils;
 import io.github.oliviercailloux.xml.XmlUtils;
 
@@ -66,112 +66,10 @@ public class Emailer {
 
 	public static final String USERNAME_OTHERS = "olivier.cailloux";
 
-	public static final InternetAddress FROM = asInternetAddress("olivier.cailloux@dauphine.fr", "Olivier Cailloux");
-
 	private static final boolean DO_CHECK = true;
-
-	private static InternetAddress asInternetAddress(String address, String personal) {
-		try {
-			return new InternetAddress(address, personal);
-		} catch (UnsupportedEncodingException e) {
-			throw new IllegalArgumentException(e);
-		}
-	}
 
 	public static Message send(Email email) {
 		return send(ImmutableSet.of(email)).stream().collect(MoreCollectors.onlyElement());
-	}
-
-	public static ImmutableSet<Message> send(Collection<Email> emails) {
-		final Session session = getSmtpSession();
-		final ImmutableSet.Builder<Message> messagesBuilder = ImmutableSet.builder();
-		try (Transport transport = getTransport(session)) {
-			LOGGER.info("Connecting to transport.");
-			transport.connect(USERNAME_DAUPHINE, getDauphineToken());
-			LOGGER.info("Connected to transport.");
-			for (Email email : emails) {
-				final MimeMessage message = getMessage(session, email);
-
-				final InternetAddress to = email.getTo();
-				final InternetAddress[] toSingleton = new InternetAddress[] { to };
-				/**
-				 * When the address is incorrect (e.g. WRONG@gmail.com), a message delivered
-				 * event is still sent to registered TransportListeners. A new message in the
-				 * INBOX indicates the error, but it seems hard to detect it on the spot.
-				 */
-				message.setRecipients(Message.RecipientType.TO, toSingleton);
-				message.saveChanges();
-
-				transport.sendMessage(message, toSingleton);
-				messagesBuilder.add(message);
-			}
-			LOGGER.info("Messages sent.");
-		} catch (MessagingException e) {
-			throw new AssertionError(e);
-		}
-		return messagesBuilder.build();
-	}
-
-	public static void saveInto(Set<Message> messages, String folderName)
-			throws NoSuchProviderException, MessagingException {
-		final Session session = getOutlookImapSession();
-		try (Store store = session.getStore()) {
-			LOGGER.info("Connecting to store.");
-			store.connect(USERNAME_DAUPHINE, getDauphineToken());
-			LOGGER.info("Connected to store.");
-			// final Folder root = store.getDefaultFolder();
-			// final ImmutableList<Folder> folders = ImmutableList.copyOf(root.list());
-			// LOGGER.info("Folders: {}.", folders);
-			// final Folder folder = root.getFolder(folderName);
-			try (Folder folder = store.getFolder(folderName)) {
-				LOGGER.info("Message count: {}.", folder.getMessageCount());
-				folder.open(Folder.READ_WRITE);
-				folder.appendMessages(messages.toArray(new Message[] {}));
-			}
-		}
-	}
-
-	public static ImmutableSet<Message> searchIn(SearchTerm term, String folderName)
-			throws NoSuchProviderException, MessagingException {
-		final Session session = getOutlookImapSession();
-		final ImmutableSet<Message> found;
-		try (Store store = session.getStore()) {
-			LOGGER.info("Connecting.");
-			store.connect(USERNAME_DAUPHINE, getDauphineToken());
-			try (Folder folder = store.getFolder(folderName)) {
-				folder.open(Folder.READ_ONLY);
-				found = searchIn(term, folder, true);
-			}
-		}
-		return found;
-	}
-
-	public static ImmutableSet<Message> searchIn(SearchTerm term, Folder folder, boolean cache) {
-		final ImmutableSet<Message> found;
-		final Message[] asArray = Utils.getOrThrow(() -> folder.search(term));
-		if (cache) {
-			/**
-			 * As message is lazily filled up, we need to retrieve it before the folder gets
-			 * closed.
-			 */
-			final FetchProfile fp = new FetchProfile();
-			fp.add(FetchProfile.Item.ENVELOPE);
-			fp.add(FetchProfile.Item.CONTENT_INFO);
-			fp.add(FetchProfile.Item.SIZE);
-			fp.add(FetchProfile.Item.FLAGS);
-			Utils.uncheck(() -> folder.fetch(asArray, fp));
-			/**
-			 * Asking for the addresses, even with this fetch order, fails. Bugs seem common
-			 * in this area, see https://javaee.github.io/javamail/FAQ#imapserverbug, though
-			 * this may not be a bug. Anyway, let’s force fetching headers to avoid this.
-			 */
-			for (Message message : asArray) {
-				Utils.uncheck(() -> message.getAllHeaders());
-			}
-		}
-		found = ImmutableSet.copyOf(asArray);
-		verify(found.size() == asArray.length);
-		return found;
 	}
 
 	public static ImmutableSet<Message> searchIn(SearchTerm term, Folder folder) {
@@ -389,139 +287,12 @@ public class Emailer {
 		return username + "@" + domainComponents[0];
 	}
 
-	public static ImmutableList<Folder> getFolders() throws NoSuchProviderException, MessagingException {
-		final Session session = getOutlookImapSession();
-		try (Store store = session.getStore()) {
-			LOGGER.info("Connecting.");
-			store.connect(USERNAME_DAUPHINE, getDauphineToken());
-			try (Folder root = store.getDefaultFolder()) {
-				final ImmutableList<Folder> folders = ImmutableList.copyOf(root.list());
-				return folders;
-			}
-		}
-	}
-
-	private static Session getSmtpSession() {
-		final Properties props = new Properties();
-		props.put("mail.smtp.auth", "true");
-		props.put("mail.smtp.starttls.enable", "true");
-		props.put("mail.smtp.port", "587");
-		props.setProperty("mail.store.protocol", "smtp");
-		props.setProperty("mail.host", "outlook.office365.com");
-		props.setProperty("mail.user", USERNAME_DAUPHINE);
-		final Session session = Session.getInstance(props);
-		return session;
-	}
-
-	/**
-	 * @param session
-	 * @param subject     not encoded
-	 * @param textContent not encoded
-	 */
-	private static MimeMessage getMessage(Session session, Email email) {
-		final String subject = email.getSubject();
-		final String textContent = XmlUtils.asString(email.getDocument());
-		final String utf8 = StandardCharsets.UTF_8.toString();
-		final MimeMessage message = new MimeMessage(session);
-		try {
-			message.setFrom(FROM);
-			message.setSubject(subject, utf8);
-
-			final MimeBodyPart textPart = new MimeBodyPart();
-			textPart.setText(textContent, utf8, "html");
-
-			final MimeMultipart multipartContent;
-			if (email.hasFile()) {
-				final String fileName = email.getFileName();
-				final String fileContent = email.getFileContent();
-				final String fileSubtype = email.getFileSubtype();
-
-				final MimeBodyPart filePart = new MimeBodyPart();
-				filePart.setFileName(fileName);
-				filePart.setDisposition(Part.ATTACHMENT);
-				filePart.setText(fileContent, utf8, fileSubtype);
-
-				multipartContent = new MimeMultipart(textPart, filePart);
-			} else {
-				multipartContent = new MimeMultipart(textPart);
-			}
-
-			message.setContent(multipartContent);
-		} catch (MessagingException e) {
-			throw new AssertionError(e);
-		}
-		return message;
-	}
-
 	private static Transport getTransport(Session session) {
 		try {
 			return session.getTransport();
 		} catch (NoSuchProviderException e) {
 			throw new AssertionError(e);
 		}
-	}
-
-	static String getDauphineToken() {
-		{
-			final String token = System.getenv("token_dauphine");
-			if (token != null) {
-				return token;
-			}
-		}
-		{
-			final String token = System.getProperty("token_dauphine");
-			if (token != null) {
-				return token;
-			}
-		}
-		final Path path = Paths.get("token_dauphine.txt");
-		if (!Files.exists(path)) {
-			throw new IllegalStateException();
-		}
-		final String content = Utils.getOrThrow(() -> Files.readString(path));
-		return content.replaceAll("\n", "");
-	}
-
-	static String getGmailToken() {
-		{
-			final String token = System.getenv("token_gmail");
-			if (token != null) {
-				return token;
-			}
-		}
-		{
-			final String token = System.getProperty("token_gmail");
-			if (token != null) {
-				return token;
-			}
-		}
-		final Path path = Paths.get("token_gmail.txt");
-		if (!Files.exists(path)) {
-			throw new IllegalStateException();
-		}
-		final String content = Utils.getOrThrow(() -> Files.readString(path));
-		return content.replaceAll("\n", "");
-	}
-
-	static String getZohoToken() {
-		{
-			final String token = System.getenv("token_zoho");
-			if (token != null) {
-				return token;
-			}
-		}
-		{
-			final String token = System.getProperty("token_zoho");
-			if (token != null) {
-				return token;
-			}
-		}
-		final Path path = Paths.get("token_zoho.txt");
-		if (!Files.exists(path)) {
-			throw new IllegalStateException();
-		}
-		final String content = Utils.getOrThrow(() -> Files.readString(path));
-		return content.replaceAll("\n", "");
 	}
 
 	public static <T> T fromFolder(String folderName, Function<Folder, T> function)
