@@ -17,6 +17,7 @@ import javax.mail.Message;
 import javax.mail.Message.RecipientType;
 import javax.mail.Session;
 import javax.mail.Store;
+import javax.mail.URLName;
 import javax.mail.internet.InternetAddress;
 import javax.mail.search.RecipientStringTerm;
 import javax.mail.search.RecipientTerm;
@@ -67,7 +68,7 @@ public class EmailerTests {
 				to2);
 
 		try (BetterEmailer emailer = BetterEmailer.newInstance()) {
-			emailer.connectToStore(BetterEmailer.getOutlookImapSession(), Emailer.USERNAME_DAUPHINE,
+			emailer.connectToStore(BetterEmailer.getOutlookImapSession(), EmailerDauphineHelper.USERNAME_DAUPHINE,
 					EmailerDauphineHelper.getDauphineToken());
 			final ImmutableSet<Message> sent = emailer.send(ImmutableSet.of(email1, email2),
 					EmailerDauphineHelper.FROM);
@@ -99,7 +100,7 @@ public class EmailerTests {
 	@Test
 	void testOutlookBug() throws Exception {
 		try (BetterEmailer emailer = BetterEmailer.newInstance()) {
-			emailer.connectToStore(BetterEmailer.getOutlookImapSession(), Emailer.USERNAME_DAUPHINE,
+			emailer.connectToStore(BetterEmailer.getOutlookImapSession(), EmailerDauphineHelper.USERNAME_DAUPHINE,
 					EmailerDauphineHelper.getDauphineToken());
 			@SuppressWarnings("resource")
 			final Folder folder = emailer.getFolder("Éléments envoyés");
@@ -165,7 +166,7 @@ public class EmailerTests {
 		final Session session = Session.getInstance(props);
 		try (Store store = session.getStore()) {
 			LOGGER.info("Connecting.");
-			store.connect(Emailer.USERNAME_DAUPHINE, EmailerDauphineHelper.getDauphineToken());
+			store.connect(EmailerDauphineHelper.USERNAME_DAUPHINE, EmailerDauphineHelper.getDauphineToken());
 			try (Folder folder = store.getFolder("Éléments envoyés")) {
 				folder.open(Folder.READ_ONLY);
 				final Message[] messages6068 = folder.getMessages(6068, 6068);
@@ -230,7 +231,7 @@ public class EmailerTests {
 		final Session session = Session.getInstance(props);
 		try (Store store = session.getStore()) {
 			LOGGER.info("Connecting.");
-			store.connect(Emailer.USERNAME_OTHERS, EmailerDauphineHelper.getGmailToken());
+			store.connect(EmailerDauphineHelper.USERNAME_OTHERS, EmailerDauphineHelper.getGmailToken());
 			try (Folder folder = store.getFolder("Grades")) {
 				folder.open(Folder.READ_ONLY);
 				final Message[] messages31 = folder.getMessages(31, 31);
@@ -310,7 +311,7 @@ public class EmailerTests {
 	@Test
 	void testZoho() throws Exception {
 		try (BetterEmailer emailer = BetterEmailer.newInstance()) {
-			emailer.connectToStore(BetterEmailer.getZohoImapSession(), Emailer.USERNAME_OTHERS,
+			emailer.connectToStore(BetterEmailer.getZohoImapSession(), EmailerDauphineHelper.USERNAME_OTHERS,
 					EmailerDauphineHelper.getZohoToken());
 			@SuppressWarnings("resource")
 			final Folder folder = emailer.getFolder("Grades");
@@ -358,6 +359,15 @@ public class EmailerTests {
 //		assertEquals(ImmutableSet.of("commit", "git-br"), SendEmails
 //				.getAllLatestGradesTo(new InternetAddress("…@dauphine.eu", "…")).keySet());
 		}
+	}
+
+	@Test
+	void testWithMstore() throws Exception {
+		Session session = Session.getDefaultInstance(new Properties());
+
+		Store store = session.getStore(new URLName("mstor:c:/mailbox/MyStore"));
+		store.connect();
+		store.close();
 	}
 
 }

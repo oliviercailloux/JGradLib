@@ -4,12 +4,14 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 import io.github.oliviercailloux.email.EmailAddress;
-import io.github.oliviercailloux.email.Emailer;
 import io.github.oliviercailloux.utils.Utils;
 
 public class EmailerDauphineHelper {
 
 	public static final EmailAddress FROM = EmailAddress.given("olivier.cailloux@dauphine.fr", "Olivier Cailloux");
+
+	public static final String USERNAME_DAUPHINE = "ocailloux@dauphine.fr";
+	public static final String USERNAME_OTHERS = "olivier.cailloux";
 
 	public static String getDauphineToken() {
 		{
@@ -75,9 +77,9 @@ public class EmailerDauphineHelper {
 	}
 
 	public static void connect(BetterEmailer emailer) {
-		emailer.connectToStore(BetterEmailer.getZohoImapSession(), Emailer.USERNAME_OTHERS,
+		emailer.connectToStore(BetterEmailer.getZohoImapSession(), USERNAME_OTHERS,
 				EmailerDauphineHelper.getZohoToken());
-		emailer.connectToTransport(BetterEmailer.getOutlookSmtpSession(), Emailer.USERNAME_DAUPHINE,
+		emailer.connectToTransport(BetterEmailer.getOutlookSmtpSession(), USERNAME_DAUPHINE,
 				EmailerDauphineHelper.getDauphineToken());
 	}
 
