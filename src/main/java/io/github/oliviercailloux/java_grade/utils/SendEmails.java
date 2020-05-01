@@ -29,7 +29,7 @@ import io.github.oliviercailloux.grade.Criterion;
 import io.github.oliviercailloux.grade.IGrade;
 import io.github.oliviercailloux.grade.Mark;
 import io.github.oliviercailloux.grade.WeightingGrade;
-import io.github.oliviercailloux.grade.comm.BetterEmailer;
+import io.github.oliviercailloux.grade.comm.Emailer;
 import io.github.oliviercailloux.grade.comm.Email;
 import io.github.oliviercailloux.grade.comm.EmailerDauphineHelper;
 import io.github.oliviercailloux.grade.comm.GradesInEmails;
@@ -80,7 +80,7 @@ public class SendEmails {
 
 		try (GradesInEmails sendEmails = GradesInEmails.newInstance()) {
 			@SuppressWarnings("resource")
-			final BetterEmailer emailer = sendEmails.getEmailer();
+			final Emailer emailer = sendEmails.getEmailer();
 			EmailerDauphineHelper.connect(emailer);
 			@SuppressWarnings("resource")
 			final Folder folder = emailer.getFolderReadWrite("Grades");

@@ -76,10 +76,10 @@ public class EmailerDauphineHelper {
 		return content.replaceAll("\n", "");
 	}
 
-	public static void connect(BetterEmailer emailer) {
-		emailer.connectToStore(BetterEmailer.getZohoImapSession(), USERNAME_OTHERS,
+	public static void connect(Emailer emailer) {
+		emailer.connectToStore(Emailer.getZohoImapSession(), USERNAME_OTHERS,
 				EmailerDauphineHelper.getZohoToken());
-		emailer.connectToTransport(BetterEmailer.getOutlookSmtpSession(), USERNAME_DAUPHINE,
+		emailer.connectToTransport(Emailer.getOutlookSmtpSession(), USERNAME_DAUPHINE,
 				EmailerDauphineHelper.getDauphineToken());
 	}
 

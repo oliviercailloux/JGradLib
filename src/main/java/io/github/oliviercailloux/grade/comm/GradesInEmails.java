@@ -38,7 +38,7 @@ import com.google.common.math.Stats;
 
 import io.github.oliviercailloux.email.EmailAddress;
 import io.github.oliviercailloux.grade.IGrade;
-import io.github.oliviercailloux.grade.comm.BetterEmailer.ImapSearchPredicate;
+import io.github.oliviercailloux.grade.comm.Emailer.ImapSearchPredicate;
 import io.github.oliviercailloux.grade.format.HtmlGrades;
 import io.github.oliviercailloux.grade.format.json.JsonGrade;
 import io.github.oliviercailloux.json.JsonbUtils;
@@ -126,16 +126,16 @@ public class GradesInEmails implements AutoCloseable {
 		return new GradesInEmails();
 	}
 
-	private final BetterEmailer emailer;
+	private final Emailer emailer;
 
 	private Folder folder;
 
 	private GradesInEmails() {
-		emailer = BetterEmailer.newInstance();
+		emailer = Emailer.newInstance();
 		folder = null;
 	}
 
-	public BetterEmailer getEmailer() {
+	public Emailer getEmailer() {
 		return emailer;
 	}
 
@@ -145,7 +145,7 @@ public class GradesInEmails implements AutoCloseable {
 
 	/**
 	 * @param folder must be open.
-	 * @see BetterEmailer#getFolder(String)
+	 * @see Emailer#getFolder(String)
 	 */
 	public void setFolder(Folder folder) {
 		checkArgument(folder.isOpen());
@@ -156,18 +156,18 @@ public class GradesInEmails implements AutoCloseable {
 	public ImmutableSetMultimap<String, IGrade> getAllGradesTo(EmailAddress recipient) {
 		checkState(folder != null);
 
-		final ImapSearchPredicate subjectContains = BetterEmailer.ImapSearchPredicate.subjectContains("Grade ");
-		final ImapSearchPredicate recipientEqual = BetterEmailer.ImapSearchPredicate
+		final ImapSearchPredicate subjectContains = Emailer.ImapSearchPredicate.subjectContains("Grade ");
+		final ImapSearchPredicate recipientEqual = Emailer.ImapSearchPredicate
 				.recipientAddressEquals(RecipientType.TO, recipient.getAddress());
 		final ImmutableSet<Message> matching = emailer.searchIn(subjectContains.andSatisfy(recipientEqual), folder);
 		final ImmutableSortedSet<Message> matchingSorted = matching.stream().collect(ImmutableSortedSet
-				.toImmutableSortedSet(Comparator.comparing(BetterEmailer.uncheck(Message::getSentDate))));
+				.toImmutableSortedSet(Comparator.comparing(Emailer.uncheck(Message::getSentDate))));
 
 		final ImmutableSetMultimap.Builder<String, IGrade> gradesBuilder = ImmutableSetMultimap.builder();
 		for (Message message : matchingSorted) {
 			final Optional<IGrade> gradeOpt = getGrade(message);
 			if (gradeOpt.isPresent()) {
-				final String subject = BetterEmailer.call(message::getSubject);
+				final String subject = Emailer.call(message::getSubject);
 				verify(subject.startsWith("Grade "));
 				gradesBuilder.put(subject.substring(6), gradeOpt.get());
 			}

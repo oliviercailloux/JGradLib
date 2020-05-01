@@ -60,9 +60,9 @@ import io.github.oliviercailloux.xml.XmlUtils;
  * @author Olivier Cailloux
  *
  */
-public class BetterEmailer implements AutoCloseable {
+public class Emailer implements AutoCloseable {
 	@SuppressWarnings("unused")
-	private static final Logger LOGGER = LoggerFactory.getLogger(BetterEmailer.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(Emailer.class);
 
 	@SuppressWarnings("serial")
 	public static class UncheckedMessagingException extends RuntimeException {
@@ -175,8 +175,8 @@ public class BetterEmailer implements AutoCloseable {
 		}
 	}
 
-	public static BetterEmailer newInstance() {
-		return new BetterEmailer();
+	public static Emailer newInstance() {
+		return new Emailer();
 	}
 
 	public static Session getOutlookImapSession() {
@@ -301,7 +301,7 @@ public class BetterEmailer implements AutoCloseable {
 	private Session transportSession;
 	private Transport transport;
 
-	private BetterEmailer() {
+	private Emailer() {
 		store = null;
 		openReadFolders = Maps.newLinkedHashMap();
 		openRWFolders = Maps.newLinkedHashMap();
