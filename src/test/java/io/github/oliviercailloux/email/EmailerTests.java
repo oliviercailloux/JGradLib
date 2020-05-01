@@ -361,13 +361,4 @@ public class EmailerTests {
 		}
 	}
 
-	@Test
-	void testWithMstore() throws Exception {
-		Session session = Session.getDefaultInstance(new Properties());
-
-		Store store = session.getStore(new URLName("mstor:c:/mailbox/MyStore"));
-		store.connect();
-		store.close();
-	}
-
 }
