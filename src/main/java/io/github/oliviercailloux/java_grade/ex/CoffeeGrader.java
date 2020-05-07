@@ -1,4 +1,4 @@
-package io.github.oliviercailloux.java_grade.ex.coffee;
+package io.github.oliviercailloux.java_grade.ex;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Verify.verify;

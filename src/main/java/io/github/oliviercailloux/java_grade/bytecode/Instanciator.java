@@ -6,6 +6,7 @@ import static com.google.common.base.Preconditions.checkState;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.URL;
 import java.net.URLClassLoader;
@@ -14,6 +15,7 @@ import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.VerifyException;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.MoreCollectors;
 
@@ -43,15 +45,16 @@ public class Instanciator {
 		classOpt = null;
 	}
 
-	public <T> Optional<T> getInstance(Class<T> type) {
+	public <T> Optional<T> getInstance(Class<T> type) throws InvocationTargetException {
 		return getInstance(type, Optional.empty());
 	}
 
-	public <T> Optional<T> getInstance(Class<T> type, String staticFactoryMethodName) {
+	public <T> Optional<T> getInstance(Class<T> type, String staticFactoryMethodName) throws InvocationTargetException {
 		return getInstance(type, Optional.of(staticFactoryMethodName));
 	}
 
-	private <T> Optional<T> getInstance(Class<T> type, Optional<String> staticFactoryMethodNameOpt) {
+	private <T> Optional<T> getInstance(Class<T> type, Optional<String> staticFactoryMethodNameOpt)
+			throws InvocationTargetException {
 		checkNotNull(staticFactoryMethodNameOpt);
 		try (URLClassLoader child = new URLClassLoader(new URL[] { url }, parent)) {
 			final ClassGraph graph = new ClassGraph().enableURLScheme(url.getProtocol()).overrideClassLoaders(child)
@@ -75,7 +78,12 @@ public class Instanciator {
 					final boolean isPublic = methodInfoOpt.map(MethodInfo::isPublic).orElse(false);
 					if (isPublic) {
 						final Optional<Method> methodOpt = methodInfoOpt.map(MethodInfo::loadClassAndGetMethod);
-						instanceOpt = methodOpt.map(Utils.uncheck(m -> m.invoke(null)));
+						try {
+							instanceOpt = methodOpt.isPresent() ? Optional.of(methodOpt.get().invoke(null))
+									: Optional.empty();
+						} catch (IllegalAccessException | IllegalArgumentException e) {
+							throw new VerifyException(e);
+						}
 					} else {
 						instanceOpt = Optional.empty();
 					}
