@@ -4,7 +4,6 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Verify.verify;
 
 import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.FileSystem;
 import java.nio.file.Files;
@@ -191,18 +190,12 @@ public class StringFilesGrader {
 			final Instanciator instanciator = Instanciator.given(
 					fileSourcePath.resolve(Path.of("target/classes/")).toUri().toURL(), getClass().getClassLoader());
 
-			Optional<StringFilesUtils> instanceOpt;
-			try {
-				instanceOpt = instanciator.getInstance(StringFilesUtils.class, "newInstance");
-			} catch (@SuppressWarnings("unused") InvocationTargetException e) {
-				instanceOpt = Optional.empty();
-			}
+			final Optional<StringFilesUtils> instanceOpt = instanciator.getInstance(StringFilesUtils.class,
+					"newInstance");
 			if (instanceOpt.isPresent()) {
-				final Supplier<StringFilesUtils> supplier = () -> Utils
-						.getOrThrow(() -> instanciator.getInstance(StringFilesUtils.class, "newInstance")).get();
-				implGrade = grade(supplier);
+				implGrade = grade(() -> instanciator.getInstance(StringFilesUtils.class, "newInstance").get());
 			} else {
-				implGrade = Mark.zero("Could not initialize impl.");
+				implGrade = Mark.zero("Could not initialize implementation: " + instanciator.getLastException());
 			}
 		} else {
 			implGrade = Mark.zero();

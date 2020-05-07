@@ -25,7 +25,6 @@ import io.github.classgraph.ClassInfoList;
 import io.github.classgraph.MethodInfo;
 import io.github.classgraph.MethodInfoList;
 import io.github.classgraph.ScanResult;
-import io.github.oliviercailloux.utils.Utils;
 
 public class Instanciator {
 	@SuppressWarnings("unused")
@@ -38,24 +37,27 @@ public class Instanciator {
 	private final URL url;
 	private final ClassLoader parent;
 	private Optional<Class<?>> classOpt;
+	private ReflectiveOperationException lastException;
 
 	private Instanciator(URL url, ClassLoader delegate) {
 		this.url = checkNotNull(url);
 		this.parent = checkNotNull(delegate);
 		classOpt = null;
+		lastException = null;
 	}
 
-	public <T> Optional<T> getInstance(Class<T> type) throws InvocationTargetException {
+	public <T> Optional<T> getInstance(Class<T> type) {
 		return getInstance(type, Optional.empty());
 	}
 
-	public <T> Optional<T> getInstance(Class<T> type, String staticFactoryMethodName) throws InvocationTargetException {
+	public <T> Optional<T> getInstance(Class<T> type, String staticFactoryMethodName) {
 		return getInstance(type, Optional.of(staticFactoryMethodName));
 	}
 
-	private <T> Optional<T> getInstance(Class<T> type, Optional<String> staticFactoryMethodNameOpt)
-			throws InvocationTargetException {
+	private <T> Optional<T> getInstance(Class<T> type, Optional<String> staticFactoryMethodNameOpt) {
 		checkNotNull(staticFactoryMethodNameOpt);
+		lastException = null;
+
 		try (URLClassLoader child = new URLClassLoader(new URL[] { url }, parent)) {
 			final ClassGraph graph = new ClassGraph().enableURLScheme(url.getProtocol()).overrideClassLoaders(child)
 					.ignoreParentClassLoaders().enableAllInfo();
@@ -67,7 +69,7 @@ public class Instanciator {
 				final Optional<ClassInfo> infoOpt = implementingClasses.directOnly().getStandardClasses().stream()
 						.collect(MoreCollectors.toOptional());
 				classOpt = infoOpt.map(ClassInfo::loadClass);
-				final Optional<Object> instanceOpt;
+				Optional<Object> instanceOpt;
 				if (staticFactoryMethodNameOpt.isPresent()) {
 					final Optional<MethodInfoList> methodInfoListOpt = infoOpt
 							.map(c -> c.getDeclaredMethodInfo(staticFactoryMethodNameOpt.get()));
@@ -77,14 +79,18 @@ public class Instanciator {
 							.flatMap(l -> l.stream().collect(MoreCollectors.toOptional()));
 					final boolean isPublic = methodInfoOpt.map(MethodInfo::isPublic).orElse(false);
 					if (isPublic) {
-						final Optional<Method> methodOpt = methodInfoOpt.map(MethodInfo::loadClassAndGetMethod);
+						final Method method = methodInfoOpt.get().loadClassAndGetMethod();
 						try {
-							instanceOpt = methodOpt.isPresent() ? Optional.of(methodOpt.get().invoke(null))
-									: Optional.empty();
+							instanceOpt = Optional.of(method.invoke(null));
 						} catch (IllegalAccessException | IllegalArgumentException e) {
 							throw new VerifyException(e);
+						} catch (InvocationTargetException e) {
+							lastException = e;
+							instanceOpt = Optional.empty();
 						}
 					} else {
+						lastException = new InvocationTargetException(
+								new IllegalArgumentException("Factory not found"));
 						instanceOpt = Optional.empty();
 					}
 				} else {
@@ -92,7 +98,20 @@ public class Instanciator {
 							.map(c -> ImmutableSet.copyOf(c.getDeclaredConstructors())).orElse(ImmutableSet.of());
 					final Optional<Constructor<?>> parameterlessConstructor = constructors.stream()
 							.filter(c -> c.getParameters().length == 0).collect(MoreCollectors.toOptional());
-					instanceOpt = parameterlessConstructor.map(Utils.uncheck(Constructor::newInstance));
+					if (parameterlessConstructor.isPresent()) {
+						try {
+							instanceOpt = Optional.of(parameterlessConstructor.get().newInstance());
+						} catch (IllegalAccessException | IllegalArgumentException e) {
+							throw new VerifyException(e);
+						} catch (InvocationTargetException | InstantiationException e) {
+							lastException = e;
+							instanceOpt = Optional.empty();
+						}
+					} else {
+						lastException = new InvocationTargetException(
+								new IllegalArgumentException("Constructor not found"));
+						instanceOpt = Optional.empty();
+					}
 				}
 				return instanceOpt.map(type::cast);
 			}
@@ -104,5 +123,10 @@ public class Instanciator {
 	public Optional<Class<?>> getLastClass() {
 		checkState(classOpt != null);
 		return classOpt;
+	}
+
+	public ReflectiveOperationException getLastException() {
+		checkState(lastException != null);
+		return lastException;
 	}
 }

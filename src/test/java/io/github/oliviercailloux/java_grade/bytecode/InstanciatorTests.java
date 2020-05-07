@@ -1,6 +1,7 @@
 package io.github.oliviercailloux.java_grade.bytecode;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.net.URL;
@@ -50,6 +51,31 @@ class InstanciatorTests {
 			assertTrue(instanciator.getInstance(List.class, "newInstance").isEmpty());
 			assertTrue(instanciator.getInstance(Function.class, "newInstanceWrongName").isEmpty());
 			assertTrue(instanciator.getInstance(Function.class, "newInstance").isPresent());
+		}
+	}
+
+	@Test
+	void testInstanceThrowing() throws Exception {
+		try (FileSystem jimFs = Jimfs.newFileSystem(Configuration.unix())) {
+			final Path work = jimFs.getPath("");
+			final Path sourceDir = work.resolve(getClass().getPackage().getName().replace('.', '/'));
+			final Path sourcePath = sourceDir.resolve("MyIdentityFunctionThrowing.java");
+			{
+				final String idFct = Files
+						.readString(Path.of(getClass().getResource("MyIdentityFunctionThrowing.java").toURI()));
+				Files.createDirectories(sourceDir);
+				Files.writeString(sourcePath, idFct);
+			}
+			final List<Diagnostic<? extends JavaFileObject>> diagnostics = SimpleCompiler
+					.compileFromPaths(ImmutableList.of(sourcePath), ImmutableList.of());
+			assertEquals(ImmutableList.of(), diagnostics);
+
+			final URL url = work.toUri().toURL();
+			final Instanciator instanciator = Instanciator.given(url, getClass().getClassLoader());
+			assertTrue(instanciator.getInstance(Function.class, "newInstance").isEmpty());
+			final ReflectiveOperationException lastException = instanciator.getLastException();
+			LOGGER.debug("Last exc:", lastException);
+			assertNotNull(lastException);
 		}
 	}
 
