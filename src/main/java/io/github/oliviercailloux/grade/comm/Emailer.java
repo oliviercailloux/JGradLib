@@ -1,19 +1,16 @@
 package io.github.oliviercailloux.grade.comm;
 
-import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
-import static com.google.common.base.Verify.verify;
+import static io.github.oliviercailloux.email.UncheckedMessagingException.MESSAGING_UNCHECKER;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.LinkedHashMap;
-import java.util.Locale;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.function.Function;
-import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.StreamSupport;
 
@@ -26,18 +23,11 @@ import javax.mail.Part;
 import javax.mail.Session;
 import javax.mail.Store;
 import javax.mail.Transport;
+import javax.mail.URLName;
 import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeBodyPart;
 import javax.mail.internet.MimeMessage;
 import javax.mail.internet.MimeMultipart;
-import javax.mail.search.AndTerm;
-import javax.mail.search.FromStringTerm;
-import javax.mail.search.FromTerm;
-import javax.mail.search.OrTerm;
-import javax.mail.search.RecipientStringTerm;
-import javax.mail.search.RecipientTerm;
-import javax.mail.search.SearchTerm;
-import javax.mail.search.SubjectTerm;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,9 +38,10 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import com.google.common.collect.MoreCollectors;
-import com.google.common.collect.Sets;
 
-import io.github.oliviercailloux.email.EmailAddress;
+import io.github.oliviercailloux.email.EmailAddressAndPersonal;
+import io.github.oliviercailloux.email.ImapSearchPredicate;
+import io.github.oliviercailloux.email.UncheckedMessagingException;
 import io.github.oliviercailloux.xml.XmlUtils;
 
 /**
@@ -64,119 +55,8 @@ public class Emailer implements AutoCloseable {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(Emailer.class);
 
-	@SuppressWarnings("serial")
-	public static class UncheckedMessagingException extends RuntimeException {
-		private UncheckedMessagingException(Throwable cause) {
-			super(cause);
-		}
-	}
-
-	public static class ImapSearchPredicate implements Predicate<Message> {
-		public static ImapSearchPredicate recipientAddressEquals(RecipientType recipientType, String address) {
-			checkArgument(address.toLowerCase(Locale.ROOT).equals(address));
-			final EmailAddress emailAddress = EmailAddress.given(address);
-			return new ImapSearchPredicate(new RecipientTerm(recipientType, emailAddress.asInternetAddress()),
-					(m) -> recipientAddressEquals(recipientType, address, m));
-		}
-
-		public static ImapSearchPredicate fromAddressEquals(String address) {
-			checkArgument(address.toLowerCase(Locale.ROOT).equals(address));
-			final EmailAddress emailAddress = EmailAddress.given(address);
-			return new ImapSearchPredicate(new FromTerm(emailAddress.asInternetAddress()),
-					(m) -> fromAddressEquals(address, m));
-		}
-
-		public static ImapSearchPredicate recipientFullAddressContains(RecipientType recipientType, String subString) {
-			/**
-			 * “In all search keys that use strings, a message matches the key if the string
-			 * is a substring of the field. The matching is case-insensitive.” --
-			 * https://tools.ietf.org/html/rfc3501
-			 */
-			checkArgument(subString.toLowerCase(Locale.ROOT).equals(subString));
-			return new ImapSearchPredicate(new RecipientStringTerm(recipientType, subString),
-					(m) -> recipientFullAddressContains(recipientType, subString, m));
-		}
-
-		public static ImapSearchPredicate fromFullAddressContains(String subString) {
-			checkArgument(subString.toLowerCase(Locale.ROOT).equals(subString));
-			return new ImapSearchPredicate(new FromStringTerm(subString), (m) -> fromFullAddressContains(subString, m));
-		}
-
-		public static ImapSearchPredicate subjectContains(String subString) {
-			checkArgument(subString.toLowerCase(Locale.ROOT).equals(subString));
-			return new ImapSearchPredicate(new SubjectTerm(subString), (m) -> subjectContains(subString, m));
-		}
-
-		private static boolean recipientAddressEquals(RecipientType recipientType, String address, Message m) {
-			return Arrays.stream(call(() -> m.getRecipients(recipientType))).map(a -> (InternetAddress) a)
-					.anyMatch(a -> a.getAddress().toLowerCase(Locale.ROOT).equals(address));
-		}
-
-		private static boolean fromAddressEquals(String address, Message m) {
-			return Arrays.stream(call(() -> m.getFrom())).map(a -> (InternetAddress) a)
-					.anyMatch(a -> a.getAddress().toLowerCase(Locale.ROOT).equals(address));
-		}
-
-		private static boolean recipientFullAddressContains(RecipientType recipientType, String subString, Message m) {
-			return Arrays.stream(call(() -> m.getRecipients(recipientType))).map(a -> (InternetAddress) a)
-					.map(InternetAddress::toUnicodeString)
-					.anyMatch(s -> s.toLowerCase(Locale.ROOT).contains(subString));
-		}
-
-		private static boolean fromFullAddressContains(String subString, Message m) {
-			return Arrays.stream(call(() -> m.getFrom())).map(a -> (InternetAddress) a)
-					.anyMatch(a -> a.toUnicodeString().toLowerCase(Locale.ROOT).contains(subString));
-		}
-
-		private static boolean subjectContains(String subString, Message m) {
-			return call(() -> m.getSubject()).toLowerCase(Locale.ROOT).contains(subString);
-		}
-
-		private SearchTerm term;
-		private Predicate<Message> predicate;
-
-		public ImapSearchPredicate(SearchTerm term, Predicate<Message> predicate) {
-			this.term = checkNotNull(term);
-			this.predicate = checkNotNull(predicate);
-		}
-
-		@Override
-		public boolean test(Message m) {
-			final boolean test = predicate.test(m);
-			verify(term.match(m) == test);
-			return test;
-		}
-
-		public ImapSearchPredicate andSatisfy(ImapSearchPredicate other) {
-			final ImmutableSet<SearchTerm> theseTerms;
-			if (term instanceof AndTerm) {
-				final AndTerm thisAndTerm = (AndTerm) term;
-				theseTerms = ImmutableSet.copyOf(thisAndTerm.getTerms());
-			} else {
-				theseTerms = ImmutableSet.of(term);
-			}
-
-			final ImmutableSet<SearchTerm> otherTerms;
-			if (other.term instanceof AndTerm) {
-				final AndTerm otherAndTerm = (AndTerm) other.term;
-				otherTerms = ImmutableSet.copyOf(otherAndTerm.getTerms());
-			} else {
-				otherTerms = ImmutableSet.of(other.term);
-			}
-
-			final ImmutableSet<SearchTerm> allTerms = Sets.union(theseTerms, otherTerms).immutableCopy();
-
-			final AndTerm andTerm = new AndTerm(allTerms.toArray(new SearchTerm[allTerms.size()]));
-			return new ImapSearchPredicate(andTerm, predicate.and(other.predicate));
-		}
-
-		public ImapSearchPredicate orSatisfy(ImapSearchPredicate other) {
-			return new ImapSearchPredicate(new OrTerm(term, other.term), predicate.or(other.predicate));
-		}
-	}
-
-	public static Emailer newInstance() {
-		return new Emailer();
+	public static Emailer instance() {
+		return new Emailer(false);
 	}
 
 	public static Session getOutlookImapSession() {
@@ -197,11 +77,10 @@ public class Emailer implements AutoCloseable {
 		props.setProperty("mail.store.protocol", "imap");
 		props.setProperty("mail.host", "imap.gmail.com");
 		props.setProperty("mail.imap.connectiontimeout", "2000");
-		props.setProperty("mail.imap.timeout", "60*1000");
+		props.setProperty("mail.imap.timeout", "60000");
 		props.setProperty("mail.imap.connectionpooltimeout", "10");
 		props.setProperty("mail.imap.ssl.enable", "true");
 		props.setProperty("mail.imap.ssl.checkserveridentity", "true");
-		// props.setProperty("mail.debug", "true");
 		final Session session = Session.getInstance(props);
 		return session;
 	}
@@ -211,11 +90,10 @@ public class Emailer implements AutoCloseable {
 		props.setProperty("mail.store.protocol", "imap");
 		props.setProperty("mail.host", "imap.zoho.eu");
 		props.setProperty("mail.imap.connectiontimeout", "2000");
-		props.setProperty("mail.imap.timeout", "60*1000");
+		props.setProperty("mail.imap.timeout", "60000");
 		props.setProperty("mail.imap.connectionpooltimeout", "10");
 		props.setProperty("mail.imap.ssl.enable", "true");
 		props.setProperty("mail.imap.ssl.checkserveridentity", "true");
-		// props.setProperty("mail.debug", "true");
 		final Session session = Session.getInstance(props);
 		return session;
 	}
@@ -224,74 +102,23 @@ public class Emailer implements AutoCloseable {
 		final Properties props = new Properties();
 		props.setProperty("mail.store.protocol", "smtp");
 		props.setProperty("mail.host", "outlook.office365.com");
-		props.put("mail.smtp.auth", "true");
-		props.put("mail.smtp.starttls.enable", "true");
-		props.put("mail.smtp.port", "587");
+		props.setProperty("mail.smtp.auth", "true");
+		props.setProperty("mail.smtp.starttls.enable", "true");
+		props.setProperty("mail.smtp.port", "587");
 		final Session session = Session.getInstance(props);
 		return session;
 	}
 
 	public static ImmutableMap<Integer, Message> byMessageNumber(Iterable<Message> messages) {
-		return StreamSupport.stream(messages.spliterator(), false)
-				.collect(ImmutableMap.toImmutableMap(uncheck(Message::getMessageNumber), m -> m));
+		return StreamSupport.stream(messages.spliterator(), false).collect(
+				ImmutableMap.toImmutableMap(MESSAGING_UNCHECKER.wrapFunction(Message::getMessageNumber), m -> m));
 	}
 
 	public static String getDescription(Message message) {
 		return String.format("Message number %s sent %s to %s with subject '%s'.", message.getMessageNumber(),
-				call(message::getSentDate), ImmutableList.copyOf(call(() -> message.getRecipients(RecipientType.TO))),
-				call(message::getSubject));
-	}
-
-	@FunctionalInterface
-	public static interface MessagingRunnable {
-		public void run() throws MessagingException;
-	}
-
-	@FunctionalInterface
-	public static interface MessagingFunction<F, T> {
-		public T apply(F from) throws MessagingException;
-	}
-
-	@FunctionalInterface
-	public static interface MessagingSupplier<T> {
-		public T get() throws MessagingException;
-	}
-
-	public static void call(MessagingRunnable runnable) {
-		try {
-			runnable.run();
-		} catch (MessagingException e) {
-			throw new UncheckedMessagingException(e);
-		}
-	}
-
-	public static <T> T call(MessagingSupplier<T> supplier) {
-		try {
-			return supplier.get();
-		} catch (MessagingException e) {
-			throw new UncheckedMessagingException(e);
-		}
-	}
-
-	public static <F, T> Function<F, T> uncheck(MessagingFunction<F, T> function) {
-		return (f -> {
-			try {
-				return function.apply(f);
-			} catch (MessagingException e) {
-				throw new UncheckedMessagingException(e);
-			}
-		});
-	}
-
-	@SuppressWarnings("unused")
-	public static <T> Supplier<T> uncheck(MessagingSupplier<T> supplier) {
-		return (() -> {
-			try {
-				return supplier.get();
-			} catch (MessagingException e) {
-				throw new UncheckedMessagingException(e);
-			}
-		});
+				MESSAGING_UNCHECKER.getUsing(message::getSentDate),
+				ImmutableList.copyOf(MESSAGING_UNCHECKER.getUsing(() -> message.getRecipients(RecipientType.TO))),
+				MESSAGING_UNCHECKER.getUsing(message::getSubject));
 	}
 
 	private Store store;
@@ -300,24 +127,37 @@ public class Emailer implements AutoCloseable {
 
 	private Session transportSession;
 	private Transport transport;
+	private boolean debug;
+	private Folder saveInto;
 
-	private Emailer() {
+	private Emailer(boolean debug) {
+		this.debug = debug;
 		store = null;
 		openReadFolders = Maps.newLinkedHashMap();
 		openRWFolders = Maps.newLinkedHashMap();
 		transportSession = null;
 		transport = null;
+		saveInto = null;
 	}
 
 	public void connectToStore(Session session, String username, String password) {
 		try {
+			session.setDebug(debug);
 			store = session.getStore();
-			LOGGER.info("Connecting to store.");
-			call(() -> store.connect(username, password));
+			LOGGER.info("Connecting to store with properties {}.", session.getProperties());
+			MESSAGING_UNCHECKER.call(() -> store.connect(username, password));
 			LOGGER.info("Connected to store.");
 		} catch (NoSuchProviderException e) {
 			throw new IllegalStateException(e);
 		}
+	}
+
+	public URLName getUrlName() {
+		return store.getURLName();
+	}
+
+	public void setDebug(boolean debug) {
+		this.debug = debug;
 	}
 
 	public void connectToTransport(Session session, String username, String password) {
@@ -325,7 +165,7 @@ public class Emailer implements AutoCloseable {
 		try {
 			transport = transportSession.getTransport();
 			LOGGER.info("Connecting to transport.");
-			call(() -> transport.connect(username, password));
+			MESSAGING_UNCHECKER.call(() -> transport.connect(username, password));
 			LOGGER.info("Connected to transport.");
 		} catch (NoSuchProviderException e) {
 			throw new IllegalStateException(e);
@@ -383,12 +223,12 @@ public class Emailer implements AutoCloseable {
 
 		if (!openReadFolders.containsKey(folderName) && !openRWFolders.containsKey(folderName)) {
 			@SuppressWarnings("resource")
-			final Folder folder = call(() -> store.getFolder(folderName));
+			final Folder folder = MESSAGING_UNCHECKER.getUsing(() -> store.getFolder(folderName));
 			if (andWrite) {
-				call(() -> folder.open(Folder.READ_WRITE));
+				MESSAGING_UNCHECKER.call(() -> folder.open(Folder.READ_WRITE));
 				openRWFolders.put(folderName, folder);
 			} else {
-				call(() -> folder.open(Folder.READ_ONLY));
+				MESSAGING_UNCHECKER.call(() -> folder.open(Folder.READ_ONLY));
 				openReadFolders.put(folderName, folder);
 			}
 		}
@@ -405,13 +245,15 @@ public class Emailer implements AutoCloseable {
 		return openRWFolders.get(folderName);
 	}
 
-	@SuppressWarnings("resource")
 	public ImmutableSet<Message> searchIn(ImapSearchPredicate term, Folder folder) {
+		if (term.equals(ImapSearchPredicate.FALSE)) {
+			return ImmutableSet.of();
+		}
 		checkState(folder.isOpen());
 
-		final Message[] asArray = call(() -> folder.search(term.term));
+		final Message[] asArray = MESSAGING_UNCHECKER.getUsing(() -> folder.search(term.getTerm()));
 		final ImmutableSet<Message> found = ImmutableSet.copyOf(asArray);
-		final Optional<Message> notMatching = found.stream().filter(term.predicate.negate()).limit(1)
+		final Optional<Message> notMatching = found.stream().filter(term.getPredicate().negate()).limit(1)
 				.collect(MoreCollectors.toOptional());
 		if (notMatching.isPresent()) {
 			throw new VerifyException(getDescription(notMatching.get()));
@@ -450,7 +292,7 @@ public class Emailer implements AutoCloseable {
 
 			message.setContent(multipartContent);
 
-			final EmailAddress to = email.getTo();
+			final EmailAddressAndPersonal to = email.getTo();
 			final InternetAddress[] toSingleton = new InternetAddress[] { to.asInternetAddress() };
 			/**
 			 * When the address is incorrect (e.g. WRONG@gmail.com), a message delivered
@@ -465,46 +307,44 @@ public class Emailer implements AutoCloseable {
 		return message;
 	}
 
-	public ImmutableSet<Message> send(Collection<Email> emails, EmailAddress fromAddress) {
-		checkState(transport != null);
-
-		final ImmutableSet.Builder<Message> messagesBuilder = ImmutableSet.builder();
-		for (Email email : emails) {
-			final MimeMessage message = getMessage(email, fromAddress.asInternetAddress());
-			call(() -> transport.sendMessage(message, message.getAllRecipients()));
-
-			messagesBuilder.add(message);
-		}
-		LOGGER.info("Messages sent.");
-		return messagesBuilder.build();
+	public void saveInto(Folder folder) {
+		this.saveInto = folder;
 	}
 
-	public void saveInto(Collection<Message> messages, Folder folder) {
-		checkState(messages.isEmpty() || folder.isOpen());
-		checkState(messages.isEmpty() || (folder.getMode() == Folder.READ_WRITE));
+	public void send(Collection<Email> emails, EmailAddressAndPersonal fromAddress) {
+		if (saveInto != null && !emails.isEmpty()) {
+			checkState(transport != null);
+			checkState(saveInto.isOpen());
+			checkState(saveInto.getMode() == Folder.READ_WRITE);
+		}
 
-		final Message[] asArray = messages.toArray(new Message[messages.size()]);
-		call(() -> folder.appendMessages(asArray));
+		for (Email email : emails) {
+			final MimeMessage message = getMessage(email, fromAddress.asInternetAddress());
+			MESSAGING_UNCHECKER.call(() -> transport.sendMessage(message, message.getAllRecipients()));
+
+			MESSAGING_UNCHECKER.call(() -> saveInto.appendMessages(new Message[] { message }));
+		}
+		LOGGER.info("Messages sent: {}.", emails.size());
 	}
 
 	@Override
 	public void close() throws UncheckedMessagingException {
 		if (transportSession != null) {
-			call(() -> transport.close());
+			MESSAGING_UNCHECKER.call(() -> transport.close());
 		}
 
 		for (Folder folder : openRWFolders.values()) {
-			call(() -> folder.close());
+			MESSAGING_UNCHECKER.call(() -> folder.close());
 		}
 		openRWFolders.clear();
 
 		for (Folder folder : openReadFolders.values()) {
-			call(() -> folder.close());
+			MESSAGING_UNCHECKER.call(() -> folder.close());
 		}
 		openReadFolders.clear();
 
 		if (store != null) {
-			call(() -> store.close());
+			MESSAGING_UNCHECKER.call(() -> store.close());
 		}
 	}
 

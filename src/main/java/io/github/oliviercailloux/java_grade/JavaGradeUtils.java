@@ -1,6 +1,7 @@
 package io.github.oliviercailloux.java_grade;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static io.github.oliviercailloux.exceptions.Unchecker.IO_UNCHECKER;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -11,10 +12,8 @@ import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.util.Arrays;
-import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.function.Predicate;
-import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -23,8 +22,6 @@ import com.google.common.collect.ImmutableList;
 
 import io.github.oliviercailloux.git.FileContent;
 import io.github.oliviercailloux.grade.GradingException;
-import io.github.oliviercailloux.utils.Utils;
-import io.vavr.control.Try;
 
 public class JavaGradeUtils {
 	/**
@@ -77,7 +74,7 @@ public class JavaGradeUtils {
 		try {
 			content = Files.readString(sourcePath);
 		} catch (@SuppressWarnings("unused") MalformedInputException e) {
-			content = Utils.getOrThrow(() -> Files.readString(sourcePath, StandardCharsets.ISO_8859_1));
+			content = IO_UNCHECKER.getUsing(() -> Files.readString(sourcePath, StandardCharsets.ISO_8859_1));
 		} catch (IOException e) {
 			throw new UncheckedIOException(e);
 		}

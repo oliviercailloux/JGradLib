@@ -37,23 +37,6 @@ class StringFilesGraderTests {
 	private static final Logger LOGGER = LoggerFactory.getLogger(StringFilesGraderTests.class);
 
 	@Test
-	void testBad() throws Exception {
-		final GitUri gitUri = GitUri.fromGitUri(URI.create("https://github.com/oliviercailloux/string-files.git"));
-		try (Repository repository = new InMemoryRepository(new DfsRepositoryDescription("myrepo"))) {
-			repository.create(true);
-			new GitCloner().clone(gitUri, repository);
-
-			try (GitRepoFileSystem gitFs = new GitFileSystemProvider().newFileSystemFromRepository(repository)) {
-				final GitHubHistory fakeGitHubHistory = GitBrGraderTests
-						.getMinGitHubHistory(gitFs.getHistory().getGraph());
-				final IGrade grade = new StringFilesGrader().grade("me", gitFs, fakeGitHubHistory);
-				LOGGER.debug("Grade bad: {}.", grade);
-				assertEquals(0d, grade.getPoints());
-			}
-		}
-	}
-
-	@Test
 	void testGood() throws Exception {
 		try (GitRepoFileSystem gitFs = new GitFileSystemProvider()
 				.newFileSystemFromGitDir(Path.of("../../Samples/string files/.git"))) {

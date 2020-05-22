@@ -75,19 +75,6 @@ public class Repository {
 		return URI.create(json.getString("url"));
 	}
 
-	public JsonObject toJsonSummary() {
-		// FIXME crashes!
-		final String data;
-		try (Jsonb jsonb = JsonbBuilder.create()) {
-			data = jsonb.toJson(this);
-		} catch (Exception e) {
-			throw new IllegalStateException(e);
-		}
-		try (JsonReader jr = Json.createReader(new StringReader(data))) {
-			return jr.readObject();
-		}
-	}
-
 	@Override
 	public String toString() {
 		return MoreObjects.toStringHelper(this).addValue(getCoordinates().toString()).toString();

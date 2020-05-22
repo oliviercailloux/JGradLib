@@ -58,19 +58,12 @@ class CompilerTests {
 
 	@Test
 	void testCompileSourceWithWarnings() throws Exception {
-		final List<Diagnostic<? extends JavaFileObject>> diagnostics;
+		final Path sourcePath = Path.of(getClass().getResource("SourceWithWarnings.java").toURI());
 		try (FileSystem jimFs = Jimfs.newFileSystem(Configuration.unix())) {
 			final Path work = jimFs.getPath("");
-			final Path sourceDir = work.resolve(getClass().getPackage().getName().replace('.', '/'));
-			final Path sourcePath = sourceDir.resolve("SourceWithWarnings.java");
-			{
-				final String idFct = Files
-						.readString(Path.of(getClass().getResource("SourceWithWarnings.java").toURI()));
-				Files.createDirectories(sourceDir);
-				Files.writeString(sourcePath, idFct);
-			}
 
-			diagnostics = SimpleCompiler.compileFromPaths(ImmutableList.of(sourcePath), ImmutableList.of());
+			final List<Diagnostic<? extends JavaFileObject>> diagnostics = SimpleCompiler
+					.compileFromPaths(ImmutableList.of(sourcePath), ImmutableList.of(), work);
 
 			assertEquals(ImmutableList.of(), diagnostics);
 
@@ -79,9 +72,9 @@ class CompilerTests {
 				files = stream.filter(Files::isRegularFile).collect(ImmutableSet.toImmutableSet());
 			}
 			assertEquals(
-					ImmutableSet.of("/work/io/github/oliviercailloux/java_grade/bytecode/SourceWithWarnings.java",
-							"/work/io/github/oliviercailloux/java_grade/bytecode/SourceWithWarnings.class"),
-					files.stream().map(Path::toString).collect(ImmutableSet.toImmutableSet()));
+					ImmutableSet.of(jimFs
+							.getPath("/work/io/github/oliviercailloux/java_grade/bytecode/SourceWithWarnings.class")),
+					files);
 		}
 	}
 

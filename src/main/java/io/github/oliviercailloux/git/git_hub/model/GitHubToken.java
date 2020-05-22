@@ -1,6 +1,7 @@
 package io.github.oliviercailloux.git.git_hub.model;
 
 import static com.google.common.base.Preconditions.checkState;
+import static io.github.oliviercailloux.exceptions.Unchecker.IO_UNCHECKER;
 import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
@@ -13,8 +14,6 @@ import java.util.Optional;
 import javax.ws.rs.client.Invocation;
 import javax.ws.rs.core.HttpHeaders;
 
-import io.github.oliviercailloux.utils.Utils;
-
 public class GitHubToken {
 	private static GitHubRealToken instance = null;
 	private static GitHubToken none = null;
@@ -22,7 +21,7 @@ public class GitHubToken {
 
 	public static GitHubRealToken getRealInstance() throws IllegalStateException {
 		if (instance == null) {
-			instance = new GitHubRealToken(Utils.getOrThrow(GitHubToken::getTokenValue));
+			instance = new GitHubRealToken(IO_UNCHECKER.getUsing(GitHubToken::getTokenValue));
 		}
 		return instance;
 	}

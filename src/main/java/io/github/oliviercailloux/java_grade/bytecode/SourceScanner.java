@@ -3,6 +3,7 @@ package io.github.oliviercailloux.java_grade.bytecode;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Verify.verify;
+import static io.github.oliviercailloux.exceptions.Unchecker.IO_UNCHECKER;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -13,7 +14,6 @@ import java.util.stream.Stream;
 import com.google.common.collect.ImmutableSet;
 
 import io.github.oliviercailloux.java_grade.JavaGradeUtils;
-import io.github.oliviercailloux.utils.Utils;
 
 public class SourceScanner {
 	private static final Pattern PACKAGE_PATTERN = Pattern.compile("^\\h*package\\h+(?<packageName>[^\\h]*)\\h*;");
@@ -21,7 +21,7 @@ public class SourceScanner {
 	public static ImmutableSet<SourceClass> scan(Path start) {
 		checkNotNull(start);
 		final ImmutableSet<Path> javaPaths;
-		try (Stream<Path> found = Utils.getOrThrow(() -> Files.find(start, 30,
+		try (Stream<Path> found = IO_UNCHECKER.getUsing(() -> Files.find(start, 30,
 				(p, a) -> p.getFileName() == null ? false : p.getFileName().toString().endsWith(".java")))) {
 			verify(found != null);
 			assert found != null;

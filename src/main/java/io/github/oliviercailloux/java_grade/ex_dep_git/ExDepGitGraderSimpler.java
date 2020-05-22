@@ -8,6 +8,7 @@ import static io.github.oliviercailloux.java_grade.ex_dep_git.ExDepGitCriterion.
 import static io.github.oliviercailloux.java_grade.ex_dep_git.ExDepGitCriterion.PARENT_OF_MY_BRANCH;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -21,7 +22,6 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
 
-import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.lib.ObjectId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -87,7 +87,7 @@ public class ExDepGitGraderSimpler {
 
 		final ExDepGitGraderSimpler grader = new ExDepGitGraderSimpler();
 		final ImmutableMap<RepositoryCoordinates, IGrade> grades = repositories.stream()
-				.collect(ImmutableMap.toImmutableMap(Function.identity(), Utils.uncheck(r -> grader.grade(r))));
+				.collect(ImmutableMap.toImmutableMap(Function.identity(), r -> grader.grade(r)));
 
 		Files.writeString(OUT_DIR.resolve("all grades " + PREFIX + ".json"),
 				JsonbUtils.toJsonObject(grades, JsonGrade.asAdapter()).toString());
@@ -104,8 +104,7 @@ public class ExDepGitGraderSimpler {
 		// Nothing.
 	}
 
-	public ImmutableMap<Instant, IGrade> getPossibleGrades(RepositoryCoordinates coord)
-			throws GitAPIException, IOException {
+	public ImmutableMap<Instant, IGrade> getPossibleGrades(RepositoryCoordinates coord) throws IOException {
 		final GitHubHistory gitHubHistory;
 		try (GitHubFetcherQL fetcher = GitHubFetcherQL.using(GitHubToken.getRealInstance())) {
 			gitHubHistory = fetcher.getGitHubHistory(coord);
@@ -151,7 +150,7 @@ public class ExDepGitGraderSimpler {
 		return possibleGradesBuilder.build();
 	}
 
-	public IGrade grade(RepositoryCoordinates coord) throws IOException, GitAPIException {
+	public IGrade grade(RepositoryCoordinates coord) {
 		final Path projectsBaseDir = WORK_DIR.resolve(PREFIX);
 		final Path projectDir = projectsBaseDir.resolve(coord.getRepositoryName());
 		new GitCloner().download(GitUri.fromGitUri(coord.asURI()), projectDir);
@@ -162,6 +161,8 @@ public class ExDepGitGraderSimpler {
 			final IGrade grade = grade(coord.getOwner(), fs, filtered);
 			LOGGER.info("Grade {}: {}.", coord, grade);
 			return grade;
+		} catch (IOException e) {
+			throw new UncheckedIOException(e);
 		}
 	}
 

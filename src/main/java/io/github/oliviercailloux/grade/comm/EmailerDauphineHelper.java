@@ -1,14 +1,16 @@
 package io.github.oliviercailloux.grade.comm;
 
+import static io.github.oliviercailloux.exceptions.Unchecker.IO_UNCHECKER;
+
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-import io.github.oliviercailloux.email.EmailAddress;
-import io.github.oliviercailloux.utils.Utils;
+import io.github.oliviercailloux.email.EmailAddressAndPersonal;
 
 public class EmailerDauphineHelper {
 
-	public static final EmailAddress FROM = EmailAddress.given("olivier.cailloux@dauphine.fr", "Olivier Cailloux");
+	public static final EmailAddressAndPersonal FROM = EmailAddressAndPersonal.given("olivier.cailloux@dauphine.fr",
+			"Olivier Cailloux");
 
 	public static final String USERNAME_DAUPHINE = "ocailloux@dauphine.fr";
 	public static final String USERNAME_OTHERS = "olivier.cailloux";
@@ -30,7 +32,7 @@ public class EmailerDauphineHelper {
 		if (!Files.exists(path)) {
 			throw new IllegalStateException();
 		}
-		final String content = Utils.getOrThrow(() -> Files.readString(path));
+		final String content = IO_UNCHECKER.getUsing(() -> Files.readString(path));
 		return content.replaceAll("\n", "");
 	}
 
@@ -51,7 +53,7 @@ public class EmailerDauphineHelper {
 		if (!Files.exists(path)) {
 			throw new IllegalStateException();
 		}
-		final String content = Utils.getOrThrow(() -> Files.readString(path));
+		final String content = IO_UNCHECKER.getUsing(() -> Files.readString(path));
 		return content.replaceAll("\n", "");
 	}
 
@@ -72,13 +74,12 @@ public class EmailerDauphineHelper {
 		if (!Files.exists(path)) {
 			throw new IllegalStateException();
 		}
-		final String content = Utils.getOrThrow(() -> Files.readString(path));
+		final String content = IO_UNCHECKER.getUsing(() -> Files.readString(path));
 		return content.replaceAll("\n", "");
 	}
 
 	public static void connect(Emailer emailer) {
-		emailer.connectToStore(Emailer.getZohoImapSession(), USERNAME_OTHERS,
-				EmailerDauphineHelper.getZohoToken());
+		emailer.connectToStore(Emailer.getZohoImapSession(), USERNAME_OTHERS, EmailerDauphineHelper.getZohoToken());
 		emailer.connectToTransport(Emailer.getOutlookSmtpSession(), USERNAME_DAUPHINE,
 				EmailerDauphineHelper.getDauphineToken());
 	}

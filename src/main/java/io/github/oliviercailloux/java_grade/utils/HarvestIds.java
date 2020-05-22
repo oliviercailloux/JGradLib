@@ -1,5 +1,7 @@
 package io.github.oliviercailloux.java_grade.utils;
 
+import static io.github.oliviercailloux.exceptions.Unchecker.IO_UNCHECKER;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -11,7 +13,6 @@ import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.eclipse.jgit.api.errors.GitAPIException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,7 +32,6 @@ import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherV3;
 import io.github.oliviercailloux.grade.mycourse.json.JsonStudentOnGitHubKnown;
 import io.github.oliviercailloux.json.JsonbUtils;
 import io.github.oliviercailloux.json.PrintableJsonObject;
-import io.github.oliviercailloux.utils.Utils;
 
 public class HarvestIds {
 	@SuppressWarnings("unused")
@@ -42,7 +42,7 @@ public class HarvestIds {
 		if (!Files.exists(idPath)) {
 			return Optional.empty();
 		}
-		final List<String> lines = Utils.getOrThrow(() -> Files.readAllLines(idPath));
+		final List<String> lines = IO_UNCHECKER.getUsing(() -> Files.readAllLines(idPath));
 		final ImmutableList<String> nonEmptyLines = lines.stream().filter(l -> !l.isBlank())
 				.collect(ImmutableList.toImmutableList());
 		LOGGER.info("File content: {}.", nonEmptyLines);
@@ -81,7 +81,7 @@ public class HarvestIds {
 				.filter(r -> pattern.matcher(r.getRepositoryName()).matches()).collect(ImmutableList.toImmutableList());
 
 		final ImmutableMap<RepositoryCoordinatesWithPrefix, Optional<Integer>> idsOpt = matching.stream()
-				.collect(ImmutableMap.toImmutableMap(Function.identity(), Utils.uncheck(this::getId)));
+				.collect(ImmutableMap.toImmutableMap(Function.identity(), this::getId));
 
 		final ImmutableSet<RepositoryCoordinatesWithPrefix> missing = idsOpt.entrySet().stream()
 				.filter(e -> e.getValue().isEmpty()).map(Entry::getKey).collect(ImmutableSet.toImmutableSet());
@@ -99,13 +99,13 @@ public class HarvestIds {
 		Files.writeString(Path.of("gh-id.json"), asJson.toString());
 	}
 
-	private Optional<Integer> getId(RepositoryCoordinates coord) throws GitAPIException {
+	private Optional<Integer> getId(RepositoryCoordinates coord) {
 		LOGGER.info("Proceeding with {}.", coord);
 		final Path projectsBaseDir = Paths.get("../../Java L3/En cours").resolve(prefix);
 		final Path projectDir = projectsBaseDir.resolve(coord.getRepositoryName());
 		new GitCloner().download(GitUri.fromGitUri(coord.asURI()), projectDir);
-		try (GitRepoFileSystem fs = Utils
-				.getOrThrow(() -> new GitFileSystemProvider().newFileSystemFromGitDir(projectDir.resolve(".git")))) {
+		try (GitRepoFileSystem fs = IO_UNCHECKER
+				.getUsing(() -> new GitFileSystemProvider().newFileSystemFromGitDir(projectDir.resolve(".git")))) {
 			return getId(fs);
 		}
 	}

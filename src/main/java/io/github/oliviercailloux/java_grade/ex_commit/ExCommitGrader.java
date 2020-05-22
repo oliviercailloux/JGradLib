@@ -1,6 +1,7 @@
 package io.github.oliviercailloux.java_grade.ex_commit;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -9,7 +10,6 @@ import java.time.ZonedDateTime;
 import java.util.Optional;
 import java.util.Set;
 
-import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.slf4j.Logger;
@@ -40,6 +40,7 @@ import io.github.oliviercailloux.java_grade.GraderOrchestrator;
 import io.github.oliviercailloux.java_grade.JavaCriterion;
 import io.github.oliviercailloux.java_grade.testers.JavaMarkHelper;
 import io.github.oliviercailloux.java_grade.utils.HarvestIds;
+import io.github.oliviercailloux.java_grade.utils.IdsToUsernames;
 import io.github.oliviercailloux.java_grade.utils.Summarize;
 import io.github.oliviercailloux.json.JsonbUtils;
 import io.github.oliviercailloux.supann.QueriesHelper;
@@ -76,8 +77,8 @@ public class ExCommitGrader {
 //				.of(RepositoryCoordinatesWithPrefix.from("oliviercailloux-org", PREFIX, ""));
 
 		final ExCommitGrader grader = new ExCommitGrader();
-		final ImmutableMap<String, IGrade> grades = repositories.stream().collect(ImmutableMap
-				.toImmutableMap(RepositoryCoordinatesWithPrefix::getUsername, Utils.uncheck(r -> grader.grade(r))));
+		final ImmutableMap<String, IGrade> grades = repositories.stream().collect(
+				ImmutableMap.toImmutableMap(RepositoryCoordinatesWithPrefix::getUsername, r -> grader.grade(r)));
 
 		final Path outDir = Path.of("");
 		Files.writeString(outDir.resolve("all grades " + PREFIX + ".json"),
@@ -93,7 +94,7 @@ public class ExCommitGrader {
 		// Nothing.
 	}
 
-	public IGrade grade(RepositoryCoordinatesWithPrefix coord) throws IOException, GitAPIException {
+	public IGrade grade(RepositoryCoordinatesWithPrefix coord) {
 		final Path projectsBaseDir = WORK_DIR.resolve(PREFIX);
 		final Path projectDir = projectsBaseDir.resolve(coord.getRepositoryName());
 		new GitCloner().download(GitUri.fromGitUri(coord.asURI()), projectDir);
@@ -104,6 +105,8 @@ public class ExCommitGrader {
 			final IGrade grade = grade(coord.getUsername(), fs, filtered);
 			LOGGER.info("Grade {}: {}.", coord, grade);
 			return grade;
+		} catch (IOException e) {
+			throw new UncheckedIOException(e);
 		}
 	}
 
@@ -145,8 +148,8 @@ public class ExCommitGrader {
 		gradeBuilder.put(ExCommitCriterion.ID_FILE_EXISTS, Mark.binary(Files.exists(idPath)));
 
 		final Optional<Integer> id = HarvestIds.getId(fs);
-		final boolean foundStudent = id
-				.map(Utils.uncheck(i -> supannQuerier.getStudents("id = '" + i + "'").size() == 1)).orElse(false);
+		final boolean foundStudent = id.map(IdsToUsernames.SUPANN_UNCHECKER
+				.wrapFunction(i -> supannQuerier.getStudents("id = '" + i + "'").size() == 1)).orElse(false);
 		gradeBuilder.put(ExCommitCriterion.ID_FILE_CONTENTS, Mark.binary(foundStudent, "", "Id found: " + id));
 
 		final ImmutableMap<Criterion, IGrade> subGrades = gradeBuilder.build();

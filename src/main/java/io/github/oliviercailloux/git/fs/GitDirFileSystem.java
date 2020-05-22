@@ -24,7 +24,7 @@ public class GitDirFileSystem extends GitRepoFileSystem {
 		FileRepository fileRepository = null;
 		try {
 			fileRepository = new FileRepository(gitDir.toFile());
-			final GitDirFileSystem fs = new GitDirFileSystem(provider, fileRepository);
+			final GitDirFileSystem fs = new GitDirFileSystem(provider, fileRepository, true);
 			return fs;
 		} catch (Exception e) {
 			if (fileRepository != null) {
@@ -35,7 +35,7 @@ public class GitDirFileSystem extends GitRepoFileSystem {
 	}
 
 	public static GitDirFileSystem given(GitFileSystemProvider provider, FileRepository repository) {
-		return new GitDirFileSystem(provider, repository);
+		return new GitDirFileSystem(provider, repository, false);
 	}
 
 	/**
@@ -43,8 +43,9 @@ public class GitDirFileSystem extends GitRepoFileSystem {
 	 */
 	private final Path gitDir;
 
-	private GitDirFileSystem(GitFileSystemProvider gitProvider, FileRepository repository) {
-		super(gitProvider, repository);
+	private GitDirFileSystem(GitFileSystemProvider gitProvider, FileRepository repository,
+			boolean shouldCloseRepository) {
+		super(gitProvider, repository, shouldCloseRepository);
 		this.gitDir = checkNotNull(repository.getDirectory()).toPath();
 	}
 

@@ -1,5 +1,6 @@
 package io.github.oliviercailloux.git.fs;
 
+import static io.github.oliviercailloux.exceptions.Unchecker.IO_UNCHECKER;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -17,11 +18,10 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import io.github.oliviercailloux.git.JGit;
-import io.github.oliviercailloux.utils.Utils;
 
 public class GitPathTests {
-	private static final GitRepoFileSystem GIT_FILE_SYSTEM = Utils
-			.getOrThrow(() -> GitDirFileSystem.given(Mockito.mock(GitFileSystemProvider.class), Path.of(".")));
+	private static final GitRepoFileSystem GIT_FILE_SYSTEM = IO_UNCHECKER
+			.getUsing(() -> GitDirFileSystem.given(Mockito.mock(GitFileSystemProvider.class), Path.of(".")));
 
 	@Test
 	void testBasics() throws Exception {

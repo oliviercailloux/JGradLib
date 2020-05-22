@@ -1,8 +1,10 @@
 package io.github.oliviercailloux.git;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static io.github.oliviercailloux.exceptions.Unchecker.IO_UNCHECKER;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.FileSystem;
 import java.nio.file.Files;
@@ -10,6 +12,8 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.stream.Stream;
 
+import org.eclipse.jgit.internal.storage.dfs.DfsRepositoryDescription;
+import org.eclipse.jgit.internal.storage.dfs.InMemoryRepository;
 import org.eclipse.jgit.lib.CommitBuilder;
 import org.eclipse.jgit.lib.Constants;
 import org.eclipse.jgit.lib.FileMode;
@@ -32,6 +36,45 @@ import com.google.common.jimfs.Jimfs;
 public class JGit {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(JGit.class);
+
+	public static InMemoryRepository createRepository(PersonIdent personIdent, Path baseDir) {
+		final InMemoryRepository repository = new InMemoryRepository(new DfsRepositoryDescription("myrepo"));
+		IO_UNCHECKER.call(() -> repository.create(true));
+		final ObjectDatabase objectDatabase = repository.getObjectDatabase();
+
+		try (ObjectInserter inserter = objectDatabase.newInserter()) {
+			final ObjectId commitStart = insertCommit(inserter, personIdent, baseDir, ImmutableList.of(),
+					"First commit");
+			setMaster(repository, commitStart);
+		} catch (IOException e) {
+			throw new UncheckedIOException(e);
+		}
+
+		return repository;
+	}
+
+	public static InMemoryRepository createRepository(PersonIdent personIdent, String path, String content) {
+		final InMemoryRepository repository = new InMemoryRepository(new DfsRepositoryDescription("myrepo"));
+		IO_UNCHECKER.call(() -> repository.create(true));
+		final ObjectDatabase objectDatabase = repository.getObjectDatabase();
+
+		try (FileSystem jimFs = Jimfs.newFileSystem(Configuration.unix());
+				ObjectInserter inserter = objectDatabase.newInserter()) {
+			final Path workDir = jimFs.getPath("");
+
+			final Path target = workDir.resolve(path);
+			Files.createDirectories(target.getParent());
+			Files.writeString(target, content);
+			final ObjectId commitStart = insertCommit(inserter, personIdent, workDir, ImmutableList.of(),
+					"First commit");
+
+			setMaster(repository, commitStart);
+		} catch (IOException e) {
+			throw new UncheckedIOException(e);
+		}
+
+		return repository;
+	}
 
 	public static ImmutableList<ObjectId> createBasicRepo(Repository repository) throws IOException {
 		repository.create(true);
@@ -96,13 +139,13 @@ public class JGit {
 		}
 	}
 
-	public static ObjectId insertCommit(ObjectInserter inserter, PersonIdent personIdent, Path directory,
+	private static ObjectId insertCommit(ObjectInserter inserter, PersonIdent personIdent, Path directory,
 			List<ObjectId> parents, String commitMessage) throws IOException {
 		final ObjectId treeId = insertTree(inserter, directory);
 		return insertCommit(inserter, personIdent, treeId, parents, commitMessage);
 	}
 
-	public static ObjectId insertCommit(ObjectInserter inserter, PersonIdent personIdent, ObjectId treeId,
+	private static ObjectId insertCommit(ObjectInserter inserter, PersonIdent personIdent, ObjectId treeId,
 			List<ObjectId> parents, String commitMessage) throws IOException {
 		final CommitBuilder commitBuilder = new CommitBuilder();
 		commitBuilder.setMessage(commitMessage);
@@ -123,7 +166,7 @@ public class JGit {
 	 * <p>
 	 * Does not flush the inserter.
 	 */
-	public static ObjectId insertTree(ObjectInserter inserter, Path directory) throws IOException {
+	private static ObjectId insertTree(ObjectInserter inserter, Path directory) throws IOException {
 		checkArgument(Files.isDirectory(directory));
 
 		/**
@@ -137,8 +180,8 @@ public class JGit {
 			for (Path relEntry : (Iterable<Path>) content::iterator) {
 				final String entryName = relEntry.getFileName().toString();
 				/** Work around Jimfs bug, see https://github.com/google/jimfs/issues/105 . */
-//				final Path entry = relEntry.toAbsolutePath();
-				final Path entry = relEntry;
+				final Path entry = relEntry.toAbsolutePath();
+//				final Path entry = relEntry;
 				if (Files.isRegularFile(entry)) {
 					final String fileContent = Files.readString(entry);
 					final ObjectId fileOId = inserter.insert(Constants.OBJ_BLOB,
@@ -157,11 +200,15 @@ public class JGit {
 		return inserted;
 	}
 
-	public static void setMaster(Repository repository, ObjectId newId) throws IOException {
-		final RefUpdate updateRef = repository.updateRef("refs/heads/master");
-		updateRef.setNewObjectId(newId);
-		final Result updateResult = updateRef.update();
-		Verify.verify(updateResult == Result.NEW, updateResult.toString());
+	public static void setMaster(Repository repository, ObjectId newId) {
+		try {
+			final RefUpdate updateRef = repository.updateRef("refs/heads/master");
+			updateRef.setNewObjectId(newId);
+			final Result updateResult = updateRef.update();
+			Verify.verify(updateResult == Result.NEW, updateResult.toString());
+		} catch (IOException e) {
+			throw new UncheckedIOException(e);
+		}
 	}
 
 }

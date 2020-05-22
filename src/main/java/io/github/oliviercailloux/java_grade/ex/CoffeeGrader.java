@@ -19,7 +19,6 @@ import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.function.Predicate;
 
-import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.slf4j.Logger;
@@ -110,7 +109,7 @@ public class CoffeeGrader {
 		branchPrefix = "origin";
 	}
 
-	public IGrade grade(RepositoryCoordinatesWithPrefix coord, Path projectDir) throws IOException, GitAPIException {
+	public IGrade grade(RepositoryCoordinatesWithPrefix coord, Path projectDir) throws IOException {
 		new GitCloner().download(GitUri.fromGitUri(coord.asURI()), projectDir);
 
 		try (GitRepoFileSystem fs = new GitFileSystemProvider().newFileSystemFromGitDir(projectDir.resolve(".git"))) {

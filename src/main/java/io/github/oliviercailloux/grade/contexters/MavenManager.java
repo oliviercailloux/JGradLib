@@ -1,6 +1,7 @@
 package io.github.oliviercailloux.grade.contexters;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.base.Verify.verify;
 
@@ -33,6 +34,7 @@ public class MavenManager {
 	private static final Logger LOGGER = LoggerFactory.getLogger(MavenManager.class);
 	private String output;
 	private static final String ANSI_ESCAPE_CODES_REG_EXP = "\u001B\\[[;\\d]*[ -/]*[@-~]";
+	private Path lastPom;
 
 	public MavenManager() {
 		output = null;
@@ -64,6 +66,7 @@ public class MavenManager {
 	}
 
 	private boolean command(Path pom, String goal) throws GradingException {
+		this.lastPom = checkNotNull(pom);
 		InvocationRequest request = new DefaultInvocationRequest();
 		request.setInputStream(new ByteArrayInputStream(new byte[] {}));
 		final ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -95,5 +98,11 @@ public class MavenManager {
 	public String getOutput() {
 		checkState(output != null);
 		return output;
+	}
+
+	public String getCensoredOutput() {
+		checkState(output != null);
+		verify(lastPom != null);
+		return output.replaceAll(lastPom.toAbsolutePath().toString() + "/", "");
 	}
 }

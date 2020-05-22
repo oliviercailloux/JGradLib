@@ -18,7 +18,6 @@ import java.util.stream.Stream;
 import javax.tools.Diagnostic;
 import javax.tools.JavaFileObject;
 
-import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.slf4j.Logger;
@@ -142,8 +141,7 @@ public class PrintExecGrader {
 		diffCommands = new ArrayList<>();
 	}
 
-	public IGrade grade(RepositoryCoordinatesWithPrefix coord, Path projectsBaseDir)
-			throws IOException, GitAPIException {
+	public IGrade grade(RepositoryCoordinatesWithPrefix coord, Path projectsBaseDir) throws IOException {
 		final Path projectDir = projectsBaseDir.resolve(coord.getRepositoryName());
 		new GitCloner().download(GitUri.fromGitUri(coord.asURI()), projectDir);
 

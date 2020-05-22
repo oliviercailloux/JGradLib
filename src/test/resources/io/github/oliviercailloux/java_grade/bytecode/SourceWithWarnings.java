@@ -1,4 +1,4 @@
-package io.github.oliviercailloux.java_grade.compiler;
+package io.github.oliviercailloux.java_grade.bytecode;
 
 import java.io.IOException;
 

@@ -1,6 +1,8 @@
 package io.github.oliviercailloux.grade.format.json;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.charset.StandardCharsets;
 
@@ -11,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.Resources;
@@ -78,7 +81,7 @@ public class JsonGradeTest {
 
 		final String json = Resources.toString(this.getClass().getResource("CriterionGradeWeight.json"),
 				StandardCharsets.UTF_8);
-		final CriterionGradeWeight read = JsonGrade.toCriterionGradeWeightAdapter()
+		final CriterionGradeWeight read = JsonGrade.usingSophisticatedCriteria().toCriterionGradeWeightAdapter()
 				.adaptFromJson(PrintableJsonObjectFactory.wrapPrettyPrintedString(json));
 		assertEquals(expected, read);
 	}
@@ -103,6 +106,21 @@ public class JsonGradeTest {
 		final PrintableJsonObject jsonComplexGrade = PrintableJsonObjectFactory.wrapPrettyPrintedString(
 				Resources.toString(getClass().getResource("ComplexGrade.json"), StandardCharsets.UTF_8));
 		final IGrade read = JsonGrade.asGrade(jsonComplexGrade);
+		assertEquals(expected, read);
+	}
+
+	@Test
+	void gradeComplexWithInvalidClassRead() throws Exception {
+		final WeightingGrade expected = GradeTestsHelper.getComplexGrade();
+
+		final PrintableJsonObject jsonComplexGrade = PrintableJsonObjectFactory.wrapPrettyPrintedString(Resources
+				.toString(getClass().getResource("ComplexGradeWithInvalidClass.json"), StandardCharsets.UTF_8));
+
+		final IllegalStateException exc = assertThrows(IllegalStateException.class,
+				() -> JsonGrade.asGrade(jsonComplexGrade));
+		assertTrue(Throwables.getCausalChain(exc).stream().anyMatch(t -> t instanceof ClassNotFoundException));
+
+		final IGrade read = JsonGrade.usingSimpleCriteria().instanceAsGrade(jsonComplexGrade);
 		assertEquals(expected, read);
 	}
 

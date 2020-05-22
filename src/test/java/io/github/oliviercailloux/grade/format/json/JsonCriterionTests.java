@@ -62,6 +62,15 @@ class JsonCriterionTests {
 	}
 
 	@Test
+	void testReadInvalidUsingSimpleAdapter() throws Exception {
+		final String json = Resources.toString(this.getClass().getResource("NullClassCriterion.json"),
+				StandardCharsets.UTF_8);
+		final Criterion criterion = JsonCriterion
+				.asSimpleCriterion(PrintableJsonObjectFactory.wrapPrettyPrintedString(json));
+		assertEquals(Criterion.given("Simple criterion"), criterion);
+	}
+
+	@Test
 	void testReadSimple() throws Exception {
 		final String json = Resources.toString(this.getClass().getResource("SimpleCriterion.json"),
 				StandardCharsets.UTF_8);

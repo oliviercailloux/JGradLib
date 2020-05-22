@@ -9,7 +9,7 @@ public class MyIdentityFunctionThrowing implements Function<String, String> {
 	}
 
 	public MyIdentityFunctionThrowing() {
-		throw new IllegalStateException("I like to throw.");
+		throw new IllegalStateException("I like to be thrown.");
 	}
 
 	@Override

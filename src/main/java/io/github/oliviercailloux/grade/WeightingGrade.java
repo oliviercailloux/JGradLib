@@ -23,6 +23,7 @@ import com.google.common.base.MoreObjects;
 import com.google.common.base.Verify;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Sets;
 
 /**
  * containing positive points only and at one weights per sub-grade, at least
@@ -42,6 +43,9 @@ import com.google.common.collect.ImmutableSet;
  * second attempt would have a low weight if the second attempt differed much
  * from her first attempt, and possibly being zero; to prevent students from
  * simply submitting a friend’s solution instead of correcting their own.)
+ * Another example is a test that shouldn’t count for points (for example,
+ * because the wording indicates that this aspect will not be considered) but
+ * whose result is considered informative feedback for the student anyway.
  *
  * {weights: Map<CriterionAndPoints, Double>} (non empty, all non null), this
  * implementation has only the (normalized) weights and the marks and a comment,
@@ -145,7 +149,8 @@ public class WeightingGrade implements IGrade {
 		checkArgument(weights.values().stream().anyMatch((d) -> d > 0d));
 		checkArgument(subGrades.values().stream().allMatch((g) -> 0d <= g.getPoints() && g.getPoints() <= 1d));
 		checkArgument(subGrades.keySet().equals(weights.keySet()),
-				String.format("Sub grades have keys: %s, weights have keys: %s", subGrades.keySet(), weights.keySet()));
+				String.format("Sub grades have keys: %s, weights have keys: %s, diff: %s", subGrades.keySet(),
+						weights.keySet(), Sets.symmetricDifference(subGrades.keySet(), weights.keySet())));
 		final double sumPosWeights = weights.values().stream().filter((d) -> d > 0d)
 				.collect(Collectors.summingDouble((d) -> d));
 		/**

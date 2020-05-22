@@ -1,4 +1,4 @@
-package io.github.oliviercailloux.java_grade.compiler;
+package io.github.oliviercailloux.java_grade.bytecode;
 
 public class SourceWithNoWarnings {
 	public static void main(String[] args) throws Exception {

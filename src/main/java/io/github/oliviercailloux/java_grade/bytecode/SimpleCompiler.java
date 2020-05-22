@@ -1,8 +1,11 @@
 package io.github.oliviercailloux.java_grade.bytecode;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.base.Verify.verify;
+import static io.github.oliviercailloux.exceptions.Unchecker.IO_UNCHECKER;
+import static io.github.oliviercailloux.exceptions.Unchecker.URI_UNCHECKER;
 
 import java.io.File;
 import java.io.IOException;
@@ -32,10 +35,10 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 
 import io.github.oliviercailloux.git.FileContent;
 import io.github.oliviercailloux.grade.context.FilesSource;
-import io.github.oliviercailloux.utils.Utils;
 
 /**
  * In the below list, “checked” means that I checked everything there and
@@ -90,12 +93,16 @@ public class SimpleCompiler {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(SimpleCompiler.class);
 
+	public static SimpleCompiler throwing(List<Path> cp, Path destDir) {
+		return new SimpleCompiler(cp, destDir, true);
+	}
+
 	public static JavaFileObject asJavaSource(Path srcPath, FileContent content) {
 		return new JavaSourceFromString(srcPath.relativize(content.getPath()).toString(), content.getContent());
 	}
 
 	public static JavaFileObject asJavaSource(String name, Path path) {
-		final String content = Utils.getOrThrow(() -> Files.readString(path));
+		final String content = IO_UNCHECKER.getUsing(() -> Files.readString(path));
 		return asJavaSource(name, content);
 	}
 
@@ -134,11 +141,22 @@ public class SimpleCompiler {
 		return compile(m -> m.getJavaFileObjectsFromPaths(srcToCompile), cp, Optional.empty());
 	}
 
-	private static List<Diagnostic<? extends JavaFileObject>> compile(
+	public static ImmutableList<Diagnostic<? extends JavaFileObject>> compileFromPaths(Iterable<Path> srcToCompile,
+			Collection<Path> cp, Path destDir) {
+		/**
+		 * Compiler throws if asked to compile no source (even though the doc seems to
+		 * allow it).
+		 */
+		if (!srcToCompile.iterator().hasNext()) {
+			return ImmutableList.of();
+		}
+
+		return compile(m -> m.getJavaFileObjectsFromPaths(srcToCompile), cp, Optional.of(destDir));
+	}
+
+	private static ImmutableList<Diagnostic<? extends JavaFileObject>> compile(
 			Function<StandardJavaFileManager, Iterable<? extends JavaFileObject>> fctSrcToCompile, Collection<Path> cp,
 			Optional<Path> destDir) {
-		final ImmutableList<String> options = destDir.isEmpty() ? ImmutableList.of()
-				: ImmutableList.of("-d", destDir.toString());
 
 		final JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
 		final boolean compiled;
@@ -156,11 +174,13 @@ public class SimpleCompiler {
 			 * location).
 			 */
 			fileManager.setLocationFromPaths(StandardLocation.CLASS_PATH, cp);
+			if (destDir.isPresent()) {
+				fileManager.setLocationFromPaths(StandardLocation.CLASS_OUTPUT, ImmutableSet.of(destDir.get()));
+			}
 			final Iterable<? extends JavaFileObject> srcToCompile = fctSrcToCompile.apply(fileManager);
 			final StringWriter compilationOutputReceiver = new StringWriter();
-			compiled = compiler
-					.getTask(compilationOutputReceiver, fileManager, diagnosticCollector, options, null, srcToCompile)
-					.call();
+			compiled = compiler.getTask(compilationOutputReceiver, fileManager, diagnosticCollector, ImmutableList.of(),
+					null, srcToCompile).call();
 			final String compilationOutput = compilationOutputReceiver.toString();
 			if (!compilationOutput.isEmpty()) {
 				throw new UnsupportedOperationException();
@@ -169,9 +189,15 @@ public class SimpleCompiler {
 			throw new UncheckedIOException(e);
 		}
 		final List<Diagnostic<? extends JavaFileObject>> diagnostics = diagnosticCollector.getDiagnostics();
-		LOGGER.debug("Compiling with {}: {}.", options, diagnostics);
+		LOGGER.debug("Compiled and got: {}.", diagnostics);
 		verify(compiled == diagnostics.isEmpty());
-		return diagnostics;
+		if (compiled) {
+			/**
+			 * TODO check here that the file gets created; requires to simplify the
+			 * parameters so that we get the paths of the source.
+			 */
+		}
+		return ImmutableList.copyOf(diagnostics);
 	}
 
 	public static List<Diagnostic<? extends JavaFileObject>> compile(Path srcPath, FilesSource sources,
@@ -207,7 +233,7 @@ public class SimpleCompiler {
 			/** Could instead use options such as "-warn:+allDeadCode,allDeprecation…". */
 			final URL propertiesUrl = SimpleCompiler.class.getResource("Eclipse-prefs.epf");
 			checkState(propertiesUrl != null);
-			final Path propertiesPath = Path.of(Utils.getOrThrow(() -> propertiesUrl.toURI()));
+			final Path propertiesPath = Path.of(URI_UNCHECKER.getUsing(() -> propertiesUrl.toURI()));
 			checkState(Files.exists(propertiesPath));
 			builder.add("-properties", propertiesPath.toString());
 		}
@@ -244,6 +270,25 @@ public class SimpleCompiler {
 		public int countErrors() {
 			return Splitter.on("ERROR ").splitToStream(err).mapToInt(e -> 1).sum() - 1;
 		}
+	}
+
+	private ImmutableList<Path> cp;
+	private boolean throwing;
+	private Path destDir;
+
+	private SimpleCompiler(List<Path> cp, Path destDir, boolean throwing) {
+		this.cp = ImmutableList.copyOf(cp);
+		this.destDir = checkNotNull(destDir);
+		this.throwing = throwing;
+	}
+
+	public ImmutableList<Diagnostic<? extends JavaFileObject>> compile(Iterable<Path> srcToCompile) {
+		final ImmutableList<Diagnostic<? extends JavaFileObject>> output = SimpleCompiler.compileFromPaths(srcToCompile,
+				cp, destDir);
+		if (throwing) {
+			verify(output.isEmpty(), output.toString());
+		}
+		return output;
 	}
 
 }

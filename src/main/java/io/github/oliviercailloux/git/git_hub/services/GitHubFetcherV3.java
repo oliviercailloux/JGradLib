@@ -10,10 +10,12 @@ import java.io.StringReader;
 import java.net.URI;
 import java.net.URL;
 import java.nio.file.Path;
+import java.text.Collator;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.BinaryOperator;
@@ -238,8 +240,10 @@ public class GitHubFetcherV3 implements AutoCloseable {
 			}
 		}
 		final ImmutableList<RepositoryCoordinatesWithPrefix> prefixed = builder.build();
+		final Collator collator = Collator.getInstance(Locale.ENGLISH);
+		collator.setStrength(Collator.SECONDARY);
 		final Comparator<RepositoryCoordinatesWithPrefix> byName = Comparator
-				.comparing(RepositoryCoordinatesWithPrefix::getRepositoryName);
+				.comparing(RepositoryCoordinatesWithPrefix::getRepositoryName, collator);
 		final ImmutableSortedSet<RepositoryCoordinatesWithPrefix> sortedRepositories = ImmutableSortedSet.copyOf(byName,
 				prefixed);
 		return sortedRepositories.asList();

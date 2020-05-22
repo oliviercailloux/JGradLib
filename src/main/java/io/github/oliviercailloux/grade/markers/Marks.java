@@ -1,6 +1,7 @@
 package io.github.oliviercailloux.grade.markers;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static io.github.oliviercailloux.exceptions.Unchecker.IO_UNCHECKER;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -38,7 +39,6 @@ import io.github.oliviercailloux.grade.context.GitFullContext;
 import io.github.oliviercailloux.grade.context.PomContext;
 import io.github.oliviercailloux.grade.contexters.MavenManager;
 import io.github.oliviercailloux.grade.contexters.PomSupplier;
-import io.github.oliviercailloux.utils.Utils;
 
 /**
  *
@@ -132,12 +132,12 @@ public class Marks {
 				projectRoot.resolve("bin/"), projectRoot.resolve(".DS_Store"));
 
 		final boolean contains;
-		try (Stream<Path> entries = Utils.getOrThrow(() -> Files.list(projectRoot))) {
+		try (Stream<Path> entries = IO_UNCHECKER.getUsing(() -> Files.list(projectRoot))) {
 			contains = entries.findAny().isPresent();
 		}
 
 		final boolean noForbidden;
-		try (Stream<Path> entries = Utils.getOrThrow(() -> Files.list(projectRoot))) {
+		try (Stream<Path> entries = IO_UNCHECKER.getUsing(() -> Files.list(projectRoot))) {
 			noForbidden = entries.noneMatch(forbidden::contains);
 		}
 
@@ -298,7 +298,7 @@ public class Marks {
 
 	public static IGrade fileMatchesGrade(Path file, String exactTarget, Pattern approximateTarget) {
 		final boolean exists = Files.exists(file);
-		final String content = exists ? Utils.getOrThrow(() -> Files.readString(file)) : "";
+		final String content = exists ? IO_UNCHECKER.getUsing(() -> Files.readString(file)) : "";
 		final boolean matchesExactly = exists && content.stripTrailing().equals(exactTarget);
 		final boolean matchesApproximately = exists && (matchesExactly || approximateTarget.matcher(content).matches());
 		final Mark matchesExactlyMark = exists

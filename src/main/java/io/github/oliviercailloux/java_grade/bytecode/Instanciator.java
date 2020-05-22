@@ -11,6 +11,7 @@ import java.lang.reflect.Method;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,6 +28,24 @@ import io.github.classgraph.MethodInfoList;
 import io.github.classgraph.ScanResult;
 
 public class Instanciator {
+	private static class MyCL extends URLClassLoader {
+		private MyCL(URL[] urls, ClassLoader parent) {
+			super(urls, parent);
+		}
+
+		@Override
+		protected Class<?> findClass(String name) throws ClassNotFoundException {
+			LOGGER.info("Finding class {}.", name);
+			return super.findClass(name);
+		}
+
+		@Override
+		protected Class<?> loadClass(String name, boolean resolve) throws ClassNotFoundException {
+			LOGGER.info("Loading class {}.", name);
+			return super.loadClass(name, resolve);
+		}
+	}
+
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(Instanciator.class);
 
@@ -58,9 +77,10 @@ public class Instanciator {
 		checkNotNull(staticFactoryMethodNameOpt);
 		lastException = null;
 
-		try (URLClassLoader child = new URLClassLoader(new URL[] { url }, parent)) {
-			final ClassGraph graph = new ClassGraph().enableURLScheme(url.getProtocol()).overrideClassLoaders(child)
-					.ignoreParentClassLoaders().enableAllInfo();
+		try (URLClassLoader child = new MyCL(new URL[] { url }, parent)) {
+			final ClassGraph classGraph = new ClassGraph();
+			Stream.of(child.getURLs()).distinct().forEach(u -> classGraph.enableURLScheme(u.getProtocol()));
+			final ClassGraph graph = classGraph.overrideClassLoaders(child).ignoreParentClassLoaders().enableAllInfo();
 			LOGGER.debug("Scanning.");
 			try (ScanResult scanResult = graph.scan()) {
 				LOGGER.debug("Scan found: {}.", scanResult.getAllClasses().size());
@@ -74,7 +94,8 @@ public class Instanciator {
 					final Optional<MethodInfoList> methodInfoListOpt = infoOpt
 							.map(c -> c.getDeclaredMethodInfo(staticFactoryMethodNameOpt.get()));
 					LOGGER.debug("Found {} classes in {}, implementing: {}, with method: {}.",
-							scanResult.getAllClasses().size(), url, implementingClasses.size(), methodInfoListOpt);
+							scanResult.getAllClasses().size(), child.getURLs(), implementingClasses.size(),
+							methodInfoListOpt);
 					final Optional<MethodInfo> methodInfoOpt = methodInfoListOpt
 							.flatMap(l -> l.stream().collect(MoreCollectors.toOptional()));
 					final boolean isPublic = methodInfoOpt.map(MethodInfo::isPublic).orElse(false);

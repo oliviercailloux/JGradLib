@@ -1,58 +1,61 @@
 package io.github.oliviercailloux.email;
 
-import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 
-import java.io.UnsupportedEncodingException;
-import java.nio.charset.StandardCharsets;
-import java.util.Optional;
+import java.util.Objects;
 
 import javax.mail.internet.AddressException;
 import javax.mail.internet.InternetAddress;
 
+import com.google.common.base.MoreObjects;
 import com.google.common.base.VerifyException;
 
 public class EmailAddress {
 	public static EmailAddress given(String address) {
-		return new EmailAddress(address, Optional.empty());
+		return new EmailAddress(address);
 	}
 
-	public static EmailAddress given(String address, String personal) {
-		return new EmailAddress(address, Optional.of(personal));
-	}
+	private final String address;
 
-	private String address;
-	private Optional<String> personal;
-
-	private EmailAddress(String address, Optional<String> personal) {
+	private EmailAddress(String address) {
 		this.address = checkNotNull(address);
-		this.personal = checkNotNull(personal);
-		checkArgument(personal.isEmpty() || !personal.get().isEmpty());
+		try {
+			@SuppressWarnings("unused")
+			final InternetAddress internetAddress = new InternetAddress(address, true);
+		} catch (AddressException e) {
+			throw new IllegalArgumentException(e);
+		}
 	}
 
 	public String getAddress() {
 		return address;
 	}
 
-	public Optional<String> getPersonal() {
-		return personal;
-	}
-
 	public InternetAddress asInternetAddress() {
+		/** Need defensive copy. */
 		try {
-			final InternetAddress internetAddress = new InternetAddress(address, true);
-			if (personal.isPresent()) {
-				internetAddress.setPersonal(personal.get(), StandardCharsets.UTF_8.name());
-			}
-			return internetAddress;
-		} catch (UnsupportedEncodingException e) {
-			throw new VerifyException(e);
+			return new InternetAddress(address, true);
 		} catch (AddressException e) {
-			throw new IllegalArgumentException(e);
+			throw new VerifyException(e);
 		}
 	}
 
-	public String asRfcAddressString() {
-		return personal.isPresent() ? (personal.get() + " <" + address + ">") : address;
+	@Override
+	public boolean equals(Object o2) {
+		if (!(o2 instanceof EmailAddress)) {
+			return false;
+		}
+		final EmailAddress e2 = (EmailAddress) o2;
+		return address.equals(e2.address);
+	}
+
+	@Override
+	public int hashCode() {
+		return Objects.hash(address);
+	}
+
+	@Override
+	public String toString() {
+		return MoreObjects.toStringHelper(this).add("address", address).toString();
 	}
 }

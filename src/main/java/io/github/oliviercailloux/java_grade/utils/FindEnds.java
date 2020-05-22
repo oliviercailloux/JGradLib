@@ -1,6 +1,7 @@
 package io.github.oliviercailloux.java_grade.utils;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static io.github.oliviercailloux.exceptions.Unchecker.IO_UNCHECKER;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -15,13 +16,13 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
+import io.github.oliviercailloux.exceptions.Unchecker;
 import io.github.oliviercailloux.git.GitCloner;
 import io.github.oliviercailloux.git.GitUri;
 import io.github.oliviercailloux.git.git_hub.model.GitHubToken;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinatesWithPrefix;
 import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherV3;
-import io.github.oliviercailloux.utils.Utils;
 
 public class FindEnds {
 	@SuppressWarnings("unused")
@@ -56,10 +57,11 @@ public class FindEnds {
 	public boolean hasEnd(RepositoryCoordinates coord) {
 		final Path projectsBaseDir = WORK_DIR.resolve(prefix);
 		final Path projectDir = projectsBaseDir.resolve(coord.getRepositoryName());
-		Utils.uncheck(() -> new GitCloner().download(GitUri.fromGitUri(coord.asURI()), projectDir));
+		new GitCloner().download(GitUri.fromGitUri(coord.asURI()), projectDir);
 
-		try (Git git = Utils.getOrThrow(() -> Git.open(projectDir.resolve(".git").toFile()))) {
-			final List<Ref> remoteRefs = Utils.getOrThrow(() -> git.branchList().setListMode(ListMode.REMOTE).call());
+		try (Git git = IO_UNCHECKER.getUsing(() -> Git.open(projectDir.resolve(".git").toFile()))) {
+			final List<Ref> remoteRefs = Unchecker.wrappingWith(IllegalStateException::new)
+					.getUsing(() -> git.branchList().setListMode(ListMode.REMOTE).call());
 			LOGGER.info("Remote refs for {}: {}.", coord, remoteRefs);
 			return remoteRefs.stream().anyMatch(r -> r.getName().equals("refs/remotes/origin/END"));
 		}

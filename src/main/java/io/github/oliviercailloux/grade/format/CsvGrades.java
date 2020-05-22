@@ -16,10 +16,12 @@ import org.slf4j.LoggerFactory;
 import com.google.common.base.Verify;
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSetMultimap;
 import com.google.common.collect.ImmutableTable;
 import com.google.common.collect.MoreCollectors;
+import com.google.common.collect.Range;
 import com.google.common.collect.Streams;
 import com.univocity.parsers.csv.CsvWriter;
 import com.univocity.parsers.csv.CsvWriterSettings;
@@ -36,24 +38,27 @@ public class CsvGrades {
 
 	public static final double DEFAULT_DENOMINATOR = 20d;
 
-	public static String asCsv(Map<StudentOnGitHub, WeightingGrade> grades) {
+	public static String asCsv(Map<StudentOnGitHub, ? extends IGrade> grades) {
 		return asCsv(grades, DEFAULT_DENOMINATOR);
 	}
 
-	public static String asCsv(Map<StudentOnGitHub, WeightingGrade> grades, double denominator) {
+	public static String asCsv(Map<StudentOnGitHub, ? extends IGrade> grades, double denominator) {
 		return asCsv(grades, denominator, true);
 	}
 
 	/**
-	 * Must disable printing range when weight is dynamic (varies per student).
+	 * Must disable printing bounds when weight is dynamic (varies per student).
 	 */
-	public static String asCsv(Map<StudentOnGitHub, WeightingGrade> grades, double denominator, boolean printRange) {
+	public static String asCsv(Map<StudentOnGitHub, ? extends IGrade> grades, double denominator, boolean printBounds) {
 		final NumberFormat formatter = NumberFormat.getNumberInstance(Locale.FRENCH);
 		final StringWriter stringWriter = new StringWriter();
 		final CsvWriter writer = new CsvWriter(stringWriter, new CsvWriterSettings());
 
-		final ImmutableSetMultimap<StudentOnGitHub, CriterionGradeWeight> perStudent = grades.entrySet().stream()
-				.collect(ImmutableSetMultimap.flatteningToImmutableSetMultimap(Entry::getKey,
+		final ImmutableMap<StudentOnGitHub, WeightingGrade> weightingGrades = grades.entrySet().stream()
+				.filter(e -> e.getValue() instanceof WeightingGrade)
+				.collect(ImmutableMap.toImmutableMap(Map.Entry::getKey, e -> (WeightingGrade) e.getValue()));
+		final ImmutableSetMultimap<StudentOnGitHub, CriterionGradeWeight> perStudent = weightingGrades.entrySet()
+				.stream().collect(ImmutableSetMultimap.flatteningToImmutableSetMultimap(Entry::getKey,
 						(e) -> e.getValue().getSubGradesAsSet().stream().flatMap(CsvGrades::asContextualizedStream)));
 		final ImmutableTable<StudentOnGitHub, Criterion, CriterionGradeWeight> asTable = perStudent.entries().stream()
 				.collect(ImmutableTable.toImmutableTable(Entry::getKey, (e) -> e.getValue().getCriterion(),
@@ -74,7 +79,7 @@ public class CsvGrades {
 				.collect(ImmutableList.toImmutableList());
 		writer.writeHeaders(headers);
 
-		for (Entry<StudentOnGitHub, WeightingGrade> studentGrade : grades.entrySet()) {
+		for (Entry<StudentOnGitHub, ? extends IGrade> studentGrade : grades.entrySet()) {
 			final StudentOnGitHub student = studentGrade.getKey();
 			LOGGER.debug("Writing {}.", student);
 			if (enableName) {
@@ -82,7 +87,7 @@ public class CsvGrades {
 			}
 			writer.addValue("GitHub username", student.getGitHubUsername());
 
-			final WeightingGrade grade = studentGrade.getValue();
+			final IGrade grade = studentGrade.getValue();
 			final ImmutableCollection<CriterionGradeWeight> marks = asTable.row(student).values();
 			for (CriterionGradeWeight cgw : marks) {
 				final Criterion criterion = cgw.getCriterion();
@@ -95,16 +100,25 @@ public class CsvGrades {
 			writer.writeValuesToRow();
 		}
 
-		if (printRange) {
+		if (printBounds) {
 			writer.addValue("GitHub username", "Range");
-
 			for (Criterion criterion : allCriteria) {
 				final double weight = asTable.column(criterion).values().stream().map(CriterionGradeWeight::getWeight)
 						.distinct().collect(MoreCollectors.onlyElement());
-				final String interval = weight == 0d ? "{0}" : "[0, " + formatter.format(weight * denominator) + "]";
-				writer.addValue(criterion.getName(), interval);
+				final Range<Double> bounds = Range.closed(0d, weight * denominator);
+				writer.addValue(criterion.getName(), boundsToString(formatter, bounds));
 			}
-			writer.addValue("Points", "[0," + formatter.format(denominator) + "]");
+			final Range<Double> overallBounds = Range.closed(0d, denominator);
+			writer.addValue("Points", boundsToString(formatter, overallBounds));
+			writer.writeValuesToRow();
+
+			writer.addValue("GitHub username", "Upper bound");
+			for (Criterion criterion : allCriteria) {
+				final double weight = asTable.column(criterion).values().stream().map(CriterionGradeWeight::getWeight)
+						.distinct().collect(MoreCollectors.onlyElement());
+				writer.addValue(criterion.getName(), formatter.format(weight * denominator));
+			}
+			writer.addValue("Points", formatter.format(denominator));
 			writer.writeValuesToRow();
 		}
 
@@ -189,5 +203,13 @@ public class CsvGrades {
 		final double pointsSigned = cgw.getWeight() >= 0d ? points : 1d - points;
 		final double pointsScaled = pointsSigned * cgw.getWeight() * denominator;
 		return pointsScaled;
+	}
+
+	private static String boundsToString(NumberFormat formatter, Range<Double> bounds) {
+		final double lower = bounds.lowerEndpoint();
+		final double upper = bounds.upperEndpoint();
+		final String formattedLower = formatter.format(bounds.lowerEndpoint());
+		final String formattedUpper = formatter.format(bounds.upperEndpoint());
+		return (lower == upper) ? "{" + formattedLower + "}" : "[" + formattedLower + ", " + formattedUpper + "]";
 	}
 }

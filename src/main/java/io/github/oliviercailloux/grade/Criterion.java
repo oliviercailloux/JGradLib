@@ -11,6 +11,9 @@ public interface Criterion {
 	/**
 	 * Two criteria are equal iff they have the same name.
 	 *
+	 * TODO this is not currently implemented and creates problem when deserializing
+	 * with simple criteria.
+	 *
 	 * {@inheritDoc}
 	 */
 	@Override

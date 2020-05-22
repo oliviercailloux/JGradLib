@@ -5,7 +5,6 @@ import static com.google.common.base.Preconditions.checkArgument;
 import javax.json.Json;
 import javax.json.JsonObject;
 import javax.json.JsonObjectBuilder;
-import javax.json.JsonValue;
 import javax.json.bind.adapter.JsonbAdapter;
 
 import io.github.oliviercailloux.grade.Criterion;
@@ -23,9 +22,16 @@ public class JsonCriterion {
 		return PrintableJsonObjectFactory.wrapObject(builder.build());
 	}
 
+	public static Criterion asSimpleCriterion(JsonObject json) {
+		final String criterionName = json.getString("name");
+		return Criterion.given(criterionName);
+	}
+
 	public static Criterion asCriterion(JsonObject json) {
-		checkArgument(!json.containsKey("class") || !json.get("class").equals(JsonValue.NULL));
 		final String enumClassName = json.getString("class", null);
+		if (json.containsKey("class")) {
+			checkArgument(enumClassName != null);
+		}
 		final String criterionName = json.getString("name");
 		if (enumClassName != null) {
 			final Class<?> enumTentativeClass;
@@ -41,6 +47,20 @@ public class JsonCriterion {
 			return (Criterion) s;
 		}
 		return Criterion.given(criterionName);
+	}
+
+	public static JsonbAdapter<Criterion, JsonObject> asSimpleAdapter() {
+		return new JsonbAdapter<>() {
+			@Override
+			public JsonObject adaptToJson(Criterion obj) throws Exception {
+				return asJson(obj);
+			}
+
+			@Override
+			public Criterion adaptFromJson(JsonObject obj) throws Exception {
+				return asSimpleCriterion(obj);
+			}
+		};
 	}
 
 	public static JsonbAdapter<Criterion, JsonObject> asAdapter() {

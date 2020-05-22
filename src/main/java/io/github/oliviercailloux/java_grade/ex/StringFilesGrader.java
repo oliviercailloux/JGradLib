@@ -18,7 +18,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.Supplier;
 
-import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.slf4j.Logger;
@@ -31,6 +30,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import com.google.common.jimfs.Configuration;
 import com.google.common.jimfs.Jimfs;
+import com.google.common.primitives.Booleans;
 
 import io.github.oliviercailloux.git.GitCloner;
 import io.github.oliviercailloux.git.GitLocalHistory;
@@ -79,9 +79,9 @@ public class StringFilesGrader {
 
 	private static final String PREFIX = "string-files";
 
-	private static final boolean FAKE = true;
+	private static final String TEST_NAME = "string-files-homework";
 
-	private static final Instant DEADLINE = ZonedDateTime.parse("2020-04-23T14:22:00+02:00").toInstant();
+	private static final Instant DEADLINE = ZonedDateTime.parse("2020-05-11T00:00:00+02:00").toInstant();
 
 	/**
 	 * NB for this to work, we need to have the interfaces in the class path with
@@ -90,7 +90,7 @@ public class StringFilesGrader {
 	 */
 	public static void main(String[] args) throws Exception {
 		final Path outDir = Paths.get("../../Java L3/");
-		final Path projectsBaseDir = outDir.resolve(PREFIX);
+		final Path projectsBaseDir = outDir.resolve(TEST_NAME);
 
 		final ImmutableList<RepositoryCoordinatesWithPrefix> repositories;
 		try (GitHubFetcherV3 fetcher = GitHubFetcherV3.using(GitHubToken.getRealInstance())) {
@@ -99,17 +99,14 @@ public class StringFilesGrader {
 //		repositories = ImmutableList.of(RepositoryCoordinatesWithPrefix.from("oliviercailloux-org", PREFIX, "…"));
 
 		final StringFilesGrader grader = new StringFilesGrader();
-		if (FAKE) {
-			grader.deadline = Instant.MAX;
-		}
 
 		final Map<String, IGrade> gradesB = new LinkedHashMap<>();
 		for (RepositoryCoordinatesWithPrefix repository : repositories) {
 			final Path projectDir = projectsBaseDir.resolve(repository.getRepositoryName());
 			gradesB.put(repository.getUsername(), grader.grade(repository, projectDir));
-			Files.writeString(outDir.resolve("all grades " + PREFIX + (FAKE ? "-fake" : "") + ".json"),
+			Files.writeString(outDir.resolve("all grades " + TEST_NAME + ".json"),
 					JsonbUtils.toJsonObject(gradesB, JsonGrade.asAdapter()).toString());
-			Summarize.summarize(PREFIX, outDir);
+			Summarize.summarize(TEST_NAME, outDir);
 		}
 	}
 
@@ -119,7 +116,7 @@ public class StringFilesGrader {
 		deadline = DEADLINE;
 	}
 
-	public IGrade grade(RepositoryCoordinatesWithPrefix coord, Path projectDir) throws IOException, GitAPIException {
+	public IGrade grade(RepositoryCoordinatesWithPrefix coord, Path projectDir) throws IOException {
 		new GitCloner().download(GitUri.fromGitUri(coord.asURI()), projectDir);
 
 		try (GitRepoFileSystem fs = new GitFileSystemProvider().newFileSystemFromGitDir(projectDir.resolve(".git"))) {
@@ -161,7 +158,7 @@ public class StringFilesGrader {
 			gradeBuilder.put(JavaCriterion.ID, Mark.binary(JavaMarkHelper.committerAndAuthorIs(master, owner)));
 		}
 
-		final Path fileSourcePath = Path.of("src-" + owner);
+		final Path fileSourcePath = Utils.getTempUniqueDirectory("src-" + owner);
 		Utils.copyRecursively(gitSourcePath, fileSourcePath, StandardCopyOption.REPLACE_EXISTING);
 
 		final MavenManager mavenManager = new MavenManager();
@@ -181,8 +178,7 @@ public class StringFilesGrader {
 			gradeBuilder.put(JavaCriterion.NO_WARNINGS, Mark.binary(!suppressed && (stringFiles.countWarnings() == 0),
 					"", stringFiles.err.replaceAll(fileSourcePath.toAbsolutePath().toString() + "/", "")));
 		} else {
-			gradeBuilder.put(JavaCriterion.COMPILE, Mark.binary(compiled, "",
-					mavenManager.getOutput().replaceAll(fileSourcePath.toAbsolutePath().toString() + "/", "")));
+			gradeBuilder.put(JavaCriterion.COMPILE, Mark.binary(compiled, "", mavenManager.getCensoredOutput()));
 			gradeBuilder.put(JavaCriterion.NO_WARNINGS, Mark.zero());
 		}
 		final IGrade implGrade;
@@ -214,84 +210,85 @@ public class StringFilesGrader {
 	private IGrade grade(Supplier<StringFilesUtils> factory) throws IOException {
 		final ImmutableMap.Builder<Criterion, IGrade> gradeBuilder = ImmutableMap.builder();
 
-		try (FileSystem jimfs = Jimfs.newFileSystem(Configuration.unix())) {
-			{
-				final StringFilesUtils instance = factory.get();
-				boolean thrown = JavaGradeUtils.doesThrow(() -> instance.setReferenceFolder(null),
-						e -> e instanceof NullPointerException);
-				gradeBuilder.put(LocalCriterion.REF_THROWS_ON_NULL, Mark.binary(thrown));
-			}
-			{
-				final StringFilesUtils instance = factory.get();
-				final Try<Boolean> changedToDot = Try.of(() -> instance.setReferenceFolder(Path.of(".")));
-				final StringFilesUtils instance2 = factory.get();
-				final Try<Boolean> changedToEmpty = Try.of(() -> instance2.setReferenceFolder(Path.of("")));
-				gradeBuilder.put(LocalCriterion.REF_IS_CURRENT_INITIALLY, Mark.binary(changedToDot.isSuccess()
-						&& changedToEmpty.isSuccess()
-						&& (changedToDot.equals(Try.success(false)) || changedToEmpty.equals(Try.success(false)))));
-			}
-			{
-				final StringFilesUtils instance = factory.get();
-				Try.of(() -> instance.setReferenceFolder(Path.of("")));
-				final Try<Boolean> changed = Try.of(() -> instance.setReferenceFolder(Path.of(".")));
-				gradeBuilder.put(LocalCriterion.REF_DOT_IS_EMPTY, Mark.binary(changed.equals(Try.success(false))));
-			}
-			{
-				final StringFilesUtils instance = factory.get();
-				final Try<Boolean> changed = Try.of(() -> instance.setReferenceFolder(Path.of("truc chose")));
-				gradeBuilder.put(LocalCriterion.REF_CHANGED, Mark.binary(changed.equals(Try.success(true))));
-			}
-			{
-				final StringFilesUtils instance = factory.get();
-				Try.of(() -> instance.setReferenceFolder(Path.of("truc/chose")));
-				final Try<Boolean> changed = Try.of(() -> instance.setReferenceFolder(Path.of("truc/./../truc/chose")));
-				gradeBuilder.put(LocalCriterion.REF_NO_SPURIOUS_CHANGE,
-						Mark.binary(changed.equals(Try.success(false))));
-			}
-			{
+		{
+			final StringFilesUtils instance = factory.get();
+			boolean thrown = JavaGradeUtils.doesThrow(() -> instance.setReferenceFolder(null),
+					e -> e instanceof NullPointerException);
+			gradeBuilder.put(LocalCriterion.REF_THROWS_ON_NULL, Mark.binary(thrown));
+		}
+		{
+			final StringFilesUtils instance = factory.get();
+			final Try<Boolean> changedToDot = Try.of(() -> instance.setReferenceFolder(Path.of(".")));
+			final StringFilesUtils instance2 = factory.get();
+			final Try<Boolean> changedToEmpty = Try.of(() -> instance2.setReferenceFolder(Path.of("")));
+			gradeBuilder.put(LocalCriterion.REF_IS_CURRENT_INITIALLY,
+					Mark.binary(changedToDot.isSuccess() && changedToEmpty.isSuccess()
+							&& (changedToDot.equals(Try.success(false)) || changedToEmpty.equals(Try.success(false)))));
+		}
+		{
+			final StringFilesUtils instance = factory.get();
+			Try.of(() -> instance.setReferenceFolder(Path.of("")));
+			final Try<Boolean> changed = Try.of(() -> instance.setReferenceFolder(Path.of(".")));
+			gradeBuilder.put(LocalCriterion.REF_DOT_IS_EMPTY, Mark.binary(changed.equals(Try.success(false))));
+		}
+		{
+			final StringFilesUtils instance = factory.get();
+			final Try<Boolean> changed = Try.of(() -> instance.setReferenceFolder(Path.of("truc chose")));
+			gradeBuilder.put(LocalCriterion.REF_CHANGED, Mark.binary(changed.equals(Try.success(true))));
+		}
+		{
+			final StringFilesUtils instance = factory.get();
+			Try.of(() -> instance.setReferenceFolder(Path.of("truc/chose")));
+			final Try<Boolean> changed = Try.of(() -> instance.setReferenceFolder(Path.of("truc/./../truc/chose")));
+			gradeBuilder.put(LocalCriterion.REF_NO_SPURIOUS_CHANGE, Mark.binary(changed.equals(Try.success(false))));
+		}
+		{
+			try (FileSystem jimfs = Jimfs.newFileSystem(Configuration.unix())) {
 				final StringFilesUtils instance = factory.get();
 				final Try<Boolean> changed = Try.of(() -> instance.setReferenceFolder(jimfs.getPath(".")));
 				gradeBuilder.put(LocalCriterion.REF_USING_OTHER_FS, Mark.binary(changed.equals(Try.success(true))));
 			}
+		}
 
-			{
-				final StringFilesUtils instance = factory.get();
-				boolean thrown = JavaGradeUtils.doesThrow(() -> instance.getAbsolutePath(null),
-						e -> e instanceof NullPointerException);
-				gradeBuilder.put(LocalCriterion.ABS_THROWS_ON_NULL, Mark.binary(thrown));
-			}
-			{
-				final StringFilesUtils instance = factory.get();
-				boolean thrown = JavaGradeUtils.doesThrow(() -> instance.getAbsolutePath("/usr"),
-						e -> e instanceof IllegalArgumentException);
-				gradeBuilder.put(LocalCriterion.ABS_THROWS_ON_ABS, Mark.binary(thrown));
-			}
-			{
-				final StringFilesUtils instance = factory.get();
-				final String relative = "adir/anotherdir/";
-				final Try<Path> pathAbs = Try.of(() -> Path.of(instance.getAbsolutePath(relative)));
-				gradeBuilder.put(LocalCriterion.ABS_ON_CUR_PLUS_DIR, Mark.binary(
-						pathAbs.isSuccess() && pathAbs.get().normalize().equals(Path.of(relative).toAbsolutePath())));
-			}
-			{
-				final StringFilesUtils instance = factory.get();
-				final Path reference = Path.of(".");
-				Try.of(() -> instance.setReferenceFolder(reference));
-				final String relative = "adir/afile";
-				final Try<Path> pathAbs = Try.of(() -> Path.of(instance.getAbsolutePath(relative)));
-				gradeBuilder.put(LocalCriterion.ABS_ON_DOT_PLUS_FILE, Mark.binary(
-						pathAbs.isSuccess() && pathAbs.get().normalize().equals(Path.of(relative).toAbsolutePath())));
-			}
-			{
-				final StringFilesUtils instance = factory.get();
-				final Path reference = Path.of("adir/");
-				Try.of(() -> instance.setReferenceFolder(reference));
-				final String relative = "dir/file.txt";
-				final Try<Path> pathAbs = Try.of(() -> Path.of(instance.getAbsolutePath(relative)));
-				gradeBuilder.put(LocalCriterion.ABS_ON_DIR_PLUS_FILE, Mark.binary(pathAbs.isSuccess()
-						&& pathAbs.get().normalize().equals(reference.resolve(relative).toAbsolutePath())));
-			}
-			{
+		{
+			final StringFilesUtils instance = factory.get();
+			boolean thrown = JavaGradeUtils.doesThrow(() -> instance.getAbsolutePath(null),
+					e -> e instanceof NullPointerException);
+			gradeBuilder.put(LocalCriterion.ABS_THROWS_ON_NULL, Mark.binary(thrown));
+		}
+		{
+			final StringFilesUtils instance = factory.get();
+			boolean thrown = JavaGradeUtils.doesThrow(() -> instance.getAbsolutePath("/usr"),
+					e -> e instanceof IllegalArgumentException);
+			gradeBuilder.put(LocalCriterion.ABS_THROWS_ON_ABS, Mark.binary(thrown));
+		}
+		{
+			final StringFilesUtils instance = factory.get();
+			final String relative = "adir/anotherdir/";
+			final Try<Path> pathAbs = Try.of(() -> Path.of(instance.getAbsolutePath(relative)));
+			gradeBuilder.put(LocalCriterion.ABS_ON_CUR_PLUS_DIR, Mark.binary(
+					pathAbs.isSuccess() && pathAbs.get().normalize().equals(Path.of(relative).toAbsolutePath())));
+		}
+		{
+			final StringFilesUtils instance = factory.get();
+			final Path reference = Path.of(".");
+			Try.of(() -> instance.setReferenceFolder(reference));
+			final String relative = "adir/afile";
+			final Try<Path> pathAbs = Try.of(() -> Path.of(instance.getAbsolutePath(relative)));
+			gradeBuilder.put(LocalCriterion.ABS_ON_DOT_PLUS_FILE, Mark.binary(
+					pathAbs.isSuccess() && pathAbs.get().normalize().equals(Path.of(relative).toAbsolutePath())));
+		}
+		{
+			final StringFilesUtils instance = factory.get();
+			final Path reference = Path.of("adir/");
+			Try.of(() -> instance.setReferenceFolder(reference));
+			final String relative = "dir/file.txt";
+			final Try<Path> pathAbs = Try.of(() -> Path.of(instance.getAbsolutePath(relative)));
+			gradeBuilder.put(LocalCriterion.ABS_ON_DIR_PLUS_FILE, Mark.binary(pathAbs.isSuccess()
+					&& pathAbs.get().normalize().equals(reference.resolve(relative).toAbsolutePath())));
+		}
+		{
+			try (FileSystem jimfs = Jimfs.newFileSystem(Configuration.unix())) {
 				final StringFilesUtils instance = factory.get();
 				final Path reference = jimfs.getPath("subdir/");
 				Try.of(() -> instance.setReferenceFolder(reference));
@@ -300,48 +297,67 @@ public class StringFilesGrader {
 				gradeBuilder.put(LocalCriterion.ABS_ON_JIM_PLUS_FILE, Mark.binary(pathAbs.isSuccess() && Strings
 						.nullToEmpty(pathAbs.get()).equals(reference.resolve(relative).toAbsolutePath().toString())));
 			}
+		}
 
-			{
-				final StringFilesUtils instance = factory.get();
-				final String relative = "nonexistent.txt";
-				final boolean thrown = JavaGradeUtils.doesThrow(() -> instance.getContentUsingIso88591Charset(relative),
-						e -> e instanceof IOException);
-				gradeBuilder.put(LocalCriterion.CONTENT_THROWS, Mark.binary(thrown));
-			}
-			{
+		{
+			final StringFilesUtils instance = factory.get();
+			final String relative = "nonexistent.txt";
+			final boolean thrown = JavaGradeUtils.doesThrow(() -> instance.getContentUsingIso88591Charset(relative),
+					e -> e instanceof IOException);
+			gradeBuilder.put(LocalCriterion.CONTENT_THROWS, Mark.binary(thrown));
+		}
+		{
+			try (FileSystem jimfs = Jimfs.newFileSystem(Configuration.unix())) {
 				final StringFilesUtils instance = factory.get();
 				final Path reference = jimfs.getPath("subdir/");
 				Try.of(() -> instance.setReferenceFolder(reference));
-				final String relative = "existent.txt";
-				Files.createDirectory(reference);
-				Files.writeString(reference.resolve(relative), "One\rTwo\nThree\r\n Four\n");
-				final ImmutableList<String> read = Try.of(() -> instance.getContentUsingIso88591Charset(relative))
-						.getOrElse(ImmutableList.of());
-				gradeBuilder.put(LocalCriterion.CONTENT_READS_FROM_JIMFS,
-						Mark.binary(read != null && read.equals(ImmutableList.of("One", "Two", "Three", " Four"))));
+				if (!jimfs.isOpen()) {
+					gradeBuilder.put(LocalCriterion.CONTENT_READS_FROM_JIMFS, Mark.zero("Closed prematurely."));
+				} else {
+					final String relative = "existent.txt";
+					Files.createDirectory(reference);
+					Files.writeString(reference.resolve(relative), "One\rTwo\nThree\r\n Four\n");
+					final ImmutableList<String> read = Try.of(() -> instance.getContentUsingIso88591Charset(relative))
+							.getOrElse(ImmutableList.of());
+					gradeBuilder.put(LocalCriterion.CONTENT_READS_FROM_JIMFS,
+							Mark.binary(read != null && read.equals(ImmutableList.of("One", "Two", "Three", " Four"))));
+				}
 			}
-			{
+		}
+		{
+			try (FileSystem jimfs = Jimfs.newFileSystem(Configuration.unix())) {
 				final StringFilesUtils instance = factory.get();
 				final Path reference = jimfs.getPath("subdir/");
 				Try.of(() -> instance.setReferenceFolder(reference));
-				final String relative = "existent.txt";
-				Files.write(reference.resolve(relative), "Hé !\r\n\n\r".getBytes(StandardCharsets.ISO_8859_1));
-				final ImmutableList<String> read = Try.of(() -> instance.getContentUsingIso88591Charset(relative))
-						.getOrElse(ImmutableList.of());
-				gradeBuilder.put(LocalCriterion.CONTENT_READS_FROM_JIMFS_USING_8859,
-						Mark.binary(read != null && read.equals(ImmutableList.of("Hé !", "", ""))));
+				if (!jimfs.isOpen()) {
+					gradeBuilder.put(LocalCriterion.CONTENT_READS_FROM_JIMFS_USING_8859,
+							Mark.zero("Closed prematurely."));
+				} else {
+					final String relative = "existent.txt";
+					Files.createDirectory(reference);
+					Files.write(reference.resolve(relative), "Hé !\r\n\n\r".getBytes(StandardCharsets.ISO_8859_1));
+					final ImmutableList<String> read = Try.of(() -> instance.getContentUsingIso88591Charset(relative))
+							.getOrElse(ImmutableList.of());
+					gradeBuilder.put(LocalCriterion.CONTENT_READS_FROM_JIMFS_USING_8859,
+							Mark.binary(read != null && read.equals(ImmutableList.of("Hé !", "", ""))));
+				}
 			}
+		}
 
-			{
-				final StringFilesUtils instance = factory.get();
-				final Path reference = Path.of("fold", "subf");
-				Try.of(() -> instance.setReferenceFolder(reference));
-				final Try<Path> pathRelativeToReference = Try
-						.of(() -> Path.of(instance.getPathRelativeToReference("fold/stuff.txt")));
-				gradeBuilder.put(LocalCriterion.RELATIVE_TO_CURRENT_TO_RELATIVE_TO_REFERENCE,
-						Mark.binary(pathRelativeToReference.isSuccess()
-								&& pathRelativeToReference.get().normalize().equals(Path.of("..", "stuff.txt"))));
-			}
+		{
+			final StringFilesUtils instance = factory.get();
+			final Path reference = Path.of("fold", "subf");
+			Try.of(() -> instance.setReferenceFolder(reference));
+			final Try<Path> pathRelativeToReference = Try
+					.of(() -> Path.of(instance.getPathRelativeToReference("fold/stuff.txt")));
+			final Try<Path> pathToCurrentRelativeToReference = Try
+					.of(() -> Path.of(instance.getPathRelativeToReference("")));
+			final boolean test1 = pathRelativeToReference.isSuccess()
+					&& pathRelativeToReference.get().normalize().equals(Path.of("..", "stuff.txt"));
+			final boolean test2 = pathToCurrentRelativeToReference.isSuccess()
+					&& pathToCurrentRelativeToReference.get().normalize().equals(Path.of("..", ".."));
+			gradeBuilder.put(LocalCriterion.RELATIVE_TO_CURRENT_TO_RELATIVE_TO_REFERENCE,
+					Mark.given(Booleans.countTrue(test1, test2) / 2d, ""));
 		}
 		final ImmutableMap<Criterion, IGrade> grade = gradeBuilder.build();
 

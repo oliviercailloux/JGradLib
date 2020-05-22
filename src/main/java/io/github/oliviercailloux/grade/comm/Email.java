@@ -11,24 +11,24 @@ import org.w3c.dom.Document;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Strings;
 
-import io.github.oliviercailloux.email.EmailAddress;
+import io.github.oliviercailloux.email.EmailAddressAndPersonal;
 import io.github.oliviercailloux.xml.HtmlDocument;
 
 public class Email {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(Email.class);
-	private EmailAddress to;
+	private EmailAddressAndPersonal to;
 
-	public static Email withDocument(Document document, EmailAddress to) {
+	public static Email withDocument(Document document, EmailAddressAndPersonal to) {
 		return new Email(document, null, null, null, to);
 	}
 
 	public static Email withDocumentAndFile(Document document, String fileName, String fileContent, String fileSubtype,
-			EmailAddress to) {
+			EmailAddressAndPersonal to) {
 		return new Email(document, fileName, fileContent, fileSubtype, to);
 	}
 
-	private Email(Document document, String fileName, String fileContent, String fileSubtype, EmailAddress to) {
+	private Email(Document document, String fileName, String fileContent, String fileSubtype, EmailAddressAndPersonal to) {
 		this.document = document;
 		this.fileName = Strings.emptyToNull(fileName);
 		this.fileContent = Strings.emptyToNull(fileContent);
@@ -76,7 +76,7 @@ public class Email {
 		return fileSubtype;
 	}
 
-	public EmailAddress getTo() {
+	public EmailAddressAndPersonal getTo() {
 		return to;
 	}
 

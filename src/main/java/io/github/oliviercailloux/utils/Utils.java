@@ -3,8 +3,8 @@ package io.github.oliviercailloux.utils;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import java.io.FilePermission;
 import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.net.URI;
 import java.nio.file.CopyOption;
 import java.nio.file.FileVisitResult;
@@ -13,6 +13,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.AbstractMap.SimpleImmutableEntry;
@@ -30,8 +31,6 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.diffplug.common.base.Errors;
-import com.diffplug.common.base.Throwing;
 import com.google.common.base.Strings;
 import com.google.common.base.Verify;
 import com.google.common.collect.ImmutableList;
@@ -61,44 +60,6 @@ public class Utils {
 		return !a || b;
 	}
 
-	public static void uncheck(Throwing.Runnable runnable) {
-		try {
-			runnable.run();
-		} catch (IOException e) {
-			throw new UncheckedIOException(e);
-		} catch (Throwable e) {
-			throw new IllegalStateException(e);
-		}
-	}
-
-	public static <T, R> Function<T, R> uncheck(Throwing.Function<T, R> function) {
-		return Errors.createRethrowing(e -> (e instanceof IOException) ? new UncheckedIOException((IOException) e)
-				: new IllegalStateException(e)).wrap(function);
-	}
-
-	public static <T> T getOrThrow(Throwing.Supplier<T> supplier) {
-		try {
-			return supplier.get();
-		} catch (IOException e) {
-			throw new UncheckedIOException(e);
-		} catch (RuntimeException e) {
-			throw e;
-		} catch (Throwable e) {
-			throw new IllegalStateException(e);
-		}
-	}
-
-	/**
-	 *
-	 * TODO
-	 * https://www.freecodecamp.org/news/why-you-should-ignore-exceptions-in-java-and-how-to-do-it-correctly-8e95e5775e58/
-	 * https://github.com/ylegat/uncheck https://github.com/diffplug/durian/issues/8
-	 */
-	@FunctionalInterface
-	public interface SupplierThrowingIOException<T> {
-		T get() throws IOException;
-	}
-
 	/**
 	 * Thanks to https://stackoverflow.com/a/13592567. Slightly modified to avoid
 	 * null values.
@@ -121,6 +82,10 @@ public class Utils {
 
 	public static Path getTempDirectory() {
 		return Paths.get(System.getProperty("java.io.tmpdir"));
+	}
+
+	public static Path getTempUniqueDirectory(String prefix) {
+		return getTempDirectory().resolve(prefix + " " + Utils.ISO_BASIC_UTC_FORMATTER.format(Instant.now()));
 	}
 
 	public static <E> Graph<E> asGraph(SuccessorsFunction<E> successorsFunction, Set<E> tips) {
@@ -177,8 +142,13 @@ public class Utils {
 	 * Thx https://stackoverflow.com/a/60621544.
 	 */
 	public static void copyRecursively(Path source, Path target, CopyOption... options) throws IOException {
-		// TODO AccessController.checkPermission(new FilePermission("<<ALL FILES>>",
-		// "read"));
+		// TODO
+		if (source.toUri().getScheme().equals("file")) {
+			final SecurityManager securityManager = System.getSecurityManager();
+			if (securityManager != null) {
+				securityManager.checkPermission(new FilePermission(source.toString() + "/-", "read"));
+			}
+		}
 		Files.walkFileTree(source, new SimpleFileVisitor<Path>() {
 
 			@Override

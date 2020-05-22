@@ -13,6 +13,8 @@ import javax.xml.bind.JAXBElement;
 
 import com.google.common.collect.ImmutableSet;
 
+import ebx.ebx_dataservices.StandardException;
+import io.github.oliviercailloux.exceptions.Unchecker;
 import io.github.oliviercailloux.grade.comm.StudentOnGitHubKnown;
 import io.github.oliviercailloux.grade.comm.StudentOnMyCourse;
 import io.github.oliviercailloux.grade.mycourse.json.JsonStudentOnGitHubKnown;
@@ -20,10 +22,12 @@ import io.github.oliviercailloux.json.JsonbUtils;
 import io.github.oliviercailloux.json.PrintableJsonObject;
 import io.github.oliviercailloux.supann.QueriesHelper;
 import io.github.oliviercailloux.supann.SupannQuerier;
-import io.github.oliviercailloux.utils.Utils;
 import schemas.ebx.dataservices_1.StudentType.Root.Student;
 
 public class IdsToUsernames {
+	public static final Unchecker<StandardException, IllegalStateException> SUPANN_UNCHECKER = Unchecker
+			.wrappingWith(IllegalStateException::new);
+
 	public static void main(String[] args) throws Exception {
 		QueriesHelper.setDefaultAuthenticator();
 		final SupannQuerier supannQuerier = new SupannQuerier();
@@ -35,7 +39,7 @@ public class IdsToUsernames {
 				superclass);
 
 		final ImmutableSet<StudentOnGitHubKnown> known = idsByGitHubUsername.entrySet().stream()
-				.map(Utils.uncheck(e -> StudentOnGitHubKnown
+				.map(SUPANN_UNCHECKER.wrapFunction(e -> StudentOnGitHubKnown
 						.with(asStudentOnMyCourse(supannQuerier.getStudent(e.getValue().toString())), e.getKey())))
 				.collect(ImmutableSet.toImmutableSet());
 

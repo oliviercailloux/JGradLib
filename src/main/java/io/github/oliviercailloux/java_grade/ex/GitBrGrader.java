@@ -17,7 +17,6 @@ import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.slf4j.Logger;
@@ -104,7 +103,7 @@ public class GitBrGrader {
 		branchPrefix = "origin";
 	}
 
-	public IGrade grade(RepositoryCoordinatesWithPrefix coord) throws IOException, GitAPIException {
+	public IGrade grade(RepositoryCoordinatesWithPrefix coord) throws IOException {
 		final Path projectsBaseDir = WORK_DIR.resolve(PREFIX);
 		final Path projectDir = projectsBaseDir.resolve(coord.getRepositoryName());
 		new GitCloner().download(GitUri.fromGitUri(coord.asURI()), projectDir);

@@ -2,8 +2,11 @@ package io.github.oliviercailloux.git;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
+import static io.github.oliviercailloux.exceptions.Unchecker.IO_UNCHECKER;
 
 import java.io.File;
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -35,11 +38,20 @@ import com.google.common.collect.MoreCollectors;
 import com.google.common.collect.Sets;
 import com.google.common.collect.Sets.SetView;
 
+import io.github.oliviercailloux.exceptions.Unchecker;
 import io.github.oliviercailloux.utils.Utils;
 
 public class GitCloner {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(GitCloner.class);
+	@SuppressWarnings("unused")
+	private static final Unchecker<GitAPIException, IllegalStateException> UNCHECKER = Unchecker
+			.wrappingWith(IllegalStateException::new);
+
+	public static GitCloner newInstance() {
+		return new GitCloner();
+	}
+
 	private ImmutableTable<String, String, ObjectId> remoteRefs;
 	private ImmutableMap<String, ObjectId> localRefs;
 	private boolean checkCommonRefsAgree;
@@ -67,15 +79,15 @@ public class GitCloner {
 		}
 	}
 
-	public void download(GitUri uri) throws GitAPIException {
+	public void download(GitUri uri) {
 		download(uri, getGitFolderPathInTemp(uri.getRepositoryName()));
 	}
 
-	public void download(GitUri uri, Path workTree) throws GitAPIException {
+	public void download(GitUri uri, Path workTree) {
 		download(uri, workTree, false);
 	}
 
-	public void downloadBare(GitUri uri, Path gitDir) throws GitAPIException {
+	public void downloadBare(GitUri uri, Path gitDir) {
 		download(uri, gitDir, true);
 	}
 
@@ -89,7 +101,7 @@ public class GitCloner {
 	 *                            exists, this method will not check whether it is
 	 *                            bare)
 	 */
-	private void download(GitUri uri, Path repositoryDirectory, boolean allowBare) throws GitAPIException {
+	private void download(GitUri uri, Path repositoryDirectory, boolean allowBare) {
 		localRefs = null;
 		remoteRefs = null;
 		final boolean exists = Files.exists(repositoryDirectory);
@@ -107,17 +119,19 @@ public class GitCloner {
 //			}
 //			try (Git git = Git.open(repositoryDirectory.toFile())) {
 			try (Git git = cloneCmd.call()) {
-				Utils.uncheck(() -> maybeCheckCommonRefs(git));
+				maybeCheckCommonRefs(git);
+			} catch (GitAPIException e) {
+				throw new IllegalStateException(e);
 			}
 		} else {
-			try (Git git = Utils.getOrThrow(() -> Git.open(repositoryDirectory.toFile()))) {
+			try (Git git = Git.open(repositoryDirectory.toFile())) {
 				final List<RemoteConfig> remoteList = git.remoteList().call();
 				final Optional<RemoteConfig> origin = remoteList.stream().filter((r) -> r.getName().equals("origin"))
 						.collect(MoreCollectors.toOptional());
 				if (!git.getRepository().isBare() && !git.status().call().isClean()) {
 					throw new IllegalStateException("Can’t update: not clean.");
 				}
-				final String fullBranch = Utils.getOrThrow(() -> git.getRepository().getFullBranch());
+				final String fullBranch = git.getRepository().getFullBranch();
 				LOGGER.debug("HEAD: {}.", fullBranch);
 				if (origin.isPresent() && origin.get().getURIs().size() == 1
 						&& origin.get().getURIs().get(0).toString().equals(uri.getGitString())) {
@@ -147,6 +161,10 @@ public class GitCloner {
 				}
 
 				maybeCheckCommonRefs(git);
+			} catch (IOException e) {
+				throw new UncheckedIOException(e);
+			} catch (GitAPIException e) {
+				throw new IllegalStateException(e);
 			}
 		}
 	}
@@ -154,12 +172,12 @@ public class GitCloner {
 	private void maybeCheckCommonRefs(Git git) throws GitAPIException {
 		if (checkCommonRefsAgree) {
 			final List<Ref> branches = git.branchList().setListMode(ListMode.ALL).call();
-			final List<Ref> allRefs = Utils.getOrThrow(() -> git.getRepository().getRefDatabase().getRefs());
+			final List<Ref> allRefs = IO_UNCHECKER.getUsing(() -> git.getRepository().getRefDatabase().getRefs());
 			LOGGER.debug("All refs: {}, branches: {}.", allRefs, branches);
 
 			parse(branches);
 
-			final Ref head = Utils.getOrThrow(() -> git.getRepository().findRef(Constants.HEAD));
+			final Ref head = IO_UNCHECKER.getUsing(() -> git.getRepository().findRef(Constants.HEAD));
 			checkState(head != null, "Did you forget to create the repository?");
 			checkState(head.getTarget().getName().equals("refs/heads/master"));
 
