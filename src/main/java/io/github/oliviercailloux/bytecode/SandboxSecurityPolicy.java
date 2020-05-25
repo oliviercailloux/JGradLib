@@ -1,4 +1,4 @@
-package io.github.oliviercailloux.security;
+package io.github.oliviercailloux.bytecode;
 
 import java.security.Permission;
 import java.security.Policy;
@@ -16,11 +16,17 @@ public class SandboxSecurityPolicy extends Policy {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(SandboxSecurityPolicy.class);
 
+	public static void setSecurity() {
+		final SandboxSecurityPolicy myPolicy = new SandboxSecurityPolicy();
+		Policy.setPolicy(myPolicy);
+		System.setSecurityManager(new SecurityManager());
+	}
+
 	@Override
 	public boolean implies(ProtectionDomain domain, Permission permission) {
-		if (!(domain.getClassLoader() instanceof PluginClassLoader)) {
-			return true;
+		if (domain.getClassLoader() instanceof RestrictingClassLoader) {
+			return domain.getPermissions().implies(permission);
 		}
-		return false;
+		return true;
 	}
 }

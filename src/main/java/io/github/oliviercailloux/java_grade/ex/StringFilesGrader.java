@@ -4,6 +4,8 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Verify.verify;
 
 import java.io.IOException;
+import java.net.URL;
+import java.net.URLClassLoader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.FileSystem;
 import java.nio.file.Files;
@@ -32,6 +34,7 @@ import com.google.common.jimfs.Configuration;
 import com.google.common.jimfs.Jimfs;
 import com.google.common.primitives.Booleans;
 
+import io.github.oliviercailloux.bytecode.Instanciator;
 import io.github.oliviercailloux.git.GitCloner;
 import io.github.oliviercailloux.git.GitLocalHistory;
 import io.github.oliviercailloux.git.GitUri;
@@ -51,7 +54,6 @@ import io.github.oliviercailloux.grade.format.json.JsonGrade;
 import io.github.oliviercailloux.java_grade.GraderOrchestrator;
 import io.github.oliviercailloux.java_grade.JavaCriterion;
 import io.github.oliviercailloux.java_grade.JavaGradeUtils;
-import io.github.oliviercailloux.java_grade.bytecode.Instanciator;
 import io.github.oliviercailloux.java_grade.bytecode.SimpleCompiler;
 import io.github.oliviercailloux.java_grade.bytecode.SimpleCompiler.CompilationResult;
 import io.github.oliviercailloux.java_grade.testers.JavaMarkHelper;
@@ -183,15 +185,18 @@ public class StringFilesGrader {
 		}
 		final IGrade implGrade;
 		if (compiled) {
-			final Instanciator instanciator = Instanciator.given(
-					fileSourcePath.resolve(Path.of("target/classes/")).toUri().toURL(), getClass().getClassLoader());
+			try (URLClassLoader loader = new URLClassLoader(
+					new URL[] { fileSourcePath.resolve(Path.of("target/classes/")).toUri().toURL() },
+					getClass().getClassLoader())) {
+				final Instanciator instanciator = Instanciator.given(loader);
 
-			final Optional<StringFilesUtils> instanceOpt = instanciator.getInstance(StringFilesUtils.class,
-					"newInstance");
-			if (instanceOpt.isPresent()) {
-				implGrade = grade(() -> instanciator.getInstance(StringFilesUtils.class, "newInstance").get());
-			} else {
-				implGrade = Mark.zero("Could not initialize implementation: " + instanciator.getLastException());
+				final Optional<StringFilesUtils> instanceOpt = instanciator.getInstance(StringFilesUtils.class,
+						"newInstance");
+				if (instanceOpt.isPresent()) {
+					implGrade = grade(() -> instanciator.getInstance(StringFilesUtils.class, "newInstance").get());
+				} else {
+					implGrade = Mark.zero("Could not initialize implementation: " + instanciator.getLastException());
+				}
 			}
 		} else {
 			implGrade = Mark.zero();

@@ -6,6 +6,8 @@ import static com.google.common.base.Verify.verify;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Modifier;
+import java.net.URL;
+import java.net.URLClassLoader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -31,6 +33,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.MoreCollectors;
 import com.google.common.math.DoubleMath;
 
+import io.github.oliviercailloux.bytecode.Instanciator;
 import io.github.oliviercailloux.git.GitCloner;
 import io.github.oliviercailloux.git.GitUri;
 import io.github.oliviercailloux.git.fs.GitFileSystemProvider;
@@ -49,7 +52,6 @@ import io.github.oliviercailloux.grade.format.json.JsonGrade;
 import io.github.oliviercailloux.grade.markers.Marks;
 import io.github.oliviercailloux.java_grade.GraderOrchestrator;
 import io.github.oliviercailloux.java_grade.JavaCriterion;
-import io.github.oliviercailloux.java_grade.bytecode.Instanciator;
 import io.github.oliviercailloux.java_grade.bytecode.SimpleCompiler;
 import io.github.oliviercailloux.java_grade.bytecode.SimpleCompiler.CompilationResult;
 import io.github.oliviercailloux.java_grade.testers.JavaMarkHelper;
@@ -169,21 +171,24 @@ public class CoffeeGrader {
 				compilationDrip.err.replaceAll(fileSourcePath.toAbsolutePath().toString() + "/", "") + "\n"
 						+ compilationEspresso.err.replaceAll(fileSourcePath.toAbsolutePath().toString() + "/", "")));
 
-		final Instanciator instanciator = Instanciator
-				.given(fileSourcePath.resolve(Path.of("target/classes/")).toUri().toURL(), getClass().getClassLoader());
+		try (URLClassLoader loader = new URLClassLoader(
+				new URL[] { fileSourcePath.resolve(Path.of("target/classes/")).toUri().toURL() },
+				getClass().getClassLoader())) {
+			final Instanciator instanciator = Instanciator.given(loader);
 
-		final Optional<CoffeeMachine> dripMachineOpt = instanciator.getInstance(CoffeeMachine.class, "newInstance")
-				.or(() -> instanciator.getInstance(CoffeeMachine.class));
-		final IGrade dripGrade = dripMachineOpt.map(this::getDripGrade)
-				.orElse(Mark.zero("Could not initialize drip machine."));
-		gradeBuilder.put(CoffeeCriterion.DRIP, dripGrade);
+			final Optional<CoffeeMachine> dripMachineOpt = instanciator.getInstance(CoffeeMachine.class, "newInstance")
+					.or(() -> instanciator.getInstance(CoffeeMachine.class));
+			final IGrade dripGrade = dripMachineOpt.map(this::getDripGrade)
+					.orElse(Mark.zero("Could not initialize drip machine."));
+			gradeBuilder.put(CoffeeCriterion.DRIP, dripGrade);
 
-		final Optional<EspressoMachine> espressoMachineOpt = instanciator
-				.getInstance(EspressoMachine.class, "newInstance")
-				.or(() -> instanciator.getInstance(EspressoMachine.class));
-		final IGrade espressoGrade = espressoMachineOpt.map(this::getEspressoGrade)
-				.orElse(Mark.zero("Could not initialize espresso machine."));
-		gradeBuilder.put(CoffeeCriterion.ESPRESSO, espressoGrade);
+			final Optional<EspressoMachine> espressoMachineOpt = instanciator
+					.getInstance(EspressoMachine.class, "newInstance")
+					.or(() -> instanciator.getInstance(EspressoMachine.class));
+			final IGrade espressoGrade = espressoMachineOpt.map(this::getEspressoGrade)
+					.orElse(Mark.zero("Could not initialize espresso machine."));
+			gradeBuilder.put(CoffeeCriterion.ESPRESSO, espressoGrade);
+		}
 
 		final ImmutableMap<Criterion, IGrade> subGrades = gradeBuilder.build();
 		final ImmutableMap.Builder<Criterion, Double> builder = ImmutableMap.builder();

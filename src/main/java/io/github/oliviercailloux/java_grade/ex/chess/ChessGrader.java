@@ -5,6 +5,7 @@ import static com.google.common.base.Verify.verify;
 import static io.github.oliviercailloux.exceptions.Unchecker.URI_UNCHECKER;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.file.FileSystem;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -49,7 +50,6 @@ import io.github.oliviercailloux.grade.format.json.JsonGrade;
 import io.github.oliviercailloux.java_grade.GraderOrchestrator;
 import io.github.oliviercailloux.java_grade.JavaCriterion;
 import io.github.oliviercailloux.java_grade.JavaGradeUtils;
-import io.github.oliviercailloux.java_grade.bytecode.Instanciator;
 import io.github.oliviercailloux.java_grade.bytecode.SimpleCompiler;
 import io.github.oliviercailloux.java_grade.bytecode.SimpleCompiler.CompilationResult;
 import io.github.oliviercailloux.java_grade.testers.JavaMarkHelper;
@@ -195,18 +195,8 @@ public class ChessGrader {
 			gradeBuilder.put(JavaCriterion.NO_WARNINGS, Mark.binary(!suppressed && (eclipseResult.countWarnings() == 0),
 					"", eclipseResult.err.replaceAll(fileSourcePath.toAbsolutePath().toString() + "/", "")));
 
-			final Instanciator instanciator = Instanciator.given(
-					fileSourcePath.resolve(Path.of("target/classes/")).toUri().toURL(), getClass().getClassLoader());
-
-			final Optional<ChessBoard> instanceOpt = instanciator.getInstance(ChessBoard.class, "newInstance");
-			final IGrade implGrade;
-			if (instanceOpt.isPresent()) {
-				final Supplier<ChessBoard> factory = () -> instanciator.getInstance(ChessBoard.class, "newInstance")
-						.get();
-				implGrade = grade(factory);
-			} else {
-				implGrade = Mark.zero("Could not initialize implementation: " + instanciator.getLastException());
-			}
+			final IGrade implGrade = JavaGradeUtils.gradeSecurely(fileSourcePath.resolve(Path.of("target/classes/")),
+					ChessBoard.class, this::grade);
 			gradeBuilder.put(LocalCriterion.IMPL, implGrade);
 		} else {
 			gradeBuilder.put(JavaCriterion.COMPILE, Mark.binary(compiled, "", mavenManager.getCensoredOutput()));
@@ -225,7 +215,7 @@ public class ChessGrader {
 		return WeightingGrade.from(subGrades, builder.build(), "Using commit " + lastCommitBeforeDeadline.getName());
 	}
 
-	private IGrade grade(Supplier<ChessBoard> factory) throws IOException {
+	private IGrade grade(Supplier<ChessBoard> factory) {
 		final ImmutableMap.Builder<Criterion, IGrade> gradeBuilder = ImmutableMap.builder();
 
 		try (FileSystem jimfs = Jimfs.newFileSystem(Configuration.unix())) {
@@ -399,7 +389,10 @@ public class ChessGrader {
 				gradeBuilder.put(LocalCriterion.MOVE,
 						Mark.binary(move.isSuccess() && b2Ok && c3Ok && d2Ok && e2Ok && e8Ok));
 			}
+		} catch (IOException e) {
+			throw new UncheckedIOException(e);
 		}
+
 		final ImmutableMap<Criterion, IGrade> grade = gradeBuilder.build();
 
 		final ImmutableMap.Builder<Criterion, Double> weightsBuilder = ImmutableMap.builder();

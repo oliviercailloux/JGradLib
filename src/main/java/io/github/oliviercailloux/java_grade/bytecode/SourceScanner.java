@@ -21,7 +21,7 @@ public class SourceScanner {
 	public static ImmutableSet<SourceClass> scan(Path start) {
 		checkNotNull(start);
 		final ImmutableSet<Path> javaPaths;
-		try (Stream<Path> found = IO_UNCHECKER.getUsing(() -> Files.find(start, 30,
+		try (Stream<Path> found = IO_UNCHECKER.getUsing(() -> Files.find(start, Integer.MAX_VALUE,
 				(p, a) -> p.getFileName() == null ? false : p.getFileName().toString().endsWith(".java")))) {
 			verify(found != null);
 			assert found != null;

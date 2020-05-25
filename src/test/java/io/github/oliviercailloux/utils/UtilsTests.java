@@ -23,7 +23,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.jimfs.Configuration;
 import com.google.common.jimfs.Jimfs;
 
-import io.github.oliviercailloux.security.SandboxSecurityPolicy;
+import io.github.oliviercailloux.bytecode.SandboxSecurityPolicy;
 
 class UtilsTests {
 	@SuppressWarnings("unused")
