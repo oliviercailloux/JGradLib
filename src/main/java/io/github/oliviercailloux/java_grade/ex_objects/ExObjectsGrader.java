@@ -1,6 +1,5 @@
 package io.github.oliviercailloux.java_grade.ex_objects;
 
-import static io.github.oliviercailloux.java_grade.ex_objects.ExObjectsCriterion.JAR_REQUIRED;
 import static io.github.oliviercailloux.java_grade.ex_objects.ExObjectsCriterion.ON_TIME;
 import static io.github.oliviercailloux.java_grade.ex_objects.ExObjectsCriterion.P43;
 import static io.github.oliviercailloux.java_grade.ex_objects.ExObjectsCriterion.P47;
@@ -14,15 +13,11 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Instant;
 import java.time.ZonedDateTime;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Predicate;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
-
-import javax.tools.Diagnostic;
-import javax.tools.JavaFileObject;
 
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.revwalk.RevCommit;
@@ -47,7 +42,6 @@ import io.github.oliviercailloux.grade.context.GitFullContext;
 import io.github.oliviercailloux.grade.contexters.FilesSourceUtils;
 import io.github.oliviercailloux.grade.contexters.FullContextInitializer;
 import io.github.oliviercailloux.grade.markers.Marks;
-import io.github.oliviercailloux.java_grade.bytecode.SimpleCompiler;
 
 public class ExObjectsGrader {
 
@@ -155,28 +149,28 @@ public class ExObjectsGrader {
 		/**
 		 * This will not work now that asJavaSource has changed, required "/", now ".".
 		 */
-		final ImmutableList<? extends JavaFileObject> srcToCompile = p53MainSources
-				.filterOnPath((p) -> p.getName(p.getNameCount() - 1).toString().endsWith(".java")).asFileContents()
-				.stream().map((fc) -> SimpleCompiler.asJavaSource(p53MainSrcPath, fc))
-				.collect(ImmutableList.toImmutableList());
-		final Mark jarRequiredMark;
-		if (jarMark.getPoints() != P53JAR.getMaxPoints() || srcToCompile.isEmpty()) {
-			jarRequiredMark = Mark.zero();
-		} else {
-//				final Path cp = projectPath.resolve(p53MainSrcPath);
-			final Path cp = projectPath.resolve(p53jarPath);
-			final List<Diagnostic<? extends JavaFileObject>> diagnosticsNaked = SimpleCompiler.compile(srcToCompile,
-					ImmutableList.of());
-			final List<Diagnostic<? extends JavaFileObject>> diagnosticsWithJar = SimpleCompiler.compile(srcToCompile,
-					ImmutableList.of(cp));
-			if (!diagnosticsNaked.isEmpty() && diagnosticsWithJar.isEmpty()) {
-				jarRequiredMark = Mark.one();
-			} else {
-				jarRequiredMark = Mark.zero(
-						"No jar: " + diagnosticsNaked.toString() + " — With jar: " + diagnosticsWithJar.toString());
-			}
-		}
-		gradeBuilder.put(JAR_REQUIRED, jarRequiredMark);
+//		final ImmutableList<? extends JavaFileObject> srcToCompile = p53MainSources
+//				.filterOnPath((p) -> p.getName(p.getNameCount() - 1).toString().endsWith(".java")).asFileContents()
+//				.stream().map((fc) -> SimpleCompiler.asJavaSource(p53MainSrcPath, fc))
+//				.collect(ImmutableList.toImmutableList());
+//		final Mark jarRequiredMark;
+//		if (jarMark.getPoints() != P53JAR.getMaxPoints() || srcToCompile.isEmpty()) {
+//			jarRequiredMark = Mark.zero();
+//		} else {
+////				final Path cp = projectPath.resolve(p53MainSrcPath);
+//			final Path cp = projectPath.resolve(p53jarPath);
+//			final List<Diagnostic<? extends JavaFileObject>> diagnosticsNaked = SimpleCompiler.compile(srcToCompile,
+//					ImmutableList.of());
+//			final List<Diagnostic<? extends JavaFileObject>> diagnosticsWithJar = SimpleCompiler.compile(srcToCompile,
+//					ImmutableList.of(cp));
+//			if (!diagnosticsNaked.isEmpty() && diagnosticsWithJar.isEmpty()) {
+//				jarRequiredMark = Mark.one();
+//			} else {
+//				jarRequiredMark = Mark.zero(
+//						"No jar: " + diagnosticsNaked.toString() + " — With jar: " + diagnosticsWithJar.toString());
+//			}
+//		}
+//		gradeBuilder.put(JAR_REQUIRED, jarRequiredMark);
 
 		return gradeBuilder.build();
 	}

@@ -97,37 +97,6 @@ public class SimpleCompiler {
 		return new SimpleCompiler(cp, destDir, true);
 	}
 
-	public static JavaFileObject asJavaSource(Path srcPath, FileContent content) {
-		return new JavaSourceFromString(srcPath.relativize(content.getPath()).toString(), content.getContent());
-	}
-
-	public static JavaFileObject asJavaSource(String name, Path path) {
-		final String content = IO_UNCHECKER.getUsing(() -> Files.readString(path));
-		return asJavaSource(name, content);
-	}
-
-	public static JavaFileObject asJavaSource(String name, String content) {
-		return new JavaSourceFromString(name, content);
-	}
-
-	public static List<Diagnostic<? extends JavaFileObject>> compile(Iterable<? extends JavaFileObject> srcToCompile,
-			Collection<Path> cp) {
-		return compile(srcToCompile, cp, Path.of("."));
-	}
-
-	public static List<Diagnostic<? extends JavaFileObject>> compile(Iterable<? extends JavaFileObject> srcToCompile,
-			Collection<Path> cp, Path destDir) {
-		/**
-		 * Compiler throws if asked to compile no source (even though the doc seems to
-		 * allow it).
-		 */
-		if (!srcToCompile.iterator().hasNext()) {
-			return ImmutableList.of();
-		}
-
-		return compile(m -> srcToCompile, cp, Optional.of(destDir));
-	}
-
 	public static List<Diagnostic<? extends JavaFileObject>> compileFromPaths(Iterable<Path> srcToCompile,
 			Collection<Path> cp) {
 		/**
@@ -198,13 +167,6 @@ public class SimpleCompiler {
 			 */
 		}
 		return ImmutableList.copyOf(diagnostics);
-	}
-
-	public static List<Diagnostic<? extends JavaFileObject>> compile(Path srcPath, FilesSource sources,
-			Collection<Path> cp) {
-		final ImmutableList<JavaFileObject> javaSources = sources.asFileContents().stream()
-				.map((fc) -> asJavaSource(srcPath, fc)).collect(ImmutableList.toImmutableList());
-		return compile(javaSources, cp, Path.of("."));
 	}
 
 	public static CompilationResult eclipseCompile(Path target) {

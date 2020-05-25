@@ -55,7 +55,6 @@ import io.github.oliviercailloux.grade.format.json.JsonGrade;
 import io.github.oliviercailloux.grade.markers.MarkHelper;
 import io.github.oliviercailloux.grade.mycourse.json.StudentsReaderFromJson;
 import io.github.oliviercailloux.java_grade.JavaCriterion;
-import io.github.oliviercailloux.java_grade.JavaGradeUtils;
 import io.github.oliviercailloux.java_grade.bytecode.SimpleCompiler;
 import io.github.oliviercailloux.java_grade.bytecode.SourceScanner;
 import io.github.oliviercailloux.java_grade.bytecode.SourceScanner.SourceClass;
@@ -208,8 +207,6 @@ public class PrintExecGrader {
 		gradeBuilder.put(PrintExecCriterion.FULL_CLASS_NAME,
 				Mark.binary(fullName.equals("PrintExec"), "", "Expected 'PrintExec' but found '" + fullName + "'"));
 
-		final String content = printExecSource.map(SourceClass::getPath)
-				.map(p -> JavaGradeUtils.read(p).replaceAll("package .*", "")).orElse("");
 		printExecClassName = printExecSource.map(SourceClass::getShortClassName).orElse("");
 		LOGGER.info("Print exec class name: {}.", printExecClassName);
 		compileDir = compileBaseDir.resolve(owner);
@@ -217,9 +214,12 @@ public class PrintExecGrader {
 		if (Files.exists(targetClass)) {
 			Files.delete(targetClass);
 		}
-		final JavaFileObject source = SimpleCompiler.asJavaSource(printExecClassName, content);
-		final List<Diagnostic<? extends JavaFileObject>> diags = SimpleCompiler.compile(ImmutableList.of(source),
-				ImmutableSet.of(), compileDir);
+		/**
+		 * This fails if source path is empty, and possibly fails if non-default package
+		 * is used, to be fixed?
+		 */
+		final ImmutableList<Diagnostic<? extends JavaFileObject>> diags = SimpleCompiler.compileFromPaths(
+				ImmutableList.of(printExecSource.map(SourceClass::getPath).get()), ImmutableSet.of(), compileDir);
 		LOGGER.info("Diags: {}; compiling to {}.", diags.toString(), targetClass);
 		Verify.verify(diags.isEmpty() == Files.exists(targetClass));
 		gradeBuilder.put(PrintExecCriterion.COMPILES, Mark.binary(diags.isEmpty(), "", diags.toString()));
