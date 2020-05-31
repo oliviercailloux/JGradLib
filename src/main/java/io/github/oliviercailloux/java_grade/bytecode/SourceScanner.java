@@ -5,6 +5,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Verify.verify;
 import static io.github.oliviercailloux.exceptions.Unchecker.IO_UNCHECKER;
 
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.regex.Matcher;
@@ -12,8 +13,6 @@ import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import com.google.common.collect.ImmutableSet;
-
-import io.github.oliviercailloux.java_grade.JavaGradeUtils;
 
 public class SourceScanner {
 	private static final Pattern PACKAGE_PATTERN = Pattern.compile("^\\h*package\\h+(?<packageName>[^\\h]*)\\h*;");
@@ -32,7 +31,13 @@ public class SourceScanner {
 
 	public static SourceClass asSourceClass(Path sourcePath) {
 		final String shortClassNameFromFileName = sourcePath.getFileName().toString().replace(".java", "");
-		String content = JavaGradeUtils.read(sourcePath);
+//		String content = JavaGradeUtils.read(sourcePath);
+		String content;
+		try {
+			content = Files.readString(sourcePath);
+		} catch (IOException e) {
+			throw new IllegalStateException(e);
+		}
 		final Matcher matcher = PACKAGE_PATTERN.matcher(content);
 		final boolean found = matcher.find();
 		final String packageName = found ? matcher.group("packageName") : "";

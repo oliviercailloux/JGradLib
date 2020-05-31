@@ -1,20 +1,21 @@
 package io.github.oliviercailloux.bytecode;
 
+import java.security.Policy;
 import java.util.function.Function;
 
-public class MyFunctionRequiring implements Function<String, String> {
+public class MyFunctionReading implements Function<String, String> {
 
 	public static Function<String, String> newInstance() {
-		return new MyFunctionRequiring();
+		return new MyFunctionReading();
 	}
 
-	private MyFunctionRequiring() {
+	private MyFunctionReading() {
 		/** Empty private constructor. */
 	}
 
 	@Override
 	public String apply(String t) {
-		return new SourceWithNoWarnings().toString();
+		return Policy.getPolicy().toString();
 	}
 
 }

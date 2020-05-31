@@ -33,6 +33,8 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.MoreCollectors;
 import com.google.common.math.DoubleMath;
 
+import io.github.oliviercailloux.bytecode.Compiler;
+import io.github.oliviercailloux.bytecode.Compiler.CompilationResult;
 import io.github.oliviercailloux.bytecode.Instanciator;
 import io.github.oliviercailloux.git.GitCloner;
 import io.github.oliviercailloux.git.GitUri;
@@ -52,8 +54,6 @@ import io.github.oliviercailloux.grade.format.json.JsonGrade;
 import io.github.oliviercailloux.grade.markers.Marks;
 import io.github.oliviercailloux.java_grade.GraderOrchestrator;
 import io.github.oliviercailloux.java_grade.JavaCriterion;
-import io.github.oliviercailloux.java_grade.bytecode.SimpleCompiler;
-import io.github.oliviercailloux.java_grade.bytecode.SimpleCompiler.CompilationResult;
 import io.github.oliviercailloux.java_grade.testers.JavaMarkHelper;
 import io.github.oliviercailloux.java_grade.utils.Summarize;
 import io.github.oliviercailloux.json.JsonbUtils;
@@ -160,10 +160,10 @@ public class CoffeeGrader {
 		final Path java = fileSourcePath.resolve("src/main/java/");
 		final ImmutableList<Path> depsAndItself = ImmutableList.<Path>builder().add(java).addAll(classPath).build();
 
-		final CompilationResult compilationDrip = SimpleCompiler.eclipseCompile(depsAndItself,
-				java.resolve("io/github/oliviercailloux/samples/coffee/DripCoffeeMaker.java"));
-		final CompilationResult compilationEspresso = SimpleCompiler.eclipseCompile(depsAndItself,
-				java.resolve("io/github/oliviercailloux/samples/coffee/MyEspressoMachine.java"));
+		final CompilationResult compilationDrip = Compiler.eclipseCompile(depsAndItself,
+				ImmutableSet.of(java.resolve("io/github/oliviercailloux/samples/coffee/DripCoffeeMaker.java")));
+		final CompilationResult compilationEspresso = Compiler.eclipseCompile(depsAndItself,
+				ImmutableSet.of(java.resolve("io/github/oliviercailloux/samples/coffee/MyEspressoMachine.java")));
 		verify(compilationDrip.compiled, compilationDrip.err);
 		verify(compilationEspresso.compiled, compilationEspresso.err);
 		gradeBuilder.put(JavaCriterion.NO_WARNINGS, Mark.binary(

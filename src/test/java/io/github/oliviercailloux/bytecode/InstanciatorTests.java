@@ -22,8 +22,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.jimfs.Configuration;
 import com.google.common.jimfs.Jimfs;
 
-import io.github.oliviercailloux.java_grade.bytecode.SimpleCompiler;
-
 public class InstanciatorTests {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(InstanciatorTests.class);
@@ -34,7 +32,7 @@ public class InstanciatorTests {
 		try (FileSystem jimFs = Jimfs.newFileSystem(Configuration.unix())) {
 			final Path work = jimFs.getPath("");
 
-			SimpleCompiler.throwing(ImmutableList.of(), work).compile(ImmutableList.of(sourcePath));
+			Compiler.intolerant(ImmutableList.of(), work).compile(ImmutableList.of(sourcePath));
 
 			final URL url = work.toUri().toURL();
 			try (URLClassLoader loader = new URLClassLoader(new URL[] { url }, getClass().getClassLoader())) {
@@ -57,7 +55,7 @@ public class InstanciatorTests {
 		try (FileSystem jimFs = Jimfs.newFileSystem(Configuration.unix())) {
 			final Path work = jimFs.getPath("");
 
-			SimpleCompiler.throwing(ImmutableList.of(), work).compile(ImmutableList.of(sourcePath1, sourcePath2));
+			Compiler.intolerant(ImmutableList.of(), work).compile(ImmutableList.of(sourcePath1, sourcePath2));
 			final Path destSourceWithNoWarnings = work.resolve(thisPackage.getName().replace('.', '/'))
 					.resolve("SourceWithNoWarnings.class");
 //			Files.delete(destSourceWithNoWarnings);
@@ -83,7 +81,7 @@ public class InstanciatorTests {
 		try (FileSystem jimFs = Jimfs.newFileSystem(Configuration.unix())) {
 			final Path work = jimFs.getPath("");
 
-			SimpleCompiler.throwing(ImmutableList.of(), work).compile(ImmutableList.of(sourcePath));
+			Compiler.intolerant(ImmutableList.of(), work).compile(ImmutableList.of(sourcePath));
 
 			final URL url = work.toUri().toURL();
 			try (URLClassLoader loader = new URLClassLoader(new URL[] { url }, getClass().getClassLoader())) {

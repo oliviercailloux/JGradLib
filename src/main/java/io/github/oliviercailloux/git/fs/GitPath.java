@@ -3,11 +3,13 @@ package io.github.oliviercailloux.git.fs;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Verify.verify;
+import static com.google.common.base.Verify.verifyNotNull;
 
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.LinkOption;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.WatchEvent.Kind;
 import java.nio.file.WatchEvent.Modifier;
@@ -15,12 +17,14 @@ import java.nio.file.WatchKey;
 import java.nio.file.WatchService;
 import java.util.Comparator;
 import java.util.Objects;
+import java.util.Optional;
 
 import org.eclipse.jgit.internal.storage.dfs.DfsRepository;
+import org.eclipse.jgit.lib.ObjectId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Verify;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.jimfs.Jimfs;
 
 /**
@@ -90,7 +94,7 @@ public class GitPath implements Path {
 	}
 
 	public String getRevStr() {
-		Verify.verifyNotNull(revStr);
+		verifyNotNull(revStr);
 		return revStr;
 	}
 
@@ -288,7 +292,16 @@ public class GitPath implements Path {
 
 	@Override
 	public Path toRealPath(LinkOption... options) throws IOException {
-		throw new UnsupportedOperationException();
+		/** Need to check existence! */
+		final GitObject objectId = fileSystem.getAndCheckCommit(this);
+		final String revStrPossiblyResolved;
+		if (ImmutableSet.copyOf(options).contains(LinkOption.NOFOLLOW_LINKS)) {
+			revStrPossiblyResolved = revStr;
+		} else {
+			final Optional<ObjectId> commitIdOpt = fileSystem.getCommitId(this);
+			revStrPossiblyResolved = commitIdOpt.orElseThrow(() -> new NoSuchFileException(toString())).getName();
+		}
+		return new GitPath(fileSystem, revStrPossiblyResolved, dirAndFile.toRealPath(options));
 	}
 
 	@Override

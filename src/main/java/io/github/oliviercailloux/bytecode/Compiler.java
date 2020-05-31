@@ -1,10 +1,9 @@
-package io.github.oliviercailloux.java_grade.bytecode;
+package io.github.oliviercailloux.bytecode;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.base.Verify.verify;
-import static io.github.oliviercailloux.exceptions.Unchecker.IO_UNCHECKER;
 import static io.github.oliviercailloux.exceptions.Unchecker.URI_UNCHECKER;
 
 import java.io.File;
@@ -18,7 +17,7 @@ import java.nio.file.Path;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
-import java.util.function.Function;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import javax.tools.Diagnostic;
@@ -36,9 +35,6 @@ import org.slf4j.LoggerFactory;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-
-import io.github.oliviercailloux.git.FileContent;
-import io.github.oliviercailloux.grade.context.FilesSource;
 
 /**
  * In the below list, “checked” means that I checked everything there and
@@ -89,44 +85,33 @@ import io.github.oliviercailloux.grade.context.FilesSource;
  * @author Olivier Cailloux
  *
  */
-public class SimpleCompiler {
+public class Compiler {
 	@SuppressWarnings("unused")
-	private static final Logger LOGGER = LoggerFactory.getLogger(SimpleCompiler.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(Compiler.class);
 
-	public static SimpleCompiler throwing(List<Path> cp, Path destDir) {
-		return new SimpleCompiler(cp, destDir, true);
+	public static Compiler tolerant(List<Path> cp, Path destDir) {
+		return new Compiler(cp, destDir, true);
 	}
 
-	public static List<Diagnostic<? extends JavaFileObject>> compileFromPaths(Iterable<Path> srcToCompile,
-			Collection<Path> cp) {
+	public static Compiler intolerant(List<Path> cp, Path destDir) {
+		return new Compiler(cp, destDir, false);
+	}
+
+	public static ImmutableList<Diagnostic<? extends JavaFileObject>> compile(Collection<Path> classPath, Path destDir,
+			Collection<Path> sources) {
 		/**
 		 * Compiler throws if asked to compile no source (even though the doc seems to
 		 * allow it).
 		 */
-		if (!srcToCompile.iterator().hasNext()) {
+		if (!sources.iterator().hasNext()) {
 			return ImmutableList.of();
 		}
 
-		return compile(m -> m.getJavaFileObjectsFromPaths(srcToCompile), cp, Optional.empty());
+		return compile(classPath, sources, Optional.of(destDir));
 	}
 
-	public static ImmutableList<Diagnostic<? extends JavaFileObject>> compileFromPaths(Iterable<Path> srcToCompile,
-			Collection<Path> cp, Path destDir) {
-		/**
-		 * Compiler throws if asked to compile no source (even though the doc seems to
-		 * allow it).
-		 */
-		if (!srcToCompile.iterator().hasNext()) {
-			return ImmutableList.of();
-		}
-
-		return compile(m -> m.getJavaFileObjectsFromPaths(srcToCompile), cp, Optional.of(destDir));
-	}
-
-	private static ImmutableList<Diagnostic<? extends JavaFileObject>> compile(
-			Function<StandardJavaFileManager, Iterable<? extends JavaFileObject>> fctSrcToCompile, Collection<Path> cp,
-			Optional<Path> destDir) {
-
+	private static ImmutableList<Diagnostic<? extends JavaFileObject>> compile(Collection<Path> classPath,
+			Collection<Path> sources, Optional<Path> destDir) {
 		final JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
 		final boolean compiled;
 		final DiagnosticCollector<JavaFileObject> diagnosticCollector = new DiagnosticCollector<>();
@@ -137,19 +122,24 @@ public class SimpleCompiler {
 		 */
 		try (StandardJavaFileManager fileManager = compiler.getStandardFileManager(diagnosticCollector, null, null)) {
 			/**
-			 * This fails if the paths do not refer to File instances, because
+			 * Have to set explicitly the annotation processor path, otherwise, the
+			 * initialization of annotation processing (involving #getClassLoader) uses the
+			 * class path, which fails if the paths do not refer to File instances, because
 			 * JavacFileManager#getClassLoader(Location location) calls getLocation, which
 			 * tries to return File instances, instead of getLocationAsPaths(Location
-			 * location).
+			 * location). See CompilerTests#testBugJdk().
+			 * https://github.com/openjdk/jdk/blob/master/src/jdk.compiler/share/classes/com/sun/tools/javac/file/JavacFileManager.java#L744
 			 */
-			fileManager.setLocationFromPaths(StandardLocation.CLASS_PATH, cp);
+			fileManager.setLocationFromPaths(StandardLocation.ANNOTATION_PROCESSOR_PATH, ImmutableList.of());
+			fileManager.setLocationFromPaths(StandardLocation.CLASS_PATH, classPath);
 			if (destDir.isPresent()) {
 				fileManager.setLocationFromPaths(StandardLocation.CLASS_OUTPUT, ImmutableSet.of(destDir.get()));
 			}
-			final Iterable<? extends JavaFileObject> srcToCompile = fctSrcToCompile.apply(fileManager);
+			final Iterable<? extends JavaFileObject> srcToCompileObjs = fileManager
+					.getJavaFileObjectsFromPaths(sources);
 			final StringWriter compilationOutputReceiver = new StringWriter();
 			compiled = compiler.getTask(compilationOutputReceiver, fileManager, diagnosticCollector, ImmutableList.of(),
-					null, srcToCompile).call();
+					null, srcToCompileObjs).call();
 			final String compilationOutput = compilationOutputReceiver.toString();
 			if (!compilationOutput.isEmpty()) {
 				throw new UnsupportedOperationException();
@@ -161,16 +151,14 @@ public class SimpleCompiler {
 		LOGGER.debug("Compiled and got: {}.", diagnostics);
 		verify(compiled == diagnostics.isEmpty());
 		if (compiled) {
+//			SourceScanner.scan()
 			/**
-			 * TODO check here that the file gets created; requires to simplify the
-			 * parameters so that we get the paths of the source.
+			 * Seems impossible to check that the file gets created, because seems
+			 * impossible to (elegantly) obtain the package name or output exact location of
+			 * the file.
 			 */
 		}
 		return ImmutableList.copyOf(diagnostics);
-	}
-
-	public static CompilationResult eclipseCompile(Path target) {
-		return eclipseCompile(ImmutableList.of(Path.of(".")), target);
 	}
 
 	/**
@@ -179,12 +167,12 @@ public class SimpleCompiler {
 	 *
 	 * @see https://help.eclipse.org/2020-03/index.jsp?topic=%2Forg.eclipse.jdt.doc.user%2Ftasks%2Ftask-using_batch_compiler.htm
 	 */
-	public static CompilationResult eclipseCompile(List<Path> classPath, Path target) {
-		return eclipseCompile(classPath, target, true);
+	public static CompilationResult eclipseCompile(List<Path> classPath, Set<Path> targets) {
+		return eclipseCompile(classPath, targets, true);
 	}
 
-	public static CompilationResult eclipseCompile(List<Path> classPath, Path target, boolean useStrictWarnings) {
-		checkArgument(Files.exists(target));
+	public static CompilationResult eclipseCompile(List<Path> classPath, Set<Path> targets, boolean useStrictWarnings) {
+		checkArgument(targets.stream().allMatch(Files::exists));
 
 		final StringWriter out = new StringWriter();
 		final StringWriter err = new StringWriter();
@@ -193,7 +181,7 @@ public class SimpleCompiler {
 		builder.add("--release", "11");
 		if (useStrictWarnings) {
 			/** Could instead use options such as "-warn:+allDeadCode,allDeprecation…". */
-			final URL propertiesUrl = SimpleCompiler.class.getResource("Eclipse-prefs.epf");
+			final URL propertiesUrl = Compiler.class.getResource("Eclipse-prefs.epf");
 			checkState(propertiesUrl != null);
 			final Path propertiesPath = Path.of(URI_UNCHECKER.getUsing(() -> propertiesUrl.toURI()));
 			checkState(Files.exists(propertiesPath));
@@ -201,7 +189,7 @@ public class SimpleCompiler {
 		}
 		builder.add("-classpath",
 				classPath.stream().map(Path::toString).collect(Collectors.joining(File.pathSeparator)));
-		builder.add(target.toString());
+		targets.stream().map(Path::toString).forEach(builder::add);
 		final ImmutableList<String> args = builder.build();
 
 		final boolean compiled = BatchCompiler.compile(args.toArray(new String[args.size()]), new PrintWriter(out),
@@ -234,20 +222,19 @@ public class SimpleCompiler {
 		}
 	}
 
+	private boolean tolerateFailure;
 	private ImmutableList<Path> cp;
-	private boolean throwing;
 	private Path destDir;
 
-	private SimpleCompiler(List<Path> cp, Path destDir, boolean throwing) {
+	private Compiler(List<Path> cp, Path destDir, boolean tolerateFailure) {
 		this.cp = ImmutableList.copyOf(cp);
 		this.destDir = checkNotNull(destDir);
-		this.throwing = throwing;
+		this.tolerateFailure = tolerateFailure;
 	}
 
-	public ImmutableList<Diagnostic<? extends JavaFileObject>> compile(Iterable<Path> srcToCompile) {
-		final ImmutableList<Diagnostic<? extends JavaFileObject>> output = SimpleCompiler.compileFromPaths(srcToCompile,
-				cp, destDir);
-		if (throwing) {
+	public ImmutableList<Diagnostic<? extends JavaFileObject>> compile(Collection<Path> srcToCompile) {
+		final ImmutableList<Diagnostic<? extends JavaFileObject>> output = Compiler.compile(cp, destDir, srcToCompile);
+		if (!tolerateFailure) {
 			verify(output.isEmpty(), output.toString());
 		}
 		return output;

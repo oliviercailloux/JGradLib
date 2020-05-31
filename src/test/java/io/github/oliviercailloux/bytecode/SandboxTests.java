@@ -25,8 +25,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.jimfs.Configuration;
 import com.google.common.jimfs.Jimfs;
 
-import io.github.oliviercailloux.java_grade.bytecode.SimpleCompiler;
-
 public class SandboxTests {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(SandboxTests.class);
@@ -48,7 +46,7 @@ public class SandboxTests {
 		try (FileSystem jimFs = Jimfs.newFileSystem(Configuration.unix())) {
 			final Path work = jimFs.getPath("");
 
-			SimpleCompiler.throwing(ImmutableList.of(), work).compile(ImmutableList.of(sourcePath));
+			Compiler.intolerant(ImmutableList.of(), work).compile(ImmutableList.of(sourcePath));
 
 			final URL url = work.toUri().toURL();
 			try (URLClassLoader loader = RestrictingClassLoader.noPermissions(url, getClass().getClassLoader())) {

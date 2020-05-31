@@ -33,6 +33,7 @@ import com.google.common.collect.MoreCollectors;
 import com.google.common.collect.Streams;
 import com.google.common.graph.ImmutableGraph;
 
+import io.github.oliviercailloux.bytecode.Compiler;
 import io.github.oliviercailloux.git.GitCloner;
 import io.github.oliviercailloux.git.GitLocalHistory;
 import io.github.oliviercailloux.git.GitUri;
@@ -55,7 +56,6 @@ import io.github.oliviercailloux.grade.format.json.JsonGrade;
 import io.github.oliviercailloux.grade.markers.MarkHelper;
 import io.github.oliviercailloux.grade.mycourse.json.StudentsReaderFromJson;
 import io.github.oliviercailloux.java_grade.JavaCriterion;
-import io.github.oliviercailloux.java_grade.bytecode.SimpleCompiler;
 import io.github.oliviercailloux.java_grade.bytecode.SourceScanner;
 import io.github.oliviercailloux.java_grade.bytecode.SourceScanner.SourceClass;
 import io.github.oliviercailloux.java_grade.testers.JavaMarkHelper;
@@ -210,6 +210,7 @@ public class PrintExecGrader {
 		printExecClassName = printExecSource.map(SourceClass::getShortClassName).orElse("");
 		LOGGER.info("Print exec class name: {}.", printExecClassName);
 		compileDir = compileBaseDir.resolve(owner);
+		Files.createDirectories(compileDir);
 		final Path targetClass = compileDir.resolve(printExecClassName + ".class");
 		if (Files.exists(targetClass)) {
 			Files.delete(targetClass);
@@ -218,8 +219,8 @@ public class PrintExecGrader {
 		 * This fails if source path is empty, and possibly fails if non-default package
 		 * is used, to be fixed?
 		 */
-		final ImmutableList<Diagnostic<? extends JavaFileObject>> diags = SimpleCompiler.compileFromPaths(
-				ImmutableList.of(printExecSource.map(SourceClass::getPath).get()), ImmutableSet.of(), compileDir);
+		final ImmutableList<Diagnostic<? extends JavaFileObject>> diags = Compiler.compile(ImmutableSet.of(),
+				compileDir, ImmutableList.of(printExecSource.map(SourceClass::getPath).get()));
 		LOGGER.info("Diags: {}; compiling to {}.", diags.toString(), targetClass);
 		Verify.verify(diags.isEmpty() == Files.exists(targetClass));
 		gradeBuilder.put(PrintExecCriterion.COMPILES, Mark.binary(diags.isEmpty(), "", diags.toString()));

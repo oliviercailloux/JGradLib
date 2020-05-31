@@ -31,6 +31,8 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.jimfs.Configuration;
 import com.google.common.jimfs.Jimfs;
 
+import io.github.oliviercailloux.bytecode.Compiler;
+import io.github.oliviercailloux.bytecode.Compiler.CompilationResult;
 import io.github.oliviercailloux.git.GitCloner;
 import io.github.oliviercailloux.git.GitLocalHistory;
 import io.github.oliviercailloux.git.GitUri;
@@ -50,8 +52,6 @@ import io.github.oliviercailloux.grade.format.json.JsonGrade;
 import io.github.oliviercailloux.java_grade.GraderOrchestrator;
 import io.github.oliviercailloux.java_grade.JavaCriterion;
 import io.github.oliviercailloux.java_grade.JavaGradeUtils;
-import io.github.oliviercailloux.java_grade.bytecode.SimpleCompiler;
-import io.github.oliviercailloux.java_grade.bytecode.SimpleCompiler.CompilationResult;
 import io.github.oliviercailloux.java_grade.testers.JavaMarkHelper;
 import io.github.oliviercailloux.java_grade.utils.Summarize;
 import io.github.oliviercailloux.json.JsonbUtils;
@@ -190,7 +190,8 @@ public class ChessGrader {
 
 			final Path effectiveSourcePath = java.resolve("io/github/oliviercailloux/samples/chess/MyChessBoard.java");
 			final boolean suppressed = Files.readString(effectiveSourcePath).contains("@SuppressWarnings");
-			final CompilationResult eclipseResult = SimpleCompiler.eclipseCompile(depsAndItself, effectiveSourcePath);
+			final CompilationResult eclipseResult = Compiler.eclipseCompile(depsAndItself,
+					ImmutableSet.of(effectiveSourcePath));
 			verify(eclipseResult.compiled, eclipseResult.err);
 			gradeBuilder.put(JavaCriterion.NO_WARNINGS, Mark.binary(!suppressed && (eclipseResult.countWarnings() == 0),
 					"", eclipseResult.err.replaceAll(fileSourcePath.toAbsolutePath().toString() + "/", "")));

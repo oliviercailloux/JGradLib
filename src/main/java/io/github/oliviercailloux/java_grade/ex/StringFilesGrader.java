@@ -34,6 +34,8 @@ import com.google.common.jimfs.Configuration;
 import com.google.common.jimfs.Jimfs;
 import com.google.common.primitives.Booleans;
 
+import io.github.oliviercailloux.bytecode.Compiler;
+import io.github.oliviercailloux.bytecode.Compiler.CompilationResult;
 import io.github.oliviercailloux.bytecode.Instanciator;
 import io.github.oliviercailloux.git.GitCloner;
 import io.github.oliviercailloux.git.GitLocalHistory;
@@ -54,8 +56,6 @@ import io.github.oliviercailloux.grade.format.json.JsonGrade;
 import io.github.oliviercailloux.java_grade.GraderOrchestrator;
 import io.github.oliviercailloux.java_grade.JavaCriterion;
 import io.github.oliviercailloux.java_grade.JavaGradeUtils;
-import io.github.oliviercailloux.java_grade.bytecode.SimpleCompiler;
-import io.github.oliviercailloux.java_grade.bytecode.SimpleCompiler.CompilationResult;
 import io.github.oliviercailloux.java_grade.testers.JavaMarkHelper;
 import io.github.oliviercailloux.java_grade.utils.Summarize;
 import io.github.oliviercailloux.json.JsonbUtils;
@@ -175,7 +175,8 @@ public class StringFilesGrader {
 			final Path effectiveSourcePath = java
 					.resolve("io/github/oliviercailloux/samples/string_files/MyStringFilesUtils.java");
 			final boolean suppressed = Files.readString(effectiveSourcePath).contains("@SuppressWarnings");
-			final CompilationResult stringFiles = SimpleCompiler.eclipseCompile(depsAndItself, effectiveSourcePath);
+			final CompilationResult stringFiles = Compiler.eclipseCompile(depsAndItself,
+					ImmutableSet.of(effectiveSourcePath));
 			verify(stringFiles.compiled, stringFiles.err);
 			gradeBuilder.put(JavaCriterion.NO_WARNINGS, Mark.binary(!suppressed && (stringFiles.countWarnings() == 0),
 					"", stringFiles.err.replaceAll(fileSourcePath.toAbsolutePath().toString() + "/", "")));
