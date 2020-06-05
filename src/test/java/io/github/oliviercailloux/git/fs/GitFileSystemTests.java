@@ -11,6 +11,7 @@ import java.net.URI;
 import java.nio.channels.SeekableByteChannel;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.NotDirectoryException;
 import java.nio.file.Path;
@@ -118,8 +119,8 @@ public class GitFileSystemTests {
 				assertTrue(Files.exists(gitFs.getAbsolutePath(commits.get(0).getName())));
 				assertFalse(Files.exists(gitFs.getPath("master/", "/ploum.txt")));
 				assertFalse(Files.exists(gitFs.getPath("master/", "/dir/ploum.txt")));
-				assertTrue(Files.exists(gitFs.getPath("master/", "/dir/file.txt")));
 				assertTrue(Files.exists(gitFs.getPath("master/", "/file1.txt")));
+				assertTrue(Files.exists(gitFs.getPath("master/", "/dir/file.txt")));
 				assertTrue(Files.exists(gitFs.getPath("master/", "/dir")));
 				assertTrue(Files.exists(gitFs.getPath("master/", "/")));
 				assertTrue(Files.exists(gitFs.getPath("", "dir")));
@@ -129,6 +130,25 @@ public class GitFileSystemTests {
 				assertFalse(Files.exists(gitFs.getAbsolutePath("blah", "/file1.txt")));
 				assertTrue(Files.exists(gitFs.getAbsolutePath(commits.get(0).getName(), "/file1.txt")));
 				assertFalse(Files.exists(gitFs.getAbsolutePath(commits.get(0).getName(), "/ploum.txt")));
+			}
+		}
+	}
+
+	@Test
+	void testRealPath() throws Exception {
+		try (DfsRepository repo = new InMemoryRepository(new DfsRepositoryDescription("myrepo"))) {
+			final ImmutableList<ObjectId> commits = JGit.createRepoWithSubDir(repo);
+			final String lastCommitId = commits.get(commits.size() - 1).getName();
+			try (GitRepoFileSystem gitFs = new GitFileSystemProvider().newFileSystemFromDfsRepository(repo)) {
+				assertEquals(gitFs.getAbsolutePath("master"),
+						gitFs.getAbsolutePath("master").toRealPath(LinkOption.NOFOLLOW_LINKS));
+				assertEquals(gitFs.getAbsolutePath(lastCommitId), gitFs.getAbsolutePath("master").toRealPath());
+				assertEquals(gitFs.getAbsolutePath("master", "dir"),
+						gitFs.getRelativePath("dir").toRealPath(LinkOption.NOFOLLOW_LINKS));
+				assertEquals(gitFs.getAbsolutePath(lastCommitId, "dir"), gitFs.getRelativePath("dir").toRealPath());
+//				assertEquals(gitFs.getPath("", "dir"),
+//						gitFs.getPath("", "./dir").toRealPath(LinkOption.NOFOLLOW_LINKS));
+//				assertEquals(gitFs.getPath("", "dir"), gitFs.getPath("", "./dir").toRealPath());
 			}
 		}
 	}

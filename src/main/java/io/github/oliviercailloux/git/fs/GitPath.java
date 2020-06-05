@@ -21,11 +21,14 @@ import java.util.Optional;
 
 import org.eclipse.jgit.internal.storage.dfs.DfsRepository;
 import org.eclipse.jgit.lib.ObjectId;
+import org.eclipse.jgit.lib.Ref;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.common.jimfs.Jimfs;
+
+import io.github.oliviercailloux.git.fs.GitRepoFileSystem.GitObject;
 
 /**
  *
@@ -96,6 +99,16 @@ public class GitPath implements Path {
 	public String getRevStr() {
 		verifyNotNull(revStr);
 		return revStr;
+	}
+
+	String getNonEmptyRevStr() {
+		verifyNotNull(revStr);
+		verify(!revStr.isEmpty());
+		return revStr;
+	}
+
+	private String getRevStrOrMaster() {
+		return revStr.equals("") ? "master" : revStr;
 	}
 
 	@Override
@@ -291,17 +304,33 @@ public class GitPath implements Path {
 	}
 
 	@Override
-	public Path toRealPath(LinkOption... options) throws IOException {
-		/** Need to check existence! */
-		final GitObject objectId = fileSystem.getAndCheckCommit(this);
+	public Path toRealPath(LinkOption... options) throws IOException, NoSuchFileException {
+		final GitPath absolutePath = this.toAbsolutePath();
+		final GitObject gitObject = fileSystem.getAndCheckGitObject(absolutePath);
 		final String revStrPossiblyResolved;
 		if (ImmutableSet.copyOf(options).contains(LinkOption.NOFOLLOW_LINKS)) {
-			revStrPossiblyResolved = revStr;
+			revStrPossiblyResolved = absolutePath.getNonEmptyRevStr();
 		} else {
-			final Optional<ObjectId> commitIdOpt = fileSystem.getCommitId(this);
-			revStrPossiblyResolved = commitIdOpt.orElseThrow(() -> new NoSuchFileException(toString())).getName();
+			revStrPossiblyResolved = gitObject.getCommit().getName();
 		}
-		return new GitPath(fileSystem, revStrPossiblyResolved, dirAndFile.toRealPath(options));
+		/**
+		 * Shouldn’t use toRealPath here as this path does not exist in JimFs. Replacing
+		 * by normalize down here is not adequate either, as JGit does not consider that
+		 * ./someexistingdir exists; and normalizing before checking would be confusing
+		 * when this would lose symbolic links information, I suppose (though this would
+		 * be nice to do systematically and correctly, also for the rest of the API).
+		 */
+		/**
+		 * TODO https://www.eclipse.org/forums/index.php?t=msg&th=1103986 1. check if it
+		 * is a link; if so, crash if wants to follow links. 2. Instead of crashing, add
+		 * a method that gets link target (one step): /link/stuff/ → /blah/bloh/stuff/;
+		 * add this to the set of currently followed links or throws if already in the
+		 * set; add method that follows through all steps then clears the set if it
+		 * ends. Also follow the links to other file systems if the user explicitly
+		 * allowed at creation time to get out of a given repository (otherwise,
+		 * dangerous).
+		 */
+		return new GitPath(fileSystem, revStrPossiblyResolved, absolutePath.dirAndFile);
 	}
 
 	@Override
@@ -336,6 +365,48 @@ public class GitPath implements Path {
 	public String toString() {
 		final String maybeSlash = revStr.isEmpty() ? "" : "/";
 		return revStr + maybeSlash + dirAndFile.toString();
+	}
+
+	boolean isRevStrAnObjectId() {
+		/**
+		 * This is incorrect (I suppose): a ref could have the same length as an object
+		 * id.
+		 */
+		return revStr.length() == 40;
+	}
+
+	Optional<ObjectId> getCommitId() throws IOException {
+		if (isRevStrAnObjectId()) {
+			return Optional.of(ObjectId.fromString(revStr));
+		}
+		return getCommitIdFromRef();
+	}
+
+	/**
+	 * revStr must be a ref, such as “master”, and not a SHA-1 object id
+	 */
+	Optional<ObjectId> getCommitIdFromRef() throws IOException {
+		final Optional<ObjectId> commitId;
+
+		final String effectiveRevStr = getRevStrOrMaster();
+		final Ref ref = getFileSystem().getRepository().findRef(effectiveRevStr);
+		if (ref == null) {
+			LOGGER.debug("Rev str " + effectiveRevStr + " not found.");
+			commitId = Optional.empty();
+		} else {
+			commitId = Optional.ofNullable(ref.getLeaf().getObjectId());
+			if (commitId.isEmpty()) {
+				/** TODO enquire how this can happen. */
+				LOGGER.debug("Ref " + ref.getName() + " does not exist yet.");
+			} else {
+				LOGGER.debug("Ref {} found: {}.", ref.getName(), commitId);
+			}
+		}
+		return commitId;
+	}
+
+	ObjectId getCommitIdOrThrow() throws IOException, NoSuchFileException {
+		return getCommitId().orElseThrow(() -> new NoSuchFileException(toString()));
 	}
 
 }

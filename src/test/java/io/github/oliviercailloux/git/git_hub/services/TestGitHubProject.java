@@ -37,9 +37,9 @@ public class TestGitHubProject {
 	public void testGetRepo() throws Exception {
 		try (GitHubFetcherQL fetcher = GitHubFetcherQL.using(GitHubToken.getRealInstance())) {
 			final RepositoryWithIssuesWithHistory repo = fetcher
-					.getRepository(RepositoryCoordinates.from("MAMERY-DOUMBIA", "Dauphine-Pole-Info")).get();
+					.getRepository(RepositoryCoordinates.from("diffplug", "durian")).get();
 			LOGGER.debug("Issues with history: {}.", repo.getIssues());
-			assertEquals(13, repo.getIssues().size());
+			assertEquals(9, repo.getIssues().size());
 		}
 	}
 

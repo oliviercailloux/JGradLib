@@ -6,7 +6,6 @@ import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
-import java.time.Instant;
 
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.MergeResult;
@@ -25,6 +24,7 @@ import io.github.oliviercailloux.git.GitUri;
 import io.github.oliviercailloux.git.fs.GitFileSystemProvider;
 import io.github.oliviercailloux.git.fs.GitRepoFileSystem;
 import io.github.oliviercailloux.grade.IGrade;
+import io.github.oliviercailloux.utils.Utils;
 
 class ExDepGitGraderTests {
 
@@ -56,7 +56,7 @@ class ExDepGitGraderTests {
 		 * none of this is supported by the plumbing API, and it certainly looks
 		 * complicated to implement (see CommitCommand#createTemporaryIndex).
 		 */
-		final Path wT = Path.of("git-test " + Instant.now());
+		final Path wT = Utils.getTempUniqueDirectory("git-test depgit");
 		new GitCloner().download(gitUri, wT);
 		try (Repository repository = new FileRepository(wT.resolve(".git").toString())) {
 

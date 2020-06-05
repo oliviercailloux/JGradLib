@@ -12,6 +12,7 @@ import java.nio.file.FileSystem;
 import java.nio.file.Path;
 import java.security.AccessControlException;
 import java.security.AccessController;
+import java.security.AllPermission;
 import java.security.Permissions;
 import java.security.Policy;
 import java.security.SecurityPermission;
@@ -54,10 +55,76 @@ public class SandboxTests {
 				final Function<String, String> myFct = instanciator.getInstance(Function.class, "newInstance").get();
 				assertThrows(AccessControlException.class, () -> myFct.apply(null));
 			}
-			final Permissions permissions = new Permissions();
-			permissions.add(new SecurityPermission("*"));
+
+			final Permissions securityPermissions = new Permissions();
+			securityPermissions.add(new SecurityPermission("*"));
 			try (URLClassLoader loader = RestrictingClassLoader.granting(url, getClass().getClassLoader(),
-					permissions)) {
+					securityPermissions)) {
+				final Instanciator instanciator = Instanciator.given(loader);
+				final Function<String, String> myFct = instanciator.getInstance(Function.class, "newInstance").get();
+				assertDoesNotThrow(() -> myFct.apply(null));
+			}
+
+			final Permissions filePermissions = new Permissions();
+			filePermissions.add(new FilePermission("/-", "read"));
+			try (URLClassLoader loader = RestrictingClassLoader.granting(url, getClass().getClassLoader(),
+					filePermissions)) {
+				final Instanciator instanciator = Instanciator.given(loader);
+				final Function<String, String> myFct = instanciator.getInstance(Function.class, "newInstance").get();
+				assertThrows(AccessControlException.class, () -> myFct.apply(null));
+			}
+
+			final Permissions allPermissions = new Permissions();
+			allPermissions.add(new AllPermission());
+			try (URLClassLoader loader = RestrictingClassLoader.granting(url, getClass().getClassLoader(),
+					allPermissions)) {
+				final Instanciator instanciator = Instanciator.given(loader);
+				final Function<String, String> myFct = instanciator.getInstance(Function.class, "newInstance").get();
+				assertDoesNotThrow(() -> myFct.apply(null));
+			}
+		}
+
+	}
+
+	@Test
+	void testCheckingFilePermission() throws Exception {
+		SandboxSecurityPolicy.setSecurity();
+
+		final Path sourcePath = Path.of(getClass().getResource("MyFunctionCheckingFilePermission.java").toURI());
+		try (FileSystem jimFs = Jimfs.newFileSystem(Configuration.unix())) {
+			final Path work = jimFs.getPath("");
+
+			Compiler.intolerant(ImmutableList.of(), work).compile(ImmutableList.of(sourcePath));
+
+			final URL url = work.toUri().toURL();
+			try (URLClassLoader loader = RestrictingClassLoader.noPermissions(url, getClass().getClassLoader())) {
+				final Instanciator instanciator = Instanciator.given(loader);
+				final Function<String, String> myFct = instanciator.getInstance(Function.class, "newInstance").get();
+				assertThrows(AccessControlException.class, () -> myFct.apply(null));
+			}
+
+			final Permissions filePermissions = new Permissions();
+			filePermissions.add(new FilePermission("/-", "read"));
+			try (URLClassLoader loader = RestrictingClassLoader.granting(url, getClass().getClassLoader(),
+					filePermissions)) {
+				final Instanciator instanciator = Instanciator.given(loader);
+				final Function<String, String> myFct = instanciator.getInstance(Function.class, "newInstance").get();
+				assertDoesNotThrow(() -> myFct.apply(null));
+			}
+
+			final Permissions securityPermissions = new Permissions();
+			securityPermissions.add(new SecurityPermission("*"));
+			try (URLClassLoader loader = RestrictingClassLoader.granting(url, getClass().getClassLoader(),
+					securityPermissions)) {
+				final Instanciator instanciator = Instanciator.given(loader);
+				final Function<String, String> myFct = instanciator.getInstance(Function.class, "newInstance").get();
+				assertThrows(AccessControlException.class, () -> myFct.apply(null));
+			}
+
+			final Permissions allPermissions = new Permissions();
+			allPermissions.add(new AllPermission());
+			try (URLClassLoader loader = RestrictingClassLoader.granting(url, getClass().getClassLoader(),
+					allPermissions)) {
 				final Instanciator instanciator = Instanciator.given(loader);
 				final Function<String, String> myFct = instanciator.getInstance(Function.class, "newInstance").get();
 				assertDoesNotThrow(() -> myFct.apply(null));

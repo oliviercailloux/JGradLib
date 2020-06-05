@@ -3,16 +3,15 @@ package io.github.oliviercailloux.git;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.net.URI;
 import java.time.Instant;
-import java.time.ZonedDateTime;
 import java.util.Arrays;
 
 import org.eclipse.jgit.api.Git;
-import org.eclipse.jgit.internal.storage.file.FileRepository;
+import org.eclipse.jgit.internal.storage.dfs.DfsRepository;
+import org.eclipse.jgit.internal.storage.dfs.DfsRepositoryDescription;
+import org.eclipse.jgit.internal.storage.dfs.InMemoryRepository;
 import org.eclipse.jgit.lib.ObjectId;
-import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
@@ -29,7 +28,6 @@ import com.google.common.graph.ImmutableGraph;
 
 import io.github.oliviercailloux.git.GitLocalHistory.GitRaw;
 import io.github.oliviercailloux.git.GitRawHistoryDecorator.GitRawHistory;
-import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.java_grade.testers.JavaMarkHelper;
 import io.github.oliviercailloux.utils.Utils;
 
@@ -48,12 +46,11 @@ class GitHistoryTests {
 
 	@Test
 	void testFilter() throws Exception {
-		final RepositoryCoordinates coord = RepositoryCoordinates.from("oliviercailloux", "assisted-board-games");
-		final Path projectsBaseDir = Path.of(".");
-		final Path projectDir = projectsBaseDir.resolve(coord.getRepositoryName());
-		new GitCloner().download(GitUri.fromGitUri(coord.asURI()), projectDir);
-
-		try (Repository repository = new FileRepository(projectDir.resolve(".git").toFile())) {
+		try (DfsRepository repository = new InMemoryRepository(new DfsRepositoryDescription("myrepo"))) {
+			repository.create(true);
+			new GitCloner().clone(
+					GitUri.fromGitUri(URI.create("https://github.com/oliviercailloux/assisted-board-games.git")),
+					repository);
 			final GitLocalHistory basic;
 			final ImmutableSet<RevCommit> allCommits;
 			try (Git git = Git.wrap(repository)) {

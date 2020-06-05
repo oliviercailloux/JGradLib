@@ -142,15 +142,23 @@ public class Utils {
 	 * Thx https://stackoverflow.com/a/60621544.
 	 */
 	public static void copyRecursively(Path source, Path target, CopyOption... options) throws IOException {
-		// TODO
+		if (Files.exists(target)) {
+			checkArgument(!target.toRealPath().startsWith(source.toRealPath()));
+		} else {
+			checkArgument(!target.startsWith(source.toRealPath()));
+		}
+		/**
+		 * Note that under restricted security settings, even the toUri() call fails
+		 * (because it tries to construct an absolute path, I think).
+		 */
 		if (source.toUri().getScheme().equals("file")) {
 			final SecurityManager securityManager = System.getSecurityManager();
 			if (securityManager != null) {
 				securityManager.checkPermission(new FilePermission(source.toString() + "/-", "read"));
 			}
 		}
-		Files.walkFileTree(source, new SimpleFileVisitor<Path>() {
 
+		Files.walkFileTree(source, new SimpleFileVisitor<Path>() {
 			@Override
 			public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
 				LOGGER.debug("Pre-visiting directory {}.", dir);

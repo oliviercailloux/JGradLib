@@ -1,18 +1,23 @@
 package io.github.oliviercailloux.utils;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.FilePermission;
 import java.io.IOException;
 import java.net.URI;
+import java.net.URL;
+import java.net.URLClassLoader;
 import java.nio.file.FileSystem;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.AccessControlException;
 import java.security.AccessController;
-import java.security.Policy;
+import java.security.AllPermission;
+import java.security.Permissions;
 import java.util.Map;
+import java.util.function.Function;
 
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
@@ -23,48 +28,15 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.jimfs.Configuration;
 import com.google.common.jimfs.Jimfs;
 
+import io.github.oliviercailloux.bytecode.Compiler;
+import io.github.oliviercailloux.bytecode.Instanciator;
+import io.github.oliviercailloux.bytecode.RestrictingClassLoader;
 import io.github.oliviercailloux.bytecode.SandboxSecurityPolicy;
+import io.github.oliviercailloux.bytecode.SandboxTests;
 
 class UtilsTests {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(UtilsTests.class);
-
-	public static void main(String[] args) throws Exception {
-		final String file = "/home/olivier/Local/article.tex";
-//		LOGGER.info("Security manager: {}.", System.getSecurityManager());
-//		try {
-//			AccessController.checkPermission(new FilePermission(file, "read"));
-//		} catch (AccessControlException e) {
-//			LOGGER.info("Caught exc.", e);
-//		}
-//		LOGGER.info("Policy: {}.", Policy.getPolicy());
-
-		/**
-		 * Need to be set twice:
-		 * https://stackoverflow.com/questions/31458821/policy-setpolicy-doesnt-seem-to-work-properly
-		 */
-		final SandboxSecurityPolicy policy = new SandboxSecurityPolicy();
-		Policy.setPolicy(policy);
-		Policy.setPolicy(policy);
-		System.setSecurityManager(new SecurityManager());
-		LOGGER.info("Security manager: {}.", System.getSecurityManager());
-		try {
-			AccessController.checkPermission(new FilePermission(file, "read"));
-		} catch (AccessControlException e) {
-			LOGGER.info("Caught exc.", e);
-		}
-		LOGGER.info("Policy: {}.", Policy.getPolicy());
-
-		Files.readString(Path.of(file));
-
-		try (FileSystem jimFs = Jimfs.newFileSystem(Configuration.unix())) {
-			final Path source = Path.of("src/main/resources/");
-			final Path target = jimFs.getPath("/target/");
-			Files.createDirectory(target);
-			Utils.copyRecursively(source, target);
-			assertEquals("Hello.", Files.readString(target.resolve("file.txt")));
-		}
-	}
 
 	@Test
 	void testQuery() throws Exception {
@@ -101,7 +73,7 @@ class UtilsTests {
 		}
 	}
 
-	@Test
+//	@Test
 	void testCopyResursivelyReadableFile() throws Exception {
 		try (FileSystem jimFs = Jimfs.newFileSystem(Configuration.unix())) {
 			final Path source = Path.of("src/main/resources/");
@@ -110,5 +82,43 @@ class UtilsTests {
 			Utils.copyRecursively(source, target);
 			assertEquals("Hello.", Files.readString(target.resolve("file.txt")));
 		}
+	}
+
+	@Test
+	void testCopyUnderPolicyFails() throws Exception {
+		SandboxSecurityPolicy.setSecurity();
+		assertDoesNotThrow(() -> AccessController.checkPermission(new FilePermission("/-", "read")));
+
+		final Path sourcePath = Path.of(SandboxTests.class.getResource("MyFunctionCopying.java").toURI());
+		try (FileSystem jimFs = Jimfs.newFileSystem(Configuration.unix())) {
+			final Path work = jimFs.getPath("");
+
+			Compiler.intolerant(ImmutableList.of(Path.of("target/classes/")), work)
+					.compile(ImmutableList.of(sourcePath));
+
+			final URL url = work.toUri().toURL();
+			try (URLClassLoader loader = RestrictingClassLoader.noPermissions(url, getClass().getClassLoader())) {
+				final Instanciator instanciator = Instanciator.given(loader);
+				final Function<String, String> myFct = instanciator.getInstance(Function.class, "newInstance").get();
+				/**
+				 * Note that this actually fails while attempting to execute the very first
+				 * argument check in the copying function, which requires some path access.
+				 */
+				assertThrows(AccessControlException.class, () -> myFct.apply(null));
+			}
+			final Permissions permissions = new Permissions();
+			permissions.add(new AllPermission());
+			try (URLClassLoader loader = RestrictingClassLoader.granting(url, getClass().getClassLoader(),
+					permissions)) {
+				final Instanciator instanciator = Instanciator.given(loader);
+				final Function<String, String> myFct = instanciator.getInstance(Function.class, "newInstance").get();
+				/**
+				 * This succeeds from the security point of view, which makes it fail because of
+				 * the argument check.
+				 */
+				assertThrows(IllegalArgumentException.class, () -> myFct.apply(null));
+			}
+		}
+
 	}
 }

@@ -41,7 +41,6 @@ import org.eclipse.jgit.lib.FileMode;
 import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.lib.ObjectLoader;
 import org.eclipse.jgit.lib.ObjectReader;
-import org.eclipse.jgit.lib.Ref;
 import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.revwalk.RevTree;
@@ -51,6 +50,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Verify;
+import com.google.common.base.VerifyException;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedSet;
@@ -182,16 +182,27 @@ public class GitRepoFileSystem extends FileSystem {
 	 * (the object id was given right from the start and we never had to walk
 	 * anything).
 	 */
-	private static class GitObject {
-		/**
-		 * <code>null</code> when this is a commit.
-		 */
-		private FileMode fileMode;
-		private ObjectId objectId;
+	static class GitObject {
+		private final RevCommit commit;
+		private final ObjectId objectId;
+		private final FileMode fileMode;
 
-		public GitObject(ObjectId objectId, FileMode fileMode) {
+		public GitObject(RevCommit commit, ObjectId objectId, FileMode fileMode) {
+			this.commit = checkNotNull(commit);
 			this.objectId = checkNotNull(objectId);
-			this.fileMode = fileMode;
+			this.fileMode = checkNotNull(fileMode);
+		}
+
+		RevCommit getCommit() {
+			return commit;
+		}
+
+		ObjectId getObjectId() {
+			return objectId;
+		}
+
+		FileMode getFileMode() {
+			return fileMode;
 		}
 	}
 
@@ -288,8 +299,7 @@ public class GitRepoFileSystem extends FileSystem {
 			throw new ClosedFileSystemException();
 		}
 
-		final String revStr = gitPath.toAbsolutePath().getRevStr();
-		return getCommitId(revStr);
+		return gitPath.getCommitId();
 	}
 
 	@Override
@@ -428,7 +438,19 @@ public class GitRepoFileSystem extends FileSystem {
 			throw new ClosedFileSystemException();
 		}
 
-		final RevTree tree = getTree(dir).orElseThrow(() -> new NoSuchFileException(dir.toString()));
+		final GitObject gitObject = getAndCheckGitObject(dir);
+		if (!gitObject.fileMode.equals(FileMode.TYPE_TREE)) {
+			throw new NotDirectoryException(dir.toString());
+		}
+
+		final RevTree tree;
+		if (dir.toRelativePath().equals(root)) {
+			tree = gitObject.commit.getTree();
+		} else {
+			try (RevWalk walk = new RevWalk(reader)) {
+				tree = walk.parseTree(gitObject.objectId);
+			}
+		}
 
 		final ImmutableSet.Builder<GitPath> builder = ImmutableSet.builder();
 		try (TreeWalk treeWalk = new TreeWalk(reader)) {
@@ -468,17 +490,7 @@ public class GitRepoFileSystem extends FileSystem {
 	}
 
 	public BasicFileAttributes readAttributes(GitPath gitPath, ImmutableSet<LinkOption> optionsSet) throws IOException {
-		final GitObject gitObject;
-		if (gitPath.toRelativePath().equals(root)) {
-			final String revStr = gitPath.toAbsolutePath().getRevStr();
-			final Optional<RevTree> commitTree = getCommitTree(revStr);
-			if (commitTree.isEmpty()) {
-				throw new NoSuchFileException(gitPath.toString());
-			}
-			gitObject = new GitObject(commitTree.get(), FileMode.TREE);
-		} else {
-			gitObject = getGitObjectNotRoot(gitPath).orElseThrow(() -> new NoSuchFileException(gitPath.toString()));
-		}
+		final GitObject gitObject = getAndCheckGitObject(gitPath);
 
 		final ObjectLoader fileLoader = reader.open(gitObject.objectId);
 		verify(fileLoader.getType() == gitObject.fileMode.getObjectType(),
@@ -498,109 +510,53 @@ public class GitRepoFileSystem extends FileSystem {
 		throw new UnsupportedOperationException();
 	}
 
-	private GitObject getAndCheckCommit(GitPath gitPath)
-			throws IOException, NoSuchFileException, MissingObjectException, IncorrectObjectTypeException {
-		final String revStr = gitPath.toAbsolutePath().getRevStr();
-		final Optional<ObjectId> commitIdOpt = getCommitId(revStr);
-		if (commitIdOpt.isEmpty()) {
+	private RevCommit getRevCommit(GitPath gitPath) throws IOException, NoSuchFileException {
+		final ObjectId commitId = gitPath.getCommitIdOrThrow();
+
+		final RevCommit revCommit;
+		try (RevWalk walk = new RevWalk(reader)) {
+			revCommit = walk.parseCommit(commitId);
+		} catch (@SuppressWarnings("unused") MissingObjectException e) {
+			throw new NoSuchFileException(gitPath.toString());
+		} catch (IncorrectObjectTypeException e) {
+			LOGGER.info("Tried to access a non-commit as a commit: " + e + ".");
 			throw new NoSuchFileException(gitPath.toString());
 		}
-		if (isObjectId(revStr)) {
-			if (getCommitTree(revStr).isEmpty()) {
-				throw new NoSuchFileException(gitPath.toString());
-			}
-		}
-		final ObjectId commitId = commitIdOpt.get();
-		return new GitObject(commitId, null);
+		return revCommit;
 	}
 
-	private GitObject getAndCheckGitObject(GitPath gitPath) throws IOException, NoSuchFileException,
-			MissingObjectException, IncorrectObjectTypeException, CorruptObjectException {
+	GitObject getAndCheckGitObject(GitPath gitPath) throws IOException, NoSuchFileException {
+		final RevCommit commit = getRevCommit(gitPath);
+		final RevTree tree = commit.getTree();
+		final GitPath relativePath = gitPath.toRelativePath();
+
 		final GitObject gitObject;
-		if (gitPath.toRelativePath().equals(root)) {
-			gitObject = getAndCheckCommit(gitPath);
+		if (relativePath.equals(root)) {
+			gitObject = new GitObject(commit, tree, FileMode.TREE);
 		} else {
-			gitObject = getGitObjectNotRoot(gitPath).orElseThrow(() -> new NoSuchFileException(gitPath.toString()));
+			/**
+			 * TreeWalk.forPath says “Empty path not permitted” if using "" or "/".
+			 */
+			LOGGER.debug("Searching for {} in {}.", relativePath, tree);
+			try (TreeWalk treeWalk = TreeWalk.forPath(repository, reader, relativePath.toString(), tree)) {
+				if (treeWalk == null) {
+					LOGGER.debug("Path " + relativePath + " not found.");
+					throw new NoSuchFileException(gitPath.toString());
+				}
+
+				final FileMode fileMode = treeWalk.getFileMode();
+				verify(fileMode != null);
+				final ObjectId objectId = treeWalk.getObjectId(0);
+				verify(!objectId.equals(ObjectId.zeroId()), gitPath.toString());
+				gitObject = new GitObject(commit, objectId, fileMode);
+				verify(!treeWalk.next());
+			} catch (MissingObjectException | IncorrectObjectTypeException e) {
+				throw new VerifyException(e);
+			} catch (CorruptObjectException e) {
+				throw new IOException(e);
+			}
 		}
 		return gitObject;
-	}
-
-	private Optional<ObjectId> getCommitId(String revStr) throws IOException {
-		if (isObjectId(revStr)) {
-			return Optional.of(ObjectId.fromString(revStr));
-		}
-		return getCommitIdFromRef(revStr);
-	}
-
-	/**
-	 * @param refStr must be a ref, such as “master”, and not a SHA-1 object id
-	 */
-	private Optional<ObjectId> getCommitIdFromRef(String refStr) throws IOException {
-		final Optional<ObjectId> commitId;
-
-		final Ref ref = repository.findRef(refStr);
-		if (ref == null) {
-			LOGGER.debug("Ref str " + refStr + " not found.");
-			commitId = Optional.empty();
-		} else {
-			commitId = Optional.ofNullable(ref.getLeaf().getObjectId());
-			if (commitId.isEmpty()) {
-				/** TODO enquire how this can happen. */
-				LOGGER.debug("Ref " + ref.getName() + " does not exist yet.");
-			} else {
-				LOGGER.debug("Ref {} found: {}.", ref.getName(), commitId);
-			}
-		}
-		return commitId;
-	}
-
-	private Optional<RevTree> getCommitTree(String revStr)
-			throws IOException, MissingObjectException, IncorrectObjectTypeException {
-		final Optional<ObjectId> commitId = getCommitId(revStr);
-
-		final Optional<RevCommit> commit;
-		if (commitId.isEmpty()) {
-			commit = Optional.empty();
-		} else {
-			try (RevWalk walk = new RevWalk(reader)) {
-				commit = Optional.of(walk.parseCommit(commitId.get()));
-			}
-		}
-
-		return commit.map(RevCommit::getTree);
-	}
-
-	/**
-	 * @param gitPath dirAndFile part must be non-empty and not "/".
-	 */
-	private Optional<GitObject> getGitObjectNotRoot(GitPath gitPath)
-			throws IOException, MissingObjectException, IncorrectObjectTypeException, CorruptObjectException {
-		checkArgument(!gitPath.toRelativePath().equals(root));
-		final GitPath withoutRoot = gitPath.toRelativePath();
-		/**
-		 * TreeWalk.forPath says “Empty path not permitted” if using "" or "/".
-		 */
-		checkArgument(!withoutRoot.equals(root));
-
-		final Optional<RevTree> treeOpt = getCommitTree(gitPath.toAbsolutePath().getRevStr());
-
-		final Optional<GitObject> objectId;
-		if (treeOpt.isEmpty()) {
-			objectId = Optional.empty();
-		} else {
-			final RevTree tree = treeOpt.get();
-			try (TreeWalk treeWalk = TreeWalk.forPath(repository, withoutRoot.toString(), tree)) {
-				if (treeWalk == null) {
-					objectId = Optional.empty();
-					LOGGER.debug("Path " + withoutRoot + " not found.");
-				} else {
-					objectId = Optional.of(new GitObject(treeWalk.getObjectId(0), treeWalk.getFileMode()));
-					verify(!treeWalk.next());
-				}
-			}
-		}
-		verify(objectId.isEmpty() || objectId.get().fileMode != null);
-		return objectId;
 	}
 
 	private GitPath getPath(String first, List<String> more) {
@@ -673,37 +629,6 @@ public class GitRepoFileSystem extends FileSystem {
 	private Comparator<GitPath> getPathLexicographicTemporalComparator() {
 		final Comparator<ObjectId> compareWithoutTies = getLexicographicTemporalComparator();
 		return Comparator.comparing(p -> ObjectId.fromString(p.getRevStr()), compareWithoutTies);
-	}
-
-	private Optional<RevTree> getTree(GitPath dir)
-			throws IOException, MissingObjectException, IncorrectObjectTypeException, CorruptObjectException {
-		if (dir.toRelativePath().equals(root)) {
-			return getCommitTree(dir.toAbsolutePath().getRevStr());
-		}
-
-		final Optional<GitObject> gitObjectOpt = getGitObjectNotRoot(dir);
-		if (gitObjectOpt.isEmpty()) {
-			return Optional.empty();
-		}
-		final GitObject gitObject = gitObjectOpt.get();
-		assert gitObject.fileMode != null;
-		if (!gitObject.fileMode.equals(FileMode.TYPE_TREE)) {
-			throw new NotDirectoryException(dir.toString());
-		}
-
-		final RevTree tree;
-		try (RevWalk walk = new RevWalk(reader)) {
-			tree = walk.parseTree(gitObject.objectId);
-		}
-		return Optional.of(tree);
-	}
-
-	private boolean isObjectId(String revStr) {
-		/**
-		 * This is incorrect (I suppose): a ref could have the same length as an object
-		 * id.
-		 */
-		return revStr.length() == 40;
 	}
 
 	Repository getRepository() {

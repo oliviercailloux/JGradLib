@@ -82,7 +82,7 @@ public class ChessGrader {
 
 	private static final boolean FAKE = false;
 
-	private static final Instant DEADLINE = ZonedDateTime.parse("2020-05-07T15:16:00+02:00").toInstant();
+	private static final Instant DEADLINE = ZonedDateTime.parse("2020-05-25T00:00:00+02:00").toInstant();
 
 	/**
 	 * NB for this to work, we need to have the interfaces in the class path with
@@ -108,7 +108,7 @@ public class ChessGrader {
 		for (RepositoryCoordinatesWithPrefix repository : repositories) {
 			final Path projectDir = projectsBaseDir.resolve(repository.getRepositoryName());
 			gradesB.put(repository.getUsername(), grader.grade(repository, projectDir));
-			Files.writeString(outDir.resolve("all grades " + PREFIX + (FAKE ? "-fake" : "") + ".json"),
+			Files.writeString(outDir.resolve("all grades " + PREFIX + "-homework" + ".json"),
 					JsonbUtils.toJsonObject(gradesB, JsonGrade.asAdapter()).toString());
 			Summarize.summarize(PREFIX, outDir);
 		}

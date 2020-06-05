@@ -114,22 +114,22 @@ public class JGit {
 			final ImmutableList.Builder<ObjectId> builder = ImmutableList.builder();
 
 			Files.writeString(workDir.resolve("file1.txt"), "Hello, world");
-			final ObjectId commitStart = insertCommit(inserter, personIdent, workDir, ImmutableList.of(),
+			final ObjectId commit1 = insertCommit(inserter, personIdent, workDir, ImmutableList.of(),
 					"First commit");
-			builder.add(commitStart);
+			builder.add(commit1);
 
 			Files.writeString(workDir.resolve("file2.txt"), "Hello again");
-			final ObjectId commitNext = insertCommit(inserter, personIdent, workDir, ImmutableList.of(commitStart),
+			final ObjectId commit2 = insertCommit(inserter, personIdent, workDir, ImmutableList.of(commit1),
 					"Second commit");
-			builder.add(commitNext);
+			builder.add(commit2);
 
 			Files.writeString(workDir.resolve("file2.txt"), "I insist");
 			final Path subDirectory = workDir.resolve("dir");
 			Files.createDirectory(subDirectory);
 			Files.writeString(subDirectory.resolve("file.txt"), "Hello from sub dir");
-			final ObjectId commitThird = insertCommit(inserter, personIdent, workDir, ImmutableList.of(commitNext),
+			final ObjectId commit3 = insertCommit(inserter, personIdent, workDir, ImmutableList.of(commit2),
 					"Third commit");
-			builder.add(commitThird);
+			builder.add(commit3);
 
 			final ImmutableList<ObjectId> commits = builder.build();
 

@@ -204,7 +204,7 @@ class GitClonerTests {
 
 	@Test
 	void testCloneToFileUsingRepo() throws Exception {
-		final Path gitDir = Path.of("git-test " + Instant.now());
+		final Path gitDir = Utils.getTempUniqueDirectory("git-test");
 		Git.init().setBare(true).setDirectory(gitDir.toFile()).call();
 		try (Repository repo = new FileRepository(gitDir.toString())) {
 			new GitCloner().clone(GitUri.fromGitUri(URI.create("https://github.com/oliviercailloux/testrel.git")),

@@ -72,7 +72,7 @@ public class GitBrGraderTests {
 	void testGradeFull() throws Exception {
 		final GitUri gitUri = GitUri
 				.fromGitUri(URI.create("https://github.com/oliviercailloux/Assisted-Board-Games.git"));
-		final Path wT = Path.of("git-test " + Instant.now());
+		final Path wT = Utils.getTempUniqueDirectory("git-test");
 		new GitCloner().download(gitUri, wT);
 		final RevCommit commitA;
 		try (Repository repository = new FileRepository(wT.resolve(".git").toString())) {
