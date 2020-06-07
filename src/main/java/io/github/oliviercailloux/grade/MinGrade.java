@@ -41,6 +41,16 @@ public class MinGrade implements IGrade {
 	}
 
 	@Override
+	public IGrade limitedDepth(int depth) {
+		checkArgument(depth >= 0);
+		if (depth == 0) {
+			return Mark.given(getPoints(), getComment());
+		}
+		return MinGrade.given(subGrades.keySet().stream()
+				.collect(ImmutableMap.toImmutableMap(c -> c, c -> subGrades.get(c).limitedDepth(depth - 1))));
+	}
+
+	@Override
 	public boolean equals(Object o2) {
 		if (!(o2 instanceof IGrade)) {
 			return false;

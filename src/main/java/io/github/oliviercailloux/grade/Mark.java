@@ -74,6 +74,12 @@ public class Mark implements IGrade {
 	}
 
 	@Override
+	public IGrade limitedDepth(int depth) {
+		checkArgument(depth >= 0);
+		return this;
+	}
+
+	@Override
 	public boolean equals(Object o2) {
 		if (!(o2 instanceof IGrade)) {
 			return false;

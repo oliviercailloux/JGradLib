@@ -49,6 +49,11 @@ public interface IGrade {
 	public ImmutableMap<Criterion, IGrade> getSubGrades();
 
 	/**
+	 * @param depth ≥0; 0 for a mark.
+	 */
+	public IGrade limitedDepth(int depth);
+
+	/**
 	 * Two {@link IGrade} objects are equal iff they have the same points, comment,
 	 * and sub grades (irrespective of the order of the sub grades).
 	 */

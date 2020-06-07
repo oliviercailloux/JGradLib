@@ -44,11 +44,10 @@ public class SendEmails {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(SendEmails.class);
 
-	private static final String PREFIX = "chess";
+	private static final String PREFIX = "scorers";
 	private static final Path WORK_DIR = Path.of("../../Java L3/");
 
 	public static void main(String[] args) throws Exception {
-
 		@SuppressWarnings("all")
 		final Type typeSet = new HashSet<StudentOnGitHubKnown>() {
 		}.getClass().getGenericSuperclass();
@@ -82,7 +81,8 @@ public class SendEmails {
 
 			final ImmutableSet<EmailAddress> addresses = gradesByEmail.keySet().stream()
 					.map(EmailAddressAndPersonal::getAddress).collect(ImmutableSet.toImmutableSet());
-			final ImmutableMap<EmailAddress, IGrade> lastGrades = gradesInEmails.getLastGradesTo(addresses, PREFIX);
+			gradesInEmails.filterRecipients(addresses);
+			final ImmutableMap<EmailAddress, IGrade> lastGrades = gradesInEmails.getLastGrades(PREFIX);
 			LOGGER.debug("Searching grades sent to {}, got those sent to {}.", addresses, lastGrades.keySet());
 
 			for (EmailAddressAndPersonal address : gradesByEmail.keySet()) {

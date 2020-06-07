@@ -145,8 +145,9 @@ public class Utils {
 		if (Files.exists(target)) {
 			checkArgument(!target.toRealPath().startsWith(source.toRealPath()));
 		} else {
-			checkArgument(!target.startsWith(source.toRealPath()));
+			checkArgument(!target.toAbsolutePath().startsWith(source.toRealPath()));
 		}
+
 		/**
 		 * Note that under restricted security settings, even the toUri() call fails
 		 * (because it tries to construct an absolute path, I think).

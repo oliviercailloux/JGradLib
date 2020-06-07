@@ -31,14 +31,10 @@ public class Summarize {
 	private static final Path READ_DIR = Paths.get("../../Java L3/");
 
 	public static void main(String[] args) throws Exception {
-		summarize("chess", Paths.get("../../Java L3/"), true);
+		summarize("chess-homework", Paths.get("../../Java L3/"));
 	}
 
 	public static void summarize(String prefix, Path outDir) throws IOException {
-		summarize(prefix, outDir, true);
-	}
-
-	public static void summarize(String prefix, Path outDir, boolean printRange) throws IOException {
 		@SuppressWarnings("all")
 		final Type type = new LinkedHashMap<RepositoryCoordinates, IGrade>() {
 		}.getClass().getGenericSuperclass();
@@ -57,7 +53,7 @@ public class Summarize {
 		LOGGER.debug("Grades keys: {}.", byStudent.keySet());
 
 		LOGGER.info("Writing grades CSV.");
-		Files.writeString(outDir.resolve("all grades " + prefix + ".csv"), CsvGrades.asCsv(byStudent, 20d, printRange));
+		Files.writeString(outDir.resolve("all grades " + prefix + ".csv"), CsvGrades.asCsv(byStudent, 20d));
 
 		LOGGER.info("Writing grades Html.");
 		final Document doc = HtmlGrades.asHtml(grades, "All grades " + prefix, 20d);

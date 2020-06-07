@@ -11,6 +11,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.Map;
@@ -25,6 +26,7 @@ import javax.mail.Folder;
 import javax.mail.Message;
 import javax.mail.Message.RecipientType;
 import javax.mail.MessagingException;
+import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeBodyPart;
 import javax.mail.internet.MimeMessage;
 import javax.mail.internet.MimeMultipart;
@@ -41,6 +43,7 @@ import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.ImmutableTable;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.MoreCollectors;
+import com.google.common.collect.Range;
 import com.google.common.collect.Table.Cell;
 import com.google.common.io.CharStreams;
 import com.google.common.math.Stats;
@@ -110,10 +113,15 @@ public class GradesInEmails implements AutoCloseable {
 
 	private JsonbAdapter<IGrade, JsonObject> jsonGradeAdapter;
 
+	private ImmutableSet<EmailAddress> recipientsFilter;
+	private Range<Instant> sentFilter;
+
 	private GradesInEmails(JsonbAdapter<IGrade, JsonObject> jsonGradeAdapter) {
 		this.jsonGradeAdapter = checkNotNull(jsonGradeAdapter);
 		emailer = Emailer.instance();
 		folder = null;
+		recipientsFilter = null;
+		sentFilter = null;
 	}
 
 	public Emailer getEmailer() {
@@ -131,6 +139,17 @@ public class GradesInEmails implements AutoCloseable {
 	public void setFolder(Folder folder) {
 		checkArgument(folder.isOpen());
 		this.folder = folder;
+	}
+
+	/**
+	 * @param recipients <code>null</code> for no filter
+	 */
+	public void filterRecipients(Set<EmailAddress> recipients) {
+		recipientsFilter = recipients == null ? null : ImmutableSet.copyOf(recipients);
+	}
+
+	public void filterSent(Range<Instant> filter) {
+		sentFilter = filter;
 	}
 
 	private Optional<GradeMessage> getGrade(Message source) {
@@ -179,11 +198,16 @@ public class GradesInEmails implements AutoCloseable {
 		return gradeSubject;
 	}
 
+	/**
+	 * @param recipients <code>null</code> for no filter.
+	 */
 	private EmailAddress getUniqueRecipientAmong(Message message, Set<EmailAddress> recipients) {
 		final ImmutableSet<Address> seen = ImmutableSet
 				.copyOf(MESSAGING_UNCHECKER.getUsing(() -> message.getRecipients(RecipientType.TO)));
-		final ImmutableSet<EmailAddress> intersection = recipients.stream()
-				.filter(r -> seen.contains(r.asInternetAddress())).collect(ImmutableSet.toImmutableSet());
+		final ImmutableSet<EmailAddress> intersection = (recipients == null
+				? seen.stream().map(a -> (InternetAddress) a).map(a -> EmailAddress.given(a.getAddress()))
+				: recipients.stream().filter(r -> seen.contains(r.asInternetAddress())))
+						.collect(ImmutableSet.toImmutableSet());
 		verify(!intersection.isEmpty(), seen.toString());
 		checkState(intersection.size() <= 1);
 		return Iterables.getOnlyElement(intersection);
@@ -191,6 +215,7 @@ public class GradesInEmails implements AutoCloseable {
 
 	public ImmutableSetMultimap<String, IGrade> getGradesTo(EmailAddress recipient) {
 		checkState(folder != null);
+		checkArgument(recipientsFilter == null || recipientsFilter.contains(recipient));
 
 		final ImmutableSortedSet<GradeMessage> matchingSorted = getAllGradeMessagesTo(ImmutableSet.of(recipient),
 				"Grade ".toLowerCase());
@@ -202,29 +227,36 @@ public class GradesInEmails implements AutoCloseable {
 		return grades;
 	}
 
+	/**
+	 * @param recipients <code>null</code> for no filter.
+	 */
 	private ImmutableSortedSet<GradeMessage> getAllGradeMessagesTo(Set<EmailAddress> recipients,
 			String subjectPattern) {
 		final ImapSearchPredicate subjectContains = ImapSearchPredicate.subjectContains(subjectPattern);
-		final ImmutableSet<ImapSearchPredicate> predicates = recipients.stream()
-				.map(r -> ImapSearchPredicate.recipientAddressEquals(RecipientType.TO, r.getAddress()))
+		final ImapSearchPredicate matchesAddress = recipients == null ? ImapSearchPredicate.TRUE
+				: ImapSearchPredicate.orList(recipients.stream()
+						.map(r -> ImapSearchPredicate.recipientAddressEquals(RecipientType.TO, r.getAddress()))
+						.collect(ImmutableSet.toImmutableSet()));
+		/**
+		 * If too complex, we search everything, because Zoho (and, I suspect, many
+		 * others) do not implement this correctly.
+		 */
+		final ImapSearchPredicate effectiveMatchesAddress = (recipients == null || recipients.size() >= 2)
+				? ImapSearchPredicate.TRUE
+				: matchesAddress;
+		final ImapSearchPredicate sentWithin = sentFilter == null ? ImapSearchPredicate.TRUE
+				: ImapSearchPredicate.sentWithin(sentFilter);
+
+		final ImapSearchPredicate searchTerm = subjectContains.andSatisfy(effectiveMatchesAddress)
+				.andSatisfy(sentWithin);
+
+		/** We filter manually in all cases for simplicity of the code. */
+		final ImmutableSet<Message> matchingWidened = emailer.searchIn(searchTerm, folder);
+		LOGGER.debug("Got all '{}' messages ({}).", subjectPattern, matchingWidened.size());
+		final ImmutableSet<Message> matching = matchingWidened.stream().filter(matchesAddress.getPredicate())
 				.collect(ImmutableSet.toImmutableSet());
-		final ImapSearchPredicate matchesOneOfThose = ImapSearchPredicate.orList(predicates);
-		final ImmutableSet<Message> matching;
-		if (recipients.size() <= 1) {
-			final ImapSearchPredicate searchTerm = subjectContains.andSatisfy(matchesOneOfThose);
-			matching = emailer.searchIn(searchTerm, folder);
-		} else {
-			/**
-			 * We search everything because Zoho (and, I suspect, many others) does not
-			 * implement this correctly.
-			 */
-			final ImapSearchPredicate searchTerm = subjectContains;
-			final ImmutableSet<Message> matchingWidened = emailer.searchIn(searchTerm, folder);
-			LOGGER.debug("Got all '{}' messages ({}).", subjectPattern, matchingWidened.size());
-			matching = matchingWidened.stream().filter(matchesOneOfThose.getPredicate())
-					.collect(ImmutableSet.toImmutableSet());
-			LOGGER.debug("Got all '{}' matching messages ({}).", subjectPattern, matching.size());
-		}
+		LOGGER.debug("Got all '{}' matching messages ({}).", subjectPattern, matching.size());
+
 		final ImmutableSet<GradeMessage> matchingGrades = matching.stream().map(this::getGrade)
 				.filter(Optional::isPresent).map(Optional::get).collect(ImmutableSet.toImmutableSet());
 		LOGGER.debug("Got all '{}' matching grades to {} ({}).", subjectPattern, recipients, matchingGrades.size());
@@ -236,14 +268,17 @@ public class GradesInEmails implements AutoCloseable {
 		return matchingSorted;
 	}
 
-	public ImmutableTable<EmailAddress, String, IGrade> getLastGradesTo(Set<EmailAddress> recipients) {
+	public ImmutableTable<EmailAddress, String, IGrade> getLastGrades() {
 		checkState(folder != null);
 
-		final ImmutableTable<EmailAddress, String, IGrade> grades = getLastGradesToInternal(recipients,
+		final ImmutableTable<EmailAddress, String, IGrade> grades = getLastGradesToInternal(recipientsFilter,
 				"Grade ".toLowerCase());
 		return grades;
 	}
 
+	/**
+	 * @param recipients <code>null</code> for no filter.
+	 */
 	private ImmutableTable<EmailAddress, String, IGrade> getLastGradesToInternal(Set<EmailAddress> recipients,
 			String subjectPattern) {
 		final ImmutableSortedSet<GradeMessage> matchingSorted = getAllGradeMessagesTo(recipients, subjectPattern);
@@ -258,12 +293,15 @@ public class GradesInEmails implements AutoCloseable {
 	}
 
 	public Optional<IGrade> getLastGradeTo(EmailAddress recipient, String prefix) {
-		return Optional.ofNullable(getLastGradesTo(ImmutableSet.of(recipient), prefix).get(recipient));
+		checkArgument(recipientsFilter == null || recipientsFilter.contains(recipient));
+		return Optional
+				.ofNullable(getLastGradesToInternal(ImmutableSet.of(recipient), ("Grade " + prefix).toLowerCase())
+						.column(prefix).get(recipient));
 	}
 
-	public ImmutableMap<EmailAddress, IGrade> getLastGradesTo(Set<EmailAddress> recipients, String prefix) {
+	public ImmutableMap<EmailAddress, IGrade> getLastGrades(String prefix) {
 		checkState(folder != null);
-		return getLastGradesToInternal(recipients, ("Grade " + prefix).toLowerCase()).column(prefix);
+		return getLastGradesToInternal(recipientsFilter, ("Grade " + prefix).toLowerCase()).column(prefix);
 	}
 
 	@Override

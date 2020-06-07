@@ -1,5 +1,6 @@
 package io.github.oliviercailloux.email;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import java.util.Objects;
@@ -19,6 +20,7 @@ public class EmailAddress {
 
 	private EmailAddress(String address) {
 		this.address = checkNotNull(address);
+		checkArgument(address.contains("@"));
 		try {
 			@SuppressWarnings("unused")
 			final InternetAddress internetAddress = new InternetAddress(address, true);

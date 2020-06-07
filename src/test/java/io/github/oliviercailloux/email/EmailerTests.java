@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.Optional;
 import java.util.Properties;
@@ -36,6 +37,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableTable;
+import com.google.common.collect.Range;
 
 import io.github.oliviercailloux.grade.GradeTestsHelper;
 import io.github.oliviercailloux.grade.IGrade;
@@ -421,7 +423,8 @@ public class EmailerTests {
 			sendEmails.setFolder(sendEmails.getEmailer().getFolder("Grades"));
 			final EmailAddress inexistant = EmailAddress.given("olivier.cailloux@inexistant.fr");
 			assertEquals(Optional.empty(), sendEmails.getLastGradeTo(inexistant, "git-br"));
-			assertEquals(ImmutableTable.of(), sendEmails.getLastGradesTo(ImmutableSet.of(inexistant)));
+			sendEmails.filterRecipients(ImmutableSet.of(inexistant));
+			assertEquals(ImmutableTable.of(), sendEmails.getLastGrades());
 		}
 	}
 
@@ -435,15 +438,25 @@ public class EmailerTests {
 			final EmailAddress existant = EmailAddress.given("olivier.cailloux@invaliddauphine.fr");
 			final EmailAddress inexistant = EmailAddress.given("olivier.cailloux@inexistant.fr");
 
-			final ImmutableMap<EmailAddress, IGrade> gradeT = sendEmails
-					.getLastGradesTo(ImmutableSet.of(inexistant, existant), "git-br");
+			sendEmails.filterRecipients(ImmutableSet.of(inexistant, existant));
+			final ImmutableMap<EmailAddress, IGrade> gradeT = sendEmails.getLastGrades("git-br");
 			assertEquals(8.88d / 20d, gradeT.get(existant).getPoints(), 0.001d);
 
 			final Optional<IGrade> grade = sendEmails.getLastGradeTo(existant, "git-br");
 			assertEquals(8.88d / 20d, grade.get().getPoints(), 0.001d);
-			final ImmutableMap<EmailAddress, IGrade> grades = sendEmails.getLastGradesTo(ImmutableSet.of(existant),
-					"git-br");
+
+			sendEmails.filterRecipients(ImmutableSet.of(existant));
+			final ImmutableMap<EmailAddress, IGrade> grades = sendEmails.getLastGrades("git-br");
 			assertEquals(8.88d / 20d, grades.get(existant).getPoints(), 0.001d);
+
+			sendEmails.filterSent(
+					Range.closed(Instant.parse("2001-01-01T00:00:00.00Z"), Instant.parse("2020-06-01T00:00:00.00Z")));
+			final ImmutableMap<EmailAddress, IGrade> gradesInPeriod = sendEmails.getLastGrades("git-br");
+			assertEquals(8.88d / 20d, gradesInPeriod.get(existant).getPoints(), 0.001d);
+
+			sendEmails.filterSent(Range.atMost(Instant.parse("2001-01-01T00:00:00.00Z")));
+			final ImmutableMap<EmailAddress, IGrade> gradesOld = sendEmails.getLastGrades("git-br");
+			assertEquals(ImmutableMap.of(), gradesOld);
 		}
 	}
 
@@ -455,8 +468,8 @@ public class EmailerTests {
 			sendEmails.setFolder(sendEmails.getEmailer().getFolder("Grades"));
 			final EmailAddress inexistant = EmailAddress.given("olivier.cailloux@inexistant.fr");
 			final EmailAddress existant = EmailAddress.given("olivier.cailloux@invaliddauphine.fr");
-			final ImmutableMap<EmailAddress, IGrade> grades = sendEmails
-					.getLastGradesTo(ImmutableSet.of(inexistant, existant), "git-br");
+			sendEmails.filterRecipients(ImmutableSet.of(inexistant, existant));
+			final ImmutableMap<EmailAddress, IGrade> grades = sendEmails.getLastGrades("git-br");
 			assertEquals(ImmutableSet.of(existant), grades.keySet());
 		}
 	}
@@ -470,9 +483,11 @@ public class EmailerTests {
 			final EmailAddress lam = EmailAddress.given("olivier.cailloux@lamsade.dauphine.fr");
 			final EmailAddress dau = EmailAddress.given("olivier.cailloux@invaliddauphine.fr");
 			final ImmutableSet<EmailAddress> lamSingleton = ImmutableSet.of(lam);
-			assertEquals(lamSingleton, sendEmails.getLastGradesTo(lamSingleton, "commit").keySet());
+			sendEmails.filterRecipients(lamSingleton);
+			assertEquals(lamSingleton, sendEmails.getLastGrades("commit").keySet());
 			final ImmutableSet<EmailAddress> lamdau = ImmutableSet.of(lam, dau);
-			assertEquals(lamdau, sendEmails.getLastGradesTo(lamdau, "commit").keySet());
+			sendEmails.filterRecipients(lamdau);
+			assertEquals(lamdau, sendEmails.getLastGrades("commit").keySet());
 		}
 	}
 

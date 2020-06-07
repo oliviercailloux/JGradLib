@@ -20,9 +20,6 @@ package io.github.oliviercailloux.exceptions.durian;
  * https://github.com/diffplug/durian/blob/99100976d27a5ebec74a0a7df48fc23de822fa00/src/com/diffplug/common/base/Errors.java,
  * only added a @SuppressWarnings and removed some annotations that prevented
  * compilation.
- * <p>Variations on the standard functional interfaces which throw Throwable.
- * <p>
- * {@link Errors} can convert these into standard functional interfaces.
  */
 @SuppressWarnings("all")
 public interface Throwing {

@@ -1,12 +1,15 @@
 package io.github.oliviercailloux.grade.format;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkNotNull;
 
 import java.io.StringWriter;
 import java.text.NumberFormat;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -20,7 +23,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSetMultimap;
 import com.google.common.collect.ImmutableTable;
-import com.google.common.collect.MoreCollectors;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Range;
 import com.google.common.collect.Streams;
 import com.univocity.parsers.csv.CsvWriter;
@@ -32,7 +35,7 @@ import io.github.oliviercailloux.grade.IGrade;
 import io.github.oliviercailloux.grade.WeightingGrade;
 import io.github.oliviercailloux.grade.comm.StudentOnGitHub;
 
-public class CsvGrades {
+public class CsvGrades<K> {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(CsvGrades.class);
 
@@ -43,125 +46,11 @@ public class CsvGrades {
 	}
 
 	public static String asCsv(Map<StudentOnGitHub, ? extends IGrade> grades, double denominator) {
-		return asCsv(grades, denominator, true);
-	}
-
-	/**
-	 * Must disable printing bounds when weight is dynamic (varies per student).
-	 */
-	public static String asCsv(Map<StudentOnGitHub, ? extends IGrade> grades, double denominator, boolean printBounds) {
-		final NumberFormat formatter = NumberFormat.getNumberInstance(Locale.FRENCH);
-		final StringWriter stringWriter = new StringWriter();
-		final CsvWriter writer = new CsvWriter(stringWriter, new CsvWriterSettings());
-
-		final ImmutableMap<StudentOnGitHub, WeightingGrade> weightingGrades = grades.entrySet().stream()
-				.filter(e -> e.getValue() instanceof WeightingGrade)
-				.collect(ImmutableMap.toImmutableMap(Map.Entry::getKey, e -> (WeightingGrade) e.getValue()));
-		final ImmutableSetMultimap<StudentOnGitHub, CriterionGradeWeight> perStudent = weightingGrades.entrySet()
-				.stream().collect(ImmutableSetMultimap.flatteningToImmutableSetMultimap(Entry::getKey,
-						(e) -> e.getValue().getSubGradesAsSet().stream().flatMap(CsvGrades::asContextualizedStream)));
-		final ImmutableTable<StudentOnGitHub, Criterion, CriterionGradeWeight> asTable = perStudent.entries().stream()
-				.collect(ImmutableTable.toImmutableTable(Entry::getKey, (e) -> e.getValue().getCriterion(),
-						Entry::getValue));
-		LOGGER.debug("From {}, obtained {}, as table {}.", grades, perStudent, asTable);
-
-		final ImmutableSet<Criterion> allCriteria = asTable.columnKeySet();
-		final boolean enableName = grades.keySet().stream().anyMatch(s -> s.getLastName().isPresent());
-
-		final Stream<String> firstHeaders;
-		if (enableName) {
-			firstHeaders = Stream.of("Name", "GitHub username");
-		} else {
-			firstHeaders = Stream.of("GitHub username");
-		}
-		final ImmutableList<String> headers = Streams
-				.concat(firstHeaders, allCriteria.stream().map(Object::toString), Stream.of("Points"))
-				.collect(ImmutableList.toImmutableList());
-		writer.writeHeaders(headers);
-
-		for (Entry<StudentOnGitHub, ? extends IGrade> studentGrade : grades.entrySet()) {
-			final StudentOnGitHub student = studentGrade.getKey();
-			LOGGER.debug("Writing {}.", student);
-			if (enableName) {
-				writer.addValue("Name", student.getLastName().orElse("unknown"));
-			}
-			writer.addValue("GitHub username", student.getGitHubUsername());
-
-			final IGrade grade = studentGrade.getValue();
-			final ImmutableCollection<CriterionGradeWeight> marks = asTable.row(student).values();
-			for (CriterionGradeWeight cgw : marks) {
-				final Criterion criterion = cgw.getCriterion();
-				Verify.verify(allCriteria.contains(criterion));
-				final double pointsScaled = getPointsScaled(cgw, denominator);
-				writer.addValue(criterion.getName(), formatter.format(pointsScaled));
-			}
-
-			writer.addValue("Points", formatter.format(grade.getPoints() * denominator));
-			writer.writeValuesToRow();
-		}
-
-		if (printBounds) {
-			writer.addValue("GitHub username", "Range");
-			for (Criterion criterion : allCriteria) {
-				final double weight = asTable.column(criterion).values().stream().map(CriterionGradeWeight::getWeight)
-						.distinct().collect(MoreCollectors.onlyElement());
-				final Range<Double> bounds = Range.closed(0d, weight * denominator);
-				writer.addValue(criterion.getName(), boundsToString(formatter, bounds));
-			}
-			final Range<Double> overallBounds = Range.closed(0d, denominator);
-			writer.addValue("Points", boundsToString(formatter, overallBounds));
-			writer.writeValuesToRow();
-
-			writer.addValue("GitHub username", "Upper bound");
-			for (Criterion criterion : allCriteria) {
-				final double weight = asTable.column(criterion).values().stream().map(CriterionGradeWeight::getWeight)
-						.distinct().collect(MoreCollectors.onlyElement());
-				writer.addValue(criterion.getName(), formatter.format(weight * denominator));
-			}
-			writer.addValue("Points", formatter.format(denominator));
-			writer.writeValuesToRow();
-		}
-
-		{
-			writer.addValue("GitHub username", "Average");
-			for (Criterion criterion : allCriteria) {
-				final double average = asTable.column(criterion).values().stream()
-						.collect(Collectors.averagingDouble(c -> getPointsScaled(c, denominator)));
-				writer.addValue(criterion.getName(), formatter.format(average));
-			}
-			final double averageOfTotalScore = grades.values().stream()
-					.collect(Collectors.averagingDouble(g -> g.getPoints() * denominator));
-			writer.addValue("Points", formatter.format(averageOfTotalScore));
-			writer.writeValuesToRow();
-		}
-
-		{
-			writer.addValue("GitHub username", "Nb > 0");
-			for (Criterion criterion : allCriteria) {
-				final int nb = Math.toIntExact(
-						asTable.column(criterion).values().stream().filter(c -> c.getGrade().getPoints() > 0d).count());
-				writer.addValue(criterion.getName(), formatter.format(nb));
-			}
-			final int nb = Math.toIntExact(grades.values().stream().filter(g -> g.getPoints() > 0d).count());
-			writer.addValue("Points", formatter.format(nb));
-			writer.writeValuesToRow();
-		}
-
-		{
-			writer.addValue("GitHub username", "Nb MAX");
-			for (Criterion criterion : allCriteria) {
-				final int nb = Math.toIntExact(asTable.column(criterion).values().stream()
-						.filter(c -> c.getGrade().getPoints() == 1d).count());
-				writer.addValue(criterion.getName(), formatter.format(nb));
-			}
-			final int nb = Math.toIntExact(grades.values().stream().filter(g -> g.getPoints() == 1d).count());
-			writer.addValue("Points", formatter.format(nb));
-			writer.writeValuesToRow();
-		}
-
-		writer.close();
-
-		return stringWriter.toString();
+		Function<StudentOnGitHub, ImmutableMap<String, String>> f = s -> ImmutableMap.of("Name",
+				s.getLastName().orElse("unknown"), "GitHub username", s.getGitHubUsername());
+		final CsvGrades<StudentOnGitHub> csvGrades = new CsvGrades<>();
+		csvGrades.setIdentityFunction(f).setDenominator(denominator);
+		return csvGrades.toCsv(grades.keySet(), grades::get);
 	}
 
 	private static Stream<Map.Entry<Criterion, IGrade>> childrenAsStream(Entry<Criterion, IGrade> parent) {
@@ -211,5 +100,165 @@ public class CsvGrades {
 		final String formattedLower = formatter.format(bounds.lowerEndpoint());
 		final String formattedUpper = formatter.format(bounds.upperEndpoint());
 		return (lower == upper) ? "{" + formattedLower + "}" : "[" + formattedLower + ", " + formattedUpper + "]";
+	}
+
+	private Function<K, ? extends Map<String, String>> identityFunction;
+	private double denominator;
+
+	public static <K> CsvGrades<K> newInstance() {
+		return new CsvGrades<>();
+	}
+
+	private CsvGrades() {
+		identityFunction = k -> ImmutableMap.of("name", k.toString());
+		denominator = DEFAULT_DENOMINATOR;
+	}
+
+	public Function<K, ? extends Map<String, String>> getIdentityFunction() {
+		return identityFunction;
+	}
+
+	public CsvGrades<K> setIdentityFunction(Function<K, ? extends Map<String, String>> identityFunction) {
+		this.identityFunction = checkNotNull(identityFunction);
+		return this;
+	}
+
+	public double getDenominator() {
+		return denominator;
+	}
+
+	public CsvGrades<K> setDenominator(double denominator) {
+		this.denominator = denominator;
+		return this;
+	}
+
+	public String toCsv(Set<K> keys, Function<K, ? extends IGrade> grades) {
+		checkArgument(!keys.isEmpty(), "Can’t determine identity headers with no keys.");
+
+		final NumberFormat formatter = NumberFormat.getNumberInstance(Locale.ENGLISH);
+		final StringWriter stringWriter = new StringWriter();
+		final CsvWriter writer = new CsvWriter(stringWriter, new CsvWriterSettings());
+
+		final ImmutableMap<K, IGrade> allGrades = keys.stream().collect(ImmutableMap.toImmutableMap(k -> k, grades));
+		final ImmutableMap<K, WeightingGrade> weightingGrades = allGrades.entrySet().stream()
+				.filter(e -> e.getValue() instanceof WeightingGrade)
+				.collect(ImmutableMap.toImmutableMap(Map.Entry::getKey, e -> (WeightingGrade) e.getValue()));
+		final ImmutableSetMultimap<K, CriterionGradeWeight> perKey = weightingGrades.entrySet().stream()
+				.collect(ImmutableSetMultimap.flatteningToImmutableSetMultimap(Entry::getKey,
+						(e) -> e.getValue().getSubGradesAsSet().stream().flatMap(CsvGrades::asContextualizedStream)));
+		final ImmutableTable<K, Criterion, CriterionGradeWeight> asTable = perKey.entries().stream().collect(
+				ImmutableTable.toImmutableTable(Entry::getKey, (e) -> e.getValue().getCriterion(), Entry::getValue));
+		LOGGER.debug("From {}, obtained {}, as table {}.", grades, perKey, asTable);
+
+		final ImmutableSet<Criterion> allCriteria = asTable.columnKeySet();
+
+		final ImmutableSet<String> identityHeadersFromFunction = keys.stream()
+				.flatMap(k -> identityFunction.apply(k).keySet().stream()).distinct()
+				.collect(ImmutableSet.toImmutableSet());
+		final ImmutableSet<String> identityHeaders = identityHeadersFromFunction.isEmpty() ? ImmutableSet.of("")
+				: identityHeadersFromFunction;
+		final ImmutableList<String> headers = Streams
+				.concat(identityHeaders.stream(), allCriteria.stream().map(Object::toString), Stream.of("Points"))
+				.collect(ImmutableList.toImmutableList());
+		writer.writeHeaders(headers);
+
+		final String firstHeader = identityHeaders.iterator().next();
+
+		for (K key : keys) {
+			LOGGER.debug("Writing {}.", key);
+			final Map<String, String> identity = identityFunction.apply(key);
+			identity.entrySet().forEach(e -> writer.addValue(e.getKey(), e.getValue()));
+
+			final IGrade grade = allGrades.get(key);
+			final ImmutableCollection<CriterionGradeWeight> marks = asTable.row(key).values();
+			for (CriterionGradeWeight cgw : marks) {
+				final Criterion criterion = cgw.getCriterion();
+				Verify.verify(allCriteria.contains(criterion));
+				final double pointsScaled = getPointsScaled(cgw, denominator);
+				writer.addValue(criterion.getName(), formatter.format(pointsScaled));
+			}
+
+			writer.addValue("Points", formatter.format(grade.getPoints() * denominator));
+			writer.writeValuesToRow();
+		}
+		writer.writeEmptyRow();
+
+		final ImmutableMap<Criterion, ImmutableSet<Double>> weightsPerCriterion = asTable.columnKeySet().stream()
+				.collect(ImmutableMap.toImmutableMap(c -> c, c -> asTable.column(c).values().stream()
+						.map(CriterionGradeWeight::getWeight).collect(ImmutableSet.toImmutableSet())));
+		final boolean homogeneousWeights = weightsPerCriterion.values().stream().allMatch(s -> s.size() == 1);
+
+		{
+			writer.addValue(firstHeader, "Range");
+			if (homogeneousWeights) {
+				for (Criterion criterion : allCriteria) {
+					final double weight = Iterables.getOnlyElement(weightsPerCriterion.get(criterion));
+					final Range<Double> bounds = Range.closed(0d, weight * denominator);
+					writer.addValue(criterion.getName(), boundsToString(formatter, bounds));
+				}
+			}
+			final Range<Double> overallBounds = Range.closed(0d, denominator);
+			writer.addValue("Points", boundsToString(formatter, overallBounds));
+			writer.writeValuesToRow();
+		}
+
+		{
+			writer.addValue(firstHeader, "Upper bound");
+			if (homogeneousWeights) {
+				for (Criterion criterion : allCriteria) {
+					final double weight = Iterables.getOnlyElement(weightsPerCriterion.get(criterion));
+					writer.addValue(criterion.getName(), formatter.format(weight * denominator));
+				}
+			}
+			writer.addValue("Points", formatter.format(denominator));
+			writer.writeValuesToRow();
+		}
+
+		{
+			writer.addValue(firstHeader, "Average");
+			for (Criterion criterion : allCriteria) {
+				final double average;
+				if (homogeneousWeights) {
+					average = asTable.column(criterion).values().stream()
+							.collect(Collectors.averagingDouble(c -> getPointsScaled(c, denominator)));
+				} else {
+					average = asTable.column(criterion).values().stream()
+							.collect(Collectors.averagingDouble(c -> c.getGrade().getPoints()));
+				}
+				writer.addValue(criterion.getName(), formatter.format(average));
+			}
+			final double averageOfTotalScore = weightingGrades.values().stream()
+					.collect(Collectors.averagingDouble(g -> g.getPoints() * denominator));
+			writer.addValue("Points", formatter.format(averageOfTotalScore));
+			writer.writeValuesToRow();
+		}
+
+		{
+			writer.addValue(firstHeader, "Nb > 0");
+			for (Criterion criterion : allCriteria) {
+				final int nb = Math.toIntExact(
+						asTable.column(criterion).values().stream().filter(c -> c.getGrade().getPoints() > 0d).count());
+				writer.addValue(criterion.getName(), formatter.format(nb));
+			}
+			final int nb = Math.toIntExact(weightingGrades.values().stream().filter(g -> g.getPoints() > 0d).count());
+			writer.addValue("Points", formatter.format(nb));
+			writer.writeValuesToRow();
+		}
+
+		{
+			writer.addValue(firstHeader, "Nb MAX");
+			for (Criterion criterion : allCriteria) {
+				final int nb = Math.toIntExact(asTable.column(criterion).values().stream()
+						.filter(c -> c.getGrade().getPoints() == 1d).count());
+				writer.addValue(criterion.getName(), formatter.format(nb));
+			}
+			final int nb = Math.toIntExact(weightingGrades.values().stream().filter(g -> g.getPoints() == 1d).count());
+			writer.addValue("Points", formatter.format(nb));
+			writer.writeValuesToRow();
+		}
+
+		writer.close();
+
+		return stringWriter.toString();
 	}
 }

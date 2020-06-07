@@ -33,6 +33,8 @@ import com.google.common.jimfs.Jimfs;
 
 import io.github.oliviercailloux.bytecode.Compiler;
 import io.github.oliviercailloux.bytecode.Compiler.CompilationResult;
+import io.github.oliviercailloux.exceptions.Try;
+import io.github.oliviercailloux.exceptions.TryVoid;
 import io.github.oliviercailloux.git.GitCloner;
 import io.github.oliviercailloux.git.GitLocalHistory;
 import io.github.oliviercailloux.git.GitUri;
@@ -58,7 +60,6 @@ import io.github.oliviercailloux.json.JsonbUtils;
 import io.github.oliviercailloux.samples.chess.ChessBoard;
 import io.github.oliviercailloux.samples.chess.Piece;
 import io.github.oliviercailloux.utils.Utils;
-import io.vavr.control.Try;
 
 public class ChessGrader {
 	public static final double COMPILE_POINTS = 1.5d / 25d;
@@ -260,7 +261,7 @@ public class ChessGrader {
 
 			{
 				final ChessBoard instance = factory.get();
-				boolean thrown = JavaGradeUtils.doesThrow(() -> instance.setBoardByString(null),
+				final boolean thrown = JavaGradeUtils.doesThrow(() -> instance.setBoardByString(null),
 						e -> e instanceof NullPointerException);
 				gradeBuilder.put(LocalCriterion.BOARD_THROWS_ON_NULL, Mark.binary(setInitReturns && thrown));
 			}
@@ -272,13 +273,13 @@ public class ChessGrader {
 			}
 			{
 				final ChessBoard instance = factory.get();
-				boolean thrown = JavaGradeUtils.doesThrow(() -> instance.setBoardByString(getBoardThreeK()),
+				final boolean thrown = JavaGradeUtils.doesThrow(() -> instance.setBoardByString(getBoardThreeK()),
 						e -> e instanceof IllegalArgumentException);
 				gradeBuilder.put(LocalCriterion.BOARD_THROWS_ON_MULT_KINGS, Mark.binary(setInitReturns && thrown));
 			}
 			{
 				final ChessBoard instance = factory.get();
-				boolean thrown = JavaGradeUtils.doesThrow(() -> instance.setBoardByString(getBoardIllegalPiece()),
+				final boolean thrown = JavaGradeUtils.doesThrow(() -> instance.setBoardByString(getBoardIllegalPiece()),
 						e -> e instanceof IllegalArgumentException);
 				gradeBuilder.put(LocalCriterion.BOARD_THROWS_ON_ILLEGAL_PIECE, Mark.binary(setInitReturns && thrown));
 			}
@@ -368,7 +369,7 @@ public class ChessGrader {
 			{
 				final ChessBoard instance = factory.get();
 				Try.of(() -> instance.setBoardByString(getBoardBK()));
-				final Try<Void> move = Try.run(() -> instance.movePiece("a1", "d7"));
+				final TryVoid move = TryVoid.run(() -> instance.movePiece("a1", "d7"));
 				gradeBuilder.put(LocalCriterion.MOVE_THROWS,
 						Mark.binary(move.isFailure() && (move.getCause() instanceof IllegalArgumentException
 								|| move.getCause() instanceof IllegalStateException)));
@@ -376,7 +377,7 @@ public class ChessGrader {
 			{
 				final ChessBoard instance = factory.get();
 				Try.of(() -> instance.setBoardByString(getBoardBK()));
-				final Try<Void> move = Try.run(() -> instance.movePiece("b2", "c3"));
+				final TryVoid move = TryVoid.run(() -> instance.movePiece("b2", "c3"));
 				final Try<Optional<Piece>> b2 = Try.of(() -> instance.getPieceByPosition("b2"));
 				final Try<Optional<Piece>> c3 = Try.of(() -> instance.getPieceByPosition("c3"));
 				final Try<Optional<Piece>> d2 = Try.of(() -> instance.getPieceByPosition("d2"));

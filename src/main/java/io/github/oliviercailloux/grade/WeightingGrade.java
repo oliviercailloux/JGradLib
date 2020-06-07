@@ -204,6 +204,24 @@ public class WeightingGrade implements IGrade {
 		return weights;
 	}
 
+	/**
+	 * 1 for a weighting grade whose subgrades are all marks.
+	 */
+	@Override
+	public IGrade limitedDepth(int depth) {
+		checkArgument(depth >= 0);
+		if (depth == 0) {
+			return Mark.given(getPoints(), getComment());
+		}
+		return WeightingGrade.from(subGrades.keySet().stream()
+				.collect(ImmutableMap.toImmutableMap(c -> c, c -> subGrades.get(c).limitedDepth(depth - 1))), weights);
+	}
+
+	public WeightingGrade limitedDepthAsWeighting(int depth) {
+		checkArgument(depth >= 1);
+		return (WeightingGrade) limitedDepth(depth);
+	}
+
 	@Override
 	public boolean equals(Object o2) {
 		if (!(o2 instanceof IGrade)) {
