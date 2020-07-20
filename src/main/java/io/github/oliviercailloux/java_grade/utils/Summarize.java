@@ -31,7 +31,7 @@ public class Summarize {
 	private static final Path READ_DIR = Paths.get("../../Java L3/");
 
 	public static void main(String[] args) throws Exception {
-		summarize("chess-homework", Paths.get("../../Java L3/"));
+		summarize("commit", Paths.get("../../Java L3/"));
 	}
 
 	public static void summarize(String prefix, Path outDir) throws IOException {

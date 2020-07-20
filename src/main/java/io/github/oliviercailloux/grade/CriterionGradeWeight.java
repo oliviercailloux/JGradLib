@@ -24,8 +24,8 @@ public class CriterionGradeWeight {
 
 	private CriterionGradeWeight(Criterion criterion, IGrade grade, double weight) {
 		this.criterion = checkNotNull(criterion);
-		this.grade = checkNotNull(grade);
-		this.weight = checkNotNull(weight);
+		this.grade = checkNotNull(grade, criterion);
+		this.weight = checkNotNull(weight, criterion);
 	}
 
 	public Criterion getCriterion() {

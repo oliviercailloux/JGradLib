@@ -63,7 +63,7 @@ public class ScoreGrader {
 	public static final double COMPILE_POINTS = 0.5d / 20d;
 
 	static enum LocalCriterion implements Criterion {
-		IMPL, FACTORY, STARTS_AT_TEN, INCREMENT, MULTIPLIES, MULTIPLIES_REALLY, LISTENER;
+		IMPL, FACTORY, STARTS_AT_TEN, INCREMENT, MULTIPLIES, LISTENER;
 
 		@Override
 		public String getName() {
@@ -220,22 +220,17 @@ public class ScoreGrader {
 			{
 				final ScoreManager instance = factory.get();
 				final Try<Integer> startScore = Try.of(() -> instance.getCurrentScore());
-				Try.of(() -> instance.getScoreMultiplier());
-				final Try<ScoreKeeper> scoreMultiplierBy2 = Try.of(() -> instance.getScoreMultiplier());
-				for (int i = 0; i < 147; ++i) {
+				for (int i = 0; i < 149; ++i) {
 					Try.of(() -> instance.getScoreMultiplier());
 				}
 				final Try<ScoreKeeper> scoreMultiplierBy150 = Try.of(() -> instance.getScoreMultiplier());
 				for (int i = 0; i < 12; ++i) {
 					TryVoid.run(() -> instance.incrementScore());
 				}
-				final Try<Integer> scoreMultipliedBy2 = scoreMultiplierBy2.map(m -> m.getCurrentScore());
 				final Try<Integer> scoreMultipliedBy150 = scoreMultiplierBy150.map(m -> m.getCurrentScore());
 				final boolean multiplied = startScore.isSuccess()
 						&& scoreMultipliedBy150.equals(Try.success((startScore.get() + 12) * 150));
 				gradeBuilder.put(LocalCriterion.MULTIPLIES, Mark.binary(multiplied));
-				gradeBuilder.put(LocalCriterion.MULTIPLIES_REALLY,
-						Mark.binary(multiplied && scoreMultipliedBy2.equals(Try.success((startScore.get() + 12) * 2))));
 			}
 			{
 				final ScoreManager instance = factory.get();
@@ -263,8 +258,7 @@ public class ScoreGrader {
 		final ImmutableMap.Builder<Criterion, Double> weightsBuilder = ImmutableMap.builder();
 		weightsBuilder.put(LocalCriterion.STARTS_AT_TEN, 2.5d);
 		weightsBuilder.put(LocalCriterion.INCREMENT, 4d);
-		weightsBuilder.put(LocalCriterion.MULTIPLIES, 4d);
-		weightsBuilder.put(LocalCriterion.MULTIPLIES_REALLY, 1d);
+		weightsBuilder.put(LocalCriterion.MULTIPLIES, 5d);
 		weightsBuilder.put(LocalCriterion.LISTENER, 6d);
 		return WeightingGrade.from(grade, weightsBuilder.build());
 	}

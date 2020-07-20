@@ -50,7 +50,7 @@ public class CsvGrades<K> {
 				s.getLastName().orElse("unknown"), "GitHub username", s.getGitHubUsername());
 		final CsvGrades<StudentOnGitHub> csvGrades = new CsvGrades<>();
 		csvGrades.setIdentityFunction(f).setDenominator(denominator);
-		return csvGrades.toCsv(grades.keySet(), grades::get);
+		return csvGrades.toCsv(grades);
 	}
 
 	private static Stream<Map.Entry<Criterion, IGrade>> childrenAsStream(Entry<Criterion, IGrade> parent) {
@@ -132,15 +132,15 @@ public class CsvGrades<K> {
 		return this;
 	}
 
-	public String toCsv(Set<K> keys, Function<K, ? extends IGrade> grades) {
+	public String toCsv(Map<K, ? extends IGrade> grades) {
+		final Set<K> keys = grades.keySet();
 		checkArgument(!keys.isEmpty(), "Can’t determine identity headers with no keys.");
 
 		final NumberFormat formatter = NumberFormat.getNumberInstance(Locale.ENGLISH);
 		final StringWriter stringWriter = new StringWriter();
 		final CsvWriter writer = new CsvWriter(stringWriter, new CsvWriterSettings());
 
-		final ImmutableMap<K, IGrade> allGrades = keys.stream().collect(ImmutableMap.toImmutableMap(k -> k, grades));
-		final ImmutableMap<K, WeightingGrade> weightingGrades = allGrades.entrySet().stream()
+		final ImmutableMap<K, WeightingGrade> weightingGrades = grades.entrySet().stream()
 				.filter(e -> e.getValue() instanceof WeightingGrade)
 				.collect(ImmutableMap.toImmutableMap(Map.Entry::getKey, e -> (WeightingGrade) e.getValue()));
 		final ImmutableSetMultimap<K, CriterionGradeWeight> perKey = weightingGrades.entrySet().stream()
@@ -169,7 +169,7 @@ public class CsvGrades<K> {
 			final Map<String, String> identity = identityFunction.apply(key);
 			identity.entrySet().forEach(e -> writer.addValue(e.getKey(), e.getValue()));
 
-			final IGrade grade = allGrades.get(key);
+			final IGrade grade = grades.get(key);
 			final ImmutableCollection<CriterionGradeWeight> marks = asTable.row(key).values();
 			for (CriterionGradeWeight cgw : marks) {
 				final Criterion criterion = cgw.getCriterion();

@@ -102,8 +102,6 @@ public class WeightingGrade implements IGrade {
 	 *               sub-grades.
 	 */
 	public static WeightingGrade from(Collection<CriterionGradeWeight> grades, String comment) {
-		final Object gr = grades.iterator().next();
-		LOGGER.debug("Grade: {}, type: {}.", gr, gr.getClass());
 		final ImmutableMap<Criterion, IGrade> gradesByCriterion = grades.stream()
 				.collect(ImmutableMap.toImmutableMap((g) -> g.getCriterion(), (g) -> g.getGrade()));
 		final ImmutableMap<Criterion, Double> weights = grades.stream()

@@ -40,7 +40,7 @@ public class HtmlGrades {
 		return htmler.asHtml(grade);
 	}
 
-	public static Document asHtml(Map<String, IGrade> grades, String generalTitle, double denominator) {
+	public static Document asHtml(Map<String, ? extends IGrade> grades, String generalTitle, double denominator) {
 		final HtmlDocument document = HtmlDocument.newInstance();
 		document.setTitle(generalTitle);
 		document.getBody().appendChild(document.createTitle1(generalTitle));

@@ -3,6 +3,9 @@ package io.github.oliviercailloux.grade.format.json;
 import static com.google.common.base.Preconditions.checkArgument;
 
 import javax.json.JsonObject;
+import javax.json.bind.Jsonb;
+import javax.json.bind.JsonbBuilder;
+import javax.json.bind.JsonbConfig;
 import javax.json.bind.adapter.JsonbAdapter;
 
 import org.slf4j.Logger;
@@ -17,6 +20,7 @@ import io.github.oliviercailloux.grade.Mark;
 import io.github.oliviercailloux.grade.WeightingGrade;
 import io.github.oliviercailloux.json.JsonbUtils;
 import io.github.oliviercailloux.json.PrintableJsonObject;
+import io.github.oliviercailloux.json.PrintableJsonObjectFactory;
 
 public class JsonGrade {
 	@SuppressWarnings("unused")
@@ -32,6 +36,10 @@ public class JsonGrade {
 
 	public static WeightingGrade asWeightingGrade(JsonObject json) {
 		return JsonGrade.usingSophisticatedCriteria().instanceAsWeightingGrade(json);
+	}
+
+	public static IGrade asGrade(String json) {
+		return usingSophisticatedCriteria().instanceAsGrade(PrintableJsonObjectFactory.wrapString(json));
 	}
 
 	public static IGrade asGrade(JsonObject json) {
@@ -51,9 +59,16 @@ public class JsonGrade {
 	}
 
 	private final boolean simpleCriteria;
+	private final Jsonb jsonb;
+
+	private final Jsonb jsonbWithThisAdapter;
 
 	private JsonGrade(boolean simpleCriteria) {
 		this.simpleCriteria = simpleCriteria;
+		jsonb = JsonbBuilder.create(new JsonbConfig()
+				.withAdapters(getCriteriaAdapter(), toCriterionGradeWeightAdapter()).withFormatting(true));
+		jsonbWithThisAdapter = JsonbBuilder
+				.create(new JsonbConfig().withAdapters(getCriteriaAdapter(), instanceAsAdapter()).withFormatting(true));
 	}
 
 	public PrintableJsonObject instanceAsJson(IGrade grade) {
@@ -61,12 +76,11 @@ public class JsonGrade {
 	}
 
 	public Mark instanceAsMark(JsonObject json) {
-		return JsonbUtils.fromJson(json.toString(), Mark.class, getCriteriaAdapter());
+		return jsonb.fromJson(json.toString(), Mark.class);
 	}
 
 	public WeightingGrade instanceAsWeightingGrade(JsonObject json) {
-		final WeightingGrade grade = JsonbUtils.fromJson(json.toString(), WeightingGrade.class, getCriteriaAdapter(),
-				toCriterionGradeWeightAdapter());
+		final WeightingGrade grade = jsonb.fromJson(json.toString(), WeightingGrade.class);
 		final double sourcePoints = json.getJsonNumber("points").doubleValue();
 		checkArgument(DoubleMath.fuzzyEquals(sourcePoints, grade.getPoints(), 1e-4),
 				"Computed " + grade.getPoints() + "; read " + sourcePoints + " - " + json);
@@ -77,7 +91,8 @@ public class JsonGrade {
 		if (!json.containsKey("subGrades")) {
 			return instanceAsMark(json);
 		}
-		return instanceAsWeightingGrade(json);
+		final WeightingGrade weighting = instanceAsWeightingGrade(json);
+		return weighting;
 	}
 
 	public JsonbAdapter<IGrade, JsonObject> instanceAsAdapter() {
@@ -107,8 +122,7 @@ public class JsonGrade {
 			@Override
 			public CriterionGradeWeight adaptFromJson(JsonObject obj) throws Exception {
 				LOGGER.debug("Adapting from: {}.", obj);
-				return JsonbUtils.fromJson(obj.toString(), CriterionGradeWeight.class, criteriaAdapter,
-						instanceAsAdapter());
+				return jsonbWithThisAdapter.fromJson(obj.toString(), CriterionGradeWeight.class);
 			}
 		};
 	}

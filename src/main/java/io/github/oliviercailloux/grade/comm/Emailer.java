@@ -4,16 +4,17 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 import static io.github.oliviercailloux.email.UncheckedMessagingException.MESSAGING_UNCHECKER;
 
+import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.Optional;
 import java.util.Properties;
-import java.util.function.Function;
-import java.util.function.Supplier;
+import java.util.Set;
 import java.util.stream.StreamSupport;
 
+import javax.mail.FetchProfile;
 import javax.mail.Folder;
 import javax.mail.Message;
 import javax.mail.Message.RecipientType;
@@ -38,6 +39,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import com.google.common.collect.MoreCollectors;
+import com.sun.mail.imap.IMAPFolder;
 
 import io.github.oliviercailloux.email.EmailAddressAndPersonal;
 import io.github.oliviercailloux.email.ImapSearchPredicate;
@@ -55,8 +57,14 @@ public class Emailer implements AutoCloseable {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(Emailer.class);
 
+	@SuppressWarnings("unused")
+	private static final Logger LOGGER_JAVAMAIL = LoggerFactory
+			.getLogger(Emailer.class.getCanonicalName() + ".Javamail");
+
+	private static final PrintStream JAVAMAIL_LOGGING_OUTPUT_STREAM = LoggingOutputStream.newInstance(LOGGER_JAVAMAIL);
+
 	public static Emailer instance() {
-		return new Emailer(false);
+		return new Emailer();
 	}
 
 	public static Session getOutlookImapSession() {
@@ -127,11 +135,9 @@ public class Emailer implements AutoCloseable {
 
 	private Session transportSession;
 	private Transport transport;
-	private boolean debug;
 	private Folder saveInto;
 
-	private Emailer(boolean debug) {
-		this.debug = debug;
+	private Emailer() {
 		store = null;
 		openReadFolders = Maps.newLinkedHashMap();
 		openRWFolders = Maps.newLinkedHashMap();
@@ -142,7 +148,8 @@ public class Emailer implements AutoCloseable {
 
 	public void connectToStore(Session session, String username, String password) {
 		try {
-			session.setDebug(debug);
+			session.setDebugOut(JAVAMAIL_LOGGING_OUTPUT_STREAM);
+			session.setDebug(true);
 			store = session.getStore();
 			LOGGER.info("Connecting to store with properties {}.", session.getProperties());
 			MESSAGING_UNCHECKER.call(() -> store.connect(username, password));
@@ -153,11 +160,8 @@ public class Emailer implements AutoCloseable {
 	}
 
 	public URLName getUrlName() {
+		checkState(store != null);
 		return store.getURLName();
-	}
-
-	public void setDebug(boolean debug) {
-		this.debug = debug;
 	}
 
 	public void connectToTransport(Session session, String username, String password) {
@@ -245,7 +249,7 @@ public class Emailer implements AutoCloseable {
 		return openRWFolders.get(folderName);
 	}
 
-	public ImmutableSet<Message> searchIn(ImapSearchPredicate term, Folder folder) {
+	public ImmutableSet<Message> searchIn(Folder folder, ImapSearchPredicate term) {
 		if (term.equals(ImapSearchPredicate.FALSE)) {
 			return ImmutableSet.of();
 		}
@@ -253,12 +257,42 @@ public class Emailer implements AutoCloseable {
 
 		final Message[] asArray = MESSAGING_UNCHECKER.getUsing(() -> folder.search(term.getTerm()));
 		final ImmutableSet<Message> found = ImmutableSet.copyOf(asArray);
+		LOGGER.info("Searched, got: {}.", found.size());
+		fetchHeaders(folder, found);
 		final Optional<Message> notMatching = found.stream().filter(term.getPredicate().negate()).limit(1)
 				.collect(MoreCollectors.toOptional());
+		LOGGER.debug("Verified {}.", found.size());
 		if (notMatching.isPresent()) {
 			throw new VerifyException(getDescription(notMatching.get()));
 		}
 		return found;
+	}
+
+	public void fetchHeaders(Folder folder, Set<Message> messages) {
+		fetch(folder, messages, false);
+	}
+
+	public void fetchMessages(Folder folder, Set<Message> messages) {
+		fetch(folder, messages, true);
+	}
+
+	private void fetch(Folder folder, Set<Message> messages, boolean whole) {
+		final FetchProfile fp = new FetchProfile();
+		fp.add(FetchProfile.Item.CONTENT_INFO);
+		fp.add(FetchProfile.Item.ENVELOPE);
+		fp.add(FetchProfile.Item.FLAGS);
+		fp.add(FetchProfile.Item.SIZE);
+		fp.add(IMAPFolder.FetchProfileItem.HEADERS);
+		fp.add(IMAPFolder.FetchProfileItem.INTERNALDATE);
+		if (whole) {
+			fp.add(IMAPFolder.FetchProfileItem.MESSAGE);
+		}
+		try {
+			folder.fetch(messages.toArray(new Message[messages.size()]), fp);
+			LOGGER.debug("Fetched {} " + (whole ? "messages" : "headers") + ".", messages.size());
+		} catch (MessagingException e) {
+			throw new IllegalStateException(e);
+		}
 	}
 
 	private MimeMessage getMessage(Email email, InternetAddress fromAddress) {

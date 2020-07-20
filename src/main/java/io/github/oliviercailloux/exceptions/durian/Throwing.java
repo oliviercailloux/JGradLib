@@ -16,12 +16,15 @@
 package io.github.oliviercailloux.exceptions.durian;
 
 /**
+ * <p>
+ * Variations on the standard functional interfaces which throw exceptions.
+ * </p>
+ * <p>
  * Copied from
- * https://github.com/diffplug/durian/blob/99100976d27a5ebec74a0a7df48fc23de822fa00/src/com/diffplug/common/base/Errors.java,
- * only added a @SuppressWarnings and removed some annotations that prevented
- * compilation.
+ * https://github.com/diffplug/durian/blob/99100976d27a5ebec74a0a7df48fc23de822fa00/src/com/diffplug/common/base/Throwing.java,
+ * only removed some annotations that prevented compilation.
+ * </p>
  */
-@SuppressWarnings("all")
 public interface Throwing {
 	/**
 	 * Variations on the standard functional interfaces which throw a specific

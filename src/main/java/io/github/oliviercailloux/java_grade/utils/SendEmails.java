@@ -44,7 +44,7 @@ public class SendEmails {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(SendEmails.class);
 
-	private static final String PREFIX = "scorers";
+	private static final String PREFIX = "recap";
 	private static final Path WORK_DIR = Path.of("../../Java L3/");
 
 	public static void main(String[] args) throws Exception {
@@ -61,7 +61,7 @@ public class SendEmails {
 		final Type type = new HashMap<String, IGrade>() {
 		}.getClass().getGenericSuperclass();
 		final Map<String, IGrade> gradesByString = JsonbUtils.fromJson(
-				Files.readString(WORK_DIR.resolve("all grades " + PREFIX + ".json")), type, JsonGrade.asAdapter());
+				Files.readString(WORK_DIR.resolve("grades " + PREFIX + ".json")), type, JsonGrade.asAdapter());
 		final ImmutableMap<EmailAddressAndPersonal, IGrade> gradesByEmail = gradesByString.entrySet().stream()
 				.collect(ImmutableMap.toImmutableMap(e -> GradesInEmails.asAddress(usernames.get(e.getKey())),
 						Map.Entry::getValue));
