@@ -82,7 +82,7 @@ class GitClonerTests {
 
 		final Path sshPath = Utils.getTempDirectory()
 				.resolve("testrel cloned using ssh " + Utils.ISO_BASIC_UTC_FORMATTER.format(Instant.now()));
-		cloner.download(GitUri.fromGitUri(URI.create("ssh:git@github.com:oliviercailloux/testrel.git")), sshPath);
+		cloner.download(GitUri.fromGitUri(URI.create("ssh://git@github.com/oliviercailloux/testrel.git")), sshPath);
 		assertEquals(historyFromHttpsClone, GitUtils.getHistory(sshPath.resolve(".git").toFile()));
 
 		final Path filePath = Utils.getTempDirectory().resolve("testrel cloned using file transport to ssh clone "
@@ -124,10 +124,7 @@ class GitClonerTests {
 	void testCloneBare() throws Exception {
 		final Path gitDirPath = Utils.getTempDirectory()
 				.resolve("testrel cloned " + Utils.ISO_BASIC_UTC_FORMATTER.format(Instant.now()));
-		new GitCloner().downloadBare(GitUri.fromGitUrl("ssh:git@github.com/~git/oliviercailloux/testrel.git"),
-				gitDirPath);
-		new GitCloner().downloadBare(GitUri.fromGitUri(URI.create("ssh:git@github.com:oliviercailloux/testrel.git")),
-				gitDirPath);
+		new GitCloner().downloadBare(GitUri.fromGitUrl("git@github.com:oliviercailloux/testrel.git"), gitDirPath);
 		assertTrue(Files.exists(gitDirPath.resolve("refs")));
 		assertFalse(Files.exists(gitDirPath.resolve(".git")));
 	}

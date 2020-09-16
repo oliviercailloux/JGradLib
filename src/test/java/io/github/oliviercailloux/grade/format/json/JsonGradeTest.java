@@ -8,6 +8,7 @@ import java.nio.charset.StandardCharsets;
 
 import javax.json.Json;
 import javax.json.JsonObject;
+import javax.json.bind.JsonbException;
 
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
@@ -116,8 +117,7 @@ public class JsonGradeTest {
 		final PrintableJsonObject jsonComplexGrade = PrintableJsonObjectFactory.wrapPrettyPrintedString(Resources
 				.toString(getClass().getResource("ComplexGradeWithInvalidClass.json"), StandardCharsets.UTF_8));
 
-		final IllegalStateException exc = assertThrows(IllegalStateException.class,
-				() -> JsonGrade.asGrade(jsonComplexGrade));
+		final Exception exc = assertThrows(JsonbException.class, () -> JsonGrade.asGrade(jsonComplexGrade));
 		assertTrue(Throwables.getCausalChain(exc).stream().anyMatch(t -> t instanceof ClassNotFoundException));
 
 		final IGrade read = JsonGrade.usingSimpleCriteria().instanceAsGrade(jsonComplexGrade);

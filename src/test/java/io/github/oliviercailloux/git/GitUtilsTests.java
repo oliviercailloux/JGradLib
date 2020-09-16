@@ -63,7 +63,7 @@ class GitUtilsTests {
 
 	@Test
 	void testUsingBareClone() throws Exception {
-		final GitUri testRel = GitUri.fromGitUri(URI.create("ssh:git@github.com:oliviercailloux/testrel.git"));
+		final GitUri testRel = GitUri.fromGitUri(URI.create("ssh://git@github.com/oliviercailloux/testrel.git"));
 		final Path repoBarePath = Utils.getTempDirectory().resolve("testrel cloned bare " + Instant.now());
 		new GitCloner().downloadBare(testRel, repoBarePath);
 		final GitLocalHistory history = GitUtils.getHistory(repoBarePath.toFile());
@@ -76,7 +76,7 @@ class GitUtilsTests {
 
 	@Test
 	void testUsingClone() throws Exception {
-		final GitUri testRel = GitUri.fromGitUri(URI.create("ssh:git@github.com:oliviercailloux/testrel.git"));
+		final GitUri testRel = GitUri.fromGitUri(URI.create("ssh://git@github.com/oliviercailloux/testrel.git"));
 		final Path workTreePath = Utils.getTempDirectory().resolve("testrel cloned " + Instant.now());
 		final Path gitDir = workTreePath.resolve(".git");
 		new GitCloner().download(testRel, workTreePath);
