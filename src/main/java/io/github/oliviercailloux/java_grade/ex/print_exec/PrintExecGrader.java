@@ -33,7 +33,6 @@ import com.google.common.collect.MoreCollectors;
 import com.google.common.collect.Streams;
 import com.google.common.graph.ImmutableGraph;
 
-import io.github.oliviercailloux.bytecode.Compiler;
 import io.github.oliviercailloux.git.GitCloner;
 import io.github.oliviercailloux.git.GitLocalHistory;
 import io.github.oliviercailloux.git.GitUri;
@@ -56,6 +55,7 @@ import io.github.oliviercailloux.grade.format.json.JsonGrade;
 import io.github.oliviercailloux.grade.markers.MarkHelper;
 import io.github.oliviercailloux.grade.mycourse.json.StudentsReaderFromJson;
 import io.github.oliviercailloux.java_grade.JavaCriterion;
+import io.github.oliviercailloux.java_grade.bytecode.Compiler;
 import io.github.oliviercailloux.java_grade.bytecode.SourceScanner;
 import io.github.oliviercailloux.java_grade.bytecode.SourceScanner.SourceClass;
 import io.github.oliviercailloux.java_grade.testers.JavaMarkHelper;

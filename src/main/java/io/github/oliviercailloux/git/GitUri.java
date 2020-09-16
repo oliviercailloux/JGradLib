@@ -3,6 +3,7 @@ package io.github.oliviercailloux.git;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
+import static com.google.common.base.Verify.verify;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -24,53 +25,31 @@ import io.github.oliviercailloux.utils.Utils;
  * translated to an absolute hierarchical url: an absolute url that is
  * hierarchical has an absolute path, see URI.
  *
- * This accepts the scp-like syntax with path starting with :, but convert it to
- * an absolute path using the username expansion /~user as accepted by git and
- * as requested to be a valid URL, for the same reason.
+ * This accepts the scp-like syntax with path starting with :, but converts it
+ * to a valid URL using the (git standard) ssh:// format.
  *
  * Note that if ssh://user@stuff/~user, the name is ~user. (To test.)
  **
- * Does not accept ?git-scheme=ssh on an opaque uri.
- *
- * @author Olivier Cailloux
- *
+ * The only git standard “URL” (https://git-scm.com/docs/git-clone#_git_urls)
+ * that is not accepted as a Java URI (because it is not an RFC valid URI) is
+ * the SCP format, but it can be converted to an absolute hierarchical URI.
+ * Also, relative file paths are rejected (although they are acceptable “git
+ * URLs” per git doc). Thus, this object always represents an absolute
+ * hierarchical URI.
  */
 public class GitUri {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(GitUri.class);
-
-	public static final String GIT_SCHEME_QUERY_PARAMETER = "git-scheme";
-	private final GitScheme gitScheme;
-	private final String userInfo;
-	private final String repoHost;
-	private final int repoPort;
-	private final String repoPath;
-	private final String repoName;
 
 	public static GitUri fromGitUri(URI gitUri) {
 		final String user;
 		final String host;
 		final int port;
 		final String path;
-		if (gitUri.isOpaque()) {
-			final URIish uriish;
-			try {
-				uriish = new URIish(gitUri.getSchemeSpecificPart());
-			} catch (URISyntaxException e) {
-				throw new IllegalArgumentException(e);
-			}
-			user = uriish.getUser();
-			checkArgument(user != null);
-			host = Strings.nullToEmpty(uriish.getHost());
-			port = uriish.getPort();
-			path = uriish.getPath();
-			checkArgument(path != null);
-		} else {
-			user = Strings.nullToEmpty(gitUri.getUserInfo());
-			host = Strings.nullToEmpty(gitUri.getHost());
-			port = gitUri.getPort();
-			path = Strings.nullToEmpty(gitUri.getPath());
-		}
+		user = Strings.nullToEmpty(gitUri.getUserInfo());
+		host = Strings.nullToEmpty(gitUri.getHost());
+		port = gitUri.getPort();
+		path = Strings.nullToEmpty(gitUri.getPath());
 		return new GitUri(GitScheme.valueOf(gitUri.getScheme().toUpperCase()), user, host, port, path);
 	}
 
@@ -101,12 +80,19 @@ public class GitUri {
 			uris = new GitUri(GitScheme.SSH, Strings.nullToEmpty(uriish.getUser()),
 					Strings.nullToEmpty(uriish.getHost()), uriish.getPort(), uriish.getPath());
 		} else {
-			assert localPathUrl;
+			verify(localPathUrl);
 			uris = new GitUri(GitScheme.FILE, "", "", -1, gitUrl);
 		}
 
 		return uris;
 	}
+
+	private final GitScheme gitScheme;
+	private final String userInfo;
+	private final String repoHost;
+	private final int repoPort;
+	private final String repoPath;
+	private final String repoName;
 
 	GitUri(GitScheme gitScheme, String userInfo, String host, int port, String repoPath) {
 		this.gitScheme = checkNotNull(gitScheme);
@@ -185,7 +171,7 @@ public class GitUri {
 			Verify.verify(gitScheme == GitScheme.SSH);
 			Verify.verify(!userInfo.isEmpty());
 			Verify.verify(!repoPath.isEmpty());
-			absolutePath = "/~" + userInfo + "/" + repoPath;
+			absolutePath = "/" + repoPath;
 		} else {
 			absolutePath = repoPath;
 		}

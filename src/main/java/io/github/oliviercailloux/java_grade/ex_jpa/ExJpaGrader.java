@@ -50,7 +50,6 @@ import org.eclipse.jgit.revwalk.RevCommit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.diffplug.common.base.Functions;
 import com.google.common.base.Predicates;
 import com.google.common.base.Verify;
 import com.google.common.collect.ImmutableList;
@@ -203,8 +202,8 @@ public class ExJpaGrader {
 						addServletSourcer.existsAndAllMatch(containsPost)));
 
 		gradeBuilder.put(NOT_POLLUTED,
-				Mark.binary(anySourcer.existsAndAllMatch(Predicates.contains(Pattern.compile("Auto-generated"))
-						.negate().and(Predicates.contains(Pattern.compile("@see HttpServlet#doGet")).negate()))));
+				Mark.binary(anySourcer.existsAndAllMatch(Predicates.contains(Pattern.compile("Auto-generated")).negate()
+						.and(Predicates.contains(Pattern.compile("@see HttpServlet#doGet")).negate()))));
 		gradeBuilder.put(EXC, Mark.binary(anySourcer.noneMatch(
 				Predicates.contains(Pattern.compile("printStackTrace")).or(Predicates.containsPattern("catch\\(")))));
 
@@ -233,8 +232,8 @@ public class ExJpaGrader {
 		gradeBuilder.put(PERSISTENCE, Mark.binary(multiPersistence.getContents()
 				.containsKey(mavenRelativeRoot.resolve(Paths.get("src/main/resources/META-INF/persistence.xml")))));
 
-		gradeBuilder.put(PERSISTENCE_CONTENTS, Mark.binary(
-				multiPersistence.existsAndAllMatch(Predicates.containsPattern("persistence version=\"2.1\""))));
+		gradeBuilder.put(PERSISTENCE_CONTENTS, Mark
+				.binary(multiPersistence.existsAndAllMatch(Predicates.containsPattern("persistence version=\"2.1\""))));
 //						multiPersistence.existsAndNoneMatch(Predicates.containsPattern("RESOURCE_LOCAL")),
 //						multiPersistence.existsAndAllMatch(Predicates.containsPattern("drop-and-create")),
 //						multiPersistence.existsAndAllMatch(Predicates.containsPattern("hibernate.show_sql")
@@ -244,8 +243,7 @@ public class ExJpaGrader {
 
 		gradeBuilder.put(USING_EM, Mark.binary(!mainSourcer.asFileContents().isEmpty() && mainSourcer
 				.anyMatch(Predicates.contains(Pattern.compile("@PersistenceContext" + "[^;]+" + "EntityManager ")))));
-		gradeBuilder.put(TRANSACTIONS,
-				Mark.binary(anySourcer.anyMatch(Predicates.containsPattern("@Transactional"))));
+		gradeBuilder.put(TRANSACTIONS, Mark.binary(anySourcer.anyMatch(Predicates.containsPattern("@Transactional"))));
 		gradeBuilder.put(ADD_LIMIT,
 				Mark.binary(addServletSourcer.existsAndAllMatch(Predicates.containsPattern("getContentLength"))));
 
@@ -271,9 +269,8 @@ public class ExJpaGrader {
 		gradeBuilder.put(ADD_COMMENTS, Mark.binary(!addServletSourcer.asFileContents().isEmpty()));
 
 		final ImmutableMap<Criterion, IGrade> subGrades = gradeBuilder.build();
-		final ImmutableMap<Criterion, Double> weights = Arrays.stream(ExJpaCriterion.values())
-				.collect(ImmutableMap.toImmutableMap(Functions.identity(),
-						(c) -> c.getMaxPoints() == 0d ? c.getMinPoints() : c.getMaxPoints()));
+		final ImmutableMap<Criterion, Double> weights = Arrays.stream(ExJpaCriterion.values()).collect(ImmutableMap
+				.toImmutableMap(c -> c, (c) -> c.getMaxPoints() == 0d ? c.getMinPoints() : c.getMaxPoints()));
 		return WeightingGrade.from(subGrades, weights);
 	}
 

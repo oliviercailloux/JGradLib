@@ -63,11 +63,9 @@ class GitUriTests {
 	@Test
 	void testUrisScp() throws Exception {
 		final GitUri uris = GitUri.fromGitUrl("git@github.com:username/repo.git");
-		assertEquals(URI.create("ssh://git@github.com/~git/username/repo.git"), uris.getGitHierarchicalUri());
+		assertEquals(URI.create("ssh://git@github.com/username/repo.git"), uris.getGitHierarchicalUri());
 		assertEquals("git@github.com:username/repo.git", uris.getGitString());
 		assertEquals("repo", uris.getRepositoryName());
-		assertEquals(uris, GitUri.fromGitUri(URI.create("ssh:git@github.com:username/repo.git")));
-		assertEquals(uris, GitUri.fromGitUrl("ssh:git@github.com:username/repo.git"));
 	}
 
 	@Test

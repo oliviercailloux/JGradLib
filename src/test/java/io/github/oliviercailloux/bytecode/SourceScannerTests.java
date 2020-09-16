@@ -1,4 +1,4 @@
-package io.github.oliviercailloux.java_grade.bytecode;
+package io.github.oliviercailloux.bytecode;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 

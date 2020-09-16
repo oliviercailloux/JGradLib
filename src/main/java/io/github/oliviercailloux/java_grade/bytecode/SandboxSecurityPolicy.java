@@ -1,4 +1,4 @@
-package io.github.oliviercailloux.bytecode;
+package io.github.oliviercailloux.java_grade.bytecode;
 
 import java.security.Permission;
 import java.security.Policy;

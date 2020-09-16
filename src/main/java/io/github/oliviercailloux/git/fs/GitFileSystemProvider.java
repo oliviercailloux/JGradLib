@@ -10,7 +10,6 @@ import java.nio.file.CopyOption;
 import java.nio.file.DirectoryStream;
 import java.nio.file.DirectoryStream.Filter;
 import java.nio.file.FileStore;
-import java.nio.file.FileSystem;
 import java.nio.file.FileSystemAlreadyExistsException;
 import java.nio.file.FileSystemNotFoundException;
 import java.nio.file.Files;
@@ -43,10 +42,9 @@ public class GitFileSystemProvider extends FileSystemProvider {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(GitFileSystemProvider.class);
 
-	public static final String GIT_FOLDER = "GIT_FOLDER";
 	public static final String SCHEME = "gitfs";
 
-	public static Path getGitDir(URI gitFsUri) {
+	private static Path getGitDir(URI gitFsUri) {
 		checkArgument(gitFsUri.isAbsolute());
 		checkArgument(gitFsUri.getScheme().equalsIgnoreCase(SCHEME));
 		checkArgument(!gitFsUri.isOpaque());
@@ -62,8 +60,11 @@ public class GitFileSystemProvider extends FileSystemProvider {
 
 	private final Map<String, GitRepoFileSystem> cachedRepoFileSystems = new LinkedHashMap<>();
 
+	/**
+	 * Zero argument constructor to satisfy the standard Java service-provider
+	 * loading mechanism.
+	 */
 	public GitFileSystemProvider() {
-		/** Default constructor. */
 	}
 
 	@Override
@@ -78,21 +79,27 @@ public class GitFileSystemProvider extends FileSystemProvider {
 	}
 
 	@Override
-	public FileSystem newFileSystem(Path path, Map<String, ?> env) throws IOException {
-		throw new UnsupportedOperationException();
+	public GitDirFileSystem newFileSystem(Path gitDir, Map<String, ?> env) throws IOException {
+		return newFileSystemFromGitDir(gitDir);
 	}
 
-	public GitDirFileSystem newFileSystemFromGitDir(Path gitDir) throws IOException {
+	public GitDirFileSystem newFileSystemFromGitDir(Path gitDir) throws UnsupportedOperationException, IOException {
 		if (cachedFileSystems.containsKey(gitDir)) {
 			throw new FileSystemAlreadyExistsException();
 		}
 		if (!Files.exists(gitDir)) {
-			throw new IOException(String.format("Directory %s not found.", gitDir));
+			/**
+			 * Not clear whether the specs mandate UnsupportedOperationException here, but I
+			 * rather follow the observed behavior of ZipFileSystemProvider.
+			 */
+			throw new FileSystemNotFoundException(String.format("Directory %s not found.", gitDir));
 		}
 		try (Repository repo = new FileRepositoryBuilder().setGitDir(gitDir.toFile()).build()) {
 			if (!repo.getObjectDatabase().exists()) {
-				throw new IOException(String.format("Object database not found in %s.", gitDir));
+				throw new UnsupportedOperationException(String.format("Object database not found in %s.", gitDir));
 			}
+		} catch (IOException e) {
+			throw new UnsupportedOperationException(e);
 		}
 		final GitDirFileSystem newFs = GitDirFileSystem.given(this, gitDir);
 		cachedFileSystems.put(gitDir, newFs);

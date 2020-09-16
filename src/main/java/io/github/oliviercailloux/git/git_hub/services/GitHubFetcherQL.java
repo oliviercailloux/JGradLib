@@ -1,6 +1,7 @@
 package io.github.oliviercailloux.git.git_hub.services;
 
 import static com.google.common.base.Verify.verify;
+import static io.github.oliviercailloux.exceptions.Unchecker.IO_UNCHECKER;
 import static java.util.Objects.requireNonNull;
 
 import java.nio.charset.StandardCharsets;
@@ -27,7 +28,6 @@ import org.eclipse.jgit.lib.ObjectId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.diffplug.common.base.Errors;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.ImmutableList;
@@ -55,7 +55,7 @@ public class GitHubFetcherQL implements AutoCloseable {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(GitHubFetcherQL.class);
 
-	private static final Function<String, String> RESOURCE_READER = Errors.rethrow()
+	private static final Function<String, String> RESOURCE_READER = IO_UNCHECKER
 			.wrapFunction((n) -> Resources.toString(GitHubFetcherQL.class.getResource(n), StandardCharsets.UTF_8));
 
 	public static GitHubFetcherQL using(GitHubRealToken token) {

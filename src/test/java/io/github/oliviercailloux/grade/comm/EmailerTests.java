@@ -365,7 +365,7 @@ public class EmailerTests {
 			final ImmutableSet<Message> found = ImmutableSet.copyOf(asArray);
 			/** Should be empty. */
 			assertFalse(found.isEmpty());
-			LOGGER.debug(Emailer.getDescription(found.iterator().next()));
+			LOGGER.info(Emailer.getDescription(found.iterator().next()));
 		}
 	}
 
@@ -397,7 +397,7 @@ public class EmailerTests {
 	}
 
 	@Test
-	void testZohoBugAndOr() throws Exception {
+	void testZohoAndOr() throws Exception {
 		try (Emailer emailer = Emailer.instance()) {
 //			emailer.setDebug(true);
 			emailer.connectToStore(Emailer.getZohoImapSession(), EmailerDauphineHelper.USERNAME_OTHERS,
@@ -427,10 +427,10 @@ public class EmailerTests {
 				/**
 				 * Searches for SEARCH SUBJECT "grade commit" OR TO
 				 * olivier.cailloux@lamsade.dauphine.fr TO olivier.cailloux@notexistdauphine.fr
-				 * ALL
+				 * ALL. Used to fail (return zero matches) but was corrected following
+				 * discussions with Zoho team somewhere around July 2020.
 				 */
-				/** Should be 1. */
-				assertEquals(0, found.size());
+				assertEquals(1, found.size());
 			}
 		}
 	}

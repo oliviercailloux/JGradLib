@@ -9,8 +9,6 @@ import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.diffplug.common.base.Predicates;
-
 import io.github.oliviercailloux.java_grade.testers.JavaMarkHelper;
 
 public class MarkingPredicates {
@@ -28,7 +26,7 @@ public class MarkingPredicates {
 	}
 
 	public static Predicate<Path> pathContainsOnce(Pattern pattern) {
-		return Predicates.compose(containsOnce(pattern), JavaMarkHelper::getContentOrEmpty);
+		return p -> containsOnce(pattern).test(JavaMarkHelper.getContentOrEmpty(p));
 	}
 
 	public static Predicate<Path> startsWithPathRelativeTo(Optional<Path> relativeTo, Path start) {

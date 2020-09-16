@@ -124,6 +124,8 @@ class GitClonerTests {
 	void testCloneBare() throws Exception {
 		final Path gitDirPath = Utils.getTempDirectory()
 				.resolve("testrel cloned " + Utils.ISO_BASIC_UTC_FORMATTER.format(Instant.now()));
+		new GitCloner().downloadBare(GitUri.fromGitUrl("ssh:git@github.com/~git/oliviercailloux/testrel.git"),
+				gitDirPath);
 		new GitCloner().downloadBare(GitUri.fromGitUri(URI.create("ssh:git@github.com:oliviercailloux/testrel.git")),
 				gitDirPath);
 		assertTrue(Files.exists(gitDirPath.resolve("refs")));

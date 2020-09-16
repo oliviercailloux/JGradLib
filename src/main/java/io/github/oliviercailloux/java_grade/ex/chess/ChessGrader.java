@@ -31,8 +31,6 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.jimfs.Configuration;
 import com.google.common.jimfs.Jimfs;
 
-import io.github.oliviercailloux.bytecode.Compiler;
-import io.github.oliviercailloux.bytecode.Compiler.CompilationResult;
 import io.github.oliviercailloux.exceptions.Try;
 import io.github.oliviercailloux.exceptions.TryVoid;
 import io.github.oliviercailloux.git.GitCloner;
@@ -54,6 +52,8 @@ import io.github.oliviercailloux.grade.format.json.JsonGrade;
 import io.github.oliviercailloux.java_grade.GraderOrchestrator;
 import io.github.oliviercailloux.java_grade.JavaCriterion;
 import io.github.oliviercailloux.java_grade.JavaGradeUtils;
+import io.github.oliviercailloux.java_grade.bytecode.Compiler;
+import io.github.oliviercailloux.java_grade.bytecode.Compiler.CompilationResult;
 import io.github.oliviercailloux.java_grade.testers.JavaMarkHelper;
 import io.github.oliviercailloux.java_grade.utils.Summarize;
 import io.github.oliviercailloux.json.JsonbUtils;

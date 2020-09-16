@@ -24,12 +24,12 @@ import java.util.stream.Collectors;
 
 import com.google.common.collect.ImmutableList;
 
-import io.github.oliviercailloux.bytecode.Instanciator;
-import io.github.oliviercailloux.bytecode.RestrictingClassLoader;
 import io.github.oliviercailloux.git.FileContent;
 import io.github.oliviercailloux.grade.GradingException;
 import io.github.oliviercailloux.grade.IGrade;
 import io.github.oliviercailloux.grade.Mark;
+import io.github.oliviercailloux.java_grade.bytecode.Instanciator;
+import io.github.oliviercailloux.java_grade.bytecode.RestrictingClassLoader;
 
 public class JavaGradeUtils {
 	/**

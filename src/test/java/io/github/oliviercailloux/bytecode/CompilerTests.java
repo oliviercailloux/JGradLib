@@ -31,7 +31,8 @@ import com.google.common.collect.Iterables;
 import com.google.common.jimfs.Configuration;
 import com.google.common.jimfs.Jimfs;
 
-import io.github.oliviercailloux.bytecode.Compiler.CompilationResult;
+import io.github.oliviercailloux.java_grade.bytecode.Compiler;
+import io.github.oliviercailloux.java_grade.bytecode.Compiler.CompilationResult;
 
 class CompilerTests {
 	@SuppressWarnings("unused")

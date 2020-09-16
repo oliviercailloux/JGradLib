@@ -2,6 +2,7 @@ package io.github.oliviercailloux.grade;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Verify.verify;
 
 import java.util.Collection;
 import java.util.List;
@@ -149,14 +150,15 @@ public class WeightingGrade implements IGrade {
 		checkArgument(subGrades.keySet().equals(weights.keySet()),
 				String.format("Sub grades have keys: %s, weights have keys: %s, diff: %s", subGrades.keySet(),
 						weights.keySet(), Sets.symmetricDifference(subGrades.keySet(), weights.keySet())));
-		final double sumPosWeights = weights.values().stream().filter((d) -> d > 0d)
-				.collect(Collectors.summingDouble((d) -> d));
+		final double sumPosWeights = weights.values().stream().filter(d -> d > 0d)
+				.collect(Collectors.summingDouble(d -> d));
+		verify(sumPosWeights > 0d);
 		/**
 		 * I iterate over the sub grades key set in order to guarantee iteration order
 		 * of the weights reflects the order of the sub-grades.
 		 */
-		this.weights = subGrades.keySet().stream().collect(ImmutableMap.toImmutableMap((c) -> c,
-				(c) -> weights.get(c) > 0d ? weights.get(c) / sumPosWeights : weights.get(c)));
+		this.weights = subGrades.keySet().stream().collect(ImmutableMap.toImmutableMap(c -> c,
+				c -> weights.get(c) > 0d ? weights.get(c) / sumPosWeights : weights.get(c)));
 		this.subGrades = ImmutableMap.copyOf(subGrades);
 		this.comment = checkNotNull(comment);
 	}

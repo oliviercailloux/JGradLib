@@ -1,4 +1,4 @@
-package io.github.oliviercailloux.bytecode;
+package io.github.oliviercailloux.java_grade.bytecode;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
