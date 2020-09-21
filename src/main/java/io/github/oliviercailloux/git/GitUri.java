@@ -22,6 +22,7 @@ import com.google.common.base.VerifyException;
 import com.google.common.primitives.Booleans;
 
 import io.github.oliviercailloux.git.fs.GitFileSystemProvider;
+import io.github.oliviercailloux.git.fs.GitScheme;
 import io.github.oliviercailloux.utils.Utils;
 
 /**
@@ -68,8 +69,8 @@ import io.github.oliviercailloux.utils.Utils;
  * <li>any Git URL except for “relative path” Git URLs (thus GitHub-popular URLs
  * such as <code>git@github.com:oliviercailloux/JARiS.git</code> are accepted),
  * or</li>
- * <li>any absolute hierarchical URI with an absolute path using a scheme known
- * to Git (see examples above).</li>
+ * <li>any absolute hierarchical URI using a {@link GitScheme scheme} known to
+ * Git (see examples above).</li>
  * </ul>
  *
  * <h2>Rationale</h2>
@@ -95,8 +96,10 @@ import io.github.oliviercailloux.utils.Utils;
  * and leveraging the relevant standards.</dd>
  * </dl>
  *
- * <h2>Some definitions</h2> To understand precisely the syntaxes accepted by
- * this class, some definitions are useful.
+ * <h2>Some definitions</h2>
+ *
+ * To understand precisely the syntaxes accepted by this class, some definitions
+ * are useful.
  * <dl>
  * <dt><a href="https://git-scm.com/docs/git-clone#_git_urls">Git URL</a></dt>
  * <dd>A Git URL is a string that represents a (local or remote) git repository
