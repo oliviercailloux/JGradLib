@@ -21,6 +21,7 @@ import com.google.common.base.Verify;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.MoreCollectors;
 
+import io.github.oliviercailloux.git.GitScheme;
 import io.github.oliviercailloux.utils.Utils;
 
 /**

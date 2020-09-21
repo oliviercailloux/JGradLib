@@ -9,7 +9,6 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.Path;
 import java.util.Objects;
-import java.util.regex.Pattern;
 
 import org.eclipse.jgit.transport.URIish;
 import org.slf4j.Logger;
@@ -19,16 +18,14 @@ import com.google.common.base.MoreObjects;
 import com.google.common.base.Strings;
 import com.google.common.base.Verify;
 import com.google.common.base.VerifyException;
-import com.google.common.primitives.Booleans;
 
 import io.github.oliviercailloux.git.fs.GitFileSystemProvider;
-import io.github.oliviercailloux.git.fs.GitScheme;
 import io.github.oliviercailloux.utils.Utils;
 
 /**
  * A location of a (local or remote) git repository.
  *
- * <h2>Recommended usage</h2>
+ * <h1>Recommended usage</h1>
  * <ol>
  * <li>Obtain an absolute, hierarchical URI that represents your git
  * repository.</li>
@@ -45,7 +42,7 @@ import io.github.oliviercailloux.utils.Utils;
  * is furthermore also a valid Git URL (except for the version with no
  * authority). You can obtain a URI to a local path with {@link Path#toUri()}.
  *
- * <h2>Obtaining an absolute hierarchical URI</h2>
+ * <h1>Obtaining an absolute hierarchical URI</h1>
  *
  * Any instance created by this class represents a Git repository location that
  * can be converted to an absolute hierarchical URI, even if the instance was
@@ -62,7 +59,7 @@ import io.github.oliviercailloux.utils.Utils;
  * <code>file:///absolute/path</code> absolute hierarchical URI.</li>
  * </ul>
  *
- * <h2>Other possible uses</h2>
+ * <h1>Other possible uses</h1>
  *
  * You may create an instance on the basis of:
  * <ul>
@@ -73,7 +70,7 @@ import io.github.oliviercailloux.utils.Utils;
  * Git (see examples above).</li>
  * </ul>
  *
- * <h2>Rationale</h2>
+ * <h1>Rationale</h1>
  *
  * <dl>
  * <dt>Rejecting relative path Git URLs</dt>
@@ -96,22 +93,23 @@ import io.github.oliviercailloux.utils.Utils;
  * and leveraging the relevant standards.</dd>
  * </dl>
  *
- * <h2>Some definitions</h2>
+ * <h1>Some definitions</h1>
  *
  * To understand precisely the syntaxes accepted by this class, some definitions
  * are useful.
  * <dl>
  * <dt><a href="https://git-scm.com/docs/git-clone#_git_urls">Git URL</a></dt>
- * <dd>A Git URL is a string that represents a (local or remote) git repository
- * and that is accepted by the git command line, as defined in the official
- * manual. Any Git URL corresponds to exactly one of following kinds.
+ * <dd>A Git URL is a non-empty string that represents a (local or remote) git
+ * repository and that is accepted by the git command line, as defined in the
+ * official manual. Any Git URL corresponds to exactly one of following kinds
+ * (these definitions are mine).
  * <dl>
  * <dt>Scheme</dt>
  * <dd>A “scheme” Git URL starts with the string “ssh://”, “git://”, “http://”,
  * “https://”, “ftp://”, “ftps://” or “file://”.</dd>
  * <dt>SCP</dt>
- * <dd>A “SCP” Git URL contains a colon and no slash before the first
- * colon.</dd>
+ * <dd>A “SCP” Git URL contains a colon, no slash before the first colon, and
+ * does not contain two slashes just after the first colon.</dd>
  * <dt>Absolute path</dt>
  * <dd>An “absolute path” Git URL starts with a slash.</dd>
  * <dt>Relative path</dt>
@@ -119,6 +117,7 @@ import io.github.oliviercailloux.utils.Utils;
  * a colon, contains a slash before the first colon.</dd>
  * </ul>
  * </dl>
+ * See {@link GitUrlKind} to detect which kind you face.
  * <dt>Java {@link URI}</dt>
  * <dd>A URI as per the Java-interpretation of RFC 2396 (including the
  * interpretation that an empty authority is permitted). This class is
@@ -138,6 +137,12 @@ import io.github.oliviercailloux.utils.Utils;
  * mandates that an absolute hierarchical URI has an absolute path.</dd>
  * </dl>
  *
+ * <h1>Comparison</h1>
+ *
+ * Compared to {@link URIish}, this class is immutable, rejects relative path
+ * Git URLs, guarantees convertibility to an absolute hierarchical URI, accepts
+ * URIs as input, will always return a scheme when asked for one (and possibly
+ * more differences).
  */
 public class GitUri {
 	@SuppressWarnings("unused")
@@ -159,24 +164,6 @@ public class GitUri {
 		return new GitUri(GitScheme.valueOf(gitUri.getScheme().toUpperCase()), user, host, port, path);
 	}
 
-	private static enum GitUrlKind {
-		SCHEME, SCP, PATH;
-
-		private static final Pattern SCHEME_PATTERN = Pattern.compile("(ssh|git|https?|ftps?|file)://.*");
-		private static final Pattern SCP_PATTERN = Pattern.compile("[^/]*:/?[^/].*");
-		private static final Pattern ABSOLUTE_PATH_PATTERN = Pattern.compile("/.*");
-
-		public static GitUrlKind given(String gitUrl) {
-			final boolean scheme = SCHEME_PATTERN.asMatchPredicate().test(gitUrl);
-			final boolean scp = SCP_PATTERN.asMatchPredicate().test(gitUrl);
-			final boolean path = ABSOLUTE_PATH_PATTERN.asMatchPredicate().test(gitUrl);
-			final int match = Booleans.countTrue(scheme, scp, path);
-			verify(match <= 1);
-			checkArgument(match == 1);
-			return scheme ? SCHEME : (scp ? SCP : PATH);
-		}
-	}
-
 	public static GitUri fromGitUrl(String gitUrl) {
 		final GitUri uri;
 
@@ -196,9 +183,11 @@ public class GitUri {
 			uri = new GitUri(GitScheme.SSH, Strings.nullToEmpty(uriish.getUser()),
 					Strings.nullToEmpty(uriish.getHost()), uriish.getPort(), "/" + uriish.getPath());
 			break;
-		case PATH:
+		case ABSOLUTE_PATH:
 			uri = new GitUri(GitScheme.FILE, "", "", -1, gitUrl);
 			break;
+		case RELATIVE_PATH:
+			throw new IllegalArgumentException("Relative paths not accepted");
 		default:
 			throw new VerifyException();
 		}
