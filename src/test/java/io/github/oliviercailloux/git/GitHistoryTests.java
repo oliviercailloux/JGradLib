@@ -49,7 +49,7 @@ class GitHistoryTests {
 		try (DfsRepository repository = new InMemoryRepository(new DfsRepositoryDescription("myrepo"))) {
 			repository.create(true);
 			new GitCloner().clone(
-					GitUri.fromGitUri(URI.create("https://github.com/oliviercailloux/assisted-board-games.git")),
+					GitUri.fromUri(URI.create("https://github.com/oliviercailloux/assisted-board-games.git")),
 					repository);
 			final GitLocalHistory basic;
 			final ImmutableSet<RevCommit> allCommits;

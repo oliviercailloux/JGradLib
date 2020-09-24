@@ -97,7 +97,7 @@ public class ExCommitGrader {
 	public IGrade grade(RepositoryCoordinatesWithPrefix coord) {
 		final Path projectsBaseDir = WORK_DIR.resolve(PREFIX);
 		final Path projectDir = projectsBaseDir.resolve(coord.getRepositoryName());
-		new GitCloner().download(GitUri.fromGitUri(coord.asURI()), projectDir);
+		new GitCloner().download(GitUri.fromUri(coord.asURI()), projectDir);
 
 		try (GitRepoFileSystem fs = new GitFileSystemProvider().newFileSystemFromGitDir(projectDir.resolve(".git"))) {
 			final GitHubHistory gitHubHistory = GraderOrchestrator.getGitHubHistory(coord);

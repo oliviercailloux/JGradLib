@@ -142,7 +142,7 @@ public class PrintExecGrader {
 
 	public IGrade grade(RepositoryCoordinatesWithPrefix coord, Path projectsBaseDir) throws IOException {
 		final Path projectDir = projectsBaseDir.resolve(coord.getRepositoryName());
-		new GitCloner().download(GitUri.fromGitUri(coord.asURI()), projectDir);
+		new GitCloner().download(GitUri.fromUri(coord.asURI()), projectDir);
 
 		try (GitRepoFileSystem fs = new GitFileSystemProvider().newFileSystemFromGitDir(projectDir.resolve(".git"))) {
 			final IGrade grade = grade(coord.getUsername(), fs, COMPILE_BASE_DIR);

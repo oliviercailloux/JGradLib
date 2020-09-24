@@ -61,7 +61,7 @@ class GitClonerTests {
 
 		final Path httpsPath = Utils.getTempDirectory()
 				.resolve("testrel cloned using https " + Utils.ISO_BASIC_UTC_FORMATTER.format(Instant.now()));
-		cloner.download(GitUri.fromGitUri(URI.create("https://github.com/oliviercailloux/testrel/")), httpsPath);
+		cloner.download(GitUri.fromUri(URI.create("https://github.com/oliviercailloux/testrel/")), httpsPath);
 		final File httpsGitDirAsFile = httpsPath.resolve(".git").toFile();
 		final GitLocalHistory historyFromHttpsClone = GitUtils.getHistory(httpsGitDirAsFile);
 		/**
@@ -82,12 +82,12 @@ class GitClonerTests {
 
 		final Path sshPath = Utils.getTempDirectory()
 				.resolve("testrel cloned using ssh " + Utils.ISO_BASIC_UTC_FORMATTER.format(Instant.now()));
-		cloner.download(GitUri.fromGitUri(URI.create("ssh://git@github.com/oliviercailloux/testrel.git")), sshPath);
+		cloner.download(GitUri.fromUri(URI.create("ssh://git@github.com/oliviercailloux/testrel.git")), sshPath);
 		assertEquals(historyFromHttpsClone, GitUtils.getHistory(sshPath.resolve(".git").toFile()));
 
 		final Path filePath = Utils.getTempDirectory().resolve("testrel cloned using file transport to ssh clone "
 				+ Utils.ISO_BASIC_UTC_FORMATTER.format(Instant.now()));
-		cloner.download(GitUri.fromGitUri(sshPath.toUri()), filePath);
+		cloner.download(GitUri.fromUri(sshPath.toUri()), filePath);
 		/**
 		 * This clone does not clone the clone’s origin branches that are not local to
 		 * the clone. Thus, their histories might differ.
@@ -112,7 +112,7 @@ class GitClonerTests {
 		}
 
 		/** Should update and fetch the new commit. */
-		cloner.download(GitUri.fromGitUri(sshPath.toUri()), filePath);
+		cloner.download(GitUri.fromUri(sshPath.toUri()), filePath);
 		final GitLocalHistory enlargedHistory = GitUtils.getHistory(filePath.resolve(".git").toFile());
 		assertNotEquals(historyFromHttpsClone, enlargedHistory);
 		final ImmutableSet<ObjectId> expectedEnlargedCommits = ImmutableSet.<ObjectId>builder().addAll(commitsToMaster)
@@ -141,7 +141,7 @@ class GitClonerTests {
 			LOGGER.info("Cloning from {}.", uri);
 			final Path clonedTo = Utils.getTempDirectory()
 					.resolve("Just cloned using .git " + Utils.ISO_BASIC_UTC_FORMATTER.format(Instant.now()));
-			new GitCloner().download(GitUri.fromGitUri(uri), clonedTo);
+			new GitCloner().download(GitUri.fromUri(uri), clonedTo);
 			assertTrue(Files.exists(clonedTo.resolve(".git")));
 			assertTrue(Files.exists(clonedTo.resolve(".git").resolve("refs")));
 		}
@@ -150,7 +150,7 @@ class GitClonerTests {
 		LOGGER.info("Cloning from {}.", uri);
 		final Path clonedTo = Utils.getTempDirectory()
 				.resolve("Just cloned " + Utils.ISO_BASIC_UTC_FORMATTER.format(Instant.now()));
-		new GitCloner().download(GitUri.fromGitUri(uri), clonedTo);
+		new GitCloner().download(GitUri.fromUri(uri), clonedTo);
 		assertTrue(Files.exists(clonedTo.resolve(".git")));
 		assertTrue(Files.exists(clonedTo.resolve(".git").resolve("refs")));
 	}
@@ -163,7 +163,7 @@ class GitClonerTests {
 		Git.init().setDirectory(workTreePath.toFile()).call().close();
 
 		final URI uri = gitDirPath.toUri();
-		assertThrows(IllegalStateException.class, () -> new GitCloner().download(GitUri.fromGitUri(uri), workTreePath));
+		assertThrows(IllegalStateException.class, () -> new GitCloner().download(GitUri.fromUri(uri), workTreePath));
 	}
 
 	@Test
@@ -179,7 +179,7 @@ class GitClonerTests {
 			// new
 			// GitCloner().clone(GitUri.fromGitUri(URI.create("https://github.com/github/testrepo.git")),
 			// repo);
-			new GitCloner().clone(GitUri.fromGitUri(URI.create("https://github.com/oliviercailloux/testrel.git")),
+			new GitCloner().clone(GitUri.fromUri(URI.create("https://github.com/oliviercailloux/testrel.git")),
 					repo);
 			final Ref head = repo.findRef(Constants.HEAD);
 			assertNotNull(head);
@@ -206,7 +206,7 @@ class GitClonerTests {
 		final Path gitDir = Utils.getTempUniqueDirectory("git-test");
 		Git.init().setBare(true).setDirectory(gitDir.toFile()).call();
 		try (Repository repo = new FileRepository(gitDir.toString())) {
-			new GitCloner().clone(GitUri.fromGitUri(URI.create("https://github.com/oliviercailloux/testrel.git")),
+			new GitCloner().clone(GitUri.fromUri(URI.create("https://github.com/oliviercailloux/testrel.git")),
 					repo);
 			final Ref head = repo.findRef("HEAD");
 			assertEquals("e26c142665bb9f560d59b18fd80763ef45e29324", head.getLeaf().getObjectId().getName());

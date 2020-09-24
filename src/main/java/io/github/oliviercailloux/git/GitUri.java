@@ -1,14 +1,14 @@
 package io.github.oliviercailloux.git;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
-import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.base.Verify.verify;
+import static io.github.oliviercailloux.exceptions.Unchecker.URI_UNCHECKER;
 
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.nio.file.Path;
 import java.util.Objects;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.eclipse.jgit.transport.URIish;
 import org.slf4j.Logger;
@@ -16,20 +16,16 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Strings;
-import com.google.common.base.Verify;
 import com.google.common.base.VerifyException;
 
-import io.github.oliviercailloux.git.fs.GitFileSystemProvider;
-import io.github.oliviercailloux.utils.Utils;
-
 /**
- * A location of a (local or remote) git repository.
+ * An immutable location of a (local or remote) git repository.
  *
  * <h1>Recommended usage</h1>
  * <ol>
  * <li>Obtain an absolute, hierarchical URI that represents your git
  * repository.</li>
- * <li>Use the {@link #fromGitUri(URI)} factory method.</li>
+ * <li>Use the {@link #fromUri(URI)} factory method.</li>
  * </ol>
  * Typical examples:
  * <ul>
@@ -74,23 +70,24 @@ import io.github.oliviercailloux.utils.Utils;
  *
  * <dl>
  * <dt>Rejecting relative path Git URLs</dt>
- * <dd>According to the Git URL definition, the string “file:/example/” is a
- * relative path designating the sub-folder named “example” situated in the
- * folder named “file:” (itself situated in the current folder). This is calling
- * for trouble as it is also a valid URI designating the absolute path
- * “/example”. Rejecting relative paths avoids this possible confusion. Also,
- * rejecting relative paths permits to ensure that instances of this class can
- * be transformed (without loss of information) to absolute hierarchical URIs
- * (thus with an absolute path).</dd>
+ * <dd>Rejecting relative paths permits to ensure that instances of this class
+ * can be transformed (without loss of information) to absolute hierarchical
+ * URIs (thus with an absolute path), thereby permitting a more systematic
+ * usage.</dd>
  * <dt>Accepting no-authority URIs</dt>
- * <dd>This class accepts a string such as “file:/example/” and interprets it as
- * an absolute hierarchical URIs using the file scheme with no authority
- * (following RFC 2396). This is the only kind of input that is treated
- * differently than Git URLs. The reason for not treating it like a relative
- * path Git URL is indicated here above. The reason to accept it anyway and
- * treat it differently is that this makes this class accept any hierarchical
- * absolute URI using a scheme known to Git, thereby (hopefully) easing usage
- * and leveraging the relevant standards.</dd>
+ * <dd>According to the Git URL definition, any string starting with
+ * <code>file:/</code> not followed by a slash (for example,
+ * <code>file:/something/</code>) is a SCP URL designating some path (in this
+ * example, <code>/something</code>) on the host named <code>file</code>. The
+ * factory method {@link #fromGitUrl(String)} will indeed treat it as an SCP Git
+ * URL. However, such a string can also be interpreted, following RFC 2396, as
+ * an absolute hierarchical URIs using the file scheme with no authority (in
+ * this example, designating the absolute local path <code>/something</code>).
+ * The (recommended) {@link #fromUri(URI)} factory method of this class indeed
+ * interprets it (IMHO, more reasonably) in such a way. This is the only kind of
+ * input that is treated differently than Git URLs. This makes this method
+ * accept any hierarchical absolute URI with a scheme known to Git, thereby
+ * leveraging the relevant standards and (hopefully) easing usage.</dd>
  * </dl>
  *
  * <h1>Some definitions</h1>
@@ -99,17 +96,20 @@ import io.github.oliviercailloux.utils.Utils;
  * are useful.
  * <dl>
  * <dt><a href="https://git-scm.com/docs/git-clone#_git_urls">Git URL</a></dt>
- * <dd>A Git URL is a non-empty string that represents a (local or remote) git
- * repository and that is accepted by the git command line, as defined in the
- * official manual. Any Git URL corresponds to exactly one of following kinds
- * (these definitions are mine).
+ * <dd>A Git URL is a non-empty string that is accepted by the git command line
+ * and conforms to the definition given in the official manual. Any Git URL
+ * corresponds to exactly one of the following kinds (these definitions are
+ * mine).
  * <dl>
  * <dt>Scheme</dt>
  * <dd>A “scheme” Git URL starts with the string “ssh://”, “git://”, “http://”,
- * “https://”, “ftp://”, “ftps://” or “file://”.</dd>
+ * “https://”, “ftp://” or “ftps://”, followed by at least one non-slash
+ * character, followed by a slash character; or starts with the string
+ * “file:///”.</dd>
  * <dt>SCP</dt>
- * <dd>A “SCP” Git URL contains a colon, no slash before the first colon, and
- * does not contain two slashes just after the first colon.</dd>
+ * <dd>A “SCP” Git URL contains a colon, no slash before the first colon, at
+ * least one character before the first colon, and does not contain two slashes
+ * just after the first colon.</dd>
  * <dt>Absolute path</dt>
  * <dd>An “absolute path” Git URL starts with a slash.</dd>
  * <dt>Relative path</dt>
@@ -117,7 +117,11 @@ import io.github.oliviercailloux.utils.Utils;
  * a colon, contains a slash before the first colon.</dd>
  * </ul>
  * </dl>
- * See {@link GitUrlKind} to detect which kind you face.
+ * These cases are exclusive, but some string match none of them, for example:
+ * the empty string, <code>ssh://</code>, <code>https:///host/</code>,
+ * <code>https://host</code>, <code>unknownscheme://host</code>… See
+ * {@link GitUrlKind} to detect which kind you face.
+ *
  * <dt>Java {@link URI}</dt>
  * <dd>A URI as per the Java-interpretation of RFC 2396 (including the
  * interpretation that an empty authority is permitted). This class is
@@ -141,50 +145,55 @@ import io.github.oliviercailloux.utils.Utils;
  *
  * Compared to {@link URIish}, this class is immutable, rejects relative path
  * Git URLs, guarantees convertibility to an absolute hierarchical URI, accepts
- * URIs as input, will always return a scheme when asked for one (and possibly
- * more differences).
+ * URIs as input, will always return a scheme when asked for one, provides clear
+ * round-trip guarantees (and possibly more differences).
  */
 public class GitUri {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(GitUri.class);
 
-	public static GitUri fromGitUri(URI gitUri) {
-		checkArgument(gitUri.isAbsolute());
-		checkArgument(!gitUri.isOpaque());
-		final String user;
-		final String host;
-		final int port;
-		final String path;
-		user = Strings.nullToEmpty(gitUri.getUserInfo());
-		host = Strings.nullToEmpty(gitUri.getHost());
-		port = gitUri.getPort();
-		path = gitUri.getPath();
-		assert path != null;
-		verify(path.startsWith("/"));
-		return new GitUri(GitScheme.valueOf(gitUri.getScheme().toUpperCase()), user, host, port, path);
+	private static final Pattern SCP_CUT = Pattern.compile("(?<userAtHost>[^:]+):(?<path>.*)");
+
+	private static final Pattern FILE_WITH_NO_AUTHORITY = Pattern.compile("file:/([^/].*|)");
+
+	private static final Pattern FILE_WITH_AUTHORITY = Pattern.compile("file:///.*");
+
+	/**
+	 * @return the same uri but with a string form that includes an empty authority
+	 *         (file:///) if it is an absolute uri with file scheme whose string
+	 *         form includes no authority (file:/ not followed by a slash).
+	 */
+	private static URI withAuthority(URI uri) {
+		if (FILE_WITH_NO_AUTHORITY.matcher(uri.toString()).matches()) {
+			return URI.create(uri.toString().replaceFirst("file:/", "file:///"));
+		}
+		return uri;
+	}
+
+	public static GitUri fromUri(URI uri) {
+		return new GitUri(withAuthority(uri));
 	}
 
 	public static GitUri fromGitUrl(String gitUrl) {
-		final GitUri uri;
+		final URI uri;
 
 		final GitUrlKind kind = GitUrlKind.given(gitUrl);
 		switch (kind) {
 		case SCHEME:
-			uri = fromGitUri(URI.create(gitUrl));
+			uri = withAuthority(URI.create(gitUrl));
 			break;
 		case SCP:
-			URIish uriish;
-			try {
-				uriish = new URIish(gitUrl);
-			} catch (URISyntaxException e) {
-				throw new IllegalArgumentException(e);
-			}
-			checkArgument(uriish.getPass().isEmpty(), "Password not supported yet.");
-			uri = new GitUri(GitScheme.SSH, Strings.nullToEmpty(uriish.getUser()),
-					Strings.nullToEmpty(uriish.getHost()), uriish.getPort(), "/" + uriish.getPath());
+			final Matcher matcher = SCP_CUT.matcher(gitUrl);
+			verify(matcher.matches());
+			final String userAtHost = matcher.group("userAtHost");
+			verify(!userAtHost.isEmpty());
+			verify(!userAtHost.contains("/"));
+			final String path = matcher.group("path");
+			final String absolutePath = path.startsWith("/") ? path : "/" + path;
+			uri = URI_UNCHECKER.getUsing(() -> new URI(GitScheme.SSH.toString(), userAtHost, absolutePath, null, null));
 			break;
 		case ABSOLUTE_PATH:
-			uri = new GitUri(GitScheme.FILE, "", "", -1, gitUrl);
+			uri = withAuthority(Path.of(gitUrl).toUri());
 			break;
 		case RELATIVE_PATH:
 			throw new IllegalArgumentException("Relative paths not accepted");
@@ -192,117 +201,80 @@ public class GitUri {
 			throw new VerifyException();
 		}
 
-		return uri;
+		return new GitUri(uri);
 	}
 
-	private final GitScheme gitScheme;
-	private final String userInfo;
-	private final String repoHost;
-	private final int repoPort;
-	private final String repoPath;
-	private final String repoName;
+	final private URI uri;
 
-	GitUri(GitScheme gitScheme, String userInfo, String host, int port, String repoPath) {
-		/** This can probably be very much simplified. */
-		this.gitScheme = checkNotNull(gitScheme);
-		this.userInfo = checkNotNull(userInfo);
-		this.repoHost = checkNotNull(host);
-		this.repoPort = port;
-		checkNotNull(repoPath);
-		checkArgument((gitScheme == GitScheme.SSH) == !userInfo.isEmpty());
-		checkArgument(!userInfo.startsWith("/"));
-		checkArgument(port == -1 || port >= 1);
-		checkArgument((gitScheme == GitScheme.FILE) == host.isEmpty());
-		checkArgument(Utils.implies(gitScheme == GitScheme.FILE, port == -1));
-		checkArgument(!host.endsWith("/"));
-		checkArgument(Utils.implies(gitScheme != GitScheme.SSH, repoPath.startsWith("/")));
-		checkArgument(Utils.implies(gitScheme == GitScheme.SSH, repoPath.length() >= 1),
-				"Repository path can’t be empty.");
-		if (gitScheme == GitScheme.SSH) {
-			this.repoPath = repoPath;
+	GitUri(URI uri) {
+		checkArgument(uri.isAbsolute());
+		checkArgument(!uri.isOpaque());
+		/** This throws an IllegalArgumentException if the scheme is not permitted. */
+		final GitScheme scheme = GitScheme.valueOf(uri.getScheme().toUpperCase());
+
+		if (scheme == GitScheme.FILE) {
+			checkArgument(FILE_WITH_AUTHORITY.matcher(uri.toString()).matches());
+			checkArgument(Strings.isNullOrEmpty(uri.getAuthority()));
+			checkArgument(uri.getUserInfo() == null);
+			checkArgument(uri.getHost() == null);
+			checkArgument(uri.getPort() == -1);
 		} else {
-			try {
-				/** URI accepts only an absolute path in an absolute URI. */
-				this.repoPath = new URI(GitFileSystemProvider.SCHEME, null, repoPath, null).normalize().getPath();
-				Verify.verify(repoPath.startsWith("/"));
-			} catch (URISyntaxException e) {
-				throw new IllegalArgumentException(e);
-			}
-			/**
-			 * Check must be after normalization: /./, for example, would be normalized to a
-			 * single character.
-			 */
-			checkArgument(repoPath.length() >= 2, "Repository path can’t be just '/'.");
+			checkArgument(!Strings.isNullOrEmpty(uri.getAuthority()));
+			checkArgument(!Strings.isNullOrEmpty(uri.getHost()));
 		}
-		try {
-			repoName = new URIish(gitScheme + "://" + host + repoPath).getHumanishName();
-			Verify.verify(!repoName.isEmpty());
-			Verify.verify(!repoName.endsWith("/"));
-			LOGGER.debug("Repo name: {}.", repoName);
-		} catch (URISyntaxException e) {
-			throw new IllegalArgumentException(e);
-		}
+
+		verify(!Strings.isNullOrEmpty(uri.getPath()));
+		verify(uri.getPath().startsWith("/"));
+
+		this.uri = uri;
 	}
 
 	public GitScheme getGitScheme() {
-		return gitScheme;
-	}
-
-	public String getUserInfo() {
-		return userInfo;
-	}
-
-	public String getHost() {
-		return repoHost;
-	}
-
-	public int getPort() {
-		return repoPort;
-	}
-
-	public String getRepositoryPath() {
-		return repoPath;
-	}
-
-	public String getRepositoryName() {
-		return repoName;
+		return GitScheme.valueOf(uri.getScheme().toUpperCase());
 	}
 
 	/**
-	 * Do not use with gitScheme being FILE: git expects "file://" then path
-	 * (starting with /), whereas a URI contains "file:" then path (starting with
-	 * slash). TODO check doc Java URI, accepts file:///.
+	 * @return is [<code>null</code> or empty] iff the scheme is
+	 *         {@link GitScheme#FILE}.
 	 */
-	public URI getGitHierarchicalUri() {
-		checkState(gitScheme != GitScheme.FILE);
-		final String absolutePath;
-		if (!repoPath.startsWith("/")) {
-			Verify.verify(gitScheme == GitScheme.SSH);
-			Verify.verify(!userInfo.isEmpty());
-			Verify.verify(!repoPath.isEmpty());
-			absolutePath = "/" + repoPath;
-		} else {
-			absolutePath = repoPath;
-		}
-		try {
-			return new URI(gitScheme.toString().toLowerCase(), Strings.emptyToNull(userInfo),
-					Strings.emptyToNull(repoHost), repoPort, absolutePath, null, null);
-		} catch (URISyntaxException e) {
-			throw new AssertionError(e);
-		}
+	public String getAuthority() {
+		return uri.getAuthority();
 	}
 
-	public String getGitString() {
-		if (gitScheme == GitScheme.FILE) {
-			return "file://" + repoPath;
-		}
-		if (!repoPath.startsWith("/")) {
-			Verify.verify(gitScheme == GitScheme.SSH);
-			Verify.verify(!userInfo.isEmpty());
-			Verify.verify(!repoPath.isEmpty());
-			return userInfo + "@" + repoHost + ":" + repoPath;
-		}
-		return getGitHierarchicalUri().toString();
+	/**
+	 * @return starting with /
+	 */
+	public String getPath() {
+		return uri.getPath();
+	}
+
+	/**
+	 * Returns this location as an absolute hierarchical URI with a scheme known to
+	 * Git and a string form that includes an authority component. The authority is
+	 * empty iff the scheme is {@link GitScheme#FILE}. It is guaranteed that giving
+	 * the returned uri back to {@link #fromUri(URI)} will yield an instance
+	 * equivalent to this one. There is no guarantee that the returned
+	 * representation is the same as the one that was given when creating this
+	 * instance.
+	 *
+	 * @return this location as a uri.
+	 */
+	public URI asUri() {
+		return uri;
+	}
+
+	/**
+	 * Returns this location as a string representing an absolute hierarchical URI
+	 * with a scheme known to Git and an authority component. The authority is empty
+	 * iff the scheme is {@link GitScheme#FILE}. It is guaranteed that giving this
+	 * string back to {@link #fromGitUrl(String)} will yield an instance equivalent
+	 * to this one. There is no guarantee that the returned representation is the
+	 * same as the one that was given when creating this instance.
+	 *
+	 * @return this location as a string.
+	 */
+	public String asString() {
+		return uri.toString();
 	}
 
 	@Override
@@ -310,20 +282,17 @@ public class GitUri {
 		if (!(o2 instanceof GitUri)) {
 			return false;
 		}
-		final GitUri d2 = (GitUri) o2;
-		return gitScheme.equals(d2.gitScheme) && userInfo.equals(d2.userInfo) && repoHost.equals(d2.repoHost)
-				&& repoPort == d2.repoPort && repoPath.equals(d2.repoPath);
+		final GitUri g2 = (GitUri) o2;
+		return uri.equals(g2.uri);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(gitScheme, userInfo, repoHost, repoPort, repoPath);
+		return Objects.hash(uri);
 	}
 
 	@Override
 	public String toString() {
-		return MoreObjects.toStringHelper(this).add("Git scheme", gitScheme).add("User info", userInfo)
-				.add("Host", repoHost).add("Port", repoPort).add("Repository path", repoPath)
-				.add("Repository name", repoName).toString();
+		return MoreObjects.toStringHelper(this).add("Uri", uri).toString();
 	}
 }

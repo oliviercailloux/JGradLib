@@ -122,7 +122,7 @@ public class ChessGrader {
 	}
 
 	public IGrade grade(RepositoryCoordinatesWithPrefix coord, Path projectDir) throws IOException {
-		new GitCloner().download(GitUri.fromGitUri(coord.asURI()), projectDir);
+		new GitCloner().download(GitUri.fromUri(coord.asURI()), projectDir);
 
 		try (GitRepoFileSystem fs = new GitFileSystemProvider().newFileSystemFromGitDir(projectDir.resolve(".git"))) {
 			final GitHubHistory gitHubHistory = GraderOrchestrator.getGitHubHistory(coord);

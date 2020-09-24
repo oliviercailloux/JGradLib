@@ -34,7 +34,7 @@ class ExDepGitGraderTests {
 	@Test
 	void testGradeBad() throws Exception {
 		final GitUri gitUri = GitUri
-				.fromGitUri(URI.create("https://github.com/oliviercailloux/google-or-tools-java.git"));
+				.fromUri(URI.create("https://github.com/oliviercailloux/google-or-tools-java.git"));
 		try (Repository repository = new InMemoryRepository(new DfsRepositoryDescription("myrepo"))) {
 			repository.create(true);
 			new GitCloner().clone(gitUri, repository);
@@ -49,7 +49,7 @@ class ExDepGitGraderTests {
 	@Test
 	void testGradeFull() throws Exception {
 		final GitUri gitUri = GitUri
-				.fromGitUri(URI.create("https://github.com/oliviercailloux/google-or-tools-java.git"));
+				.fromUri(URI.create("https://github.com/oliviercailloux/google-or-tools-java.git"));
 		/**
 		 * Too hard to do with the plumbing API: need to commit to change an existing
 		 * non-trivial commit; then merge it with another non-trivial commit. I think

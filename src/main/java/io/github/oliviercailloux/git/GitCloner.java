@@ -72,15 +72,11 @@ public class GitCloner {
 
 	public void clone(GitUri gitUri, Repository repo) {
 		try (Git git = Git.wrap(repo)) {
-			git.fetch().setRemote(gitUri.getGitString()).setRefSpecs(new RefSpec("+refs/heads/*:refs/heads/*")).call();
+			git.fetch().setRemote(gitUri.asString()).setRefSpecs(new RefSpec("+refs/heads/*:refs/heads/*")).call();
 			maybeCheckCommonRefs(git);
 		} catch (GitAPIException e) {
 			throw new IllegalStateException(e);
 		}
-	}
-
-	public void download(GitUri uri) {
-		download(uri, getGitFolderPathInTemp(uri.getRepositoryName()));
 	}
 
 	public void download(GitUri uri, Path workTree) {
@@ -107,7 +103,7 @@ public class GitCloner {
 		final boolean exists = Files.exists(repositoryDirectory);
 		if (!exists) {
 			final CloneCommand cloneCmd = Git.cloneRepository();
-			cloneCmd.setURI(uri.getGitString());
+			cloneCmd.setURI(uri.asString());
 			cloneCmd.setBare(allowBare);
 			final File dest = repositoryDirectory.toFile();
 			cloneCmd.setDirectory(dest);
@@ -134,7 +130,7 @@ public class GitCloner {
 				final String fullBranch = git.getRepository().getFullBranch();
 				LOGGER.debug("HEAD: {}.", fullBranch);
 				if (origin.isPresent() && origin.get().getURIs().size() == 1
-						&& origin.get().getURIs().get(0).toString().equals(uri.getGitString())) {
+						&& origin.get().getURIs().get(0).toString().equals(uri.asString())) {
 					final FetchResult fetchResult = git.fetch().call();
 					if (git.getRepository().isBare()) {
 						final String messages = fetchResult.getMessages();
@@ -189,19 +185,6 @@ public class GitCloner {
 					String.format("Disagreeing: %s. Origin refs: %s; local refs: %s.", disagreeingRefShortNames,
 							originRefs, localRefs));
 		}
-	}
-
-	private Path getGitFolderPathInTemp(String repositoryName) {
-		final Path tmpDir = Utils.getTempDirectory();
-		checkArgument(!repositoryName.contains(FileSystems.getDefault().getSeparator()));
-		final Path subFolder = tmpDir.resolve(repositoryName);
-		/**
-		 * This check is required because the separator we check against is only the
-		 * default one, there could be others, which would allow to create something
-		 * like /tmp/..-mypath, where the - designates this alternative separator.
-		 */
-		checkArgument(subFolder.getParent().equals(tmpDir));
-		return subFolder;
 	}
 
 	private void parse(List<Ref> branches) {

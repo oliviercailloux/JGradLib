@@ -54,7 +54,7 @@ public class GitBrGraderTests {
 	@Test
 	void testGradeBad() throws Exception {
 		final GitUri gitUri = GitUri
-				.fromGitUri(URI.create("https://github.com/oliviercailloux/Assisted-Board-Games.git"));
+				.fromUri(URI.create("https://github.com/oliviercailloux/Assisted-Board-Games.git"));
 		try (Repository repository = new InMemoryRepository(new DfsRepositoryDescription("myrepo"))) {
 			repository.create(true);
 			new GitCloner().clone(gitUri, repository);
@@ -71,7 +71,7 @@ public class GitBrGraderTests {
 	@Test
 	void testGradeFull() throws Exception {
 		final GitUri gitUri = GitUri
-				.fromGitUri(URI.create("https://github.com/oliviercailloux/Assisted-Board-Games.git"));
+				.fromUri(URI.create("https://github.com/oliviercailloux/Assisted-Board-Games.git"));
 		final Path wT = Utils.getTempUniqueDirectory("git-test");
 		new GitCloner().download(gitUri, wT);
 		final RevCommit commitA;
