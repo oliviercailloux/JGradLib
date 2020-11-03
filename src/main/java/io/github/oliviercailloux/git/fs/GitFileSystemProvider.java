@@ -42,7 +42,7 @@ public class GitFileSystemProvider extends FileSystemProvider {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(GitFileSystemProvider.class);
 
-	public static final String SCHEME = "gitfs";
+	public static final String SCHEME = "gitjfs";
 
 	private static Path getGitDir(URI gitFsUri) {
 		checkArgument(gitFsUri.isAbsolute());

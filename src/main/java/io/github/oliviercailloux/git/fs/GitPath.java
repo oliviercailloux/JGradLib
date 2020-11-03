@@ -31,7 +31,66 @@ import com.google.common.jimfs.Jimfs;
 import io.github.oliviercailloux.git.fs.GitRepoFileSystem.GitObject;
 
 /**
+ * Has an optional root component and a sequence of names.
  *
+ * The root component is present iff this path is absolute. If present, it
+ * consists in a git reference (a string which must start with /refs/, such as
+ * /refs/heads/main) or an {@link ObjectId} (not both).
+ *
+ * The sequence of names is empty iff this path only represents a root
+ * component.
+ *
+ * <h1>String form</h1> The string form of a path consists in the string form of
+ * its root component, if it has one, followed by the string form of its
+ * sequence of names.
+ *
+ * The string form of the root component (if it exists) starts and ends with a
+ * slash, and contains more slashes iff it is a git reference. It has typically
+ * the form /refs/category/someref/, where category is tags, heads or remotes,
+ * but may have other forms (see https://git-scm.com/docs/git-check-ref-format).
+ * This class requires that these formas are such that the ref does not end with
+ * / and does not contain // (these are also restrictions on git refs anyway).
+ *
+ * The string form of the sequence of names obeys the rules of the string form
+ * of a linux path, more precisely, of an absolute linux path if the path is
+ * absolute, and of a relative linux path if the path is relative.
+ *
+ * <h2>Consequently</h2>As a consequence, the string form of the sequence of
+ * names starts with a slash iff the path is absolute. The name elements are
+ * separated by slashes (in violation of the {@link Path#toString()} contract).
+ *
+ * Consequently, the string form of a path starts with a slash iff the path is
+ * absolute. If it is absolute, its string form contains a double slash.
+ *
+ * \/c403// the root component only "" the relative path with one name element
+ * that is empty stuff/thing a relative path with two name elements
+ * \/refs/heads/master//stuff an absolute path with one name element
+ *
+ * <h1>URI</h1> newFs must be given a Uri of the form gitjfs:/some/path/ (with a
+ * trailing slash). getPath must be given a Uri of the form
+ * gitjfs:/some/path/?ref=/refs/heads/main/&sub-path=/internal/path. On Windows,
+ * gitjfs:///c:/path/to/the%20file.txt?… (ref is optional, defaults to …main,
+ * and sub-path is optional, defaults to /) (or only one slash). The path must
+ * have a <a href="https://stackoverflow.com/a/16445016/">trailing slash</a> and
+ * denotes a local directory corresponding to file:/the/same/path/.
+ *
+ * <h1>Rationale</h1> HEAD is not accepted for simplification. HEAD makes sense
+ * only wrt a workspace, whereas this library is designed to work directly from
+ * the git dir, without requiring a work space.
+ *
+ * A Ref is not accepted as an input because a Ref has an OId and does not
+ * update, whereas this object considers a git reference as referring to OIds
+ * dynamically.
+ *
+ *
+ *
+ * <h1>About Ref</h1> A Ref is symbolic and targets another Ref (which may be an
+ * unborn branch), or non-symbolic and stores an OId. It may be an annotated tag
+ * and hence is symbolic (?). Use rep.resolve to get an OId. findRef for
+ * short-hand forms. getRefsByPrefix can be useful. getRef accepts non-ref items
+ * such as MERGE_HEAD, …
+ *
+ * <h1>Old</h1>
  * <p>
  * Has an optional root component, such as "master/", and a sequence of names
  * made of a linux-like path. The linux-like path represents the sequence of

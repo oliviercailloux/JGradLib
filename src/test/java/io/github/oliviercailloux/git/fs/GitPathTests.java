@@ -9,6 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.net.URI;
+import java.nio.file.FileSystem;
 import java.nio.file.Path;
 
 import org.eclipse.jgit.internal.storage.dfs.DfsRepositoryDescription;
@@ -17,11 +18,39 @@ import org.eclipse.jgit.lib.Repository;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
+import com.google.common.jimfs.Configuration;
+import com.google.common.jimfs.Jimfs;
+
 import io.github.oliviercailloux.git.JGit;
 
 public class GitPathTests {
 	private static final GitRepoFileSystem GIT_FILE_SYSTEM = IO_UNCHECKER
 			.getUsing(() -> GitDirFileSystem.given(Mockito.mock(GitFileSystemProvider.class), Path.of(".")));
+
+	@Test
+	void testDefault() throws Exception {
+		try (FileSystem jimFs = Jimfs.newFileSystem(Configuration.windows())) {
+			final Path cBackslash = jimFs.getPath("C:\\");
+			assertEquals("C:\\", cBackslash.toString());
+			assertEquals(0, cBackslash.getNameCount());
+			assertEquals("C:\\", cBackslash.getRoot().toString());
+
+			final Path somePath = jimFs.getPath("C:\\some\\path\\");
+			assertEquals("C:\\some\\path", somePath.toString());
+			assertTrue(somePath.toUri().toString().endsWith("/C:/some/path"), "" + somePath.toUri());
+		}
+
+		try (FileSystem jimFs = Jimfs.newFileSystem(Configuration.unix())) {
+			final Path root = jimFs.getPath("/");
+			assertEquals("/", root.toString());
+			assertEquals(0, root.getNameCount());
+			assertEquals("/", root.getRoot().toString());
+		}
+
+		final URI gitFs = new URI("gitjfs:/some/path//refs/heads/master//internal/path");
+		assertEquals("gitjfs:/some/path//refs/heads/master//internal/path", gitFs.toString());
+		assertEquals("gitjfs:/some/path//refs/heads/master//internal/path", gitFs.normalize().toString());
+	}
 
 	@Test
 	void testBasics() throws Exception {
@@ -133,7 +162,7 @@ public class GitPathTests {
 		final GitRepoFileSystem fs = GitDirFileSystem.given(new GitFileSystemProvider(), gitDir);
 		final GitPath path = fs.getPath("master/", "/file.txt");
 		assertEquals(
-				new URI("gitfs", null, gitDir.toAbsolutePath().toString(), "revStr=master&dirAndFile=/file.txt", null),
+				new URI("gitjfs", null, gitDir.toAbsolutePath().toString(), "revStr=master&dirAndFile=/file.txt", null),
 				path.toUri());
 
 		try (Repository repo = new InMemoryRepository(new DfsRepositoryDescription("myrepo"))) {
@@ -141,7 +170,7 @@ public class GitPathTests {
 			@SuppressWarnings("resource")
 			final GitRepoFileSystem rfs = GitRepoFileSystem.given(new GitFileSystemProvider(), repo);
 			final GitPath p2 = rfs.getPath("master/", "/file.txt");
-			assertEquals("gitfs://mem/myrepo?revStr=master&dirAndFile=/file.txt", p2.toUri().toString());
+			assertEquals("gitjfs://mem/myrepo?revStr=master&dirAndFile=/file.txt", p2.toUri().toString());
 		}
 	}
 

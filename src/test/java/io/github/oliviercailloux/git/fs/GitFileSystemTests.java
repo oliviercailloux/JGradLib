@@ -46,7 +46,7 @@ public class GitFileSystemTests {
 			assertEquals("truc", gitFs.getPath("", "truc").toRelativePath().toString());
 			assertEquals("master//truc", gitFs.getPath("master/", "/truc").toString());
 			assertEquals("truc", gitFs.getPath("master/", "/truc").toRelativePath().toString());
-			assertEquals(URI.create("gitfs:/path/to/gitdir?revStr=master&dirAndFile=/truc"),
+			assertEquals(URI.create("gitjfs:/path/to/gitdir?revStr=master&dirAndFile=/truc"),
 					gitFs.getPath("master/", "/truc").toUri());
 			assertEquals("master//truc", gitFs.getPath("master/", "", "/truc", "").toString());
 			assertEquals("master//truc", gitFs.getPath("master//", "truc").toString());
