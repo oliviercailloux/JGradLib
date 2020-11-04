@@ -10,6 +10,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.net.URI;
 import java.nio.file.FileSystem;
+import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 
 import org.eclipse.jgit.internal.storage.dfs.DfsRepositoryDescription;
@@ -17,6 +19,8 @@ import org.eclipse.jgit.internal.storage.dfs.InMemoryRepository;
 import org.eclipse.jgit.lib.Repository;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.jimfs.Configuration;
 import com.google.common.jimfs.Jimfs;
@@ -24,11 +28,20 @@ import com.google.common.jimfs.Jimfs;
 import io.github.oliviercailloux.git.JGit;
 
 public class GitPathTests {
+	@SuppressWarnings("unused")
+	private static final Logger LOGGER = LoggerFactory.getLogger(GitPathTests.class);
+
 	private static final GitRepoFileSystem GIT_FILE_SYSTEM = IO_UNCHECKER
 			.getUsing(() -> GitDirFileSystem.given(Mockito.mock(GitFileSystemProvider.class), Path.of(".")));
 
 	@Test
 	void testDefault() throws Exception {
+		/**
+		 * Judging from
+		 * https://github.com/openjdk/jdk/tree/master/src/java.base/windows/classes/sun/nio/fs,
+		 * it seems to me that \ is a root component only relative path, and hence
+		 * getFileName on it returns null. Unfortunately, I can’t check this with Jimfs.
+		 */
 		try (FileSystem jimFs = Jimfs.newFileSystem(Configuration.windows())) {
 			final Path cBackslash = jimFs.getPath("C:\\");
 			assertEquals("C:\\", cBackslash.toString());
@@ -38,6 +51,9 @@ public class GitPathTests {
 			final Path somePath = jimFs.getPath("C:\\some\\path\\");
 			assertEquals("C:\\some\\path", somePath.toString());
 			assertTrue(somePath.toUri().toString().endsWith("/C:/some/path"), "" + somePath.toUri());
+
+			/** Unsupported unser Jimfs. */
+			assertThrows(InvalidPathException.class, () -> jimFs.getPath("\\"));
 		}
 
 		try (FileSystem jimFs = Jimfs.newFileSystem(Configuration.unix())) {
@@ -45,6 +61,24 @@ public class GitPathTests {
 			assertEquals("/", root.toString());
 			assertEquals(0, root.getNameCount());
 			assertEquals("/", root.getRoot().toString());
+		}
+		/**
+		 * That’s how they test OS:
+		 * https://github.com/openjdk/jdk/blob/master/test/jdk/java/nio/file/Path/PathOps.java.
+		 */
+		if (!System.getProperty("os.name").startsWith("Windows")) {
+			final Path root = Path.of("/");
+			assertEquals("/", root.toString());
+			assertEquals(0, root.getNameCount());
+			assertNull(root.getFileName());
+			assertTrue(Files.isDirectory(root));
+			assertEquals("/", root.getRoot().toString());
+
+			final Path doubleSlash = Path.of("brown//fox");
+			assertEquals(2, doubleSlash.getNameCount());
+
+			final Path testEmpty = Path.of("", "brown", "", "fox", "");
+			assertEquals(2, testEmpty.getNameCount());
 		}
 
 		final URI gitFs = new URI("gitjfs:/some/path//refs/heads/master//internal/path");

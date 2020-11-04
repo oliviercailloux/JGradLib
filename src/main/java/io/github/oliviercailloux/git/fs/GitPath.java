@@ -31,48 +31,91 @@ import com.google.common.jimfs.Jimfs;
 import io.github.oliviercailloux.git.fs.GitRepoFileSystem.GitObject;
 
 /**
- * Has an optional root component and a sequence of names.
+ * Has an optional root component and an optional sequence of names (strings).
+ * If it has no root component, then it has a sequence of names. The root
+ * component, if it is present, consists in a git reference (a string which must
+ * start with refs/, such as refs/heads/main) or an {@link ObjectId} (not both).
+ * The sequence of names, if it is present, consists in a non-empty sequence of
+ * names (strings), with either a unique empty name, or no empty name.
  *
- * The root component is present iff this path is absolute. If present, it
- * consists in a git reference (a string which must start with /refs/, such as
- * /refs/heads/main) or an {@link ObjectId} (not both).
+ * This path is absolute iff the root component is present.
  *
- * The sequence of names is empty iff this path only represents a root
- * component.
+ * <h1>String form</h1>
  *
- * <h1>String form</h1> The string form of a path consists in the string form of
- * its root component, if it has one, followed by the string form of its
- * sequence of names.
+ * The string form of a path consists in the string form of its root component,
+ * if it has one, followed by the string form of its sequence of names, if it
+ * has one.
  *
- * The string form of the root component (if it exists) starts and ends with a
- * slash, and contains more slashes iff it is a git reference. It has typically
- * the form /refs/category/someref/, where category is tags, heads or remotes,
- * but may have other forms (see https://git-scm.com/docs/git-check-ref-format).
- * This class requires that these formas are such that the ref does not end with
- * / and does not contain // (these are also restrictions on git refs anyway).
+ * The string form of a root component is /gitref//, or /sha1//.
  *
- * The string form of the sequence of names obeys the rules of the string form
- * of a linux path, more precisely, of an absolute linux path if the path is
- * absolute, and of a relative linux path if the path is relative.
+ * The string form of a sequence of names obeys the rules of the string form of
+ * a relative linux path.
  *
- * <h2>Consequently</h2>As a consequence, the string form of the sequence of
- * names starts with a slash iff the path is absolute. The name elements are
- * separated by slashes (in violation of the {@link Path#toString()} contract).
+ * <h1>Summary</h1>
  *
- * Consequently, the string form of a path starts with a slash iff the path is
- * absolute. If it is absolute, its string form contains a double slash.
+ * Instances of this class are in exactly one of these four cases.
+ * <ul>
+ * <li>It has no root component. Equivalently, its string form contains no
+ * leading slash. Equivalently, its string form contains no two consecutive
+ * slashes. Equivalently, it is a relative path. Implies that it has a sequence
+ * of names.</li>
+ * <ul>
+ * <li>Its sequence of names consists in a unique empty name. Equivalently, it
+ * represents the default path of the file system, that is, the branch
+ * <tt>main</tt> and the root directory in that branch. Equivalently, its string
+ * form is <code>""</code>.</li>
+ * <li>Its sequence of names consists in at least one name, and contains no
+ * empty name. An example of string form is <code>"some/path"</code>.</li>
+ * </ul>
+ * <li>It has a root component. Equivalently, its string form contains a leading
+ * slash. Equivalently, its string form contains two consecutive slashes exactly
+ * once. Equivalently, it is an absolute path.</li>
+ * <ul>
+ * <li>It consists in a root component only. Equivalently, it has no sequence of
+ * name. Equivalently, it ends with two slashes. An example of string form is
+ * <code>"/refs/heads/main//"</code>.</li>
+ * <li>It has a root component and a sequence of names. An example of string
+ * form is <code>"/refs/heads/main//some/path"</code>.</li>
+ * </ul>
  *
- * \/c403// the root component only "" the relative path with one name element
- * that is empty stuff/thing a relative path with two name elements
- * \/refs/heads/master//stuff an absolute path with one name element
+ * <h1>URI</h1>
  *
- * <h1>URI</h1> newFs must be given a Uri of the form gitjfs:/some/path/ (with a
- * trailing slash). getPath must be given a Uri of the form
+ * newFs must be given a Uri of the form gitjfs:/some/path/ (with a trailing
+ * slash). getPath must be given a Uri of the form
  * gitjfs:/some/path/?ref=/refs/heads/main/&sub-path=/internal/path. On Windows,
  * gitjfs:///c:/path/to/the%20file.txt?… (ref is optional, defaults to …main,
  * and sub-path is optional, defaults to /) (or only one slash). The path must
  * have a <a href="https://stackoverflow.com/a/16445016/">trailing slash</a> and
  * denotes a local directory corresponding to file:/the/same/path/.
+ *
+ * <h1>Extended discussion</h1>
+ *
+ * This documentation considers a sequence of names to be never empty: if a path
+ * has a sequence of names, it is not empty.
+ *
+ * The string form of the root component starts and ends with a slash, and
+ * contains more slashes iff it is a git reference. It has typically the form
+ * /refs/category/someref/, where category is tags, heads or remotes, but may
+ * have other forms (see https://git-scm.com/docs/git-check-ref-format and
+ * https://stackoverflow.com/a/47208574/). This class requires that the gitref
+ * does not start or end with / and does not contain // or \ (these are also
+ * restrictions on git refs anyway).
+ *
+ * The sequence of names is empty iff this path only represents a root
+ * component.
+ *
+ * This path is said to be an empty path, or equivalently to represent the
+ * default path of its file system, iff it has no root component and its
+ * sequence of names contains exactly one name that is empty.
+ *
+ * The sequence containing exactly one name that is empty has "" as string form.
+ *
+ * As a consequence, the string form of the sequence of names starts with a
+ * slash iff the path is absolute. The name elements are separated by slashes
+ * (in violation of the {@link Path#toString()} contract).
+ *
+ * Consequently, the string form of a path starts with a slash iff the path is
+ * absolute. If it is absolute, its string form contains a double slash.
  *
  * <h1>Rationale</h1> HEAD is not accepted for simplification. HEAD makes sense
  * only wrt a workspace, whereas this library is designed to work directly from
@@ -82,13 +125,49 @@ import io.github.oliviercailloux.git.fs.GitRepoFileSystem.GitObject;
  * update, whereas this object considers a git reference as referring to OIds
  * dynamically.
  *
+ * <h1>About Ref</h1>
  *
+ * A Ref is symbolic and targets another Ref (which may be an unborn branch), or
+ * non-symbolic and stores an OId. It may be an annotated tag and hence is
+ * symbolic (?). Use rep.resolve to get an OId. findRef for short-hand forms.
+ * getRefsByPrefix can be useful. getRef accepts non-ref items such as
+ * MERGE_HEAD, …
  *
- * <h1>About Ref</h1> A Ref is symbolic and targets another Ref (which may be an
- * unborn branch), or non-symbolic and stores an OId. It may be an annotated tag
- * and hence is symbolic (?). Use rep.resolve to get an OId. findRef for
- * short-hand forms. getRefsByPrefix can be useful. getRef accepts non-ref items
- * such as MERGE_HEAD, …
+ * Question. Given the choice that a root component exists iff the path is
+ * absolute (which is a nice and clear invariant),
+ *
+ * Question. Should /root// be considered as a root component only, thus with an
+ * empty sequence of names, or should it be considered as a root component with
+ * a one element sequence of names, equal to "/"? Equivalently, should
+ * getFileName return null on /root//? (I suppose the intent of the spec is that
+ * getFileName() must return null iff the path is a root component only.) Note
+ * that the Windows implementation <a href=
+ * "https://github.com/openjdk/jdk/tree/450452bb8cb617682a3eb28ae651cb829a45dcc6/test/jdk/java/nio/file/Path/PathOps.java#L290">treats</a>
+ * C:\ as a root component only, and returns null on getFileName(). It would be
+ * nice to consider it a one element sequence, so that it would be never empty
+ * (thereby easing usage) and because it feels more natural, as "/root//" really
+ * denotes a directory, not "nothing" as the empty path does. But 1) this forces
+ * us to return something to getFileName(), and 2) this would break the nice
+ * guarantee that the sequence of names in a gitpath behaves like the sequence
+ * of names in a linux path: "/" under linux is an empty sequence of names (this
+ * is forced by the spec as it is only a root component). (And I believe that
+ * also under Windows, "\" is considered a root component only, equivalently, an
+ * empty sequence of names.) If we want the sequence of names of a gitpath to
+ * behave like a normal sequence of names, we must have that /root// has the
+ * sequence of names "/", which is contradictory, as the sequence of names "/"
+ * does not exist under linux! (The path "/" is a root component only and
+ * corresponds to an empty sequence of names.). Thus, we must say that the
+ * sequence of names here is the part without the first slash.
+ *
+ * Thus, if we adopt the second interpretation, what do we return? We could
+ * return just "/", or "/root//". to getFileName(), and consider it as relative
+ * (which is I think similar to what the Windows implementation does: I think it
+ * treats \ as relative). OR return
+ *
+ * NB /root// getFileName returns null: that seems to be the only reasonable
+ * answer compatible with the specs. The only possible alternative seems to be
+ * to return a relative path to "/", but it seems to me that the Windows
+ * implementation does not do this; and it would break the nice invariant that
  *
  * <h1>Old</h1>
  * <p>
