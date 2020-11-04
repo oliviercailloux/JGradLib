@@ -2,7 +2,7 @@ package io.github.oliviercailloux.java_grade.ex.chess;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Verify.verify;
-import static io.github.oliviercailloux.exceptions.Unchecker.URI_UNCHECKER;
+import static io.github.oliviercailloux.jaris.exceptions.Unchecker.URI_UNCHECKER;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -31,8 +31,6 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.jimfs.Configuration;
 import com.google.common.jimfs.Jimfs;
 
-import io.github.oliviercailloux.exceptions.Try;
-import io.github.oliviercailloux.exceptions.TryVoid;
 import io.github.oliviercailloux.git.GitCloner;
 import io.github.oliviercailloux.git.GitLocalHistory;
 import io.github.oliviercailloux.git.GitUri;
@@ -49,6 +47,8 @@ import io.github.oliviercailloux.grade.Mark;
 import io.github.oliviercailloux.grade.WeightingGrade;
 import io.github.oliviercailloux.grade.contexters.MavenManager;
 import io.github.oliviercailloux.grade.format.json.JsonGrade;
+import io.github.oliviercailloux.jaris.exceptions.Try;
+import io.github.oliviercailloux.jaris.exceptions.TryVoid;
 import io.github.oliviercailloux.java_grade.GraderOrchestrator;
 import io.github.oliviercailloux.java_grade.JavaCriterion;
 import io.github.oliviercailloux.java_grade.JavaGradeUtils;

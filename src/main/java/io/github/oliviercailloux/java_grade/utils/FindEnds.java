@@ -1,7 +1,7 @@
 package io.github.oliviercailloux.java_grade.utils;
 
 import static com.google.common.base.Preconditions.checkNotNull;
-import static io.github.oliviercailloux.exceptions.Unchecker.IO_UNCHECKER;
+import static io.github.oliviercailloux.jaris.exceptions.Unchecker.IO_UNCHECKER;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -16,13 +16,13 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
-import io.github.oliviercailloux.exceptions.Unchecker;
 import io.github.oliviercailloux.git.GitCloner;
 import io.github.oliviercailloux.git.GitUri;
 import io.github.oliviercailloux.git.git_hub.model.GitHubToken;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinatesWithPrefix;
 import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherV3;
+import io.github.oliviercailloux.jaris.exceptions.Unchecker;
 
 public class FindEnds {
 	@SuppressWarnings("unused")

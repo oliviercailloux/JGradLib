@@ -1,13 +1,11 @@
 package io.github.oliviercailloux.git;
 
-import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
-import static io.github.oliviercailloux.exceptions.Unchecker.IO_UNCHECKER;
+import static io.github.oliviercailloux.jaris.exceptions.Unchecker.IO_UNCHECKER;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -38,8 +36,7 @@ import com.google.common.collect.MoreCollectors;
 import com.google.common.collect.Sets;
 import com.google.common.collect.Sets.SetView;
 
-import io.github.oliviercailloux.exceptions.Unchecker;
-import io.github.oliviercailloux.utils.Utils;
+import io.github.oliviercailloux.jaris.exceptions.Unchecker;
 
 public class GitCloner {
 	@SuppressWarnings("unused")

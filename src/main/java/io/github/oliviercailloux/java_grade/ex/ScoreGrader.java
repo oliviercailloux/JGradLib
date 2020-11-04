@@ -29,8 +29,6 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.jimfs.Configuration;
 import com.google.common.jimfs.Jimfs;
 
-import io.github.oliviercailloux.exceptions.Try;
-import io.github.oliviercailloux.exceptions.TryVoid;
 import io.github.oliviercailloux.git.GitCloner;
 import io.github.oliviercailloux.git.GitLocalHistory;
 import io.github.oliviercailloux.git.GitUri;
@@ -47,6 +45,8 @@ import io.github.oliviercailloux.grade.Mark;
 import io.github.oliviercailloux.grade.WeightingGrade;
 import io.github.oliviercailloux.grade.contexters.MavenManager;
 import io.github.oliviercailloux.grade.format.json.JsonGrade;
+import io.github.oliviercailloux.jaris.exceptions.Try;
+import io.github.oliviercailloux.jaris.exceptions.TryVoid;
 import io.github.oliviercailloux.java_grade.GraderOrchestrator;
 import io.github.oliviercailloux.java_grade.JavaCriterion;
 import io.github.oliviercailloux.java_grade.JavaGradeUtils;

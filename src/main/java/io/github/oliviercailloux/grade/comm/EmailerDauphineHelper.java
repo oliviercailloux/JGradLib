@@ -1,6 +1,6 @@
 package io.github.oliviercailloux.grade.comm;
 
-import static io.github.oliviercailloux.exceptions.Unchecker.IO_UNCHECKER;
+import static io.github.oliviercailloux.jaris.exceptions.Unchecker.IO_UNCHECKER;
 
 import java.nio.file.Files;
 import java.nio.file.Path;

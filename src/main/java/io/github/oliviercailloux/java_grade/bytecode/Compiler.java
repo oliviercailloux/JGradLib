@@ -4,7 +4,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.base.Verify.verify;
-import static io.github.oliviercailloux.exceptions.Unchecker.URI_UNCHECKER;
+import static io.github.oliviercailloux.jaris.exceptions.Unchecker.URI_UNCHECKER;
 
 import java.io.File;
 import java.io.IOException;

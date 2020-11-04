@@ -1,6 +1,6 @@
 package io.github.oliviercailloux.git.fs;
 
-import static io.github.oliviercailloux.exceptions.Unchecker.IO_UNCHECKER;
+import static io.github.oliviercailloux.jaris.exceptions.Unchecker.IO_UNCHECKER;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;

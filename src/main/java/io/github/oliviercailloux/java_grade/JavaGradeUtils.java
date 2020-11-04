@@ -1,7 +1,7 @@
 package io.github.oliviercailloux.java_grade;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static io.github.oliviercailloux.exceptions.Unchecker.IO_UNCHECKER;
+import static io.github.oliviercailloux.jaris.exceptions.Unchecker.IO_UNCHECKER;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;

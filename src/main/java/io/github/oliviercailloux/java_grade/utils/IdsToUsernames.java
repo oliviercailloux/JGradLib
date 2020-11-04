@@ -14,10 +14,10 @@ import javax.xml.bind.JAXBElement;
 import com.google.common.collect.ImmutableSet;
 
 import ebx.ebx_dataservices.StandardException;
-import io.github.oliviercailloux.exceptions.Unchecker;
 import io.github.oliviercailloux.grade.comm.StudentOnGitHubKnown;
 import io.github.oliviercailloux.grade.comm.StudentOnMyCourse;
 import io.github.oliviercailloux.grade.mycourse.json.JsonStudentOnGitHubKnown;
+import io.github.oliviercailloux.jaris.exceptions.Unchecker;
 import io.github.oliviercailloux.json.JsonbUtils;
 import io.github.oliviercailloux.json.PrintableJsonObject;
 import io.github.oliviercailloux.supann.QueriesHelper;

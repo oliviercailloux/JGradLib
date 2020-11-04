@@ -1,7 +1,7 @@
 package io.github.oliviercailloux.git;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static io.github.oliviercailloux.exceptions.Unchecker.IO_UNCHECKER;
+import static io.github.oliviercailloux.jaris.exceptions.Unchecker.IO_UNCHECKER;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -114,8 +114,7 @@ public class JGit {
 			final ImmutableList.Builder<ObjectId> builder = ImmutableList.builder();
 
 			Files.writeString(workDir.resolve("file1.txt"), "Hello, world");
-			final ObjectId commit1 = insertCommit(inserter, personIdent, workDir, ImmutableList.of(),
-					"First commit");
+			final ObjectId commit1 = insertCommit(inserter, personIdent, workDir, ImmutableList.of(), "First commit");
 			builder.add(commit1);
 
 			Files.writeString(workDir.resolve("file2.txt"), "Hello again");

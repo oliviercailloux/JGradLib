@@ -1,7 +1,7 @@
 package io.github.oliviercailloux.git.git_hub.services;
 
 import static com.google.common.base.Verify.verify;
-import static io.github.oliviercailloux.exceptions.Unchecker.IO_UNCHECKER;
+import static io.github.oliviercailloux.jaris.exceptions.Unchecker.IO_UNCHECKER;
 import static java.util.Objects.requireNonNull;
 
 import java.nio.charset.StandardCharsets;
