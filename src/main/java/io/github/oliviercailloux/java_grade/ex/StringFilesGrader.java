@@ -324,7 +324,7 @@ public class StringFilesGrader {
 					Files.createDirectory(reference);
 					Files.writeString(reference.resolve(relative), "One\rTwo\nThree\r\n Four\n");
 					final ImmutableList<String> read = Try.of(() -> instance.getContentUsingIso88591Charset(relative))
-							.getOrElse(ImmutableList.of());
+							.orElse(ImmutableList.of());
 					gradeBuilder.put(LocalCriterion.CONTENT_READS_FROM_JIMFS,
 							Mark.binary(read != null && read.equals(ImmutableList.of("One", "Two", "Three", " Four"))));
 				}
@@ -343,7 +343,7 @@ public class StringFilesGrader {
 					Files.createDirectory(reference);
 					Files.write(reference.resolve(relative), "Hé !\r\n\n\r".getBytes(StandardCharsets.ISO_8859_1));
 					final ImmutableList<String> read = Try.of(() -> instance.getContentUsingIso88591Charset(relative))
-							.getOrElse(ImmutableList.of());
+							.orElse(ImmutableList.of());
 					gradeBuilder.put(LocalCriterion.CONTENT_READS_FROM_JIMFS_USING_8859,
 							Mark.binary(read != null && read.equals(ImmutableList.of("Hé !", "", ""))));
 				}
