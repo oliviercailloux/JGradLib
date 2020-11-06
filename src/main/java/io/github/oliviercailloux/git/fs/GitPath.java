@@ -2,8 +2,8 @@ package io.github.oliviercailloux.git.fs;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.base.Verify.verify;
-import static com.google.common.base.Verify.verifyNotNull;
 
 import java.io.IOException;
 import java.net.URI;
@@ -25,10 +25,8 @@ import org.eclipse.jgit.lib.Ref;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Streams;
 import com.google.common.jimfs.Jimfs;
-
-import io.github.oliviercailloux.git.fs.GitRepoFileSystem.GitObject;
 
 /**
  * Has an optional root component and an optional sequence of names (strings).
@@ -36,20 +34,21 @@ import io.github.oliviercailloux.git.fs.GitRepoFileSystem.GitObject;
  * component, if it is present, consists in a git reference (a string which must
  * start with refs/, such as refs/heads/main) or an {@link ObjectId} (not both).
  * The sequence of names, if it is present, consists in a non-empty sequence of
- * names (strings), with either a unique empty name, or no empty name.
+ * names, and either consists in a unique empty name, or contains no empty name.
+ * Each name is a string that does not contain any slash.
  *
  * This path is absolute iff the root component is present.
  *
  * <h1>String form</h1>
  *
  * The string form of a path consists in the string form of its root component,
- * if it has one, followed by the string form of its sequence of names, if it
- * has one.
+ * if it has one, followed by its internal path.
  *
- * The string form of a root component is /gitref//, or /sha1//.
+ * The string form of a root component is /gitref/, or /sha1/.
  *
- * The string form of a sequence of names obeys the rules of the string form of
- * a relative linux path.
+ * Its internal path is a string that starts with a slash iff the path is
+ * absolute, and is composed of the names that constitute its sequence of names,
+ * separated by slashes.
  *
  * <h1>Summary</h1>
  *
@@ -72,8 +71,8 @@ import io.github.oliviercailloux.git.fs.GitRepoFileSystem.GitObject;
  * once. Equivalently, it is an absolute path.</li>
  * <ul>
  * <li>It consists in a root component only. Equivalently, it has no sequence of
- * name. Equivalently, it ends with two slashes. An example of string form is
- * <code>"/refs/heads/main//"</code>.</li>
+ * name. Equivalently, its string form ends with two slashes. An example of
+ * string form is <code>"/refs/heads/main//"</code>.</li>
  * <li>It has a root component and a sequence of names. An example of string
  * form is <code>"/refs/heads/main//some/path"</code>.</li>
  * </ul>
@@ -82,9 +81,9 @@ import io.github.oliviercailloux.git.fs.GitRepoFileSystem.GitObject;
  *
  * newFs must be given a Uri of the form gitjfs:/some/path/ (with a trailing
  * slash). getPath must be given a Uri of the form
- * gitjfs:/some/path/?ref=/refs/heads/main/&sub-path=/internal/path. On Windows,
- * gitjfs:///c:/path/to/the%20file.txt?… (ref is optional, defaults to …main,
- * and sub-path is optional, defaults to /) (or only one slash). The path must
+ * gitjfs:/some/path/?root=/refs/heads/main/&internal-path=/internal/path. On
+ * Windows, gitjfs:///c:/path/to/the%20file.txt?… (root is optional and
+ * internal-path is optional; internal-path can’t be "/" or ""). The path must
  * have a <a href="https://stackoverflow.com/a/16445016/">trailing slash</a> and
  * denotes a local directory corresponding to file:/the/same/path/.
  *
@@ -98,8 +97,8 @@ import io.github.oliviercailloux.git.fs.GitRepoFileSystem.GitObject;
  * /refs/category/someref/, where category is tags, heads or remotes, but may
  * have other forms (see https://git-scm.com/docs/git-check-ref-format and
  * https://stackoverflow.com/a/47208574/). This class requires that the gitref
- * does not start or end with / and does not contain // or \ (these are also
- * restrictions on git refs anyway).
+ * starts with "refs/", does not end with / and does not contain // or \ (these
+ * are also restrictions on git refs anyway).
  *
  * The sequence of names is empty iff this path only represents a root
  * component.
@@ -206,47 +205,47 @@ public class GitPath implements Path {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(GitPath.class);
 
-	private static final Comparator<GitPath> COMPARATOR = Comparator.<GitPath, String>comparing((p) -> p.revStr)
-			.thenComparing((p) -> p.dirAndFile);
+	private static final Comparator<GitPath> COMPARATOR = Comparator.<GitPath, String>comparing(Path::toString);
 
 	private final GitRepoFileSystem fileSystem;
 
 	/**
-	 * Empty for no commit specified.
+	 * May be <code>null</code>.
 	 */
-	private final String revStr;
+	private final RootComponent root;
 
 	/**
-	 * Linux style in-memory path, may be the empty path.
+	 * Linux style in-memory path, absolute iff has a root component iff this path
+	 * is absolute iff this path has a root component, may contain no names ("/",
+	 * good for root-only paths), may contain a single empty name ("", good for
+	 * default path).
 	 */
 	private final Path dirAndFile;
 
-	GitPath(GitRepoFileSystem fileSystem, String revStr, Path dirAndFile) {
-		this.fileSystem = checkNotNull(fileSystem);
-		this.revStr = checkNotNull(revStr);
-		this.dirAndFile = checkNotNull(dirAndFile);
+	GitPath(GitRepoFileSystem fileSystem, RootComponent root, Path dirAndFile) {
+		checkArgument(dirAndFile != null);
+
 		checkArgument(dirAndFile.getFileSystem().provider().getScheme().equals(Jimfs.URI_SCHEME));
-		checkArgument(!revStr.equals("") == dirAndFile.isAbsolute());
-		/**
-		 * TODO should check that in git, revStr may not end with /
-		 */
-		checkArgument(!revStr.endsWith("/"));
+		checkArgument(dirAndFile.isAbsolute() == (root != null));
 		checkArgument(dirAndFile.isAbsolute() == (dirAndFile.getRoot() != null));
+		final boolean noSlashInNames = Streams.stream(dirAndFile).noneMatch(p -> p.toString().contains("/"));
+		checkArgument(noSlashInNames);
+		final boolean hasEmptyName = Streams.stream(dirAndFile).anyMatch(p -> p.toString().isEmpty());
+		if (hasEmptyName) {
+			checkArgument(dirAndFile.getNameCount() == 1);
+			checkArgument(root == null);
+		}
+		if (root == null) {
+			checkArgument(dirAndFile.getNameCount() >= 1);
+		}
+
+		this.fileSystem = checkNotNull(fileSystem);
+		this.root = root;
+		this.dirAndFile = dirAndFile;
 	}
 
-	public String getRevStr() {
-		verifyNotNull(revStr);
-		return revStr;
-	}
-
-	String getNonEmptyRevStr() {
-		verifyNotNull(revStr);
-		verify(!revStr.isEmpty());
-		return revStr;
-	}
-
-	private String getRevStrOrMaster() {
-		return revStr.equals("") ? "master" : revStr;
+	private RootComponent getRootOrDefault() {
+		return root == null ? RootComponent.DEFAULT : root;
 	}
 
 	@Override
@@ -256,19 +255,34 @@ public class GitPath implements Path {
 
 	@Override
 	public boolean isAbsolute() {
-		verify(dirAndFile.isAbsolute() == !revStr.isEmpty());
-		return dirAndFile.isAbsolute();
+		return root != null;
 	}
 
 	@Override
 	public GitPath getRoot() {
-		if (revStr.equals("")) {
+		if (root == null) {
 			return null;
 		}
-		if (dirAndFile.equals(GitRepoFileSystem.JIM_FS_SLASH)) {
+		if (getNameCount() == 0) {
 			return this;
 		}
-		return new GitPath(fileSystem, revStr, GitRepoFileSystem.JIM_FS_SLASH);
+		return new GitPath(fileSystem, root, GitRepoFileSystem.JIM_FS_SLASH);
+	}
+
+	/**
+	 * Returns the root component of this path, if this path has one (equivalently,
+	 * if it is absolute).
+	 * 
+	 * @return the root component.
+	 */
+	public RootComponent getRootComponent() {
+		checkState(isAbsolute());
+		verify(root != null);
+		return root;
+	}
+
+	public RootComponent getRootComponentOrDefault() {
+		return root != null ? root : RootComponent.DEFAULT;
 	}
 
 	@Override
@@ -279,13 +293,13 @@ public class GitPath implements Path {
 	@Override
 	public GitPath getName(int index) {
 		final Path name = dirAndFile.getName(index);
-		return new GitPath(fileSystem, "", name);
+		return new GitPath(fileSystem, null, name);
 	}
 
 	@Override
 	public GitPath subpath(int beginIndex, int endIndex) {
 		final Path subpath = dirAndFile.subpath(beginIndex, endIndex);
-		return new GitPath(fileSystem, "", subpath);
+		return new GitPath(fileSystem, null, subpath);
 	}
 
 	@Override
@@ -294,7 +308,7 @@ public class GitPath implements Path {
 		if (fileName == null) {
 			return null;
 		}
-		return new GitPath(fileSystem, "", fileName);
+		return new GitPath(fileSystem, null, fileName);
 	}
 
 	@Override
@@ -303,36 +317,70 @@ public class GitPath implements Path {
 		if (parent == null) {
 			return null;
 		}
-		return new GitPath(fileSystem, revStr, parent);
+		return new GitPath(fileSystem, root, parent);
 	}
 
+	/**
+	 * Tests if this path starts with the given path.
+	 *
+	 * <p>
+	 * This path <em>starts</em> with the given path if this path's root component
+	 * <em>equals</em> the root component of the given path, and this path starts
+	 * with the same name elements as the given path. If the given path has more
+	 * name elements than this path then {@code false} is returned.
+	 *
+	 * <p>
+	 * If the given path is associated with a different {@code FileSystem} to this
+	 * path then {@code false} is returned.
+	 *
+	 * @param other the given path
+	 *
+	 * @return {@code true} iff this path starts with the given path.
+	 */
 	@Override
 	public boolean startsWith(Path other) {
 		if (!getFileSystem().equals(other.getFileSystem())) {
 			return false;
 		}
 		final GitPath p2 = (GitPath) other;
-		if (!revStr.startsWith(p2.revStr)) {
-			return false;
-		}
-		return dirAndFile.startsWith(p2.dirAndFile);
+		return Objects.equals(root, p2.root) && dirAndFile.startsWith(p2.dirAndFile);
 	}
 
+	/**
+	 * Tests if this path ends with the given path.
+	 *
+	 * <p>
+	 * If the given path has <em>N</em> elements, and no root component, and this
+	 * path has <em>N</em> or more elements, then this path ends with the given path
+	 * if the last <em>N</em> elements of each path, starting at the element
+	 * farthest from the root, are equal.
+	 *
+	 * <p>
+	 * If the given path has a root component then this path ends with the given
+	 * path if the root component of this path <em>equals</em> the root component of
+	 * the given path, and the corresponding elements of both paths are equal.
+	 *
+	 * <p>
+	 * If the given path is associated with a different {@code FileSystem} to this
+	 * path then {@code false} is returned.
+	 *
+	 * @param other the given path
+	 *
+	 * @return {@code true} iff this path ends with the given path.
+	 */
 	@Override
 	public boolean endsWith(Path other) {
 		if (!getFileSystem().equals(other.getFileSystem())) {
 			return false;
 		}
 		final GitPath p2 = (GitPath) other;
-		if (!revStr.endsWith(p2.revStr)) {
-			return false;
-		}
-		return dirAndFile.endsWith(p2.dirAndFile);
+		final boolean matchRoot = (p2.root == null || p2.root.equals(root));
+		return matchRoot && dirAndFile.endsWith(p2.dirAndFile);
 	}
 
 	@Override
 	public GitPath normalize() {
-		return new GitPath(fileSystem, revStr, dirAndFile.normalize());
+		return new GitPath(fileSystem, root, dirAndFile.normalize());
 	}
 
 	@Override
@@ -346,7 +394,7 @@ public class GitPath implements Path {
 		return resolveRelative(other);
 	}
 
-	public GitPath resolveRelative(Path other) {
+	private GitPath resolveRelative(Path other) {
 		checkArgument(!other.isAbsolute());
 
 		if (other.toString().equals("")) {
@@ -356,13 +404,7 @@ public class GitPath implements Path {
 			throw new IllegalArgumentException();
 		}
 		final GitPath p2 = (GitPath) other;
-		final String newRevStr;
-		if (p2.revStr.equals("")) {
-			newRevStr = revStr;
-		} else {
-			newRevStr = p2.revStr;
-		}
-		return new GitPath(fileSystem, newRevStr, dirAndFile.resolve(p2.dirAndFile));
+		return new GitPath(fileSystem, root, dirAndFile.resolve(p2.dirAndFile));
 	}
 
 	@Override
@@ -371,10 +413,10 @@ public class GitPath implements Path {
 			throw new IllegalArgumentException();
 		}
 		final GitPath p2 = (GitPath) other;
-		if (revStr.equals(p2.revStr)) {
-			return new GitPath(fileSystem, "", dirAndFile.relativize(p2.dirAndFile));
+		if (!Objects.equals(root, p2.root)) {
+			throw new IllegalArgumentException();
 		}
-		throw new IllegalArgumentException();
+		return new GitPath(fileSystem, null, dirAndFile.relativize(p2.dirAndFile));
 	}
 
 	@SuppressWarnings("resource")
@@ -384,19 +426,23 @@ public class GitPath implements Path {
 		 * I do not use UriBuilder because it performs “contextual encoding of
 		 * characters not permitted in the corresponding URI component following the
 		 * rules of the application/x-www-form-urlencoded media type for query
-		 * parameters”, and therefore encodes / to %2F.
+		 * parameters”, and therefore encodes / to %2F. This is not required by the
+		 * spec, see https://stackoverflow.com/a/49400367/.
 		 */
 		final StringBuilder queryBuilder = new StringBuilder();
-		if (!revStr.isEmpty()) {
-			assert !dirAndFile.toString().isEmpty();
-			queryBuilder.append("revStr=" + revStr + "&");
-		}
-		if (!dirAndFile.toString().isEmpty()) {
-			queryBuilder.append("dirAndFile=" + dirAndFile);
+		if (root != null) {
+			/** TODO think about when ref or dirAndFile contains = or &. */
+			queryBuilder.append("root=" + root.toStringForm());
+			if (dirAndFile.getNameCount() >= 1) {
+				queryBuilder.append("&internal-path=" + dirAndFile.toString());
+			}
+		} else if (!dirAndFile.toString().isEmpty()) {
+			queryBuilder.append("internal-path=" + dirAndFile.toString());
 		}
 		final String query = queryBuilder.toString();
 
 		final URI uri;
+		/** TODO this is a mess. */
 		final GitRepoFileSystem fs = getFileSystem();
 		if (fs instanceof GitDirFileSystem) {
 			final GitDirFileSystem pathBasedFs = (GitDirFileSystem) fs;
@@ -430,45 +476,51 @@ public class GitPath implements Path {
 		if (isAbsolute()) {
 			return this;
 		}
-		return fileSystem.masterRoot.resolveRelative(this);
+		return fileSystem.mainSlash.resolveRelative(this);
 	}
 
 	public GitPath toRelativePath() {
-		if (revStr.isEmpty()) {
+		if (!isAbsolute()) {
 			return this;
 		}
-		assert dirAndFile.isAbsolute();
-		return new GitPath(fileSystem, "", GitRepoFileSystem.JIM_FS_SLASH.relativize(dirAndFile));
+		verify(dirAndFile.isAbsolute());
+		return new GitPath(fileSystem, null, GitRepoFileSystem.JIM_FS_SLASH.relativize(dirAndFile));
 	}
 
 	@Override
 	public Path toRealPath(LinkOption... options) throws IOException, NoSuchFileException {
-		final GitPath absolutePath = this.toAbsolutePath();
-		final GitObject gitObject = fileSystem.getAndCheckGitObject(absolutePath);
-		final String revStrPossiblyResolved;
-		if (ImmutableSet.copyOf(options).contains(LinkOption.NOFOLLOW_LINKS)) {
-			revStrPossiblyResolved = absolutePath.getNonEmptyRevStr();
-		} else {
-			revStrPossiblyResolved = gitObject.getCommit().getName();
-		}
 		/**
-		 * Shouldn’t use toRealPath here as this path does not exist in JimFs. Replacing
-		 * by normalize down here is not adequate either, as JGit does not consider that
-		 * ./someexistingdir exists; and normalizing before checking would be confusing
-		 * when this would lose symbolic links information, I suppose (though this would
-		 * be nice to do systematically and correctly, also for the rest of the API).
+		 * Not easy to get right. For example, given "a/../b", if no link, I have to
+		 * normalize to "b"; if contains a link (e.g. a → c/d), I have to either leave
+		 * it alone ("a/../b"), or follow the link and normalize ("c/b").
 		 */
-		/**
-		 * TODO https://www.eclipse.org/forums/index.php?t=msg&th=1103986 1. check if it
-		 * is a link; if so, crash if wants to follow links. 2. Instead of crashing, add
-		 * a method that gets link target (one step): /link/stuff/ → /blah/bloh/stuff/;
-		 * add this to the set of currently followed links or throws if already in the
-		 * set; add method that follows through all steps then clears the set if it
-		 * ends. Also follow the links to other file systems if the user explicitly
-		 * allowed at creation time to get out of a given repository (otherwise,
-		 * dangerous).
-		 */
-		return new GitPath(fileSystem, revStrPossiblyResolved, absolutePath.dirAndFile);
+		throw new UnsupportedOperationException();
+//		final GitPath absolutePath = toAbsolutePath();
+//		final GitObject gitObject = fileSystem.getAndCheckGitObject(absolutePath);
+//		final String revStrPossiblyResolved;
+//		if (ImmutableSet.copyOf(options).contains(LinkOption.NOFOLLOW_LINKS)) {
+//			revStrPossiblyResolved = absolutePath.getNonEmptyRevStr();
+//		} else {
+//			revStrPossiblyResolved = gitObject.getCommit().getName();
+//		}
+//		/**
+//		 * Shouldn’t use toRealPath here as this path does not exist in JimFs. Replacing
+//		 * by normalize down here is not adequate either, as JGit does not consider that
+//		 * ./someexistingdir exists; and normalizing before checking would be confusing
+//		 * when this would lose symbolic links information, I suppose (though this would
+//		 * be nice to do systematically and correctly, also for the rest of the API).
+//		 */
+//		/**
+//		 * TODO https://www.eclipse.org/forums/index.php?t=msg&th=1103986 1. check if it
+//		 * is a link; if so, crash if wants to follow links. 2. Instead of crashing, add
+//		 * a method that gets link target (one step): /link/stuff/ → /blah/bloh/stuff/;
+//		 * add this to the set of currently followed links or throws if already in the
+//		 * set; add method that follows through all steps then clears the set if it
+//		 * ends. Also follow the links to other file systems if the user explicitly
+//		 * allowed at creation time to get out of a given repository (otherwise,
+//		 * dangerous).
+//		 */
+//		return new GitPath(fileSystem, revStrPossiblyResolved, absolutePath.dirAndFile);
 	}
 
 	@Override
@@ -476,6 +528,15 @@ public class GitPath implements Path {
 		throw new UnsupportedOperationException();
 	}
 
+	/**
+	 * Compares path according to their string form. The spec mandates
+	 * “lexicographical” comparison, but I ignore what this means: apparently not
+	 * that the root components must be considered first, then the rest, considering
+	 * that the OpenJdk implementation of the Linux default file system sorts ""
+	 * before "/" before "a"; and probably not that they must be sorted by
+	 * lexicographic ordering of their string form, as it would then be a bit odd to
+	 * specify that “The ordering defined by this method is provider specific”.
+	 */
 	@Override
 	public int compareTo(Path other) {
 		if (!getFileSystem().equals(other.getFileSystem())) {
@@ -491,51 +552,38 @@ public class GitPath implements Path {
 			return false;
 		}
 		final GitPath p2 = (GitPath) o2;
-		return revStr.equals(p2.revStr) && dirAndFile.equals(p2.dirAndFile);
+		return fileSystem.equals(p2.fileSystem) && Objects.equals(root, p2.root) && dirAndFile.equals(p2.dirAndFile);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(revStr, dirAndFile);
+		return Objects.hash(fileSystem, root, dirAndFile);
 	}
 
 	@Override
 	public String toString() {
-		final String maybeSlash = revStr.isEmpty() ? "" : "/";
-		return revStr + maybeSlash + dirAndFile.toString();
-	}
-
-	boolean isRevStrAnObjectId() {
-		/**
-		 * This is incorrect (I suppose): a ref could have the same length as an object
-		 * id.
-		 */
-		return revStr.length() == 40;
+		final String rootStr = root == null ? "" : root.toStringForm();
+		return rootStr + dirAndFile.toString();
 	}
 
 	Optional<ObjectId> getCommitId() throws IOException {
-		if (isRevStrAnObjectId()) {
-			return Optional.of(ObjectId.fromString(revStr));
+		final RootComponent effectiveRoot = getRootOrDefault();
+
+		if (effectiveRoot.isObjectId()) {
+			return Optional.of(effectiveRoot.getObjectId());
 		}
-		return getCommitIdFromRef();
-	}
 
-	/**
-	 * revStr must be a ref, such as “master”, and not a SHA-1 object id
-	 */
-	Optional<ObjectId> getCommitIdFromRef() throws IOException {
 		final Optional<ObjectId> commitId;
+		final String effectiveRef = effectiveRoot.getGitRef();
 
-		final String effectiveRevStr = getRevStrOrMaster();
-		final Ref ref = getFileSystem().getRepository().findRef(effectiveRevStr);
+		final Ref ref = getFileSystem().getRepository().exactRef(effectiveRef);
 		if (ref == null) {
-			LOGGER.debug("Rev str " + effectiveRevStr + " not found.");
+			LOGGER.debug("Rev str " + effectiveRef + " not found.");
 			commitId = Optional.empty();
 		} else {
 			commitId = Optional.ofNullable(ref.getLeaf().getObjectId());
 			if (commitId.isEmpty()) {
-				/** TODO enquire how this can happen. */
-				LOGGER.debug("Ref " + ref.getName() + " does not exist yet.");
+				LOGGER.debug("Ref " + ref.getName() + " points to nothing existing.");
 			} else {
 				LOGGER.debug("Ref {} found: {}.", ref.getName(), commitId);
 			}

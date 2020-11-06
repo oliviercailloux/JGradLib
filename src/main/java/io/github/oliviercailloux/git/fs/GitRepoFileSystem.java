@@ -25,13 +25,13 @@ import java.nio.file.WatchService;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileTime;
 import java.nio.file.attribute.UserPrincipalLookupService;
-import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Stream;
 
 import org.eclipse.jgit.errors.CorruptObjectException;
 import org.eclipse.jgit.errors.IncorrectObjectTypeException;
@@ -49,7 +49,6 @@ import org.eclipse.jgit.treewalk.TreeWalk;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Verify;
 import com.google.common.base.VerifyException;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -227,11 +226,11 @@ public class GitRepoFileSystem extends FileSystem {
 
 	private boolean isOpen;
 	private ObjectReader reader;
-	private Repository repository;
+	protected Repository repository;
 	private boolean shouldCloseRepository;
 
-	final GitPath masterRoot = new GitPath(this, "master", GitRepoFileSystem.JIM_FS_SLASH);
-	final GitPath root = new GitPath(this, "", GitRepoFileSystem.JIM_FS_EMPTY);
+	final GitPath mainSlash = new GitPath(this, RootComponent.DEFAULT, GitRepoFileSystem.JIM_FS_SLASH);
+	final GitPath defaultPath = new GitPath(this, null, GitRepoFileSystem.JIM_FS_EMPTY);
 
 	protected GitRepoFileSystem(GitFileSystemProvider gitProvider, Repository repository,
 			boolean shouldCloseRepository) {
@@ -272,15 +271,48 @@ public class GitRepoFileSystem extends FileSystem {
 		}
 	}
 
-	public GitPath getAbsolutePath(String revStr) {
-		return getAbsolutePath(revStr, "/");
+	@Override
+	public GitPath getPath(String first, String... more) {
+		if (first.startsWith("/")) {
+			return getAbsolutePath(first.substring(1), more);
+		}
+		return getRelativePath(
+				Stream.concat(Stream.of(first), Stream.of(more)).collect(ImmutableList.toImmutableList()));
 	}
 
-	public GitPath getAbsolutePath(String revStr, String dirAndFile, String... more) {
-		checkArgument(!revStr.isEmpty());
-		final Path part = JIM_FS_SLASH.resolve(JIM_FS.getPath(dirAndFile, more));
-		checkArgument(part.isAbsolute());
-		return new GitPath(this, revStr, part);
+	/**
+	 * @param root         not starting with slash.
+	 * @param internalPath may contain slashes.
+	 * @return
+	 */
+	public GitPath getAbsolutePath(String root, String... internalPath) {
+		return getAbsolutePath(RootComponent.given(root), ImmutableList.copyOf(internalPath));
+	}
+
+	public GitPath getAbsolutePath(ObjectId objectId, String... internalPath) {
+		return getAbsolutePath(RootComponent.givenObjectId(objectId), ImmutableList.copyOf(internalPath));
+	}
+
+	private GitPath getAbsolutePath(RootComponent root, List<String> internalPath) {
+		checkNotNull(root);
+		Path internalJimPath = JIM_FS_SLASH;
+		for (String name : internalPath) {
+			internalJimPath = internalJimPath.resolve(name);
+		}
+		return new GitPath(this, root, internalJimPath);
+	}
+
+	public GitPath getRelativePath(String... names) {
+		return getRelativePath(ImmutableList.copyOf(names));
+	}
+
+	private GitPath getRelativePath(List<String> internalPath) {
+		Path internalJimPath = JIM_FS_EMPTY;
+		for (String name : internalPath) {
+			internalJimPath = internalJimPath.resolve(name);
+			checkArgument(!internalJimPath.isAbsolute(), name + " is making this internal path absolute.");
+		}
+		return new GitPath(this, null, internalJimPath);
 	}
 
 	public GitLocalHistory getCachedHistory() {
@@ -351,28 +383,15 @@ public class GitRepoFileSystem extends FileSystem {
 	}
 
 	@Override
-	public GitPath getPath(String first, String... more) {
-		/** Ugly (sob)… */
-		if (!first.isEmpty() && !first.contains("//") && !first.endsWith("/")) {
-			return getRelativePath(first, more);
-		}
-		return getPath(first, Arrays.asList(more));
-	}
-
-	@Override
 	public PathMatcher getPathMatcher(String syntaxAndPattern) {
 		throw new UnsupportedOperationException();
 	}
 
-	public GitPath getRelativePath(String first, String... more) {
-		return getPath("", ImmutableList.<String>builder().add(first).addAll(Arrays.asList(more)).build());
-	}
-
 	/**
-	 * @return a relative path designating the root of the default (master) commit.
+	 * @return a relative path designating the root of the default (main) commit.
 	 */
 	public GitPath getRoot() {
-		return root;
+		return defaultPath;
 	}
 
 	@Override
@@ -386,7 +405,7 @@ public class GitRepoFileSystem extends FileSystem {
 		final Comparator<Path> compareWithoutTies = Comparator.comparing((p) -> ((GitPath) p),
 				getPathLexicographicTemporalComparator());
 		return ImmutableSortedSet.copyOf(compareWithoutTies,
-				getCachedHistory().getGraph().nodes().stream().map((c) -> getPath(c.getName() + "/")).iterator());
+				getCachedHistory().getGraph().nodes().stream().map(this::getAbsolutePath).iterator());
 	}
 
 	@Override
@@ -444,7 +463,7 @@ public class GitRepoFileSystem extends FileSystem {
 		}
 
 		final RevTree tree;
-		if (dir.toRelativePath().equals(root)) {
+		if (dir.toRelativePath().equals(defaultPath)) {
 			tree = gitObject.commit.getTree();
 		} else {
 			try (RevWalk walk = new RevWalk(reader)) {
@@ -457,7 +476,7 @@ public class GitRepoFileSystem extends FileSystem {
 			treeWalk.addTree(tree);
 			treeWalk.setRecursive(false);
 			while (treeWalk.next()) {
-				final GitPath path = dir.resolve(new GitPath(this, "", JIM_FS.getPath(treeWalk.getNameString())));
+				final GitPath path = dir.resolve(new GitPath(this, null, JIM_FS.getPath(treeWalk.getNameString())));
 				if (!filter.accept(path)) {
 					continue;
 				}
@@ -531,7 +550,7 @@ public class GitRepoFileSystem extends FileSystem {
 		final GitPath relativePath = gitPath.toRelativePath();
 
 		final GitObject gitObject;
-		if (relativePath.equals(root)) {
+		if (relativePath.equals(defaultPath)) {
 			gitObject = new GitObject(commit, tree, FileMode.TREE);
 		} else {
 			/**
@@ -559,80 +578,30 @@ public class GitRepoFileSystem extends FileSystem {
 		return gitObject;
 	}
 
-	private GitPath getPath(String first, List<String> more) {
-		/**
-		 * Get first arg until // or end of string. First arg may not start with /.
-		 *
-		 * Build a list of dirAndFile arguments, constituted of the rest of the first
-		 * arg if it contains "//" (taking everything after the first / in "//", thus
-		 * including a slash), and all others, concatenated then split at "/". If
-		 * resulting revStr is not empty, and the list of dirAndFile is not empty, then
-		 * dirAndFile must start with "/". If revStr is not empty and dirAndFile is
-		 * empty, dirAndFile is considered as slash. If revStr is empty, and the list of
-		 * dirAndFile is not empty, then dirAndFile must not start with /. If revStr is
-		 * empty, and dirAndFile is empty, dirAndFile is considered as "".
-		 *
-		 * TODO change this, this is complicated and unclear: intuition and endsWith
-		 * suggest that the path corresponding to the simple string "ploum.txt" should
-		 * transform to a relative path. We should simply decide that this is an
-		 * absolute path, thus containing a revStr, iff the first component starts with
-		 * slash.
-		 */
-		checkArgument(!first.startsWith("/"));
-		checkArgument(first.isEmpty() || first.contains("//") || first.endsWith("/"), first);
-		final int startDoubleSlash = first.indexOf("//");
-		verify(startDoubleSlash != 0);
-		final String revStr;
-		if (startDoubleSlash == -1) {
-			revStr = first.isEmpty() ? "" : first.substring(0, first.length() - 1);
-		} else {
-			revStr = first.substring(0, startDoubleSlash);
-		}
-		verify(!revStr.startsWith("/"));
-		verify(!revStr.endsWith("/"));
-		final String restFirst;
-		if (startDoubleSlash == -1) {
-			restFirst = "";
-		} else {
-			restFirst = first.substring(startDoubleSlash + 1, first.length());
-			verify(restFirst.startsWith("/"));
-		}
-
-		final ImmutableList<String> dirAndFile = ImmutableList.<String>builder().add(restFirst).addAll(more).build()
-				.stream().filter((s) -> !s.isEmpty()).collect(ImmutableList.toImmutableList());
-
-		if (!dirAndFile.isEmpty()) {
-			checkArgument(revStr.isEmpty() == !dirAndFile.get(0).startsWith("/"));
-		}
-
-		final Path effectiveDirAndFile;
-		if (dirAndFile.isEmpty()) {
-			if (revStr.isEmpty()) {
-				effectiveDirAndFile = JIM_FS_EMPTY;
-			} else {
-				effectiveDirAndFile = JIM_FS_SLASH;
-			}
-		} else {
-			effectiveDirAndFile = JIM_FS.getPath(dirAndFile.get(0),
-					dirAndFile.subList(1, dirAndFile.size()).toArray(new String[] {}));
-		}
-
-		Verify.verify(!revStr.isEmpty() == effectiveDirAndFile.isAbsolute());
-
-		return new GitPath(this, revStr, effectiveDirAndFile);
-	}
-
 	/**
-	 * Paths must have a revStr in the form of a sha1, not a reference such as
-	 * "master".
+	 * Paths must have a root in the form of a sha1.
 	 */
 	private Comparator<GitPath> getPathLexicographicTemporalComparator() {
 		final Comparator<ObjectId> compareWithoutTies = getLexicographicTemporalComparator();
-		return Comparator.comparing(p -> ObjectId.fromString(p.getRevStr()), compareWithoutTies);
+		return Comparator.comparing((GitPath p) -> p.getRootComponent().getObjectId(), compareWithoutTies);
 	}
 
 	Repository getRepository() {
 		return repository;
+	}
+
+	@Override
+	public boolean equals(Object o2) {
+		if (!(o2 instanceof GitRepoFileSystem)) {
+			return false;
+		}
+		final GitRepoFileSystem g2 = (GitRepoFileSystem) o2;
+		return repository.equals(g2.repository);
+	}
+
+	@Override
+	public int hashCode() {
+		return Objects.hash(repository);
 	}
 
 }

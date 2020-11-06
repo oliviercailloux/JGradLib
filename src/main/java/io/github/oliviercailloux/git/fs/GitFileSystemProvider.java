@@ -132,7 +132,7 @@ public class GitFileSystemProvider extends FileSystemProvider {
 
 	public GitRepoFileSystem newFileSystemFromDfsRepository(DfsRepository repository) throws IOException {
 		if (cachedRepoFileSystems.containsKey(repository.getDescription().getRepositoryName())) {
-			throw new FileSystemAlreadyExistsException();
+			throw new FileSystemAlreadyExistsException("A repository with the same name exists.");
 		}
 		if (!repository.getObjectDatabase().exists()) {
 			throw new IOException(String.format("Object database not found."));
@@ -179,7 +179,7 @@ public class GitFileSystemProvider extends FileSystemProvider {
 			throw new FileSystemNotFoundException();
 		}
 
-		return cachedFileSystems.get(gitDir).root;
+		return cachedFileSystems.get(gitDir).defaultPath;
 	}
 
 	@Override

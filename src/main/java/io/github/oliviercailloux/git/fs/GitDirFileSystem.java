@@ -38,19 +38,18 @@ public class GitDirFileSystem extends GitRepoFileSystem {
 		return new GitDirFileSystem(provider, repository, false);
 	}
 
-	/**
-	 * Must be default FS because of limitations of JGit.
-	 */
-	private final Path gitDir;
-
 	private GitDirFileSystem(GitFileSystemProvider gitProvider, FileRepository repository,
 			boolean shouldCloseRepository) {
 		super(gitProvider, repository, shouldCloseRepository);
-		this.gitDir = checkNotNull(repository.getDirectory()).toPath();
+		checkNotNull(repository.getDirectory());
+	}
+
+	private FileRepository getFileRepository() {
+		return (FileRepository) repository;
 	}
 
 	public Path getGitDir() {
-		return gitDir;
+		return getFileRepository().getDirectory().toPath();
 	}
 
 	@Override
