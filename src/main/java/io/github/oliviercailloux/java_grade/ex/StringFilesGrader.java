@@ -50,18 +50,18 @@ import io.github.oliviercailloux.grade.Mark;
 import io.github.oliviercailloux.grade.WeightingGrade;
 import io.github.oliviercailloux.grade.contexters.MavenManager;
 import io.github.oliviercailloux.grade.format.json.JsonGrade;
+import io.github.oliviercailloux.jaris.exceptions.Try;
 import io.github.oliviercailloux.java_grade.GraderOrchestrator;
 import io.github.oliviercailloux.java_grade.JavaCriterion;
 import io.github.oliviercailloux.java_grade.JavaGradeUtils;
 import io.github.oliviercailloux.java_grade.bytecode.Compiler;
-import io.github.oliviercailloux.java_grade.bytecode.Instanciator;
 import io.github.oliviercailloux.java_grade.bytecode.Compiler.CompilationResult;
+import io.github.oliviercailloux.java_grade.bytecode.Instanciator;
 import io.github.oliviercailloux.java_grade.testers.JavaMarkHelper;
 import io.github.oliviercailloux.java_grade.utils.Summarize;
 import io.github.oliviercailloux.json.JsonbUtils;
 import io.github.oliviercailloux.samples.string_files.StringFilesUtils;
 import io.github.oliviercailloux.utils.Utils;
-import io.vavr.control.Try;
 
 public class StringFilesGrader {
 	static enum LocalCriterion implements Criterion {
