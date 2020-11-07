@@ -5,10 +5,15 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.Map;
+
+import javax.ws.rs.core.UriBuilder;
 
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.net.UrlEscapers;
 
 import io.github.oliviercailloux.git.GitUri;
 
@@ -18,6 +23,32 @@ class GitUriTests {
 
 	@Test
 	void testUri() throws Exception {
+		final String orig = "slash/and&space colon:stop.question?plus+backs\\percent%";
+		{
+			final String escaped = UrlEscapers.urlPathSegmentEscaper().escape(orig);
+			final URI uri = new URI("scheme:/" + escaped);
+			final String decoded = uri.getPath();
+			assertEquals("/" + orig, decoded);
+			LOGGER.debug("Escaped: {}.", escaped);
+		}
+		{
+			final URI uri = new URI("scheme:/?param1=and%26&param2=v2");
+			assertEquals("param1=and&&param2=v2", uri.getQuery());
+			assertEquals("param1=and%26&param2=v2", uri.getRawQuery());
+		}
+		{
+			final URI uri = UriBuilder.fromUri("scheme:/").queryParam("param1", "and%26").queryParam("param2", "v2")
+					.build();
+			assertEquals("param1=and&&param2=v2", uri.getQuery());
+		}
+		{
+			final String escapedValue = QueryUtils.QUERY_ENTRY_ESCAPER.escape(orig);
+			LOGGER.info("Escaped: {}.", escapedValue);
+			final URI uri = new URI("scheme:/?param1=" + escapedValue + "&param2=v2");
+			final Map<String, String> decoded = QueryUtils.splitQuery(uri);
+			assertEquals(orig, decoded.get("param1"));
+		}
+
 		assertEquals(new URI("ssh://user@host.xz/path/to/repo.git"),
 				new URI("ssh", "user", "host.xz", -1, "/path/to/repo.git", null, null));
 		assertThrows(URISyntaxException.class, () -> new URI("git@github.com:oliviercailloux/testrel.git"));

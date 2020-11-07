@@ -26,7 +26,7 @@ public class GitPathTests {
 	private static final Logger LOGGER = LoggerFactory.getLogger(GitPathTests.class);
 
 	final GitRepoFileSystem GIT_FILE_SYSTEM = IO_UNCHECKER
-			.getUsing(() -> GitDirFileSystem.given(Mockito.mock(GitFileSystemProvider.class), Path.of(".")));
+			.getUsing(() -> GitFileFileSystem.given(Mockito.mock(GitFileSystemProvider.class), Path.of(".")));
 
 	@Test
 	void testBasics() throws Exception {
@@ -129,7 +129,7 @@ public class GitPathTests {
 	void testUris() throws Exception {
 		final Path gitDir = Path.of("git dir");
 		@SuppressWarnings("resource")
-		final GitRepoFileSystem fs = GitDirFileSystem.given(new GitFileSystemProvider(), gitDir);
+		final GitRepoFileSystem fs = GitFileFileSystem.given(new GitFileSystemProvider(), gitDir);
 		final GitPath path = fs.getPath("master/", "/file.txt");
 		assertEquals(
 				new URI("gitjfs", null, gitDir.toAbsolutePath().toString(), "revStr=master&dirAndFile=/file.txt", null),
@@ -145,6 +145,9 @@ public class GitPathTests {
 	}
 
 	private GitPath getGitPath(RootComponent root, String dirAndFile) {
-		return new GitPath(GIT_FILE_SYSTEM, root, GitRepoFileSystem.JIM_FS.getPath(dirAndFile));
+		if (root != null) {
+			return GitPath.absolute(GIT_FILE_SYSTEM, root, GitFileSystemProvider.JIM_FS.getPath(dirAndFile));
+		}
+		return GitPath.relative(GIT_FILE_SYSTEM, GitFileSystemProvider.JIM_FS.getPath(dirAndFile));
 	}
 }

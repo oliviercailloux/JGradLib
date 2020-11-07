@@ -23,6 +23,12 @@ public class RootComponent {
 	static final Comparator<RootComponent> SYNTAXIC_COMPARATOR = Comparator
 			.comparingInt((RootComponent r) -> r.isRef() ? 0 : 1).thenComparing(RootComponent::toStringForm);
 
+	public static RootComponent givenStringForm(String stringForm) {
+		checkArgument(stringForm.startsWith("/"));
+		checkArgument(stringForm.endsWith("/"));
+		return given(stringForm.substring(1, stringForm.length() - 1));
+	}
+
 	public static RootComponent given(String refOrObjectId) {
 		if (refOrObjectId.startsWith("refs/") || refOrObjectId.startsWith("heads/")
 				|| refOrObjectId.startsWith("tags/")) {

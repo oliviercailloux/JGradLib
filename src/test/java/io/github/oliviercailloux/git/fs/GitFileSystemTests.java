@@ -37,7 +37,7 @@ public class GitFileSystemTests {
 
 	@Test
 	void testPaths() throws Exception {
-		try (GitRepoFileSystem gitFs = GitDirFileSystem.given(Mockito.mock(GitFileSystemProvider.class),
+		try (GitRepoFileSystem gitFs = GitFileFileSystem.given(Mockito.mock(GitFileSystemProvider.class),
 				Path.of("/path/to/gitdir"))) {
 			assertEquals("", gitFs.getPath("").toString());
 			assertEquals("", gitFs.getPath("", "", "").toString());

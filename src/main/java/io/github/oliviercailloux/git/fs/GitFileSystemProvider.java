@@ -10,7 +10,7 @@ import java.nio.file.CopyOption;
 import java.nio.file.DirectoryStream;
 import java.nio.file.DirectoryStream.Filter;
 import java.nio.file.FileStore;
-import java.nio.file.FileSystemAlreadyExistsException;
+import java.nio.file.FileSystem;
 import java.nio.file.FileSystemNotFoundException;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
@@ -23,7 +23,6 @@ import java.nio.file.attribute.FileAttribute;
 import java.nio.file.attribute.FileAttributeView;
 import java.nio.file.spi.FileSystemProvider;
 import java.util.Iterator;
-import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 
@@ -37,34 +36,32 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Sets;
+import com.google.common.jimfs.Configuration;
+import com.google.common.jimfs.Jimfs;
 
 public class GitFileSystemProvider extends FileSystemProvider {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(GitFileSystemProvider.class);
 
 	public static final String SCHEME = "gitjfs";
+	/**
+	 * It is crucial to always use the same instance of Jimfs, because Jimfs refuses
+	 * to resolve paths coming from different instances.
+	 */
+	static final FileSystem JIM_FS = Jimfs.newFileSystem(Configuration.unix());
 
-	private static Path getGitDir(URI gitFsUri) {
-		checkArgument(gitFsUri.isAbsolute());
-		checkArgument(gitFsUri.getScheme().equalsIgnoreCase(SCHEME));
-		checkArgument(!gitFsUri.isOpaque());
-		checkArgument(gitFsUri.getAuthority() == null);
-		checkArgument(gitFsUri.getQuery() == null);
-		checkArgument(gitFsUri.getFragment() == null);
+	static final Path JIM_FS_EMPTY = JIM_FS.getPath("");
 
-		final Path gitDir = Path.of(gitFsUri.getPath());
-		return gitDir;
-	}
+	static final Path JIM_FS_SLASH = JIM_FS.getPath("/");
 
-	private final Map<Path, GitDirFileSystem> cachedFileSystems = new LinkedHashMap<>();
-
-	private final Map<String, GitRepoFileSystem> cachedRepoFileSystems = new LinkedHashMap<>();
+	private final GitFileSystems fses;
 
 	/**
 	 * Zero argument constructor to satisfy the standard Java service-provider
 	 * loading mechanism.
 	 */
 	public GitFileSystemProvider() {
+		fses = new GitFileSystems();
 	}
 
 	@Override
@@ -72,37 +69,49 @@ public class GitFileSystemProvider extends FileSystemProvider {
 		return SCHEME;
 	}
 
+	GitFileSystems getGitFileSystems() {
+		return fses;
+	}
+
 	@Override
-	public GitDirFileSystem newFileSystem(URI gitFsUri, Map<String, ?> env) throws IOException {
-		final Path gitDir = getGitDir(gitFsUri);
+	public GitFileFileSystem newFileSystem(URI gitFsUri, Map<String, ?> env) throws IOException {
+		final Path gitDir = fses.getGitDir(gitFsUri);
 		return newFileSystemFromGitDir(gitDir);
 	}
 
 	@Override
-	public GitDirFileSystem newFileSystem(Path gitDir, Map<String, ?> env) throws IOException {
+	public GitFileFileSystem newFileSystem(Path gitDir, Map<String, ?> env) throws IOException {
 		return newFileSystemFromGitDir(gitDir);
 	}
 
-	public GitDirFileSystem newFileSystemFromGitDir(Path gitDir) throws UnsupportedOperationException, IOException {
-		if (cachedFileSystems.containsKey(gitDir)) {
-			throw new FileSystemAlreadyExistsException();
-		}
+	@SuppressWarnings("resource")
+	public GitFileFileSystem newFileSystemFromGitDir(Path gitDir) throws UnsupportedOperationException {
+		fses.verifyCanCreateFileSystemCorrespondingTo(gitDir);
+
 		if (!Files.exists(gitDir)) {
 			/**
-			 * Not clear whether the specs mandate UnsupportedOperationException here, but I
-			 * rather follow the observed behavior of ZipFileSystemProvider.
+			 * Not clear whether the specs mandate UnsupportedOperationException here. I
+			 * follow the observed behavior of ZipFileSystemProvider.
 			 */
 			throw new FileSystemNotFoundException(String.format("Directory %s not found.", gitDir));
 		}
-		try (Repository repo = new FileRepositoryBuilder().setGitDir(gitDir.toFile()).build()) {
+		final FileRepository repo;
+		try {
+			repo = (FileRepository) new FileRepositoryBuilder().setGitDir(gitDir.toFile()).build();
 			if (!repo.getObjectDatabase().exists()) {
+				try {
+					repo.close();
+				} catch (Exception e) {
+					LOGGER.debug("Exception while closing underlying repository.", e);
+					// suppress
+				}
 				throw new UnsupportedOperationException(String.format("Object database not found in %s.", gitDir));
 			}
 		} catch (IOException e) {
 			throw new UnsupportedOperationException(e);
 		}
-		final GitDirFileSystem newFs = GitDirFileSystem.given(this, gitDir);
-		cachedFileSystems.put(gitDir, newFs);
+		final GitFileFileSystem newFs = GitFileFileSystem.givenOurRepository(this, repo);
+		fses.put(gitDir, newFs);
 		return newFs;
 	}
 
@@ -113,50 +122,49 @@ public class GitFileSystemProvider extends FileSystemProvider {
 		}
 		if (repository instanceof FileRepository) {
 			final FileRepository f = (FileRepository) repository;
-			final Path gitDir = f.getDirectory().toPath();
-			if (cachedFileSystems.containsKey(gitDir)) {
-				throw new FileSystemAlreadyExistsException();
-			}
-			if (!Files.exists(gitDir)) {
-				throw new IOException(String.format("Directory %s not found.", gitDir));
-			}
-			if (!repository.getObjectDatabase().exists()) {
-				throw new IOException(String.format("Object database not found in %s.", gitDir));
-			}
-			final GitDirFileSystem newFs = GitDirFileSystem.given(this, gitDir);
-			cachedFileSystems.put(gitDir, newFs);
-			return newFs;
+			return newFileSystemFromFileRepository(f);
 		}
 		throw new IllegalArgumentException("Unknown repository");
 	}
 
-	public GitRepoFileSystem newFileSystemFromDfsRepository(DfsRepository repository) throws IOException {
-		if (cachedRepoFileSystems.containsKey(repository.getDescription().getRepositoryName())) {
-			throw new FileSystemAlreadyExistsException("A repository with the same name exists.");
+	public GitFileFileSystem newFileSystemFromFileRepository(FileRepository repository) throws IOException {
+		final Path gitDir = repository.getDirectory().toPath();
+		fses.verifyCanCreateFileSystemCorrespondingTo(gitDir);
+
+		if (!Files.exists(gitDir)) {
+			throw new IOException(String.format("Directory %s not found.", gitDir));
 		}
+		if (!repository.getObjectDatabase().exists()) {
+			throw new IOException(String.format("Object database not found in %s.", gitDir));
+		}
+		final GitFileFileSystem newFs = GitFileFileSystem.givenUserRepository(this, repository);
+		fses.put(gitDir, newFs);
+		return newFs;
+	}
+
+	public GitDfsFileSystem newFileSystemFromDfsRepository(DfsRepository repository) throws IOException {
+		fses.verifyCanCreateFileSystemCorrespondingTo(repository);
+
 		if (!repository.getObjectDatabase().exists()) {
 			throw new IOException(String.format("Object database not found."));
 		}
-		final GitRepoFileSystem newFs = GitRepoFileSystem.given(this, repository);
-		cachedRepoFileSystems.put(repository.getDescription().getRepositoryName(), newFs);
+
+		final GitDfsFileSystem newFs = GitDfsFileSystem.givenUserRepository(this, repository);
+		fses.put(repository, newFs);
 		return newFs;
 	}
 
 	@Override
-	public GitDirFileSystem getFileSystem(URI gitFsUri) {
-		/** TODO this could contain a repo name. */
-		final Path gitDir = getGitDir(gitFsUri);
-		return getFileSystemFromGitDir(gitDir);
+	public GitRepoFileSystem getFileSystem(URI gitFsUri) {
+		return fses.getFileSystem(gitFsUri);
 	}
 
-	public GitDirFileSystem getFileSystemFromGitDir(Path gitDir) {
-		checkArgument(cachedFileSystems.containsKey(gitDir));
-		return cachedFileSystems.get(gitDir);
+	public GitFileFileSystem getFileSystemFromGitDir(Path gitDir) {
+		return fses.getFileSystemFromGitDir(gitDir);
 	}
 
 	public GitRepoFileSystem getFileSystemFromRepositoryName(String name) {
-		checkArgument(cachedRepoFileSystems.containsKey(name));
-		return cachedRepoFileSystems.get(name);
+		return fses.getFileSystemFromName(name);
 	}
 
 	/**
@@ -164,22 +172,12 @@ public class GitFileSystemProvider extends FileSystemProvider {
 	 * create a new file system transparently from this method. This would encourage
 	 * the caller to forget closing the just created file system.
 	 *
-	 * A URI may be more complete and identify a commit (possibly master), directory
-	 * and file. I have not thought about a general approach to do this. Patches
-	 * welcome.
 	 */
+	@SuppressWarnings("resource")
 	@Override
 	public GitPath getPath(URI gitFsUri) {
-		final Path gitDir = getGitDir(gitFsUri);
-		return getPathFromGitDir(gitDir);
-	}
-
-	public GitPath getPathFromGitDir(Path gitDir) {
-		if (!cachedFileSystems.containsKey(gitDir)) {
-			throw new FileSystemNotFoundException();
-		}
-
-		return cachedFileSystems.get(gitDir).defaultPath;
+		final GitRepoFileSystem fs = fses.getFileSystem(gitFsUri);
+		return GitPath.fromQueryString(fs, QueryUtils.splitQuery(gitFsUri));
 	}
 
 	@Override
@@ -289,10 +287,6 @@ public class GitFileSystemProvider extends FileSystemProvider {
 	@Override
 	public void setAttribute(Path path, String attribute, Object value, LinkOption... options) throws IOException {
 		throw new ReadOnlyFileSystemException();
-	}
-
-	void hasBeenClosedEvent(GitDirFileSystem fs) {
-		cachedFileSystems.remove(fs.getGitDir());
 	}
 
 }

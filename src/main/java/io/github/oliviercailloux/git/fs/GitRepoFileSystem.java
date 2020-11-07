@@ -7,6 +7,7 @@ import static com.google.common.base.Verify.verify;
 import static io.github.oliviercailloux.jaris.exceptions.Unchecker.IO_UNCHECKER;
 
 import java.io.IOException;
+import java.net.URI;
 import java.nio.ByteBuffer;
 import java.nio.channels.SeekableByteChannel;
 import java.nio.file.AccessDeniedException;
@@ -55,14 +56,12 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Sets;
 import com.google.common.graph.ImmutableGraph;
-import com.google.common.jimfs.Configuration;
-import com.google.common.jimfs.Jimfs;
 
 import io.github.oliviercailloux.git.GitLocalHistory;
 import io.github.oliviercailloux.git.GitUtils;
 import io.github.oliviercailloux.utils.SeekableInMemoryByteChannel;
 
-public class GitRepoFileSystem extends FileSystem {
+public abstract class GitRepoFileSystem extends FileSystem {
 	private static class DirectoryChannel implements SeekableByteChannel {
 		private boolean open;
 
@@ -208,29 +207,16 @@ public class GitRepoFileSystem extends FileSystem {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(GitRepoFileSystem.class);
 
-	/**
-	 * It is crucial to always use the same instance of Jimfs, because Jimfs refuses
-	 * to resolve paths coming from different instances.
-	 */
-	static final FileSystem JIM_FS = Jimfs.newFileSystem(Configuration.unix());
-
-	static final Path JIM_FS_EMPTY = JIM_FS.getPath("");
-	static final Path JIM_FS_SLASH = JIM_FS.getPath("/");
-
-	public static GitRepoFileSystem given(GitFileSystemProvider provider, Repository repository) {
-		return new GitRepoFileSystem(provider, repository, false);
-	}
-
 	private final GitFileSystemProvider gitProvider;
 	private GitLocalHistory history;
 
 	private boolean isOpen;
 	private ObjectReader reader;
-	protected Repository repository;
+	private Repository repository;
 	private boolean shouldCloseRepository;
 
-	final GitPath mainSlash = new GitPath(this, RootComponent.DEFAULT, GitRepoFileSystem.JIM_FS_SLASH);
-	final GitPath defaultPath = new GitPath(this, null, GitRepoFileSystem.JIM_FS_EMPTY);
+	final GitPath mainSlash = GitPath.absolute(this, RootComponent.DEFAULT, GitFileSystemProvider.JIM_FS_SLASH);
+	final GitPath defaultPath = GitPath.relative(this, GitFileSystemProvider.JIM_FS_EMPTY);
 
 	protected GitRepoFileSystem(GitFileSystemProvider gitProvider, Repository repository,
 			boolean shouldCloseRepository) {
@@ -269,24 +255,25 @@ public class GitRepoFileSystem extends FileSystem {
 		if (shouldCloseRepository) {
 			repository.close();
 		}
+		provider().getGitFileSystems().hasBeenClosedEvent(this);
 	}
 
 	@Override
 	public GitPath getPath(String first, String... more) {
 		if (first.startsWith("/")) {
-			return getAbsolutePath(first.substring(1), more);
+			return getAbsolutePath(first, more);
 		}
 		return getRelativePath(
 				Stream.concat(Stream.of(first), Stream.of(more)).collect(ImmutableList.toImmutableList()));
 	}
 
 	/**
-	 * @param root         not starting with slash.
-	 * @param internalPath may contain slashes.
+	 * @param rootStringForm with prefix and trailing slash.
+	 * @param internalPath   may contain slashes.
 	 * @return
 	 */
-	public GitPath getAbsolutePath(String root, String... internalPath) {
-		return getAbsolutePath(RootComponent.given(root), ImmutableList.copyOf(internalPath));
+	public GitPath getAbsolutePath(String rootStringForm, String... internalPath) {
+		return getAbsolutePath(RootComponent.givenStringForm(rootStringForm), ImmutableList.copyOf(internalPath));
 	}
 
 	public GitPath getAbsolutePath(ObjectId objectId, String... internalPath) {
@@ -295,11 +282,11 @@ public class GitRepoFileSystem extends FileSystem {
 
 	private GitPath getAbsolutePath(RootComponent root, List<String> internalPath) {
 		checkNotNull(root);
-		Path internalJimPath = JIM_FS_SLASH;
+		Path internalJimPath = GitFileSystemProvider.JIM_FS_SLASH;
 		for (String name : internalPath) {
 			internalJimPath = internalJimPath.resolve(name);
 		}
-		return new GitPath(this, root, internalJimPath);
+		return GitPath.absolute(this, root, internalJimPath);
 	}
 
 	public GitPath getRelativePath(String... names) {
@@ -307,12 +294,12 @@ public class GitRepoFileSystem extends FileSystem {
 	}
 
 	private GitPath getRelativePath(List<String> internalPath) {
-		Path internalJimPath = JIM_FS_EMPTY;
+		Path internalJimPath = GitFileSystemProvider.JIM_FS_EMPTY;
 		for (String name : internalPath) {
 			internalJimPath = internalJimPath.resolve(name);
-			checkArgument(!internalJimPath.isAbsolute(), name + " is making this internal path absolute.");
+			checkArgument(!internalJimPath.isAbsolute(), name + " makes this internal path absolute.");
 		}
-		return new GitPath(this, null, internalJimPath);
+		return GitPath.relative(this, internalJimPath);
 	}
 
 	public GitLocalHistory getCachedHistory() {
@@ -410,7 +397,7 @@ public class GitRepoFileSystem extends FileSystem {
 
 	@Override
 	public String getSeparator() {
-		assert JIM_FS.getSeparator().equals("/");
+		assert GitFileSystemProvider.JIM_FS.getSeparator().equals("/");
 		return "/";
 	}
 
@@ -476,7 +463,8 @@ public class GitRepoFileSystem extends FileSystem {
 			treeWalk.addTree(tree);
 			treeWalk.setRecursive(false);
 			while (treeWalk.next()) {
-				final GitPath path = dir.resolve(new GitPath(this, null, JIM_FS.getPath(treeWalk.getNameString())));
+				final GitPath path = dir.resolve(
+						GitPath.relative(this, GitFileSystemProvider.JIM_FS.getPath(treeWalk.getNameString())));
 				if (!filter.accept(path)) {
 					continue;
 				}
@@ -506,6 +494,10 @@ public class GitRepoFileSystem extends FileSystem {
 	@Override
 	public GitFileSystemProvider provider() {
 		return gitProvider;
+	}
+
+	URI toUri() {
+		return gitProvider.getGitFileSystems().toUri(this);
 	}
 
 	public BasicFileAttributes readAttributes(GitPath gitPath, ImmutableSet<LinkOption> optionsSet) throws IOException {
@@ -586,7 +578,7 @@ public class GitRepoFileSystem extends FileSystem {
 		return Comparator.comparing((GitPath p) -> p.getRootComponent().getObjectId(), compareWithoutTies);
 	}
 
-	Repository getRepository() {
+	protected Repository getRepository() {
 		return repository;
 	}
 

@@ -4,10 +4,10 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.base.Verify.verify;
+import static io.github.oliviercailloux.jaris.exceptions.Unchecker.URI_UNCHECKER;
 
 import java.io.IOException;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.nio.file.LinkOption;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
@@ -16,10 +16,10 @@ import java.nio.file.WatchEvent.Modifier;
 import java.nio.file.WatchKey;
 import java.nio.file.WatchService;
 import java.util.Comparator;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
-import org.eclipse.jgit.internal.storage.dfs.DfsRepository;
 import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.lib.Ref;
 import org.slf4j.Logger;
@@ -83,8 +83,9 @@ import com.google.common.jimfs.Jimfs;
  * slash). getPath must be given a Uri of the form
  * gitjfs:/some/path/?root=/refs/heads/main/&internal-path=/internal/path. On
  * Windows, gitjfs:///c:/path/to/the%20file.txt?… (root is optional and
- * internal-path is optional; internal-path can’t be "/" or ""). The path must
- * have a <a href="https://stackoverflow.com/a/16445016/">trailing slash</a> and
+ * internal-path is optional, internal-path must be present and start with a
+ * slash if root is present). The path must have a
+ * <a href="https://stackoverflow.com/a/16445016/">trailing slash</a> and
  * denotes a local directory corresponding to file:/the/same/path/.
  *
  * <h1>Extended discussion</h1>
@@ -196,7 +197,6 @@ import com.google.common.jimfs.Jimfs;
  * distinguishing a path with a linux-like relative path and one with a
  * linux-like absolute path in string form would be hard.
  * </p>
- * TODO distinguish Ref (such as master) and OId (a SHA-1).
  *
  * @author Olivier Cailloux
  *
@@ -206,6 +206,38 @@ public class GitPath implements Path {
 	private static final Logger LOGGER = LoggerFactory.getLogger(GitPath.class);
 
 	private static final Comparator<GitPath> COMPARATOR = Comparator.<GitPath, String>comparing(Path::toString);
+
+	private static final String QUERY_PARAMETER_ROOT = "root";
+
+	private static final String QUERY_PARAMETER_INTERNAL_PATH = "internal-path";
+
+	static GitPath fromQueryString(GitRepoFileSystem fs, Map<String, String> splitQuery) {
+		final Optional<String> rootValue = Optional.ofNullable(splitQuery.get(QUERY_PARAMETER_ROOT));
+		final Optional<String> internalPathValue = Optional.ofNullable(splitQuery.get(QUERY_PARAMETER_INTERNAL_PATH));
+
+		if (rootValue.isPresent()) {
+			final String rootString = rootValue.get();
+			checkArgument(internalPathValue.isPresent());
+			final String internalPathString = internalPathValue.get();
+			final Path internalPath = GitFileSystemProvider.JIM_FS_EMPTY.resolve(internalPathString);
+			checkArgument(internalPath.isAbsolute());
+			return absolute(fs, RootComponent.givenStringForm(rootString), internalPath);
+		}
+
+		final Path internalPath = GitFileSystemProvider.JIM_FS_EMPTY.resolve(internalPathValue.orElse(""));
+		return relative(fs, internalPath);
+	}
+
+	static GitPath absolute(GitRepoFileSystem fs, RootComponent root, Path internalPath) {
+		checkNotNull(root);
+		checkArgument(internalPath.isAbsolute());
+		return new GitPath(fs, root, internalPath);
+	}
+
+	static GitPath relative(GitRepoFileSystem fs, Path internalPath) {
+		checkArgument(!internalPath.isAbsolute());
+		return new GitPath(fs, null, internalPath);
+	}
 
 	private final GitRepoFileSystem fileSystem;
 
@@ -222,7 +254,7 @@ public class GitPath implements Path {
 	 */
 	private final Path dirAndFile;
 
-	GitPath(GitRepoFileSystem fileSystem, RootComponent root, Path dirAndFile) {
+	private GitPath(GitRepoFileSystem fileSystem, RootComponent root, Path dirAndFile) {
 		checkArgument(dirAndFile != null);
 
 		checkArgument(dirAndFile.getFileSystem().provider().getScheme().equals(Jimfs.URI_SCHEME));
@@ -266,13 +298,13 @@ public class GitPath implements Path {
 		if (getNameCount() == 0) {
 			return this;
 		}
-		return new GitPath(fileSystem, root, GitRepoFileSystem.JIM_FS_SLASH);
+		return new GitPath(fileSystem, root, GitFileSystemProvider.JIM_FS_SLASH);
 	}
 
 	/**
 	 * Returns the root component of this path, if this path has one (equivalently,
 	 * if it is absolute).
-	 * 
+	 *
 	 * @return the root component.
 	 */
 	public RootComponent getRootComponent() {
@@ -426,48 +458,27 @@ public class GitPath implements Path {
 		 * I do not use UriBuilder because it performs “contextual encoding of
 		 * characters not permitted in the corresponding URI component following the
 		 * rules of the application/x-www-form-urlencoded media type for query
-		 * parameters”, and therefore encodes / to %2F. This is not required by the
-		 * spec, see https://stackoverflow.com/a/49400367/.
+		 * parameters”, and therefore encodes / to %2F. This is not required by the spec
+		 * when not using that media type (as in this case). See
+		 * https://stackoverflow.com/a/49400367/.
 		 */
 		final StringBuilder queryBuilder = new StringBuilder();
 		if (root != null) {
 			/** TODO think about when ref or dirAndFile contains = or &. */
-			queryBuilder.append("root=" + root.toStringForm());
-			if (dirAndFile.getNameCount() >= 1) {
-				queryBuilder.append("&internal-path=" + dirAndFile.toString());
+			queryBuilder
+					.append(QUERY_PARAMETER_ROOT + "=" + QueryUtils.QUERY_ENTRY_ESCAPER.escape(root.toStringForm()));
+			queryBuilder.append("&" + QUERY_PARAMETER_INTERNAL_PATH + "="
+					+ QueryUtils.QUERY_ENTRY_ESCAPER.escape(dirAndFile.toString()));
+		} else {
+			if (!dirAndFile.toString().isEmpty()) {
+				queryBuilder.append("internal-path=" + dirAndFile.toString());
 			}
-		} else if (!dirAndFile.toString().isEmpty()) {
-			queryBuilder.append("internal-path=" + dirAndFile.toString());
 		}
 		final String query = queryBuilder.toString();
 
-		final URI uri;
-		/** TODO this is a mess. */
-		final GitRepoFileSystem fs = getFileSystem();
-		if (fs instanceof GitDirFileSystem) {
-			final GitDirFileSystem pathBasedFs = (GitDirFileSystem) fs;
-			final Path gitDir = pathBasedFs.getGitDir();
-			try {
-				uri = new URI(GitFileSystemProvider.SCHEME, null, gitDir.toAbsolutePath().toString(), query, null);
-			} catch (URISyntaxException e) {
-				throw new IllegalStateException(e);
-			}
-		} else if (fs.getRepository() instanceof DfsRepository) {
-			final DfsRepository repo = (DfsRepository) fs.getRepository();
-			try {
-				uri = new URI(GitFileSystemProvider.SCHEME, "mem", "/" + repo.getDescription().getRepositoryName(),
-						query, null);
-			} catch (URISyntaxException e) {
-				throw new IllegalStateException(e);
-			}
-		} else {
-			try {
-				uri = new URI(GitFileSystemProvider.SCHEME, "mem", fs.getRepository().toString(), query, null);
-			} catch (URISyntaxException e) {
-				throw new IllegalStateException(e);
-			}
-		}
-
+		final URI fsUri = fileSystem.toUri();
+		final URI uri = URI_UNCHECKER
+				.getUsing(() -> new URI(fsUri.getScheme(), fsUri.getAuthority(), fsUri.getPath(), query, null));
 		return uri;
 	}
 
@@ -484,7 +495,7 @@ public class GitPath implements Path {
 			return this;
 		}
 		verify(dirAndFile.isAbsolute());
-		return new GitPath(fileSystem, null, GitRepoFileSystem.JIM_FS_SLASH.relativize(dirAndFile));
+		return new GitPath(fileSystem, null, GitFileSystemProvider.JIM_FS_SLASH.relativize(dirAndFile));
 	}
 
 	@Override
