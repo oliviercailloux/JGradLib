@@ -1,6 +1,5 @@
 package io.github.oliviercailloux.git.fs;
 
-import static io.github.oliviercailloux.jaris.exceptions.Unchecker.IO_UNCHECKER;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -9,24 +8,29 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.net.URI;
-import java.nio.file.Path;
+import java.nio.file.InvalidPathException;
+import java.util.Map;
 
+import javax.ws.rs.core.UriBuilder;
+
+import org.eclipse.jgit.internal.storage.dfs.DfsRepository;
 import org.eclipse.jgit.internal.storage.dfs.DfsRepositoryDescription;
 import org.eclipse.jgit.internal.storage.dfs.InMemoryRepository;
-import org.eclipse.jgit.lib.Repository;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.net.UrlEscapers;
+
 import io.github.oliviercailloux.git.JGit;
 
-public class GitPathTests {
+/**
+ * Tests that do not access the underlying git repository, just deal with git
+ * paths internally (resolving, transforming to string…)
+ */
+public class GitPathInternalTests {
 	@SuppressWarnings("unused")
-	private static final Logger LOGGER = LoggerFactory.getLogger(GitPathTests.class);
-
-	final GitRepoFileSystem GIT_FILE_SYSTEM = IO_UNCHECKER
-			.getUsing(() -> GitFileFileSystem.given(Mockito.mock(GitFileSystemProvider.class), Path.of(".")));
+	private static final Logger LOGGER = LoggerFactory.getLogger(GitPathInternalTests.class);
 
 	@Test
 	void testBasics() throws Exception {
@@ -87,8 +91,8 @@ public class GitPathTests {
 		assertEquals("/refs/heads/main//ploum.txt",
 				getGitPath(main, "/").resolve(getGitPath(main, "/ploum.txt")).toString());
 		assertEquals("/refs/heads/main//",
-				getGitPath(RootComponent.givenRef("refs/something"), "/").resolve(getGitPath(main, "/")).toString());
-		assertEquals("/refs/heads/main//ploum.txt", getGitPath(RootComponent.givenRef("refs/something"), "/")
+				getGitPath(RootComponent.ref("refs/something"), "/").resolve(getGitPath(main, "/")).toString());
+		assertEquals("/refs/heads/main//ploum.txt", getGitPath(RootComponent.ref("refs/something"), "/")
 				.resolve(getGitPath(main, "/ploum.txt")).toString());
 		assertEquals("/refs/heads/main//truc", getGitPath(main, "/truc").resolve(getGitPath(null, "")).toString());
 		assertEquals("/refs/heads/main//truc/ploum.txt",
@@ -96,9 +100,9 @@ public class GitPathTests {
 		assertEquals("/refs/heads/main//", getGitPath(main, "/truc").resolve(getGitPath(main, "/")).toString());
 		assertEquals("/refs/heads/main//ploum.txt",
 				getGitPath(main, "/truc").resolve(getGitPath(main, "/ploum.txt")).toString());
-		assertEquals("/refs/heads/main//", getGitPath(RootComponent.givenRef("refs/something"), "/truc")
+		assertEquals("/refs/heads/main//", getGitPath(RootComponent.ref("refs/something"), "/truc")
 				.resolve(getGitPath(main, "/")).toString());
-		assertEquals("/refs/heads/main//ploum.txt", getGitPath(RootComponent.givenRef("refs/something"), "/truc")
+		assertEquals("/refs/heads/main//ploum.txt", getGitPath(RootComponent.ref("refs/something"), "/truc")
 				.resolve(getGitPath(main, "/ploum.txt")).toString());
 
 		assertEquals("", getGitPath(null, "").relativize(getGitPath(null, "")).toString());
@@ -125,29 +129,96 @@ public class GitPathTests {
 		assertNotEquals(getGitPath(null, "truc/chose"), getGitPath(main, "/truc/chose"));
 	}
 
-	@Test
-	void testUris() throws Exception {
-		final Path gitDir = Path.of("git dir");
-		@SuppressWarnings("resource")
-		final GitRepoFileSystem fs = GitFileFileSystem.given(new GitFileSystemProvider(), gitDir);
-		final GitPath path = fs.getPath("master/", "/file.txt");
-		assertEquals(
-				new URI("gitjfs", null, gitDir.toAbsolutePath().toString(), "revStr=master&dirAndFile=/file.txt", null),
-				path.toUri());
+	private GitPath getGitPath(RootComponent root, String dirAndFile) {
+		if (root != null) {
+			return GitPath.absolute(GitFileSystemCreatePathsTests.GIT_FILE_FILE_SYSTEM_MOCKED, root,
+					GitFileSystem.JIM_FS.getPath(dirAndFile));
+		}
+		return GitPath.relative(GitFileSystemCreatePathsTests.GIT_FILE_FILE_SYSTEM_MOCKED,
+				GitFileSystem.JIM_FS.getPath(dirAndFile));
+	}
 
-		try (Repository repo = new InMemoryRepository(new DfsRepositoryDescription("myrepo"))) {
-			JGit.createBasicRepo(repo);
-			@SuppressWarnings("resource")
-			final GitRepoFileSystem rfs = GitRepoFileSystem.given(new GitFileSystemProvider(), repo);
-			final GitPath p2 = rfs.getPath("master/", "/file.txt");
-			assertEquals("gitjfs://mem/myrepo?revStr=master&dirAndFile=/file.txt", p2.toUri().toString());
+	/**
+	 * Attempts of encoding and decoding, independent of Git Path (in search of a
+	 * correct solution).
+	 */
+	@Test
+	void testEncodingQueryPart() throws Exception {
+		final String orig = "slash/and&space colon:stop.question?plus+backs\\percent%";
+		{
+			final String escaped = UrlEscapers.urlPathSegmentEscaper().escape(orig);
+			final URI uri = new URI("scheme:/" + escaped);
+			final String decoded = uri.getPath();
+			assertEquals("/" + orig, decoded);
+			LOGGER.debug("Escaped: {}.", escaped);
+		}
+		{
+			final URI uri = new URI("scheme:/?param1=and%26&param2=v2");
+			assertEquals("param1=and&&param2=v2", uri.getQuery());
+			assertEquals("param1=and%26&param2=v2", uri.getRawQuery());
+		}
+		{
+			final URI uri = UriBuilder.fromUri("scheme:/").queryParam("param1", "and%26").queryParam("param2", "v2")
+					.build();
+			assertEquals("param1=and&&param2=v2", uri.getQuery());
+		}
+		{
+			final String escapedValue = QueryUtils.QUERY_ENTRY_ESCAPER.escape(orig);
+			LOGGER.info("Escaped: {}.", escapedValue);
+			final URI uri = new URI("scheme:/?param1=" + escapedValue + "&param2=v2");
+			final Map<String, String> decoded = QueryUtils.splitQuery(uri);
+			assertEquals(orig, decoded.get("param1"));
 		}
 	}
 
-	private GitPath getGitPath(RootComponent root, String dirAndFile) {
-		if (root != null) {
-			return GitPath.absolute(GIT_FILE_SYSTEM, root, GitFileSystemProvider.JIM_FS.getPath(dirAndFile));
+	@Test
+	void testEncodingPath() throws Exception {
+		assertEquals("/path/", URI.create("scheme:/path%2F").getPath());
+	}
+
+	@Test
+	void testStartsWith() throws Exception {
+		try (DfsRepository repo = new InMemoryRepository(new DfsRepositoryDescription("myrepo"))) {
+			JGit.createRepoWithSubDir(repo);
+			try (GitFileSystem gitFs = GitFileSystemProvider.getInstance().newFileSystemFromDfsRepository(repo)) {
+				assertTrue(
+						gitFs.getRelativePath().toAbsolutePath().startsWith(gitFs.getRelativePath().toAbsolutePath()));
+				assertTrue(gitFs.getRelativePath("ploum.txt").toAbsolutePath()
+						.startsWith(gitFs.getRelativePath().toAbsolutePath()));
+				assertTrue(gitFs.getRelativePath("dir", "ploum.txt").toAbsolutePath()
+						.startsWith(gitFs.getRelativePath().toAbsolutePath()));
+				assertTrue(gitFs.getRelativePath("dir", "ploum.txt").toAbsolutePath()
+						.startsWith(gitFs.getRelativePath("dir").toAbsolutePath()));
+				assertFalse(gitFs.getRelativePath("dir", "ploum.txt").toAbsolutePath()
+						.startsWith(gitFs.getRelativePath("dir", "p").toAbsolutePath()));
+				assertFalse(gitFs.getRelativePath("dir", "ploum.txt").toAbsolutePath()
+						.startsWith(gitFs.getRelativePath("dir", "plom.txt").toAbsolutePath()));
+				assertFalse(gitFs.getRelativePath("dir", "ploum.txt").toAbsolutePath()
+						.startsWith(gitFs.getRelativePath("dir", "ploum.txt")));
+				assertFalse(gitFs.getRelativePath().toAbsolutePath().startsWith(gitFs.getRelativePath()));
+
+				assertTrue(gitFs.getRelativePath("dir").startsWith(gitFs.getRelativePath("dir")));
+				assertTrue(gitFs.getRelativePath("dir", "ploum.txt").startsWith(gitFs.getRelativePath("dir")));
+				assertTrue(
+						gitFs.getRelativePath("dir", "subdir", "ploum.txt").startsWith(gitFs.getRelativePath("dir")));
+				assertTrue(gitFs.getRelativePath("dir", "subdir", "ploum.txt")
+						.startsWith(gitFs.getRelativePath("dir", "subdir")));
+				assertFalse(gitFs.getRelativePath("dir", "subdir", "ploum.txt")
+						.startsWith(gitFs.getRelativePath("dir", "subdir", "p")));
+				assertFalse(gitFs.getRelativePath("dir", "subdir", "ploum.txt")
+						.startsWith(gitFs.getRelativePath("dir", "subdir", "ploum.txt2")));
+				assertFalse(gitFs.getRelativePath("dir", "subdir", "ploum.txt")
+						.startsWith(gitFs.getRelativePath("subdir", "ploum.txt")));
+				assertFalse(gitFs.getRelativePath("dir").startsWith(gitFs.getRelativePath().toAbsolutePath()));
+				assertFalse(gitFs.getRelativePath().startsWith(gitFs.getRelativePath().toAbsolutePath()));
+				assertTrue(gitFs.getRelativePath().startsWith(gitFs.getRelativePath()));
+
+				assertThrows(InvalidPathException.class,
+						() -> gitFs.getRelativePath().toAbsolutePath().startsWith("/refs"));
+				assertThrows(InvalidPathException.class,
+						() -> gitFs.getRelativePath().toAbsolutePath().startsWith("/refs/"));
+				assertTrue(gitFs.getRelativePath().toAbsolutePath().startsWith("/refs/heads/main/"));
+			}
 		}
-		return GitPath.relative(GIT_FILE_SYSTEM, GitFileSystemProvider.JIM_FS.getPath(dirAndFile));
 	}
 }

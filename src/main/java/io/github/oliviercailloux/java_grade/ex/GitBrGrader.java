@@ -32,9 +32,9 @@ import com.google.common.graph.ImmutableGraph;
 import io.github.oliviercailloux.git.GitCloner;
 import io.github.oliviercailloux.git.GitLocalHistory;
 import io.github.oliviercailloux.git.GitUri;
+import io.github.oliviercailloux.git.fs.GitFileSystem;
 import io.github.oliviercailloux.git.fs.GitFileSystemProvider;
 import io.github.oliviercailloux.git.fs.GitPath;
-import io.github.oliviercailloux.git.fs.GitRepoFileSystem;
 import io.github.oliviercailloux.git.git_hub.model.GitHubHistory;
 import io.github.oliviercailloux.git.git_hub.model.GitHubToken;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinatesWithPrefix;
@@ -108,7 +108,7 @@ public class GitBrGrader {
 		final Path projectDir = projectsBaseDir.resolve(coord.getRepositoryName());
 		new GitCloner().download(GitUri.fromUri(coord.asURI()), projectDir);
 
-		try (GitRepoFileSystem fs = new GitFileSystemProvider().newFileSystemFromGitDir(projectDir.resolve(".git"))) {
+		try (GitFileSystem fs = new GitFileSystemProvider().newFileSystemFromGitDir(projectDir.resolve(".git"))) {
 			final GitHubHistory gitHubHistory = GraderOrchestrator.getGitHubHistory(coord);
 			final IGrade grade = grade(coord.getUsername(), fs, gitHubHistory);
 			LOGGER.info("Grade {}: {}.", coord, grade);
@@ -116,7 +116,7 @@ public class GitBrGrader {
 		}
 	}
 
-	public IGrade grade(String owner, GitRepoFileSystem fs, GitHubHistory gitHubHistory) throws IOException {
+	public IGrade grade(String owner, GitFileSystem fs, GitHubHistory gitHubHistory) throws IOException {
 		final GitLocalHistory filtered = GraderOrchestrator.getFilteredHistory(fs, gitHubHistory, DEADLINE);
 		final Set<ObjectId> keptIds = ImmutableSet.copyOf(filtered.getGraph().nodes());
 		final Set<ObjectId> allIds = gitHubHistory.getGraph().nodes();
@@ -162,13 +162,13 @@ public class GitBrGrader {
 		}
 
 		@SuppressWarnings("unlikely-arg-type")
-		final Optional<ObjectId> br1 = fs.getCommitId(fs.getAbsolutePath(branchPrefix + "/br1"))
+		final Optional<ObjectId> br1 = fs.getAbsolutePath(branchPrefix + "/br1").getCommitId()
 				.filter(o -> ownGraph.nodes().contains(o));
 		@SuppressWarnings("unlikely-arg-type")
-		final Optional<ObjectId> br2 = fs.getCommitId(fs.getAbsolutePath(branchPrefix + "/br2"))
+		final Optional<ObjectId> br2 = fs.getAbsolutePath(branchPrefix + "/br2").getCommitId()
 				.filter(o -> ownGraph.nodes().contains(o));
 		@SuppressWarnings("unlikely-arg-type")
-		final Optional<ObjectId> br3 = fs.getCommitId(fs.getAbsolutePath(branchPrefix + "/br3"))
+		final Optional<ObjectId> br3 = fs.getAbsolutePath(branchPrefix + "/br3").getCommitId()
 				.filter(o -> ownGraph.nodes().contains(o));
 
 		final Set<ObjectId> startCandidates = new LinkedHashSet<>();
@@ -315,7 +315,7 @@ public class GitBrGrader {
 		return WeightingGrade.from(subGrades, builder.build(), comment);
 	}
 
-	private IGrade getAContentGrade(GitRepoFileSystem fs, Optional<ObjectId> commit) {
+	private IGrade getAContentGrade(GitFileSystem fs, Optional<ObjectId> commit) {
 		final IGrade grade;
 		if (commit.isPresent()) {
 			final GitPath file = fs.getAbsolutePath(commit.get().getName(), "hello.txt");
@@ -328,7 +328,7 @@ public class GitBrGrader {
 		return grade;
 	}
 
-	private IGrade getBContentGrade(GitRepoFileSystem fs, Optional<ObjectId> commit) {
+	private IGrade getBContentGrade(GitFileSystem fs, Optional<ObjectId> commit) {
 		final IGrade grade;
 		if (commit.isPresent()) {
 			final GitPath file = fs.getAbsolutePath(commit.get().getName(), "hello.txt");
@@ -341,7 +341,7 @@ public class GitBrGrader {
 		return grade;
 	}
 
-	private IGrade getCContentGrade(GitRepoFileSystem fs, Optional<ObjectId> commit) {
+	private IGrade getCContentGrade(GitFileSystem fs, Optional<ObjectId> commit) {
 		final IGrade grade;
 		if (commit.isPresent()) {
 			final GitPath file = fs.getAbsolutePath(commit.get().getName(), "supplements.txt");
@@ -355,7 +355,7 @@ public class GitBrGrader {
 		return grade;
 	}
 
-	private IGrade getDContentGrade(GitRepoFileSystem fs, Optional<ObjectId> commit) {
+	private IGrade getDContentGrade(GitFileSystem fs, Optional<ObjectId> commit) {
 		final IGrade grade;
 		if (commit.isPresent()) {
 			final GitPath file = fs.getAbsolutePath(commit.get().getName(), "hello.txt");

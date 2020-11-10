@@ -36,9 +36,9 @@ import com.google.common.graph.ImmutableGraph;
 import io.github.oliviercailloux.git.GitCloner;
 import io.github.oliviercailloux.git.GitLocalHistory;
 import io.github.oliviercailloux.git.GitUri;
+import io.github.oliviercailloux.git.fs.GitFileSystem;
 import io.github.oliviercailloux.git.fs.GitFileSystemProvider;
 import io.github.oliviercailloux.git.fs.GitPath;
-import io.github.oliviercailloux.git.fs.GitRepoFileSystem;
 import io.github.oliviercailloux.git.git_hub.model.GitHubToken;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinatesWithPrefix;
 import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherV3;
@@ -144,14 +144,14 @@ public class PrintExecGrader {
 		final Path projectDir = projectsBaseDir.resolve(coord.getRepositoryName());
 		new GitCloner().download(GitUri.fromUri(coord.asURI()), projectDir);
 
-		try (GitRepoFileSystem fs = new GitFileSystemProvider().newFileSystemFromGitDir(projectDir.resolve(".git"))) {
+		try (GitFileSystem fs = new GitFileSystemProvider().newFileSystemFromGitDir(projectDir.resolve(".git"))) {
 			final IGrade grade = grade(coord.getUsername(), fs, COMPILE_BASE_DIR);
 			LOGGER.debug("Grade {}: {}.", coord, grade);
 			return grade;
 		}
 	}
 
-	private IGrade grade(String owner, GitRepoFileSystem fs, Path compileBaseDir) throws IOException {
+	private IGrade grade(String owner, GitFileSystem fs, Path compileBaseDir) throws IOException {
 		printExecSource = null;
 		compileDir = null;
 		printExecClassName = null;
@@ -181,7 +181,7 @@ public class PrintExecGrader {
 
 		final ImmutableSet<RevCommit> tips = fs.getCachedHistory().getTips();
 		final GitPath master = fs.getRelativePath("");
-		final ObjectId masterId = fs.getCommitId(master).get();
+		final ObjectId masterId = master.getCommitId().get();
 		final ImmutableSet<RevCommit> bestTips = MarkHelper.findBestMatches(tips,
 				ImmutableList.of(o -> o.equals(masterId), o -> true));
 		checkState(bestTips.size() == 1);

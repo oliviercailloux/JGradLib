@@ -22,7 +22,7 @@ import org.slf4j.LoggerFactory;
 import io.github.oliviercailloux.git.GitCloner;
 import io.github.oliviercailloux.git.GitUri;
 import io.github.oliviercailloux.git.fs.GitFileSystemProvider;
-import io.github.oliviercailloux.git.fs.GitRepoFileSystem;
+import io.github.oliviercailloux.git.fs.GitFileSystem;
 import io.github.oliviercailloux.grade.IGrade;
 import io.github.oliviercailloux.utils.Utils;
 
@@ -39,7 +39,7 @@ class ExDepGitGraderTests {
 			repository.create(true);
 			new GitCloner().clone(gitUri, repository);
 
-			try (GitRepoFileSystem gitFs = new GitFileSystemProvider().newFileSystemFromRepository(repository)) {
+			try (GitFileSystem gitFs = new GitFileSystemProvider().newFileSystemFromRepository(repository)) {
 				final IGrade grade = new ExDepGitGraderSimpler().grade("me", gitFs, gitFs.getHistory());
 				assertEquals(0d, grade.getPoints());
 			}
@@ -81,7 +81,7 @@ class ExDepGitGraderTests {
 			}
 		}
 		try (Repository repository = new FileRepository(wT.resolve(".git").toString())) {
-			try (GitRepoFileSystem gitFs = new GitFileSystemProvider().newFileSystemFromRepository(repository)) {
+			try (GitFileSystem gitFs = new GitFileSystemProvider().newFileSystemFromRepository(repository)) {
 				final IGrade grade = new ExDepGitGraderSimpler().grade("teststudent", gitFs, gitFs.getHistory());
 //				Files.writeString(Path.of("grade.json"),
 //						JsonbUtils.toJsonObject(grade, JsonGrade.asAdapter()).toString());

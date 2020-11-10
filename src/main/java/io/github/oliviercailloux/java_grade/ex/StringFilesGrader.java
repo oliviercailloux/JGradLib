@@ -39,7 +39,7 @@ import io.github.oliviercailloux.git.GitLocalHistory;
 import io.github.oliviercailloux.git.GitUri;
 import io.github.oliviercailloux.git.fs.GitFileSystemProvider;
 import io.github.oliviercailloux.git.fs.GitPath;
-import io.github.oliviercailloux.git.fs.GitRepoFileSystem;
+import io.github.oliviercailloux.git.fs.GitFileSystem;
 import io.github.oliviercailloux.git.git_hub.model.GitHubHistory;
 import io.github.oliviercailloux.git.git_hub.model.GitHubToken;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinatesWithPrefix;
@@ -121,7 +121,7 @@ public class StringFilesGrader {
 	public IGrade grade(RepositoryCoordinatesWithPrefix coord, Path projectDir) throws IOException {
 		new GitCloner().download(GitUri.fromUri(coord.asURI()), projectDir);
 
-		try (GitRepoFileSystem fs = new GitFileSystemProvider().newFileSystemFromGitDir(projectDir.resolve(".git"))) {
+		try (GitFileSystem fs = new GitFileSystemProvider().newFileSystemFromGitDir(projectDir.resolve(".git"))) {
 			final GitHubHistory gitHubHistory = GraderOrchestrator.getGitHubHistory(coord);
 			final IGrade grade = grade(coord.getUsername(), fs, gitHubHistory);
 			LOGGER.info("Grade {}: {}.", coord, grade);
@@ -129,7 +129,7 @@ public class StringFilesGrader {
 		}
 	}
 
-	public IGrade grade(String owner, GitRepoFileSystem fs, GitHubHistory gitHubHistory) throws IOException {
+	public IGrade grade(String owner, GitFileSystem fs, GitHubHistory gitHubHistory) throws IOException {
 		checkArgument(gitHubHistory.getPatchedKnowns().nodes().isEmpty());
 
 		final Optional<Instant> lastCommitInstantBeforeDeadlineOpt = gitHubHistory.getCommitDates().values().stream()

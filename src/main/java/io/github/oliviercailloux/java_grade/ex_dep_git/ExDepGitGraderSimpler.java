@@ -38,8 +38,8 @@ import com.google.common.graph.ImmutableGraph;
 import io.github.oliviercailloux.git.GitCloner;
 import io.github.oliviercailloux.git.GitLocalHistory;
 import io.github.oliviercailloux.git.GitUri;
+import io.github.oliviercailloux.git.fs.GitFileSystem;
 import io.github.oliviercailloux.git.fs.GitFileSystemProvider;
-import io.github.oliviercailloux.git.fs.GitRepoFileSystem;
 import io.github.oliviercailloux.git.git_hub.model.GitHubHistory;
 import io.github.oliviercailloux.git.git_hub.model.GitHubToken;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
@@ -134,7 +134,7 @@ public class ExDepGitGraderSimpler {
 		final Path projectDir = projectsBaseDir.resolve(coord.getRepositoryName());
 		new GitCloner().download(GitUri.fromUri(coord.asURI()), projectDir);
 		final ImmutableMap.Builder<Instant, IGrade> possibleGradesBuilder = ImmutableMap.builder();
-		try (GitRepoFileSystem fs = new GitFileSystemProvider().newFileSystemFromGitDir(projectDir.resolve(".git"))) {
+		try (GitFileSystem fs = new GitFileSystemProvider().newFileSystemFromGitDir(projectDir.resolve(".git"))) {
 			for (Instant acceptUntil : considered) {
 				final GitLocalHistory filtered = fs.getHistory()
 						.filter(o -> !gitHubHistory.getCommitDate(o).isAfter(acceptUntil));
@@ -155,7 +155,7 @@ public class ExDepGitGraderSimpler {
 		final Path projectDir = projectsBaseDir.resolve(coord.getRepositoryName());
 		new GitCloner().download(GitUri.fromUri(coord.asURI()), projectDir);
 
-		try (GitRepoFileSystem fs = new GitFileSystemProvider().newFileSystemFromGitDir(projectDir.resolve(".git"))) {
+		try (GitFileSystem fs = new GitFileSystemProvider().newFileSystemFromGitDir(projectDir.resolve(".git"))) {
 			final GitHubHistory gitHubHistory = GraderOrchestrator.getGitHubHistory(coord);
 			final GitLocalHistory filtered = GraderOrchestrator.getFilteredHistory(fs, gitHubHistory, DEADLINE);
 			final IGrade grade = grade(coord.getOwner(), fs, filtered);
@@ -166,7 +166,7 @@ public class ExDepGitGraderSimpler {
 		}
 	}
 
-	public IGrade grade(String owner, GitRepoFileSystem fs, GitLocalHistory history) throws IOException {
+	public IGrade grade(String owner, GitFileSystem fs, GitLocalHistory history) throws IOException {
 		fs.getHistory();
 		LOGGER.debug("Graph history: {}.", history.getGraph().edges());
 		final GitLocalHistory manual = history
@@ -196,7 +196,7 @@ public class ExDepGitGraderSimpler {
 
 		final Graph<ObjectId> closure = ImmutableGraph.copyOf(Graphs.transitiveClosure(graph));
 		LOGGER.debug("Closure: {}.", closure.edges());
-		final Optional<ObjectId> myBranch = fs.getCommitId(fs.getAbsolutePath("refs/heads/my-branch"));
+		final Optional<ObjectId> myBranch = fs.getAbsolutePath("refs/heads/my-branch").getCommitId();
 
 		{
 			IGrade firstCommitMark = Mark.zero();

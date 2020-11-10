@@ -31,8 +31,8 @@ import com.google.common.graph.ImmutableGraph;
 import io.github.oliviercailloux.git.GitCloner;
 import io.github.oliviercailloux.git.GitLocalHistory;
 import io.github.oliviercailloux.git.GitUri;
+import io.github.oliviercailloux.git.fs.GitFileSystem;
 import io.github.oliviercailloux.git.fs.GitFileSystemProvider;
-import io.github.oliviercailloux.git.fs.GitRepoFileSystem;
 import io.github.oliviercailloux.git.git_hub.model.GitHubHistory;
 import io.github.oliviercailloux.grade.IGrade;
 import io.github.oliviercailloux.grade.format.json.JsonGrade;
@@ -53,13 +53,12 @@ public class GitBrGraderTests {
 
 	@Test
 	void testGradeBad() throws Exception {
-		final GitUri gitUri = GitUri
-				.fromUri(URI.create("https://github.com/oliviercailloux/Assisted-Board-Games.git"));
+		final GitUri gitUri = GitUri.fromUri(URI.create("https://github.com/oliviercailloux/Assisted-Board-Games.git"));
 		try (Repository repository = new InMemoryRepository(new DfsRepositoryDescription("myrepo"))) {
 			repository.create(true);
 			new GitCloner().clone(gitUri, repository);
 
-			try (GitRepoFileSystem gitFs = new GitFileSystemProvider().newFileSystemFromRepository(repository)) {
+			try (GitFileSystem gitFs = new GitFileSystemProvider().newFileSystemFromRepository(repository)) {
 				final GitLocalHistory history = gitFs.getHistory();
 				final GitHubHistory fakeGitHubHistory = GitBrGraderTests.getMinGitHubHistory(history.getGraph());
 				final IGrade grade = new GitBrGrader().grade("me", gitFs, fakeGitHubHistory);
@@ -70,8 +69,7 @@ public class GitBrGraderTests {
 
 	@Test
 	void testGradeFull() throws Exception {
-		final GitUri gitUri = GitUri
-				.fromUri(URI.create("https://github.com/oliviercailloux/Assisted-Board-Games.git"));
+		final GitUri gitUri = GitUri.fromUri(URI.create("https://github.com/oliviercailloux/Assisted-Board-Games.git"));
 		final Path wT = Utils.getTempUniqueDirectory("git-test");
 		new GitCloner().download(gitUri, wT);
 		final RevCommit commitA;
@@ -113,8 +111,8 @@ public class GitBrGraderTests {
 			}
 		}
 		try (Repository repository = new FileRepository(wT.resolve(".git").toString())) {
-			try (GitRepoFileSystem gitFs = new GitFileSystemProvider().newFileSystemFromRepository(repository)) {
-				final Optional<ObjectId> br1 = gitFs.getCommitId(gitFs.getAbsolutePath("br1"));
+			try (GitFileSystem gitFs = new GitFileSystemProvider().newFileSystemFromRepository(repository)) {
+				final Optional<ObjectId> br1 = gitFs.getAbsolutePath("br1").getCommitId();
 				assertEquals(commitA, br1.get());
 
 				final GitBrGrader grader = new GitBrGrader();

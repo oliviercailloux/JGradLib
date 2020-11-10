@@ -1,5 +1,6 @@
 package io.github.oliviercailloux.git.fs;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -7,8 +8,10 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.io.IOException;
 import java.net.URI;
 import java.nio.file.FileSystem;
+import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
@@ -16,6 +19,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 
 import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.jimfs.Configuration;
@@ -27,8 +32,36 @@ import com.google.common.jimfs.Jimfs;
  */
 public class DefaultFsTests {
 
+	@SuppressWarnings("unused")
+	private static final Logger LOGGER = LoggerFactory.getLogger(DefaultFsTests.class);
+
 	@Test
 	void testDefault() throws Exception {
+		{
+			assertTrue(Path.of("", "/stuff").isAbsolute());
+			assertEquals("dir/sub", Path.of("dir", "/sub").toString());
+		}
+
+		{
+			/**
+			 * File system created by the provider (but not by invoking explicitly new using
+			 * Uri), and is then available through get. In violation of the getFS contract
+			 * (or it should be taken to mean that the invocation of new using Uri can be
+			 * implicit, that is, not done by the user, but then this restriction makes no
+			 * sense).
+			 */
+			@SuppressWarnings("resource")
+			final FileSystem def = FileSystems.getDefault();
+			final URI defaultUri = URI.create("file:/");
+			assertEquals(def, def.provider().getFileSystem(defaultUri));
+		}
+
+		{
+			final Path root = FileSystems.getDefault().getRootDirectories().iterator().next();
+			assertDoesNotThrow(() -> Files.newByteChannel(root));
+			assertThrows(IOException.class, () -> Files.readString(root));
+		}
+
 		/**
 		 * Judging from
 		 * https://github.com/openjdk/jdk/tree/master/src/java.base/windows/classes/sun/nio/fs,
@@ -93,6 +126,16 @@ public class DefaultFsTests {
 		final URI uriTest = new URI("scheme:/some/path//refs/heads/master//internal/path");
 		assertEquals("scheme:/some/path//refs/heads/master//internal/path", uriTest.toString());
 		assertEquals("scheme:/some/path/refs/heads/master/internal/path", uriTest.normalize().toString());
+	}
+
+	@Test
+	void testStartsWith() throws Exception {
+		final Path root = FileSystems.getDefault().getRootDirectories().iterator().next();
+		assertFalse(root.resolve(Path.of("dir", "ploum.txt")).startsWith(root.resolve(Path.of("dir", "p"))));
+		assertTrue(root.resolve(Path.of("dir", "ploum.txt")).startsWith(root.resolve(Path.of("dir"))));
+		assertTrue(root.resolve(Path.of("dir", "ploum.txt")).startsWith(root));
+		assertFalse(Path.of("dir/ploum.txt").startsWith(Path.of("dir/p")));
+		assertTrue(Path.of("/dir").startsWith(Path.of("/")));
 	}
 
 }

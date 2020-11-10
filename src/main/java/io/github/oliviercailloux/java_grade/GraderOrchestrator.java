@@ -20,7 +20,7 @@ import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.graph.ImmutableGraph;
 
 import io.github.oliviercailloux.git.GitLocalHistory;
-import io.github.oliviercailloux.git.fs.GitRepoFileSystem;
+import io.github.oliviercailloux.git.fs.GitFileSystem;
 import io.github.oliviercailloux.git.git_hub.model.GitHubHistory;
 import io.github.oliviercailloux.git.git_hub.model.GitHubToken;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
@@ -44,7 +44,7 @@ public class GraderOrchestrator {
 		return gitHubHistory;
 	}
 
-	public static GitLocalHistory getFilteredHistory(GitRepoFileSystem fs, GitHubHistory gitHubHistory,
+	public static GitLocalHistory getFilteredHistory(GitFileSystem fs, GitHubHistory gitHubHistory,
 			Instant deadline) throws IOException {
 		final ImmutableSortedSet<Instant> pushedDates = gitHubHistory.getRefsBySortedPushedDates(true).keySet();
 		final Optional<Instant> lastOnTimeOpt = Optional.ofNullable(pushedDates.floor(deadline));

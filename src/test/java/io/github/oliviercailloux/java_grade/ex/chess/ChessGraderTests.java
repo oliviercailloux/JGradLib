@@ -13,7 +13,7 @@ import org.slf4j.LoggerFactory;
 
 import io.github.oliviercailloux.git.JGit;
 import io.github.oliviercailloux.git.fs.GitFileSystemProvider;
-import io.github.oliviercailloux.git.fs.GitRepoFileSystem;
+import io.github.oliviercailloux.git.fs.GitFileSystem;
 import io.github.oliviercailloux.git.git_hub.model.GitHubHistory;
 import io.github.oliviercailloux.grade.IGrade;
 import io.github.oliviercailloux.grade.format.HtmlGrades;
@@ -29,7 +29,7 @@ class ChessGraderTests {
 	void testDoesNotCompile() throws Exception {
 		final Path basePath = Path.of(getClass().getResource("chess empty impl").toURI());
 		try (Repository repository = JGit.createRepository(new PersonIdent("Me", "email"), basePath)) {
-			try (GitRepoFileSystem gitFs = new GitFileSystemProvider().newFileSystemFromRepository(repository)) {
+			try (GitFileSystem gitFs = new GitFileSystemProvider().newFileSystemFromRepository(repository)) {
 				final GitHubHistory fakeGitHubHistory = GitBrGraderTests
 						.getMinGitHubHistory(gitFs.getHistory().getGraph());
 				final IGrade grade = new ChessGrader().grade("wrongname", gitFs, fakeGitHubHistory);
@@ -45,7 +45,7 @@ class ChessGraderTests {
 	void testBad() throws Exception {
 		final Path basePath = Path.of(getClass().getResource("chess bad impl").toURI());
 		try (Repository repository = JGit.createRepository(new PersonIdent("Me", "email"), basePath)) {
-			try (GitRepoFileSystem gitFs = new GitFileSystemProvider().newFileSystemFromRepository(repository)) {
+			try (GitFileSystem gitFs = new GitFileSystemProvider().newFileSystemFromRepository(repository)) {
 				final GitHubHistory fakeGitHubHistory = GitBrGraderTests
 						.getMinGitHubHistory(gitFs.getHistory().getGraph());
 				final IGrade grade = new ChessGrader().grade("wrongname", gitFs, fakeGitHubHistory);
@@ -62,7 +62,7 @@ class ChessGraderTests {
 	void testGood() throws Exception {
 		final Path basePath = Path.of(getClass().getResource("chess full impl").toURI());
 		try (Repository repository = JGit.createRepository(new PersonIdent("Me", "email"), basePath)) {
-			try (GitRepoFileSystem gitFs = new GitFileSystemProvider().newFileSystemFromRepository(repository)) {
+			try (GitFileSystem gitFs = new GitFileSystemProvider().newFileSystemFromRepository(repository)) {
 				final GitHubHistory fakeGitHubHistory = GitBrGraderTests
 						.getMinGitHubHistory(gitFs.getHistory().getGraph());
 				final IGrade grade = new ChessGrader().grade("Me", gitFs, fakeGitHubHistory);

@@ -2,17 +2,13 @@ package io.github.oliviercailloux.java_grade.ex;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
 
-import org.eclipse.jgit.internal.storage.dfs.DfsRepositoryDescription;
-import org.eclipse.jgit.internal.storage.dfs.InMemoryRepository;
 import org.eclipse.jgit.lib.ObjectId;
-import org.eclipse.jgit.lib.Repository;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,12 +16,10 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.graph.ImmutableGraph;
 
-import io.github.oliviercailloux.git.GitCloner;
 import io.github.oliviercailloux.git.GitLocalHistory;
-import io.github.oliviercailloux.git.GitUri;
+import io.github.oliviercailloux.git.fs.GitFileSystem;
 import io.github.oliviercailloux.git.fs.GitFileSystemProvider;
 import io.github.oliviercailloux.git.fs.GitPath;
-import io.github.oliviercailloux.git.fs.GitRepoFileSystem;
 import io.github.oliviercailloux.git.git_hub.model.GitHubHistory;
 import io.github.oliviercailloux.grade.IGrade;
 import io.github.oliviercailloux.grade.format.HtmlGrades;
@@ -38,7 +32,7 @@ class StringFilesGraderTests {
 
 	@Test
 	void testGood() throws Exception {
-		try (GitRepoFileSystem gitFs = new GitFileSystemProvider()
+		try (GitFileSystem gitFs = new GitFileSystemProvider()
 				.newFileSystemFromGitDir(Path.of("../../Samples/string files/.git"))) {
 			final GitLocalHistory history = gitFs.getHistory();
 			final ImmutableGraph<ObjectId> graphO = Utils.asImmutableGraph(history.getGraph(), o -> o);
@@ -48,7 +42,7 @@ class StringFilesGraderTests {
 
 			final StringFilesGrader grader = new StringFilesGrader();
 			final GitPath implPath = gitFs.getAbsolutePath("impl");
-			final ObjectId implTop = gitFs.getCommitId(implPath).get();
+			final ObjectId implTop = implPath.getCommitId().get();
 			grader.deadline = history.getCommitDateById(implTop).plus(Duration.ofSeconds(1));
 			final IGrade grade = grader.grade("Olivier Cailloux", gitFs, fakeGitHubHistory);
 

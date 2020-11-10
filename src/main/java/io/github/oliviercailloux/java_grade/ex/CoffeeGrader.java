@@ -35,9 +35,9 @@ import com.google.common.math.DoubleMath;
 
 import io.github.oliviercailloux.git.GitCloner;
 import io.github.oliviercailloux.git.GitUri;
+import io.github.oliviercailloux.git.fs.GitFileSystem;
 import io.github.oliviercailloux.git.fs.GitFileSystemProvider;
 import io.github.oliviercailloux.git.fs.GitPath;
-import io.github.oliviercailloux.git.fs.GitRepoFileSystem;
 import io.github.oliviercailloux.git.git_hub.model.GitHubHistory;
 import io.github.oliviercailloux.git.git_hub.model.GitHubToken;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinatesWithPrefix;
@@ -52,8 +52,8 @@ import io.github.oliviercailloux.grade.markers.Marks;
 import io.github.oliviercailloux.java_grade.GraderOrchestrator;
 import io.github.oliviercailloux.java_grade.JavaCriterion;
 import io.github.oliviercailloux.java_grade.bytecode.Compiler;
-import io.github.oliviercailloux.java_grade.bytecode.Instanciator;
 import io.github.oliviercailloux.java_grade.bytecode.Compiler.CompilationResult;
+import io.github.oliviercailloux.java_grade.bytecode.Instanciator;
 import io.github.oliviercailloux.java_grade.testers.JavaMarkHelper;
 import io.github.oliviercailloux.java_grade.utils.Summarize;
 import io.github.oliviercailloux.json.JsonbUtils;
@@ -114,7 +114,7 @@ public class CoffeeGrader {
 	public IGrade grade(RepositoryCoordinatesWithPrefix coord, Path projectDir) throws IOException {
 		new GitCloner().download(GitUri.fromUri(coord.asURI()), projectDir);
 
-		try (GitRepoFileSystem fs = new GitFileSystemProvider().newFileSystemFromGitDir(projectDir.resolve(".git"))) {
+		try (GitFileSystem fs = new GitFileSystemProvider().newFileSystemFromGitDir(projectDir.resolve(".git"))) {
 			final GitHubHistory gitHubHistory = GraderOrchestrator.getGitHubHistory(coord);
 			final IGrade grade = grade(coord.getUsername(), fs, gitHubHistory);
 			LOGGER.info("Grade {}: {}.", coord, grade);
@@ -122,10 +122,10 @@ public class CoffeeGrader {
 		}
 	}
 
-	public IGrade grade(String owner, GitRepoFileSystem fs, GitHubHistory gitHubHistory) throws IOException {
+	public IGrade grade(String owner, GitFileSystem fs, GitHubHistory gitHubHistory) throws IOException {
 		fs.getHistory();
-		final GitPath gitSourcePath = fs.getRoot();
-		final Optional<ObjectId> masterIdOpt = fs.getCommitId(gitSourcePath);
+		final GitPath gitSourcePath = fs.getDefaultPath();
+		final Optional<ObjectId> masterIdOpt = gitSourcePath.getCommitId();
 		if (masterIdOpt.isEmpty()) {
 			return Mark.zero("Found no master commit.");
 		}

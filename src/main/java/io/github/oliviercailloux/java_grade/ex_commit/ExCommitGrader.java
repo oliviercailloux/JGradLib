@@ -26,7 +26,7 @@ import io.github.oliviercailloux.git.GitLocalHistory;
 import io.github.oliviercailloux.git.GitUri;
 import io.github.oliviercailloux.git.fs.GitFileSystemProvider;
 import io.github.oliviercailloux.git.fs.GitPath;
-import io.github.oliviercailloux.git.fs.GitRepoFileSystem;
+import io.github.oliviercailloux.git.fs.GitFileSystem;
 import io.github.oliviercailloux.git.git_hub.model.GitHubHistory;
 import io.github.oliviercailloux.git.git_hub.model.GitHubToken;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinatesWithPrefix;
@@ -99,7 +99,7 @@ public class ExCommitGrader {
 		final Path projectDir = projectsBaseDir.resolve(coord.getRepositoryName());
 		new GitCloner().download(GitUri.fromUri(coord.asURI()), projectDir);
 
-		try (GitRepoFileSystem fs = new GitFileSystemProvider().newFileSystemFromGitDir(projectDir.resolve(".git"))) {
+		try (GitFileSystem fs = new GitFileSystemProvider().newFileSystemFromGitDir(projectDir.resolve(".git"))) {
 			final GitHubHistory gitHubHistory = GraderOrchestrator.getGitHubHistory(coord);
 			final GitLocalHistory filtered = GraderOrchestrator.getFilteredHistory(fs, gitHubHistory, DEADLINE);
 			final IGrade grade = grade(coord.getUsername(), fs, filtered);
@@ -110,7 +110,7 @@ public class ExCommitGrader {
 		}
 	}
 
-	public IGrade grade(String owner, GitRepoFileSystem fs, GitLocalHistory history) throws IOException {
+	public IGrade grade(String owner, GitFileSystem fs, GitLocalHistory history) throws IOException {
 		fs.getHistory();
 		LOGGER.debug("Graph history: {}.", history.getGraph());
 		final GitLocalHistory manual = history

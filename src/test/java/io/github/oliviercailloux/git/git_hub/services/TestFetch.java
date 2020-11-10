@@ -363,7 +363,14 @@ public class TestFetch {
 		}
 //		allCoordinates = ImmutableList.of(RepositoryCoordinates.from("oliviercailloux", "Collaborative-exams"));
 //		allCoordinates = ImmutableList.of(RepositoryCoordinates.from("oliviercailloux", "Collaborative-exams-2016"));
+//		allCoordinates = ImmutableList.of(RepositoryCoordinates.from("checkstyle", "checkstyle"));
+//		allCoordinates = ImmutableList.of(RepositoryCoordinates.from("oliviercailloux", "checkstyle"));
 
+		/**
+		 * TODO interesting: updating the oliviercailloux/checkstyle or cloning the
+		 * checkstyle/checkstyle repository fails with Graphs.subgraphHasCycle
+		 * recursion.
+		 */
 		try (GitHubFetcherQL fetcher = GitHubFetcherQL.using(GitHubToken.getRealInstance())) {
 			for (RepositoryCoordinates coordinates : allCoordinates) {
 				final ComplexClient client = ComplexClient.aboutAndUsing(coordinates, Path.of("/tmp/"));

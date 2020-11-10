@@ -8,6 +8,8 @@ import static io.github.oliviercailloux.jaris.exceptions.Unchecker.URI_UNCHECKER
 
 import java.io.IOException;
 import java.net.URI;
+import java.nio.file.FileSystem;
+import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
@@ -29,176 +31,115 @@ import com.google.common.collect.Streams;
 import com.google.common.jimfs.Jimfs;
 
 /**
- * Has an optional root component and an optional sequence of names (strings).
- * If it has no root component, then it has a sequence of names. The root
- * component, if it is present, consists in a git reference (a string which must
- * start with refs/, such as refs/heads/main) or an {@link ObjectId} (not both).
- * The sequence of names, if it is present, consists in a non-empty sequence of
- * names, and either consists in a unique empty name, or contains no empty name.
- * Each name is a string that does not contain any slash.
- *
+ * An instance of this class has an optional root component and a (possibly
+ * empty) sequence of names (strings). If it has no root component, then its
+ * sequence of names is non empty.
+ * <p>
+ * The root component, if it is present, consists in either a git reference (a
+ * string which must start with <tt>refs/</tt>, such as
+ * <tt>refs/heads/main</tt>) or a commit id (represented as an
+ * {@link ObjectId}).
+ * <p>
+ * The sequence of names represents a path inside a given commit. It either
+ * consists of a unique empty name, or contains no empty name. Each name is a
+ * string that does not contain any slash.
+ * <p>
  * This path is absolute iff the root component is present.
  *
  * <h1>String form</h1>
- *
+ * <p>
  * The string form of a path consists in the string form of its root component,
  * if it has one, followed by its internal path.
- *
- * The string form of a root component is /gitref/, or /sha1/.
- *
+ * <p>
+ * The string form of a root component is <tt>/gitref/</tt>, where
+ * <tt>gitref</tt> is a git reference; or <tt>/sha1/</tt>, where <tt>sha1</tt>
+ * is a commit id.
+ * <p>
  * Its internal path is a string that starts with a slash iff the path is
  * absolute, and is composed of the names that constitute its sequence of names,
  * separated by slashes.
+ * <p>
+ * An absolute git path string is a git path string that starts with
+ * <code>/</code>.
  *
- * <h1>Summary</h1>
- *
- * Instances of this class are in exactly one of these four cases.
+ * <h1>Possible cases</h1>
+ * <p>
+ * It follows from these rules and from the {@link GitFileSystem default path
+ * rule} that an instance of this class matches exactly one of these two cases
+ * (each admitting a special case).
  * <ul>
  * <li>It has no root component. Equivalently, its string form contains no
  * leading slash. Equivalently, its string form contains no two consecutive
- * slashes. Equivalently, it is a relative path. Implies that it has a sequence
- * of names.</li>
+ * slashes. Equivalently, it is a relative path. Implies that its sequence of
+ * names is not empty. An example of string form is
+ * <code>"some/path"</code>.</li>
  * <ul>
- * <li>Its sequence of names consists in a unique empty name. Equivalently, it
- * represents the default path of the file system, that is, the branch
- * <tt>main</tt> and the root directory in that branch. Equivalently, its string
- * form is <code>""</code>.</li>
- * <li>Its sequence of names consists in at least one name, and contains no
- * empty name. An example of string form is <code>"some/path"</code>.</li>
+ * <li>As a special case, its sequence of names may consist in a unique empty
+ * name. Equivalently, it represents the default path of the file system, that
+ * is, the branch <tt>main</tt> and the root directory in that branch.
+ * Equivalently, its string form is {@code ""}.</li>
  * </ul>
  * <li>It has a root component. Equivalently, its string form contains a leading
  * slash. Equivalently, its string form contains two consecutive slashes exactly
- * once. Equivalently, it is an absolute path.</li>
+ * once. Equivalently, it is an absolute path. Implies that its sequence of
+ * names contain no empty name. An example of string form is
+ * <code>"/refs/heads/main//some/path"</code>.</li>
  * <ul>
- * <li>It consists in a root component only. Equivalently, it has no sequence of
- * name. Equivalently, its string form ends with two slashes. An example of
- * string form is <code>"/refs/heads/main//"</code>.</li>
- * <li>It has a root component and a sequence of names. An example of string
- * form is <code>"/refs/heads/main//some/path"</code>.</li>
+ * <li>As a special case, it may consist in a root component only. Equivalently,
+ * its sequence of names is empty. Equivalently, its string form ends with two
+ * slashes. An example of string form is <code>"/refs/heads/main//"</code>.</li>
  * </ul>
  *
- * <h1>URI</h1>
- *
- * newFs must be given a Uri of the form gitjfs:/some/path/ (with a trailing
- * slash). getPath must be given a Uri of the form
- * gitjfs:/some/path/?root=/refs/heads/main/&internal-path=/internal/path. On
- * Windows, gitjfs:///c:/path/to/the%20file.txt?… (root is optional and
- * internal-path is optional, internal-path must be present and start with a
- * slash if root is present). The path must have a
- * <a href="https://stackoverflow.com/a/16445016/">trailing slash</a> and
- * denotes a local directory corresponding to file:/the/same/path/.
- *
  * <h1>Extended discussion</h1>
- *
- * This documentation considers a sequence of names to be never empty: if a path
- * has a sequence of names, it is not empty.
- *
+ * <p>
  * The string form of the root component starts and ends with a slash, and
  * contains more slashes iff it is a git reference. It has typically the form
- * /refs/category/someref/, where category is tags, heads or remotes, but may
- * have other forms (see https://git-scm.com/docs/git-check-ref-format and
- * https://stackoverflow.com/a/47208574/). This class requires that the gitref
- * starts with "refs/", does not end with / and does not contain // or \ (these
- * are also restrictions on git refs anyway).
+ * <tt>/refs/category/someref/</tt>, where <tt>category</tt> is <tt>tags</tt>,
+ * <tt>heads</tt> or <tt>remotes</tt>, but may have
+ * <a href="https://git-scm.com/docs/git-check-ref-format">other</a>
+ * <a href="https://stackoverflow.com/a/47208574/">forms</a>. This class
+ * requires that the git reference starts with <tt>refs/</tt>, does not end with
+ * <tt>/</tt> and does not contain <tt>//</tt> or <tt>\</tt> (these are also
+ * official restrictions on git references as imposed by git).
+ * <p>
+ * This path is said to represent the default path of its file system, or
+ * equivalently to be an empty path, iff it has no root component and its
+ * sequence of names contains exactly one name that is empty. The sequence
+ * containing exactly one name that is empty has <tt>""</tt> as string form.
  *
- * The sequence of names is empty iff this path only represents a root
- * component.
- *
- * This path is said to be an empty path, or equivalently to represent the
- * default path of its file system, iff it has no root component and its
- * sequence of names contains exactly one name that is empty.
- *
- * The sequence containing exactly one name that is empty has "" as string form.
- *
- * As a consequence, the string form of the sequence of names starts with a
- * slash iff the path is absolute. The name elements are separated by slashes
- * (in violation of the {@link Path#toString()} contract).
- *
- * Consequently, the string form of a path starts with a slash iff the path is
- * absolute. If it is absolute, its string form contains a double slash.
- *
- * <h1>Rationale</h1> HEAD is not accepted for simplification. HEAD makes sense
- * only wrt a workspace, whereas this library is designed to work directly from
- * the git dir, without requiring a work space.
- *
- * A Ref is not accepted as an input because a Ref has an OId and does not
- * update, whereas this object considers a git reference as referring to OIds
- * dynamically.
- *
- * <h1>About Ref</h1>
- *
- * A Ref is symbolic and targets another Ref (which may be an unborn branch), or
- * non-symbolic and stores an OId. It may be an annotated tag and hence is
- * symbolic (?). Use rep.resolve to get an OId. findRef for short-hand forms.
- * getRefsByPrefix can be useful. getRef accepts non-ref items such as
- * MERGE_HEAD, …
- *
- * Question. Given the choice that a root component exists iff the path is
- * absolute (which is a nice and clear invariant),
- *
- * Question. Should /root// be considered as a root component only, thus with an
- * empty sequence of names, or should it be considered as a root component with
- * a one element sequence of names, equal to "/"? Equivalently, should
- * getFileName return null on /root//? (I suppose the intent of the spec is that
- * getFileName() must return null iff the path is a root component only.) Note
- * that the Windows implementation <a href=
+ * <h2>Rationale</h2>
+ * <p>
+ * The special git reference <tt>HEAD</tt> is not accepted for simplification.
+ * <tt>HEAD</tt> makes sense only with respect to a workspace, whereas this
+ * library is designed to work directly from the git directory, without
+ * requiring a work space.
+ * <p>
+ * A {@link Ref} is not accepted as an input because a {@code Ref} has an object
+ * id which does not update, whereas this object considers a git reference as
+ * referring to object ids (in fact, commit ids) dynamically.
+ * <p>
+ * The fact that the path <tt>/someref//</tt> is considered as a root component
+ * only, thus with an empty sequence of names, can appear surprising. Note first
+ * that slash is a path separator, thus cannot be part of a name. The only other
+ * possible choice is thus to consider that <tt>/someref//</tt> contains a
+ * sequence of name of one element, being the empty string. An advantage of this
+ * choice is that the sequence of names would be never empty (thereby easing
+ * usage) and that it feels like a natural generalization of the case of
+ * <tt>""</tt>, a path also containing one element being the empty string. But
+ * from the wording of {@link Path#getFileName()}, it seems like this method
+ * should return null iff the path is a root component only, and that what it
+ * should return is distinct from the root component. Note that the Windows
+ * implementation <a href=
  * "https://github.com/openjdk/jdk/tree/450452bb8cb617682a3eb28ae651cb829a45dcc6/test/jdk/java/nio/file/Path/PathOps.java#L290">treats</a>
- * C:\ as a root component only, and returns null on getFileName(). It would be
- * nice to consider it a one element sequence, so that it would be never empty
- * (thereby easing usage) and because it feels more natural, as "/root//" really
- * denotes a directory, not "nothing" as the empty path does. But 1) this forces
- * us to return something to getFileName(), and 2) this would break the nice
- * guarantee that the sequence of names in a gitpath behaves like the sequence
- * of names in a linux path: "/" under linux is an empty sequence of names (this
- * is forced by the spec as it is only a root component). (And I believe that
- * also under Windows, "\" is considered a root component only, equivalently, an
- * empty sequence of names.) If we want the sequence of names of a gitpath to
- * behave like a normal sequence of names, we must have that /root// has the
- * sequence of names "/", which is contradictory, as the sequence of names "/"
- * does not exist under linux! (The path "/" is a root component only and
- * corresponds to an empty sequence of names.). Thus, we must say that the
- * sequence of names here is the part without the first slash.
- *
- * Thus, if we adopt the second interpretation, what do we return? We could
- * return just "/", or "/root//". to getFileName(), and consider it as relative
- * (which is I think similar to what the Windows implementation does: I think it
- * treats \ as relative). OR return
- *
- * NB /root// getFileName returns null: that seems to be the only reasonable
- * answer compatible with the specs. The only possible alternative seems to be
- * to return a relative path to "/", but it seems to me that the Windows
- * implementation does not do this; and it would break the nice invariant that
- *
- * <h1>Old</h1>
- * <p>
- * Has an optional root component, such as "master/", and a sequence of names
- * made of a linux-like path. The linux-like path represents the sequence of
- * names of this path. This path is absolute iff it has a root component.
- * </p>
- *
- * <p>
- * Whether the linux-like path is absolute plays no role. For clarity,
- * internally, the linux-like path is ensured to be always relative without root
- * component iff this path has no root component (no commit). Equivalently, the
- * linux-like path is absolute and with a root component iff this path has a
- * root component.
- * </p>
- *
- * <p>
- * The choice that this path’s root component equals its commit implies that
- * when this path has no root component (no commit), it can’t advertise a
- * linux-like absolute path: otherwise, such a path would have a root component,
- * but this object has none.
- * </p>
- *
- * <p>
- * The choice that when this path has a root component (a commit), it can’t
- * advertise a linux-like relative path, is for simplicity, and because
- * distinguishing a path with a linux-like relative path and one with a
- * linux-like absolute path in string form would be hard.
- * </p>
- *
- * @author Olivier Cailloux
+ * C:\ as a root component only, and returns {@code null} on
+ * {@code getFileName()}. (And I believe that also under Windows, <tt>\</tt> is
+ * considered a root component only, equivalently, an empty sequence of names.)
+ * For sure, under Linux, <tt>/</tt> is a root component only. Thus, to behave
+ * similarly, we have to return {@code null} to {@code getFileName()} on the
+ * path <tt>/someref//</tt>, hence, to treat it as a root component only. (This
+ * choice would also break the nice (internal) guarantee that the internal path
+ * in a git path behaves like the sequence of names in a linux path, as
+ * <tt>/</tt> under Linux is an empty sequence.)
  *
  */
 public class GitPath implements Path {
@@ -211,7 +152,7 @@ public class GitPath implements Path {
 
 	private static final String QUERY_PARAMETER_INTERNAL_PATH = "internal-path";
 
-	static GitPath fromQueryString(GitRepoFileSystem fs, Map<String, String> splitQuery) {
+	static GitPath fromQueryString(GitFileSystem fs, Map<String, String> splitQuery) {
 		final Optional<String> rootValue = Optional.ofNullable(splitQuery.get(QUERY_PARAMETER_ROOT));
 		final Optional<String> internalPathValue = Optional.ofNullable(splitQuery.get(QUERY_PARAMETER_INTERNAL_PATH));
 
@@ -219,27 +160,27 @@ public class GitPath implements Path {
 			final String rootString = rootValue.get();
 			checkArgument(internalPathValue.isPresent());
 			final String internalPathString = internalPathValue.get();
-			final Path internalPath = GitFileSystemProvider.JIM_FS_EMPTY.resolve(internalPathString);
+			final Path internalPath = GitFileSystem.JIM_FS_EMPTY.resolve(internalPathString);
 			checkArgument(internalPath.isAbsolute());
-			return absolute(fs, RootComponent.givenStringForm(rootString), internalPath);
+			return absolute(fs, RootComponent.stringForm(rootString), internalPath);
 		}
 
-		final Path internalPath = GitFileSystemProvider.JIM_FS_EMPTY.resolve(internalPathValue.orElse(""));
+		final Path internalPath = GitFileSystem.JIM_FS_EMPTY.resolve(internalPathValue.orElse(""));
 		return relative(fs, internalPath);
 	}
 
-	static GitPath absolute(GitRepoFileSystem fs, RootComponent root, Path internalPath) {
+	static GitPath absolute(GitFileSystem fs, RootComponent root, Path internalPath) {
 		checkNotNull(root);
 		checkArgument(internalPath.isAbsolute());
 		return new GitPath(fs, root, internalPath);
 	}
 
-	static GitPath relative(GitRepoFileSystem fs, Path internalPath) {
+	static GitPath relative(GitFileSystem fs, Path internalPath) {
 		checkArgument(!internalPath.isAbsolute());
 		return new GitPath(fs, null, internalPath);
 	}
 
-	private final GitRepoFileSystem fileSystem;
+	private final GitFileSystem fileSystem;
 
 	/**
 	 * May be <code>null</code>.
@@ -254,17 +195,17 @@ public class GitPath implements Path {
 	 */
 	private final Path dirAndFile;
 
-	private GitPath(GitRepoFileSystem fileSystem, RootComponent root, Path dirAndFile) {
-		checkArgument(dirAndFile != null);
+	private GitPath(GitFileSystem fileSystem, RootComponent root, Path dirAndFile) {
+		checkNotNull(dirAndFile);
 
 		checkArgument(dirAndFile.getFileSystem().provider().getScheme().equals(Jimfs.URI_SCHEME));
 		checkArgument(dirAndFile.isAbsolute() == (root != null));
 		checkArgument(dirAndFile.isAbsolute() == (dirAndFile.getRoot() != null));
 		final boolean noSlashInNames = Streams.stream(dirAndFile).noneMatch(p -> p.toString().contains("/"));
-		checkArgument(noSlashInNames);
+		verify(noSlashInNames);
 		final boolean hasEmptyName = Streams.stream(dirAndFile).anyMatch(p -> p.toString().isEmpty());
 		if (hasEmptyName) {
-			checkArgument(dirAndFile.getNameCount() == 1);
+			verify(dirAndFile.getNameCount() == 1);
 			checkArgument(root == null);
 		}
 		if (root == null) {
@@ -276,12 +217,8 @@ public class GitPath implements Path {
 		this.dirAndFile = dirAndFile;
 	}
 
-	private RootComponent getRootOrDefault() {
-		return root == null ? RootComponent.DEFAULT : root;
-	}
-
 	@Override
-	public GitRepoFileSystem getFileSystem() {
+	public GitFileSystem getFileSystem() {
 		return fileSystem;
 	}
 
@@ -298,14 +235,19 @@ public class GitPath implements Path {
 		if (getNameCount() == 0) {
 			return this;
 		}
-		return new GitPath(fileSystem, root, GitFileSystemProvider.JIM_FS_SLASH);
+		return new GitPath(fileSystem, root, GitFileSystem.JIM_FS_SLASH);
 	}
 
 	/**
 	 * Returns the root component of this path, if this path has one (equivalently,
 	 * if it is absolute).
+	 * <p>
+	 * To obtain the root component that this path (possibly implicitly) refers to,
+	 * including in the case it is relative, use
+	 * {@code toAbsolutePath().getRootComponent()}.
 	 *
 	 * @return the root component.
+	 * @throws IllegalStateException if this path is relative.
 	 */
 	public RootComponent getRootComponent() {
 		checkState(isAbsolute());
@@ -313,7 +255,11 @@ public class GitPath implements Path {
 		return root;
 	}
 
-	public RootComponent getRootComponentOrDefault() {
+	/**
+	 * Returns the root component of this path, if it has one, otherwise, the
+	 * default root component of the associated path system.
+	 */
+	RootComponent getRootComponentOrDefault() {
 		return root != null ? root : RootComponent.DEFAULT;
 	}
 
@@ -410,11 +356,44 @@ public class GitPath implements Path {
 		return matchRoot && dirAndFile.endsWith(p2.dirAndFile);
 	}
 
+	/**
+	 * Returns a path that is this path with redundant name elements eliminated.
+	 * <p>
+	 * All occurrences of "{@code .}" are considered redundant. If a "{@code ..}" is
+	 * preceded by a non-"{@code ..}" name then both names are considered redundant
+	 * (the process to identify such names is repeated until it is no longer
+	 * applicable).
+	 * <p>
+	 * This method does not access the file system; the path may not locate a file
+	 * that exists. Eliminating "{@code ..}" and a preceding name from a path may
+	 * result in the path that locates a different file than the original path. This
+	 * can arise when the preceding name is a symbolic link.
+	 *
+	 * @return the resulting path or this path if it does not contain redundant name
+	 *         elements; an empty path is returned if this path does not have a root
+	 *         component and all name elements are redundant
+	 *
+	 * @see #getParent
+	 */
 	@Override
 	public GitPath normalize() {
 		return new GitPath(fileSystem, root, dirAndFile.normalize());
 	}
 
+	/**
+	 * Resolve the given path against this path.
+	 *
+	 * <p>
+	 * If the {@code other} parameter is an {@link #isAbsolute() absolute} path
+	 * (equivalently, if it has a root component), then this method trivially
+	 * returns {@code other}. If {@code other} is an <i>empty path</i> then this
+	 * method trivially returns this path. Otherwise this method considers this path
+	 * to be a directory and resolves the given path against this path: this method
+	 * <em>joins</em> the given path to this path and returns a resulting path that
+	 * {@link #endsWith ends} with the given path.
+	 *
+	 * @see #relativize
+	 */
 	@Override
 	public GitPath resolve(Path other) {
 		if (!getFileSystem().equals(other.getFileSystem())) {
@@ -439,6 +418,42 @@ public class GitPath implements Path {
 		return new GitPath(fileSystem, root, dirAndFile.resolve(p2.dirAndFile));
 	}
 
+	/**
+	 * Constructs a relative path between this path and a given path.
+	 *
+	 * <p>
+	 * Relativization is the inverse of {@link #resolve(Path) resolution}. This
+	 * method attempts to construct a {@link #isAbsolute relative} path that when
+	 * {@link #resolve(Path) resolved} against this path, yields a path that locates
+	 * the same file as the given path. For example, if this path is {@code "a/b"}
+	 * and the given path is {@code "a/b/c/d"} then the resulting relative path
+	 * would be {@code "c/d"}. A relative path between two paths can be constructed
+	 * iff the two paths both are relative, or both are absolute and have the same
+	 * root component. If this path and the given path are {@link #equals equal}
+	 * then an <i>empty path</i> is returned.
+	 *
+	 * <p>
+	 * For any two {@link #normalize normalized} paths <i>p</i> and <i>q</i>, where
+	 * <i>q</i> does not have a root component, <blockquote>
+	 * <i>p</i>{@code .relativize(}<i>p</i>
+	 * {@code .resolve(}<i>q</i>{@code )).equals(}<i>q</i>{@code )} </blockquote>
+	 *
+	 * <p>
+	 * TODO When symbolic links are supported, then whether the resulting path, when
+	 * resolved against this path, yields a path that can be used to locate the
+	 * {@link Files#isSameFile same} file as {@code other} is implementation
+	 * dependent. For example, if this path is {@code "/a/b"} and the given path is
+	 * {@code "/a/x"} then the resulting relative path may be {@code
+	 * "../x"}. If {@code "b"} is a symbolic link then is implementation dependent
+	 * if {@code "a/b/../x"} would locate the same file as {@code "/a/x"}.
+	 *
+	 * @param other the path to relativize against this path
+	 *
+	 * @return the resulting relative path, or an empty path if both paths are equal
+	 *
+	 * @throws IllegalArgumentException if {@code other} is not a {@code Path} that
+	 *                                  can be relativized against this path
+	 */
 	@Override
 	public GitPath relativize(Path other) {
 		if (!getFileSystem().equals(other.getFileSystem())) {
@@ -451,6 +466,12 @@ public class GitPath implements Path {
 		return new GitPath(fileSystem, null, dirAndFile.relativize(p2.dirAndFile));
 	}
 
+	/**
+	 * Returns a URI referring to the git file system instance associated to this
+	 * path, and referring to this specific file in that file system.
+	 *
+	 * @see GitFileSystemProvider#getPath(URI)
+	 */
 	@SuppressWarnings("resource")
 	@Override
 	public URI toUri() {
@@ -462,26 +483,45 @@ public class GitPath implements Path {
 		 * when not using that media type (as in this case). See
 		 * https://stackoverflow.com/a/49400367/.
 		 */
+		final String escapedDirAndFile = QueryUtils.QUERY_ENTRY_ESCAPER.escape(dirAndFile.toString());
 		final StringBuilder queryBuilder = new StringBuilder();
 		if (root != null) {
-			/** TODO think about when ref or dirAndFile contains = or &. */
 			queryBuilder
 					.append(QUERY_PARAMETER_ROOT + "=" + QueryUtils.QUERY_ENTRY_ESCAPER.escape(root.toStringForm()));
-			queryBuilder.append("&" + QUERY_PARAMETER_INTERNAL_PATH + "="
-					+ QueryUtils.QUERY_ENTRY_ESCAPER.escape(dirAndFile.toString()));
+			queryBuilder.append("&" + QUERY_PARAMETER_INTERNAL_PATH + "=" + escapedDirAndFile);
 		} else {
 			if (!dirAndFile.toString().isEmpty()) {
-				queryBuilder.append("internal-path=" + dirAndFile.toString());
+				queryBuilder.append(QUERY_PARAMETER_INTERNAL_PATH + "=" + escapedDirAndFile);
 			}
 		}
 		final String query = queryBuilder.toString();
 
 		final URI fsUri = fileSystem.toUri();
-		final URI uri = URI_UNCHECKER
-				.getUsing(() -> new URI(fsUri.getScheme(), fsUri.getAuthority(), fsUri.getPath(), query, null));
-		return uri;
+		final URI uriBasis = URI_UNCHECKER
+				.getUsing(() -> new URI(fsUri.getScheme(), fsUri.getAuthority(), fsUri.getPath(), null, null));
+		final String qMark = query.isEmpty() ? "" : "?";
+		/**
+		 * As the query part is encoded already, we don’t want to use the URI
+		 * constructor with query parameter, which would in turn encode the %-escapers
+		 * as if they were %-signs.
+		 */
+		return URI.create(uriBasis + qMark + query);
 	}
 
+	/**
+	 * Returns a {@code Path} object representing the absolute path of this path.
+	 *
+	 * <p>
+	 * If this path is already {@link Path#isAbsolute absolute} then this method
+	 * simply returns this path. Otherwise, this method resolves the path against
+	 * the {@link GitFileSystem default directory} and thus returns a path with a
+	 * root component referring to the <tt>main</tt> branch.
+	 *
+	 * <p>
+	 * This method does not access the underlying file system and requires no
+	 * specific permission.
+	 *
+	 */
 	@Override
 	public GitPath toAbsolutePath() {
 		if (isAbsolute()) {
@@ -490,14 +530,17 @@ public class GitPath implements Path {
 		return fileSystem.mainSlash.resolveRelative(this);
 	}
 
-	public GitPath toRelativePath() {
+	GitPath toRelativePath() {
 		if (!isAbsolute()) {
 			return this;
 		}
 		verify(dirAndFile.isAbsolute());
-		return new GitPath(fileSystem, null, GitFileSystemProvider.JIM_FS_SLASH.relativize(dirAndFile));
+		return new GitPath(fileSystem, null, GitFileSystem.JIM_FS_SLASH.relativize(dirAndFile));
 	}
 
+	/**
+	 * At the moment, throws {@code UnsupportedOperationException}.
+	 */
 	@Override
 	public Path toRealPath(LinkOption... options) throws IOException, NoSuchFileException {
 		/**
@@ -534,6 +577,9 @@ public class GitPath implements Path {
 //		return new GitPath(fileSystem, revStrPossiblyResolved, absolutePath.dirAndFile);
 	}
 
+	/**
+	 * At the moment, throws {@code UnsupportedOperationException}.
+	 */
 	@Override
 	public WatchKey register(WatchService watcher, Kind<?>[] events, Modifier... modifiers) throws IOException {
 		throw new UnsupportedOperationException();
@@ -557,6 +603,24 @@ public class GitPath implements Path {
 		return COMPARATOR.compare(this, p2);
 	}
 
+	/**
+	 * Tests this path for equality with the given object.
+	 *
+	 * <p>
+	 * This method returns {@code true} iff the given object is a git path
+	 * associated to the same git file system as this path, and the paths have equal
+	 * root components (or they are both absent) and internal paths. The internal
+	 * paths are compared in a case-sensitive way (conforming to the Linux concept
+	 * of path equality). Equivalently, two git paths are equal iff they are
+	 * associated to the same git file system and have the same {@link GitPath
+	 * string forms}.
+	 *
+	 * <p>
+	 * This method does not access the file system and the files are not required to
+	 * exist.
+	 *
+	 * @see Files#isSameFile(Path, Path) (TODO)
+	 */
 	@Override
 	public boolean equals(Object o2) {
 		if (!(o2 instanceof GitPath)) {
@@ -571,22 +635,44 @@ public class GitPath implements Path {
 		return Objects.hash(fileSystem, root, dirAndFile);
 	}
 
+	/**
+	 * Returns the {@link GitPath string form} of this path.
+	 *
+	 * <p>
+	 * If this path was created by converting a path string using the
+	 * {@link FileSystem#getPath getPath} method then the path string returned by
+	 * this method may differ from the original String used to create the path.
+	 *
+	 */
 	@Override
 	public String toString() {
 		final String rootStr = root == null ? "" : root.toStringForm();
 		return rootStr + dirAndFile.toString();
 	}
 
-	Optional<ObjectId> getCommitId() throws IOException {
-		final RootComponent effectiveRoot = getRootOrDefault();
+	/**
+	 * if this path is a reference, and this method returns an objectId, then it
+	 * implies existence of that commit root; otherwise (thus if the given path
+	 * contains an object id and not a reference), this method simply returns the
+	 * object id without checking for its validity.
+	 */
+	public Optional<ObjectId> getCommitId() throws IOException {
+		final RootComponent effectiveRoot = getRootComponentOrDefault();
 
-		if (effectiveRoot.isObjectId()) {
-			return Optional.of(effectiveRoot.getObjectId());
+		if (effectiveRoot.isCommitId()) {
+			return Optional.of(effectiveRoot.getCommitId());
 		}
 
 		final Optional<ObjectId> commitId;
 		final String effectiveRef = effectiveRoot.getGitRef();
 
+		/**
+		 * Should perhaps think about this. A Ref is symbolic and targets another Ref
+		 * (which may be an unborn branch), or non-symbolic and stores an OId. It may be
+		 * an annotated tag and hence is symbolic (?). Use rep.resolve to get an OId.
+		 * findRef for short-hand forms. getRefsByPrefix can be useful. getRef accepts
+		 * non-ref items such as MERGE_HEAD, …
+		 */
 		final Ref ref = getFileSystem().getRepository().exactRef(effectiveRef);
 		if (ref == null) {
 			LOGGER.debug("Rev str " + effectiveRef + " not found.");

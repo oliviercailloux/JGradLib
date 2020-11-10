@@ -24,7 +24,7 @@ import io.github.oliviercailloux.git.GitCloner;
 import io.github.oliviercailloux.git.GitUri;
 import io.github.oliviercailloux.git.fs.GitFileSystemProvider;
 import io.github.oliviercailloux.git.fs.GitPath;
-import io.github.oliviercailloux.git.fs.GitRepoFileSystem;
+import io.github.oliviercailloux.git.fs.GitFileSystem;
 import io.github.oliviercailloux.git.git_hub.model.GitHubToken;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinatesWithPrefix;
@@ -37,7 +37,7 @@ public class HarvestIds {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(HarvestIds.class);
 
-	public static Optional<Integer> getId(GitRepoFileSystem fs) {
+	public static Optional<Integer> getId(GitFileSystem fs) {
 		final GitPath idPath = fs.getRelativePath("id.txt");
 		if (!Files.exists(idPath)) {
 			return Optional.empty();
@@ -104,7 +104,7 @@ public class HarvestIds {
 		final Path projectsBaseDir = Paths.get("../../Java L3/En cours").resolve(prefix);
 		final Path projectDir = projectsBaseDir.resolve(coord.getRepositoryName());
 		new GitCloner().download(GitUri.fromUri(coord.asURI()), projectDir);
-		try (GitRepoFileSystem fs = IO_UNCHECKER
+		try (GitFileSystem fs = IO_UNCHECKER
 				.getUsing(() -> new GitFileSystemProvider().newFileSystemFromGitDir(projectDir.resolve(".git")))) {
 			return getId(fs);
 		}

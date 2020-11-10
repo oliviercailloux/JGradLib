@@ -45,7 +45,7 @@ public class JGit {
 		try (ObjectInserter inserter = objectDatabase.newInserter()) {
 			final ObjectId commitStart = insertCommit(inserter, personIdent, baseDir, ImmutableList.of(),
 					"First commit");
-			setMaster(repository, commitStart);
+			setMain(repository, commitStart);
 		} catch (IOException e) {
 			throw new UncheckedIOException(e);
 		}
@@ -68,7 +68,7 @@ public class JGit {
 			final ObjectId commitStart = insertCommit(inserter, personIdent, workDir, ImmutableList.of(),
 					"First commit");
 
-			setMaster(repository, commitStart);
+			setMain(repository, commitStart);
 		} catch (IOException e) {
 			throw new UncheckedIOException(e);
 		}
@@ -98,7 +98,7 @@ public class JGit {
 
 			final ImmutableList<ObjectId> commits = builder.build();
 
-			setMaster(repository, commits.get(commits.size() - 1));
+			setMain(repository, commits.get(commits.size() - 1));
 
 			return commits;
 		}
@@ -132,7 +132,7 @@ public class JGit {
 
 			final ImmutableList<ObjectId> commits = builder.build();
 
-			setMaster(repository, commits.get(commits.size() - 1));
+			setMain(repository, commits.get(commits.size() - 1));
 
 			return commits;
 		}
@@ -199,9 +199,9 @@ public class JGit {
 		return inserted;
 	}
 
-	public static void setMaster(Repository repository, ObjectId newId) {
+	public static void setMain(Repository repository, ObjectId newId) {
 		try {
-			final RefUpdate updateRef = repository.updateRef("refs/heads/master");
+			final RefUpdate updateRef = repository.updateRef("refs/heads/main");
 			updateRef.setNewObjectId(newId);
 			final Result updateResult = updateRef.update();
 			Verify.verify(updateResult == Result.NEW, updateResult.toString());
