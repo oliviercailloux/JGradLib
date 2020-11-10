@@ -4,6 +4,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.base.Verify.verify;
+import static com.google.common.base.Verify.verifyNotNull;
 import static io.github.oliviercailloux.jaris.exceptions.Unchecker.URI_UNCHECKER;
 
 import java.io.IOException;
@@ -162,14 +163,14 @@ public class GitPath implements Path {
 			final String internalPathString = internalPathValue.get();
 			final Path internalPath = GitFileSystem.JIM_FS_EMPTY.resolve(internalPathString);
 			checkArgument(internalPath.isAbsolute());
-			return absolute(fs, RootComponent.stringForm(rootString), internalPath);
+			return absolute(fs, GitStaticRev.stringForm(rootString), internalPath);
 		}
 
 		final Path internalPath = GitFileSystem.JIM_FS_EMPTY.resolve(internalPathValue.orElse(""));
 		return relative(fs, internalPath);
 	}
 
-	static GitPath absolute(GitFileSystem fs, RootComponent root, Path internalPath) {
+	static GitPath absolute(GitFileSystem fs, GitStaticRev root, Path internalPath) {
 		checkNotNull(root);
 		checkArgument(internalPath.isAbsolute());
 		return new GitPath(fs, root, internalPath);
@@ -185,7 +186,7 @@ public class GitPath implements Path {
 	/**
 	 * May be <code>null</code>.
 	 */
-	private final RootComponent root;
+	private final GitStaticRev root;
 
 	/**
 	 * Linux style in-memory path, absolute iff has a root component iff this path
@@ -195,7 +196,7 @@ public class GitPath implements Path {
 	 */
 	private final Path dirAndFile;
 
-	private GitPath(GitFileSystem fileSystem, RootComponent root, Path dirAndFile) {
+	protected GitPath(GitFileSystem fileSystem, GitStaticRev root, Path dirAndFile) {
 		checkNotNull(dirAndFile);
 
 		checkArgument(dirAndFile.getFileSystem().provider().getScheme().equals(Jimfs.URI_SCHEME));
@@ -227,6 +228,13 @@ public class GitPath implements Path {
 		return root != null;
 	}
 
+	/**
+	 * {@inheritDoc}
+	 * <p>
+	 * To obtain the root component that this path (possibly implicitly) refers to,
+	 * including in the case it is relative, use {@code toAbsolutePath().getRoot()}.
+	 *
+	 */
 	@Override
 	public GitPath getRoot() {
 		if (root == null) {
@@ -249,9 +257,10 @@ public class GitPath implements Path {
 	 * @return the root component.
 	 * @throws IllegalStateException if this path is relative.
 	 */
-	public RootComponent getRootComponent() {
+	@Deprecated
+	public GitStaticRev getRootComponent() {
 		checkState(isAbsolute());
-		verify(root != null);
+		verifyNotNull(root);
 		return root;
 	}
 
@@ -259,8 +268,8 @@ public class GitPath implements Path {
 	 * Returns the root component of this path, if it has one, otherwise, the
 	 * default root component of the associated path system.
 	 */
-	RootComponent getRootComponentOrDefault() {
-		return root != null ? root : RootComponent.DEFAULT;
+	GitStaticRev getRootComponentOrDefault() {
+		return root != null ? root : GitStaticRev.DEFAULT;
 	}
 
 	@Override
@@ -656,7 +665,7 @@ public class GitPath implements Path {
 	 * object id without checking for its validity.
 	 */
 	public Optional<ObjectId> getCommitId() throws IOException {
-		final RootComponent effectiveRoot = getRootComponentOrDefault();
+		final GitStaticRev effectiveRoot = getRootComponentOrDefault();
 
 		if (effectiveRoot.isCommitId()) {
 			return Optional.of(effectiveRoot.getCommitId());

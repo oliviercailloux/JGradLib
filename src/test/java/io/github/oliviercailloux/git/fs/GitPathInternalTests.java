@@ -34,7 +34,7 @@ public class GitPathInternalTests {
 
 	@Test
 	void testBasics() throws Exception {
-		final RootComponent main = RootComponent.DEFAULT;
+		final GitStaticRev main = GitStaticRev.DEFAULT;
 		assertThrows(IllegalArgumentException.class, () -> getGitPath(main, ""));
 		assertThrows(IllegalArgumentException.class, () -> getGitPath(main, "ploum"));
 		assertThrows(IllegalArgumentException.class, () -> getGitPath(null, "/"));
@@ -91,8 +91,8 @@ public class GitPathInternalTests {
 		assertEquals("/refs/heads/main//ploum.txt",
 				getGitPath(main, "/").resolve(getGitPath(main, "/ploum.txt")).toString());
 		assertEquals("/refs/heads/main//",
-				getGitPath(RootComponent.ref("refs/something"), "/").resolve(getGitPath(main, "/")).toString());
-		assertEquals("/refs/heads/main//ploum.txt", getGitPath(RootComponent.ref("refs/something"), "/")
+				getGitPath(GitStaticRev.ref("refs/something"), "/").resolve(getGitPath(main, "/")).toString());
+		assertEquals("/refs/heads/main//ploum.txt", getGitPath(GitStaticRev.ref("refs/something"), "/")
 				.resolve(getGitPath(main, "/ploum.txt")).toString());
 		assertEquals("/refs/heads/main//truc", getGitPath(main, "/truc").resolve(getGitPath(null, "")).toString());
 		assertEquals("/refs/heads/main//truc/ploum.txt",
@@ -100,9 +100,9 @@ public class GitPathInternalTests {
 		assertEquals("/refs/heads/main//", getGitPath(main, "/truc").resolve(getGitPath(main, "/")).toString());
 		assertEquals("/refs/heads/main//ploum.txt",
 				getGitPath(main, "/truc").resolve(getGitPath(main, "/ploum.txt")).toString());
-		assertEquals("/refs/heads/main//", getGitPath(RootComponent.ref("refs/something"), "/truc")
+		assertEquals("/refs/heads/main//", getGitPath(GitStaticRev.ref("refs/something"), "/truc")
 				.resolve(getGitPath(main, "/")).toString());
-		assertEquals("/refs/heads/main//ploum.txt", getGitPath(RootComponent.ref("refs/something"), "/truc")
+		assertEquals("/refs/heads/main//ploum.txt", getGitPath(GitStaticRev.ref("refs/something"), "/truc")
 				.resolve(getGitPath(main, "/ploum.txt")).toString());
 
 		assertEquals("", getGitPath(null, "").relativize(getGitPath(null, "")).toString());
@@ -129,7 +129,7 @@ public class GitPathInternalTests {
 		assertNotEquals(getGitPath(null, "truc/chose"), getGitPath(main, "/truc/chose"));
 	}
 
-	private GitPath getGitPath(RootComponent root, String dirAndFile) {
+	private GitPath getGitPath(GitStaticRev root, String dirAndFile) {
 		if (root != null) {
 			return GitPath.absolute(GitFileSystemCreatePathsTests.GIT_FILE_FILE_SYSTEM_MOCKED, root,
 					GitFileSystem.JIM_FS.getPath(dirAndFile));

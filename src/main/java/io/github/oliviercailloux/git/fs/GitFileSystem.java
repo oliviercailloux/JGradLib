@@ -78,7 +78,7 @@ import io.github.oliviercailloux.utils.SeekableInMemoryByteChannel;
  * </p>
  *
  * @see #getAbsolutePath(String, String...)
- * @see #getAbsolutePath(RootComponent, String...)
+ * @see #getAbsolutePath(GitStaticRev, String...)
  * @see #getRelativePath(String...)
  * @see #getGitRootDirectories()
  */
@@ -251,7 +251,7 @@ public abstract class GitFileSystem extends FileSystem {
 	private Repository repository;
 	private boolean shouldCloseRepository;
 
-	final GitPath mainSlash = GitPath.absolute(this, RootComponent.DEFAULT, JIM_FS_SLASH);
+	final GitPath mainSlash = GitPath.absolute(this, GitStaticRev.DEFAULT, JIM_FS_SLASH);
 	final GitPath defaultPath = GitPath.relative(this, JIM_FS_EMPTY);
 
 	protected GitFileSystem(GitFileSystemProvider gitProvider, Repository repository, boolean shouldCloseRepository) {
@@ -377,7 +377,7 @@ public abstract class GitFileSystem extends FileSystem {
 			internalPath = ImmutableList.copyOf(more);
 		}
 
-		return getAbsolutePath(RootComponent.stringForm(rootStringForm), internalPath);
+		return getAbsolutePath(GitStaticRev.stringForm(rootStringForm), internalPath);
 	}
 
 	/**
@@ -385,15 +385,15 @@ public abstract class GitFileSystem extends FileSystem {
 	 * @param internalPath may start with <code>/</code>
 	 * @return
 	 */
-	public GitPath getAbsolutePath(RootComponent root, String... internalPath) {
+	public GitPath getAbsolutePath(GitStaticRev root, String... internalPath) {
 		return getAbsolutePath(root, ImmutableList.copyOf(internalPath));
 	}
 
 	private GitPath getAbsolutePath(ObjectId objectId, String... internalPath) {
-		return getAbsolutePath(RootComponent.commitId(objectId), ImmutableList.copyOf(internalPath));
+		return getAbsolutePath(GitStaticRev.commitId(objectId), ImmutableList.copyOf(internalPath));
 	}
 
-	private GitPath getAbsolutePath(RootComponent root, List<String> names) {
+	private GitPath getAbsolutePath(GitStaticRev root, List<String> names) {
 		checkNotNull(root);
 		final String first = names.isEmpty() ? "" : names.get(0);
 		final String[] more = names.isEmpty() ? new String[] {}
@@ -478,7 +478,7 @@ public abstract class GitFileSystem extends FileSystem {
 
 		/** Important to compare without ties, otherwise some commits get collapsed. */
 		return ImmutableSortedSet.copyOf(compareWithoutTies, getCachedHistory().getGraph().nodes().stream()
-				.map((c) -> getAbsolutePath(RootComponent.commitId(c))).iterator());
+				.map((c) -> getAbsolutePath(GitStaticRev.commitId(c))).iterator());
 	}
 
 	public GitLocalHistory getHistory() throws IOException {
