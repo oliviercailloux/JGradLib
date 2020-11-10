@@ -10,9 +10,6 @@ import java.util.Objects;
 import org.eclipse.jgit.errors.InvalidObjectIdException;
 import org.eclipse.jgit.lib.ObjectId;
 
-import com.google.common.base.MoreObjects;
-import com.google.common.base.MoreObjects.ToStringHelper;
-
 public class RootComponent {
 	public static final RootComponent DEFAULT = ref("refs/heads/main");
 	/**
@@ -23,7 +20,7 @@ public class RootComponent {
 	 * roots by commit date.
 	 */
 	static final Comparator<RootComponent> SYNTAXIC_COMPARATOR = Comparator
-			.comparingInt((RootComponent r) -> r.isRef() ? 0 : 1).thenComparing(RootComponent::toStringForm);
+			.comparingInt((RootComponent r) -> r.isRef() ? 0 : 1).thenComparing(RootComponent::toString);
 
 	public static RootComponent stringForm(String stringForm) throws InvalidPathException {
 		checkPath(stringForm.startsWith("/"), stringForm, "Must start with /");
@@ -124,10 +121,6 @@ public class RootComponent {
 		return commitId;
 	}
 
-	public String toStringForm() {
-		return "/" + (gitRef == null ? commitId.getName() : gitRef) + "/";
-	}
-
 	@Override
 	public boolean equals(Object o2) {
 		if (!(o2 instanceof RootComponent)) {
@@ -144,12 +137,6 @@ public class RootComponent {
 
 	@Override
 	public String toString() {
-		final ToStringHelper helper = MoreObjects.toStringHelper(this);
-		if (isRef()) {
-			helper.add("gitRef", gitRef);
-		} else {
-			helper.add("objectId", commitId);
-		}
-		return helper.toString();
+		return "/" + (gitRef == null ? commitId.getName() : gitRef) + "/";
 	}
 }

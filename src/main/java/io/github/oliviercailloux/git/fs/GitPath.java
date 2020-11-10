@@ -486,8 +486,7 @@ public class GitPath implements Path {
 		final String escapedDirAndFile = QueryUtils.QUERY_ENTRY_ESCAPER.escape(dirAndFile.toString());
 		final StringBuilder queryBuilder = new StringBuilder();
 		if (root != null) {
-			queryBuilder
-					.append(QUERY_PARAMETER_ROOT + "=" + QueryUtils.QUERY_ENTRY_ESCAPER.escape(root.toStringForm()));
+			queryBuilder.append(QUERY_PARAMETER_ROOT + "=" + QueryUtils.QUERY_ENTRY_ESCAPER.escape(root.toString()));
 			queryBuilder.append("&" + QUERY_PARAMETER_INTERNAL_PATH + "=" + escapedDirAndFile);
 		} else {
 			if (!dirAndFile.toString().isEmpty()) {
@@ -646,7 +645,7 @@ public class GitPath implements Path {
 	 */
 	@Override
 	public String toString() {
-		final String rootStr = root == null ? "" : root.toStringForm();
+		final String rootStr = root == null ? "" : root.toString();
 		return rootStr + dirAndFile.toString();
 	}
 
