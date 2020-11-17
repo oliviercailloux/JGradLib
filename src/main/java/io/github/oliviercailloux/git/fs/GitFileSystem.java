@@ -258,8 +258,8 @@ public abstract class GitFileSystem extends FileSystem {
 	private Repository repository;
 	private boolean shouldCloseRepository;
 
-	final GitPath mainSlash = GitPath.absolute(this, GitRev.DEFAULT, JIM_FS_SLASH);
-	final GitPath defaultPath = GitPath.relative(this, JIM_FS_EMPTY);
+	final GitPathRoot mainSlash = new GitPathRoot(this, GitRev.DEFAULT);
+	final GitEmptyPath defaultPath = new GitEmptyPath(mainSlash);
 
 	/**
 	 * Git file system provides low-level access to read operations on a repository

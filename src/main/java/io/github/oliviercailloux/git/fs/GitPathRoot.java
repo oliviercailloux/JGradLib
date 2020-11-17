@@ -1,10 +1,11 @@
 package io.github.oliviercailloux.git.fs;
 
+import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Verify.verify;
-import static com.google.common.base.Verify.verifyNotNull;
 
 import java.io.IOException;
 import java.nio.file.NoSuchFileException;
+import java.nio.file.Path;
 import java.util.Optional;
 
 import org.eclipse.jgit.errors.IncorrectObjectTypeException;
@@ -20,25 +21,49 @@ import org.slf4j.LoggerFactory;
  * git rev. Its string form ends with // (whereas the string form of a git rev
  * ends with a single /); and it never equals a git rev.
  */
-public class GitPathRoot extends GitPath {
+public class GitPathRoot extends GitAbsolutePath {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(GitPathRoot.class);
 
-	protected GitPathRoot(GitFileSystem fileSystem, GitRev root) {
-		super(fileSystem, root, GitFileSystem.JIM_FS_SLASH);
-		verifyNotNull(root);
+	private final GitFileSystem fileSystem;
+
+	private final GitRev gitRev;
+
+	GitPathRoot(GitFileSystem fileSystem, GitRev gitRev) {
+		this.fileSystem = checkNotNull(fileSystem);
+		this.gitRev = checkNotNull(gitRev);
+	}
+
+	@Override
+	Path getInternalPath() {
+		return GitFileSystem.JIM_FS_SLASH;
+	}
+
+	@Override
+	public GitFileSystem getFileSystem() {
+		return fileSystem;
+	}
+
+	@Override
+	public GitPathRoot getRoot() {
+		return this;
+	}
+
+	@Override
+	GitEmptyPath toRelativePath() {
+		return fileSystem.defaultPath;
 	}
 
 	public GitRev toStaticRev() {
-		return getRootComponent();
+		return gitRev;
 	}
 
 	public boolean isRef() {
-		return getRootComponent().isRef();
+		return gitRev.isRef();
 	}
 
 	public boolean isCommitId() {
-		return getRootComponent().isCommitId();
+		return gitRev.isCommitId();
 	}
 
 	public String getGitRef() {
@@ -52,11 +77,11 @@ public class GitPathRoot extends GitPath {
 		 * when using third party objects, for example Map can return null, but I prefer
 		 * to reduce exceptions as much as possible.)
 		 */
-		return getRootComponent().getGitRef();
+		return gitRev.getGitRef();
 	}
 
 	public ObjectId getStaticCommitId() {
-		return getRootComponent().getCommitId();
+		return gitRev.getCommitId();
 	}
 
 	/**
@@ -88,7 +113,7 @@ public class GitPathRoot extends GitPath {
 	Optional<RevCommit> tryGetRevCommit() throws IOException {
 		final ObjectId possibleCommitId;
 		if (isRef()) {
-			final Optional<ObjectId> objectId = getFileSystem().getObjectId(getGitRef());
+			final Optional<ObjectId> objectId = fileSystem.getObjectId(getGitRef());
 			if (objectId.isEmpty()) {
 				return Optional.empty();
 			}
@@ -98,7 +123,7 @@ public class GitPathRoot extends GitPath {
 		}
 
 		try {
-			return Optional.of(getFileSystem().getRevCommit(possibleCommitId));
+			return Optional.of(fileSystem.getRevCommit(possibleCommitId));
 		} catch (IncorrectObjectTypeException e) {
 			LOGGER.info("Tried to access a non-commit as a commit: " + e + ".");
 			return Optional.empty();
@@ -147,6 +172,6 @@ public class GitPathRoot extends GitPath {
 
 	@Override
 	public String toString() {
-		return getRootComponent().toString();
+		return gitRev.toString();
 	}
 }

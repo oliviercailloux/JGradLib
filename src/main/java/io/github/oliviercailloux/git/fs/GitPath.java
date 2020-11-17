@@ -198,35 +198,46 @@ public abstract class GitPath implements Path {
 			final String internalPathString = internalPathValue.get();
 			final Path internalPath = GitFileSystem.JIM_FS_EMPTY.resolve(internalPathString);
 			checkArgument(internalPath.isAbsolute());
-			return absolute(fs, GitRev.stringForm(rootString), internalPath);
+			return GitAbsolutePath.givenRev(fs, GitRev.stringForm(rootString), internalPath);
 		}
 
 		final Path internalPath = GitFileSystem.JIM_FS_EMPTY.resolve(internalPathValue.orElse(""));
-		return relative(fs, internalPath);
+		return GitRelativePath.relative(fs, internalPath);
 	}
-
-	static GitPath absolute(GitFileSystem fs, GitRev root, Path internalPath) {
-		checkNotNull(root);
-		checkArgument(internalPath.isAbsolute());
-		if (internalPath.getNameCount() == 0) {
-			verify(internalPath.toString().equals("/"));
-			return new GitPathRoot(fs, root);
-		}
-		return new GitPathNonRoot(fs, root, internalPath);
-	}
-
-	static GitPath relative(GitFileSystem fs, Path internalPath) {
-		checkArgument(!internalPath.isAbsolute());
-		checkArgument(internalPath.getNameCount() >= 1);
-		return new GitPathNonRoot(fs, null, internalPath);
-	}
-
-	private final GitFileSystem fileSystem;
 
 	/**
-	 * May be <code>null</code>.
+	 * A quick way to create a copy of a path pointing at another internal path.
+	 * This is, exceptionally, a method that accepts a root with a relative internal
+	 * path.
+	 *
+	 * @param root         if internalPath is relative, must be the default root
+	 *                     (and then only its file system is unused)
+	 * @param internalPath the new internal path.
 	 */
-	private final GitRev root;
+	static GitPath given(GitPathRoot root, Path internalPath) {
+		if (internalPath.isAbsolute()) {
+			return GitAbsolutePath.givenRoot(root, internalPath);
+		}
+		verify(root.equals(root.getFileSystem().mainSlash));
+		return GitRelativePath.relative(root.getFileSystem(), internalPath);
+	}
+
+	/**
+	 * Returns a {@code Path} object representing the absolute path of this path.
+	 *
+	 * <p>
+	 * If this path is already {@link Path#isAbsolute absolute} then this method
+	 * simply returns this path. Otherwise, this method resolves the path against
+	 * the {@link GitFileSystem default directory} and thus returns a path with a
+	 * root component referring to the <tt>main</tt> branch.
+	 *
+	 * <p>
+	 * This method does not access the underlying file system and requires no
+	 * specific permission.
+	 *
+	 */
+	@Override
+	public abstract GitAbsolutePath toAbsolutePath();
 
 	/**
 	 * Linux style in-memory path, absolute iff has a root component iff this path
@@ -234,39 +245,13 @@ public abstract class GitPath implements Path {
 	 * good for root-only paths), may contain a single empty name ("", good for
 	 * default path).
 	 */
-	private final Path dirAndFile;
-
-	protected GitPath(GitFileSystem fileSystem, GitRev root, Path dirAndFile) {
-		checkNotNull(dirAndFile);
-
-		checkArgument(dirAndFile.getFileSystem().provider().getScheme().equals(Jimfs.URI_SCHEME));
-		checkArgument(dirAndFile.isAbsolute() == (root != null));
-		checkArgument(dirAndFile.isAbsolute() == (dirAndFile.getRoot() != null));
-		final boolean noSlashInNames = Streams.stream(dirAndFile).noneMatch(p -> p.toString().contains("/"));
-		verify(noSlashInNames);
-		final boolean hasEmptyName = Streams.stream(dirAndFile).anyMatch(p -> p.toString().isEmpty());
-		if (hasEmptyName) {
-			verify(dirAndFile.getNameCount() == 1);
-			checkArgument(root == null);
-		}
-		if (root == null) {
-			checkArgument(dirAndFile.getNameCount() >= 1);
-		}
-
-		this.fileSystem = checkNotNull(fileSystem);
-		this.root = root;
-		this.dirAndFile = dirAndFile;
-	}
+	abstract Path getInternalPath();
 
 	@Override
-	public GitFileSystem getFileSystem() {
-		return fileSystem;
-	}
+	public abstract GitFileSystem getFileSystem();
 
 	@Override
-	public boolean isAbsolute() {
-		return root != null;
-	}
+	public abstract boolean isAbsolute();
 
 	/**
 	 * {@inheritDoc}
@@ -276,74 +261,42 @@ public abstract class GitPath implements Path {
 	 *
 	 */
 	@Override
-	public GitPathRoot getRoot() {
-		if (root == null) {
-			return null;
-		}
-		if (getNameCount() == 0) {
-			return this;
-		}
-		return new GitPath(fileSystem, root, GitFileSystem.JIM_FS_SLASH);
-	}
-
-	/**
-	 * Returns the root component of this path, if this path has one (equivalently,
-	 * if it is absolute).
-	 * <p>
-	 * To obtain the root component that this path (possibly implicitly) refers to,
-	 * including in the case it is relative, use
-	 * {@code toAbsolutePath().getRootComponent()}.
-	 *
-	 * @return the root component.
-	 * @throws IllegalStateException if this path is relative.
-	 */
-	GitRev getRootComponent() {
-		checkState(isAbsolute());
-		verifyNotNull(root);
-		return root;
-	}
-
-	/**
-	 * Returns the root component of this path, if it has one, otherwise, the
-	 * default root component of the associated path system.
-	 */
-	GitRev getRootComponentOrDefault() {
-		return root != null ? root : GitRev.DEFAULT;
-	}
+	public abstract GitPathRoot getRoot();
 
 	@Override
 	public int getNameCount() {
-		return dirAndFile.getNameCount();
+		return getInternalPath().getNameCount();
 	}
 
 	@Override
 	public GitPath getName(int index) {
-		final Path name = dirAndFile.getName(index);
-		return new GitPath(fileSystem, null, name);
+		final Path name = getInternalPath().getName(index);
+		verify(!name.isAbsolute());
+		return GitRelativePath.relative(getFileSystem(), name);
 	}
 
 	@Override
 	public GitPath subpath(int beginIndex, int endIndex) {
-		final Path subpath = dirAndFile.subpath(beginIndex, endIndex);
-		return new GitPath(fileSystem, null, subpath);
+		final Path subpath = getInternalPath().subpath(beginIndex, endIndex);
+		return GitRelativePath.relative(getFileSystem(), subpath);
 	}
 
 	@Override
 	public GitPath getFileName() {
-		final Path fileName = dirAndFile.getFileName();
+		final Path fileName = getInternalPath().getFileName();
 		if (fileName == null) {
 			return null;
 		}
-		return new GitPath(fileSystem, null, fileName);
+		return GitRelativePath.relative(getFileSystem(), fileName);
 	}
 
 	@Override
 	public GitPath getParent() {
-		final Path parent = dirAndFile.getParent();
+		final Path parent = getInternalPath().getParent();
 		if (parent == null) {
 			return null;
 		}
-		return new GitPath(fileSystem, root, parent);
+		return given(toAbsolutePath().getRoot(), parent);
 	}
 
 	/**
@@ -369,7 +322,7 @@ public abstract class GitPath implements Path {
 			return false;
 		}
 		final GitPath p2 = (GitPath) other;
-		return Objects.equals(root, p2.root) && dirAndFile.startsWith(p2.dirAndFile);
+		return Objects.equals(getRoot(), p2.getRoot()) && getInternalPath().startsWith(p2.getInternalPath());
 	}
 
 	/**
@@ -400,8 +353,8 @@ public abstract class GitPath implements Path {
 			return false;
 		}
 		final GitPath p2 = (GitPath) other;
-		final boolean matchRoot = (p2.root == null || p2.root.equals(root));
-		return matchRoot && dirAndFile.endsWith(p2.dirAndFile);
+		final boolean matchRoot = (p2.getRoot() == null || p2.getRoot().equals(getRoot()));
+		return matchRoot && getInternalPath().endsWith(p2.getInternalPath());
 	}
 
 	/**
@@ -425,7 +378,7 @@ public abstract class GitPath implements Path {
 	 */
 	@Override
 	public GitPath normalize() {
-		return new GitPath(fileSystem, root, dirAndFile.normalize());
+		return given(getRoot(), getInternalPath().normalize());
 	}
 
 	/**
@@ -447,23 +400,21 @@ public abstract class GitPath implements Path {
 		if (!getFileSystem().equals(other.getFileSystem())) {
 			throw new IllegalArgumentException();
 		}
+		final GitPath p2 = (GitPath) other;
 		if (other.isAbsolute()) {
-			return (GitPath) other;
+			return p2;
 		}
-		return resolveRelative(other);
+		return resolveRelative(p2);
 	}
 
-	private GitPath resolveRelative(Path other) {
-		checkArgument(!other.isAbsolute());
+	private GitPath resolveRelative(GitPath p2) {
+		checkArgument(!p2.isAbsolute());
 
-		if (other.toString().equals("")) {
+		if (p2.toString().equals("")) {
 			return this;
 		}
-		if (!getFileSystem().equals(other.getFileSystem())) {
-			throw new IllegalArgumentException();
-		}
-		final GitPath p2 = (GitPath) other;
-		return new GitPath(fileSystem, root, dirAndFile.resolve(p2.dirAndFile));
+		verify(getFileSystem().equals(p2.getFileSystem()));
+		return given(getRoot(), getInternalPath().resolve(p2.getInternalPath()));
 	}
 
 	/**
@@ -508,10 +459,10 @@ public abstract class GitPath implements Path {
 			throw new IllegalArgumentException();
 		}
 		final GitPath p2 = (GitPath) other;
-		if (!Objects.equals(root, p2.root)) {
+		if (!Objects.equals(getRoot(), p2.getRoot())) {
 			throw new IllegalArgumentException();
 		}
-		return new GitPath(fileSystem, null, dirAndFile.relativize(p2.dirAndFile));
+		return GitRelativePath.relative(getFileSystem(), getInternalPath().relativize(p2.getInternalPath()));
 	}
 
 	/**
@@ -531,19 +482,20 @@ public abstract class GitPath implements Path {
 		 * when not using that media type (as in this case). See
 		 * https://stackoverflow.com/a/49400367/.
 		 */
-		final String escapedDirAndFile = QueryUtils.QUERY_ENTRY_ESCAPER.escape(dirAndFile.toString());
+		final String escapedDirAndFile = QueryUtils.QUERY_ENTRY_ESCAPER.escape(getInternalPath().toString());
 		final StringBuilder queryBuilder = new StringBuilder();
-		if (root != null) {
-			queryBuilder.append(QUERY_PARAMETER_ROOT + "=" + QueryUtils.QUERY_ENTRY_ESCAPER.escape(root.toString()));
+		if (getRoot() != null) {
+			queryBuilder.append(QUERY_PARAMETER_ROOT + "="
+					+ QueryUtils.QUERY_ENTRY_ESCAPER.escape(getRoot().toStaticRev().toString()));
 			queryBuilder.append("&" + QUERY_PARAMETER_INTERNAL_PATH + "=" + escapedDirAndFile);
 		} else {
-			if (!dirAndFile.toString().isEmpty()) {
+			if (!getInternalPath().toString().isEmpty()) {
 				queryBuilder.append(QUERY_PARAMETER_INTERNAL_PATH + "=" + escapedDirAndFile);
 			}
 		}
 		final String query = queryBuilder.toString();
 
-		final URI fsUri = fileSystem.toUri();
+		final URI fsUri = getFileSystem().toUri();
 		final URI uriBasis = URI_UNCHECKER
 				.getUsing(() -> new URI(fsUri.getScheme(), fsUri.getAuthority(), fsUri.getPath(), null, null));
 		final String qMark = query.isEmpty() ? "" : "?";
@@ -555,35 +507,7 @@ public abstract class GitPath implements Path {
 		return URI.create(uriBasis + qMark + query);
 	}
 
-	/**
-	 * Returns a {@code Path} object representing the absolute path of this path.
-	 *
-	 * <p>
-	 * If this path is already {@link Path#isAbsolute absolute} then this method
-	 * simply returns this path. Otherwise, this method resolves the path against
-	 * the {@link GitFileSystem default directory} and thus returns a path with a
-	 * root component referring to the <tt>main</tt> branch.
-	 *
-	 * <p>
-	 * This method does not access the underlying file system and requires no
-	 * specific permission.
-	 *
-	 */
-	@Override
-	public GitPath toAbsolutePath() {
-		if (isAbsolute()) {
-			return this;
-		}
-		return fileSystem.mainSlash.resolveRelative(this);
-	}
-
-	GitPath toRelativePath() {
-		if (!isAbsolute()) {
-			return this;
-		}
-		verify(dirAndFile.isAbsolute());
-		return new GitPath(fileSystem, null, GitFileSystem.JIM_FS_SLASH.relativize(dirAndFile));
-	}
+	abstract GitPath toRelativePath();
 
 	/**
 	 * At the moment, throws {@code UnsupportedOperationException}.
@@ -674,12 +598,13 @@ public abstract class GitPath implements Path {
 			return false;
 		}
 		final GitPath p2 = (GitPath) o2;
-		return fileSystem.equals(p2.fileSystem) && Objects.equals(root, p2.root) && dirAndFile.equals(p2.dirAndFile);
+		return Objects.equals(toAbsolutePath().getRoot(), p2.toAbsolutePath().getRoot())
+				&& getInternalPath().equals(p2.getInternalPath());
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(fileSystem, root, dirAndFile);
+		return Objects.hash(getFileSystem(), getRoot(), getInternalPath());
 	}
 
 	/**
@@ -693,8 +618,8 @@ public abstract class GitPath implements Path {
 	 */
 	@Override
 	public String toString() {
-		final String rootStr = root == null ? "" : root.toString();
-		return rootStr + dirAndFile.toString();
+		final String rootStr = getRoot() == null ? "" : getRoot().toStaticRev().toString();
+		return rootStr + getInternalPath().toString();
 	}
 
 	GitObject getGitObject(Optional<RevTree> rootRevTree) {
