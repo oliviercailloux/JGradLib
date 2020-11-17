@@ -42,9 +42,9 @@ public class GitReadTests {
 				assertEquals("Hello from sub dir", Files.readString(gitFs.getRelativePath("dir", "file.txt")));
 				assertEquals("Hello, world", Files.readString(gitFs.getRelativePath("file1.txt").toAbsolutePath()));
 				assertThrows(NoSuchFileException.class, () -> Files
-						.readString(gitFs.getAbsolutePath(GitStaticRev.commitId(commits.get(0)), "file2.txt")));
+						.readString(gitFs.getAbsolutePath(GitRev.commitId(commits.get(0)), "file2.txt")));
 				assertEquals("Hello again", Files
-						.readString(gitFs.getAbsolutePath(GitStaticRev.commitId(commits.get(1)), "file2.txt")));
+						.readString(gitFs.getAbsolutePath(GitRev.commitId(commits.get(1)), "file2.txt")));
 				assertEquals("I insist", Files.readString(gitFs.getRelativePath("file2.txt")));
 				assertEquals("I insist", Files.readString(gitFs.getRelativePath("file2.txt").toAbsolutePath()));
 				assertThrows(NoSuchFileException.class, () -> Files.newByteChannel(gitFs.getRelativePath("ploum.txt")));
@@ -88,12 +88,12 @@ public class GitReadTests {
 				assertTrue(Files.exists(gitFs.getRelativePath().toAbsolutePath()));
 				assertTrue(Files.exists(gitFs.getAbsolutePath("/refs/heads/main/")));
 				assertFalse(Files.exists(gitFs.getAbsolutePath("/refs/nothing/")));
-				assertFalse(Files.exists(gitFs.getAbsolutePath(GitStaticRev.commitId(ObjectId.zeroId()))));
+				assertFalse(Files.exists(gitFs.getAbsolutePath(GitRev.commitId(ObjectId.zeroId()))));
 				assertTrue(
-						Files.exists(gitFs.getAbsolutePath(GitStaticRev.commitId(commits.get(0)), "/file1.txt")));
+						Files.exists(gitFs.getAbsolutePath(GitRev.commitId(commits.get(0)), "/file1.txt")));
 				assertFalse(
-						Files.exists(gitFs.getAbsolutePath(GitStaticRev.commitId(commits.get(0)), "/ploum.txt")));
-				assertTrue(Files.exists(gitFs.getAbsolutePath(GitStaticRev.commitId(commits.get(0)))));
+						Files.exists(gitFs.getAbsolutePath(GitRev.commitId(commits.get(0)), "/ploum.txt")));
+				assertTrue(Files.exists(gitFs.getAbsolutePath(GitRev.commitId(commits.get(0)))));
 				assertFalse(Files.exists(gitFs.getRelativePath("ploum.txt")));
 				assertFalse(Files.exists(gitFs.getRelativePath("ploum.txt").toAbsolutePath()));
 				assertFalse(Files.exists(gitFs.getRelativePath("dir/ploum.txt")));
@@ -182,7 +182,7 @@ public class GitReadTests {
 			try (GitFileSystem gitFs = GitFileSystemProvider.getInstance().newFileSystemFromDfsRepository(repo)) {
 				final ImmutableSet<RevCommit> commitsOrdered = gitFs.getHistory().getCommitDates().keySet();
 				final ImmutableSet<GitPath> commitPaths = commitsOrdered.stream()
-						.map((c) -> gitFs.getAbsolutePath(GitStaticRev.commitId(c)))
+						.map((c) -> gitFs.getAbsolutePath(GitRev.commitId(c)))
 						.collect(ImmutableSet.toImmutableSet());
 				assertEquals(commitPaths, gitFs.getGitRootDirectories());
 			}

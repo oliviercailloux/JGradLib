@@ -127,20 +127,20 @@ class GitFileSystemCreationAndUriTests {
 
 			final String zeroStr = "/0000000000000000000000000000000000000000/";
 			assertEquals(uriBasis + "?root=" + zeroStr + "&internal-path=/",
-					gitFs.getAbsolutePath(GitStaticRev.commitId(ObjectId.zeroId())).toUri().toString());
+					gitFs.getAbsolutePath(GitRev.commitId(ObjectId.zeroId())).toUri().toString());
 			assertEquals(uriBasis + "?root=" + zeroStr + "&internal-path=/",
-					gitFs.getAbsolutePath(GitStaticRev.commitId(ObjectId.zeroId()), "/").toUri().toString());
+					gitFs.getAbsolutePath(GitRev.commitId(ObjectId.zeroId()), "/").toUri().toString());
 			assertEquals(uriBasis + "?root=" + zeroStr + "&internal-path=/dir/sub", gitFs
-					.getAbsolutePath(GitStaticRev.commitId(ObjectId.zeroId()), "/dir/sub").toUri().toString());
+					.getAbsolutePath(GitRev.commitId(ObjectId.zeroId()), "/dir/sub").toUri().toString());
 
 			assertEquals(uriBasis + "?root=/refs/heads/main/&internal-path=/",
-					gitFs.getAbsolutePath(GitStaticRev.ref("refs/heads/main")).toUri().toString());
+					gitFs.getAbsolutePath(GitRev.ref("refs/heads/main")).toUri().toString());
 			assertEquals(uriBasis + "?root=/refs/heads/main/&internal-path=/",
-					gitFs.getAbsolutePath(GitStaticRev.ref("refs/heads/main"), "/").toUri().toString());
+					gitFs.getAbsolutePath(GitRev.ref("refs/heads/main"), "/").toUri().toString());
 			assertEquals(uriBasis + "?root=/refs/heads/main/&internal-path=/dir/sub",
-					gitFs.getAbsolutePath(GitStaticRev.ref("refs/heads/main"), "/dir/sub").toUri().toString());
+					gitFs.getAbsolutePath(GitRev.ref("refs/heads/main"), "/dir/sub").toUri().toString());
 			assertEquals(uriBasis + "?root=/refs/tags/and%26equals%3Dquestion?/&internal-path=/",
-					gitFs.getAbsolutePath(GitStaticRev.ref("refs/tags/and&equals=question?")).toUri().toString());
+					gitFs.getAbsolutePath(GitRev.ref("refs/tags/and&equals=question?")).toUri().toString());
 		}
 	}
 }

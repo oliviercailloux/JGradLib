@@ -28,16 +28,17 @@ public class GitFileFileSystem extends GitFileSystem {
 		return new GitFileFileSystem(provider, repository, true);
 	}
 
+	/**
+	 * See {@link GitDfsFileSystem}.
+	 */
+	private FileRepository repository;
+
 	private GitFileFileSystem(GitFileSystemProvider gitProvider, FileRepository repository,
 			boolean shouldCloseRepository) {
 		super(gitProvider, repository, shouldCloseRepository);
 		LOGGER.debug("Creating file system given {}, {}, {}.", gitProvider, repository, shouldCloseRepository);
 		checkNotNull(repository.getDirectory());
-	}
-
-	@Override
-	protected FileRepository getRepository() {
-		return (FileRepository) super.getRepository();
+		this.repository = repository;
 	}
 
 	/**
@@ -45,7 +46,7 @@ public class GitFileFileSystem extends GitFileSystem {
 	 * typically, but not necessarily, a directory named “.git”.
 	 */
 	public Path getGitDir() {
-		return getRepository().getDirectory().toPath();
+		return repository.getDirectory().toPath();
 	}
 
 	/**

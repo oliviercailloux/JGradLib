@@ -12,6 +12,13 @@ import org.eclipse.jgit.internal.storage.dfs.DfsRepository;
  */
 public class GitDfsFileSystem extends GitFileSystem {
 
+	/**
+	 * This is the same reference as the one in {@link GitFileSystem}. I want to
+	 * keep the latter private to make it clear that only {@link GitFileSystem} is
+	 * responsible for low-level read operations from the repository.
+	 */
+	private DfsRepository repository;
+
 	static GitDfsFileSystem givenUserRepository(GitFileSystemProvider provider, DfsRepository repository) {
 		return new GitDfsFileSystem(provider, repository);
 	}
@@ -20,11 +27,11 @@ public class GitDfsFileSystem extends GitFileSystem {
 		super(gitProvider, repository, false);
 		verifyNotNull(repository.getDescription());
 		checkArgument(repository.getDescription().getRepositoryName() != null);
+		this.repository = repository;
 	}
 
-	@Override
 	public DfsRepository getRepository() {
-		return (DfsRepository) super.getRepository();
+		return repository;
 	}
 
 }

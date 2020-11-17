@@ -23,8 +23,11 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
+import org.eclipse.jgit.lib.FileMode;
 import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.lib.Ref;
+import org.eclipse.jgit.revwalk.RevCommit;
+import org.eclipse.jgit.revwalk.RevTree;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -110,14 +113,25 @@ import com.google.common.jimfs.Jimfs;
  *
  * <h2>Rationale</h2>
  * <p>
- * The special git reference <tt>HEAD</tt> is not accepted for simplification.
- * <tt>HEAD</tt> makes sense only with respect to a workspace, whereas this
- * library is designed to work directly from the git directory, without
- * requiring a work space.
+ * The special git reference <tt>HEAD</tt> is not accepted for simplification:
+ * <tt>HEAD</tt> may be a reference to a reference, which introduces annoying
+ * exceptions. E.g. that a GitPathRoot is either a ref (a pointer to a commit)
+ * starting with refs/ or a commit id would not be true any more if it could
+ * also be <tt>HEAD</tt>. Another, weaker, reason for refusing <tt>HEAD</tt> is
+ * that it makes sense mainly with respect to a
+ * <a href="https://git-scm.com/docs/gitglossary#def_working_tree">worktree</a>,
+ * whereas this library is designed to read directly from the git directory,
+ * independently of what happens in the worktree. This prevents, for example,
+ * deciding that the default path of a git file system is the ref or commit
+ * pointed by <tt>HEAD</tt>. This reason is weaker because bare repositories
+ * <a href="https://stackoverflow.com/q/3301956/859604">use HEAD</a> to indicate
+ * their default branch, showing that HEAD is not solely for use within a
+ * worktree.
  * <p>
  * A {@link Ref} is not accepted as an input because a {@code Ref} has an object
  * id which does not update, whereas this object considers a git reference as
- * referring to object ids (in fact, commit ids) dynamically.
+ * referring to commit ids dynamically. Also, {@code Ref} is more general than
+ * what is called here a git ref.
  * <p>
  * The fact that the path <tt>/someref//</tt> is considered as a root component
  * only, thus with an empty sequence of names, can appear surprising. Note first
@@ -143,7 +157,28 @@ import com.google.common.jimfs.Jimfs;
  * <tt>/</tt> under Linux is an empty sequence.)
  *
  */
-public class GitPath implements Path {
+public abstract class GitPath implements Path {
+	/**
+	 * Object verified to exist.
+	 */
+	static class GitObject {
+		private final ObjectId objectId;
+		private final FileMode fileMode;
+
+		public GitObject(ObjectId objectId, FileMode fileMode) {
+			this.objectId = checkNotNull(objectId);
+			this.fileMode = checkNotNull(fileMode);
+		}
+
+		ObjectId getObjectId() {
+			return objectId;
+		}
+
+		FileMode getFileMode() {
+			return fileMode;
+		}
+	}
+
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(GitPath.class);
 
@@ -163,22 +198,27 @@ public class GitPath implements Path {
 			final String internalPathString = internalPathValue.get();
 			final Path internalPath = GitFileSystem.JIM_FS_EMPTY.resolve(internalPathString);
 			checkArgument(internalPath.isAbsolute());
-			return absolute(fs, GitStaticRev.stringForm(rootString), internalPath);
+			return absolute(fs, GitRev.stringForm(rootString), internalPath);
 		}
 
 		final Path internalPath = GitFileSystem.JIM_FS_EMPTY.resolve(internalPathValue.orElse(""));
 		return relative(fs, internalPath);
 	}
 
-	static GitPath absolute(GitFileSystem fs, GitStaticRev root, Path internalPath) {
+	static GitPath absolute(GitFileSystem fs, GitRev root, Path internalPath) {
 		checkNotNull(root);
 		checkArgument(internalPath.isAbsolute());
-		return new GitPath(fs, root, internalPath);
+		if (internalPath.getNameCount() == 0) {
+			verify(internalPath.toString().equals("/"));
+			return new GitPathRoot(fs, root);
+		}
+		return new GitPathNonRoot(fs, root, internalPath);
 	}
 
 	static GitPath relative(GitFileSystem fs, Path internalPath) {
 		checkArgument(!internalPath.isAbsolute());
-		return new GitPath(fs, null, internalPath);
+		checkArgument(internalPath.getNameCount() >= 1);
+		return new GitPathNonRoot(fs, null, internalPath);
 	}
 
 	private final GitFileSystem fileSystem;
@@ -186,7 +226,7 @@ public class GitPath implements Path {
 	/**
 	 * May be <code>null</code>.
 	 */
-	private final GitStaticRev root;
+	private final GitRev root;
 
 	/**
 	 * Linux style in-memory path, absolute iff has a root component iff this path
@@ -196,7 +236,7 @@ public class GitPath implements Path {
 	 */
 	private final Path dirAndFile;
 
-	protected GitPath(GitFileSystem fileSystem, GitStaticRev root, Path dirAndFile) {
+	protected GitPath(GitFileSystem fileSystem, GitRev root, Path dirAndFile) {
 		checkNotNull(dirAndFile);
 
 		checkArgument(dirAndFile.getFileSystem().provider().getScheme().equals(Jimfs.URI_SCHEME));
@@ -236,7 +276,7 @@ public class GitPath implements Path {
 	 *
 	 */
 	@Override
-	public GitPath getRoot() {
+	public GitPathRoot getRoot() {
 		if (root == null) {
 			return null;
 		}
@@ -257,8 +297,7 @@ public class GitPath implements Path {
 	 * @return the root component.
 	 * @throws IllegalStateException if this path is relative.
 	 */
-	@Deprecated
-	public GitStaticRev getRootComponent() {
+	GitRev getRootComponent() {
 		checkState(isAbsolute());
 		verifyNotNull(root);
 		return root;
@@ -268,8 +307,8 @@ public class GitPath implements Path {
 	 * Returns the root component of this path, if it has one, otherwise, the
 	 * default root component of the associated path system.
 	 */
-	GitStaticRev getRootComponentOrDefault() {
-		return root != null ? root : GitStaticRev.DEFAULT;
+	GitRev getRootComponentOrDefault() {
+		return root != null ? root : GitRev.DEFAULT;
 	}
 
 	@Override
@@ -658,6 +697,10 @@ public class GitPath implements Path {
 		return rootStr + dirAndFile.toString();
 	}
 
+	GitObject getGitObject(Optional<RevTree> rootRevTree) {
+		getfilesys
+	}
+
 	/**
 	 * if this path is a reference, and this method returns an objectId, then it
 	 * implies existence of that commit root; otherwise (thus if the given path
@@ -665,7 +708,7 @@ public class GitPath implements Path {
 	 * object id without checking for its validity.
 	 */
 	public Optional<ObjectId> getCommitId() throws IOException {
-		final GitStaticRev effectiveRoot = getRootComponentOrDefault();
+		final GitRev effectiveRoot = getRootComponentOrDefault();
 
 		if (effectiveRoot.isCommitId()) {
 			return Optional.of(effectiveRoot.getCommitId());

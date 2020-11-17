@@ -4,6 +4,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.base.Verify.verify;
+import static com.google.common.base.Verify.verifyNotNull;
 import static io.github.oliviercailloux.jaris.exceptions.Unchecker.IO_UNCHECKER;
 
 import java.io.IOException;
@@ -32,6 +33,7 @@ import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Stream;
 
@@ -43,6 +45,7 @@ import org.eclipse.jgit.lib.FileMode;
 import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.lib.ObjectLoader;
 import org.eclipse.jgit.lib.ObjectReader;
+import org.eclipse.jgit.lib.Ref;
 import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.revwalk.RevTree;
@@ -78,11 +81,14 @@ import io.github.oliviercailloux.utils.SeekableInMemoryByteChannel;
  * </p>
  *
  * @see #getAbsolutePath(String, String...)
- * @see #getAbsolutePath(GitStaticRev, String...)
+ * @see #getAbsolutePath(GitRev, String...)
  * @see #getRelativePath(String...)
  * @see #getGitRootDirectories()
  */
 public abstract class GitFileSystem extends FileSystem {
+	private static class PathNotFoundException extends Exception {
+	}
+
 	private static class DirectoryChannel implements SeekableByteChannel {
 		private boolean open;
 
@@ -133,12 +139,13 @@ public abstract class GitFileSystem extends FileSystem {
 	}
 
 	private static class GitBasicFileAttributes implements BasicFileAttributes {
-		private GitObject gitObject;
+		private ObjectId objectId;
+		private FileMode fileMode;
 		private long size;
 
 		public GitBasicFileAttributes(GitObject gitObject, long size) {
-			this.gitObject = checkNotNull(gitObject);
-			final FileMode fileMode = gitObject.fileMode;
+			this.objectId = checkNotNull(gitObject.objectId);
+			this.fileMode = gitObject.fileMode;
 			checkArgument(fileMode == null || !fileMode.equals(FileMode.TYPE_GITLINK));
 			checkArgument(fileMode == null || !fileMode.equals(FileMode.TYPE_MASK));
 			checkArgument(fileMode == null || !fileMode.equals(FileMode.TYPE_MISSING));
@@ -152,12 +159,12 @@ public abstract class GitFileSystem extends FileSystem {
 
 		@Override
 		public ObjectId fileKey() {
-			return gitObject.objectId;
+			return objectId;
 		}
 
 		@Override
 		public boolean isDirectory() {
-			return gitObject.fileMode == null || Objects.equals(gitObject.fileMode, FileMode.TREE);
+			return fileMode == null || Objects.equals(fileMode, FileMode.TREE);
 		}
 
 		@Override
@@ -167,13 +174,13 @@ public abstract class GitFileSystem extends FileSystem {
 
 		@Override
 		public boolean isRegularFile() {
-			return Objects.equals(gitObject.fileMode, FileMode.REGULAR_FILE)
-					|| Objects.equals(gitObject.fileMode, FileMode.EXECUTABLE_FILE);
+			return Objects.equals(fileMode, FileMode.REGULAR_FILE)
+					|| Objects.equals(fileMode, FileMode.EXECUTABLE_FILE);
 		}
 
 		@Override
 		public boolean isSymbolicLink() {
-			return Objects.equals(gitObject.fileMode, FileMode.SYMLINK);
+			return Objects.equals(fileMode, FileMode.SYMLINK);
 		}
 
 		@Override
@@ -251,9 +258,16 @@ public abstract class GitFileSystem extends FileSystem {
 	private Repository repository;
 	private boolean shouldCloseRepository;
 
-	final GitPath mainSlash = GitPath.absolute(this, GitStaticRev.DEFAULT, JIM_FS_SLASH);
+	final GitPath mainSlash = GitPath.absolute(this, GitRev.DEFAULT, JIM_FS_SLASH);
 	final GitPath defaultPath = GitPath.relative(this, JIM_FS_EMPTY);
 
+	/**
+	 * Git file system provides low-level access to read operations on a repository
+	 * (such as retrieving a RevCommit given an id; including with specific
+	 * exceptions raised by JGit). The higher level access such as reading a Commit
+	 * and throwing nice user-level exceptions such as {@link NoSuchFileException}
+	 * is left to elsewhere where possible, e.g. GitPathRoot.
+	 */
 	protected GitFileSystem(GitFileSystemProvider gitProvider, Repository repository, boolean shouldCloseRepository) {
 		this.gitProvider = checkNotNull(gitProvider);
 		this.repository = checkNotNull(repository);
@@ -262,10 +276,6 @@ public abstract class GitFileSystem extends FileSystem {
 		reader.setAvoidUnreachableObjects(true);
 		isOpen = true;
 		history = null;
-	}
-
-	protected Repository getRepository() {
-		return repository;
 	}
 
 	void checkAccess(GitPath gitPath, AccessMode... modes)
@@ -377,7 +387,7 @@ public abstract class GitFileSystem extends FileSystem {
 			internalPath = ImmutableList.copyOf(more);
 		}
 
-		return getAbsolutePath(GitStaticRev.stringForm(rootStringForm), internalPath);
+		return getAbsolutePath(GitRev.stringForm(rootStringForm), internalPath);
 	}
 
 	/**
@@ -385,15 +395,15 @@ public abstract class GitFileSystem extends FileSystem {
 	 * @param internalPath may start with <code>/</code>
 	 * @return
 	 */
-	public GitPath getAbsolutePath(GitStaticRev root, String... internalPath) {
+	public GitPath getAbsolutePath(GitRev root, String... internalPath) {
 		return getAbsolutePath(root, ImmutableList.copyOf(internalPath));
 	}
 
 	private GitPath getAbsolutePath(ObjectId objectId, String... internalPath) {
-		return getAbsolutePath(GitStaticRev.commitId(objectId), ImmutableList.copyOf(internalPath));
+		return getAbsolutePath(GitRev.commitId(objectId), ImmutableList.copyOf(internalPath));
 	}
 
-	private GitPath getAbsolutePath(GitStaticRev root, List<String> names) {
+	private GitPath getAbsolutePath(GitRev root, List<String> names) {
 		checkNotNull(root);
 		final String first = names.isEmpty() ? "" : names.get(0);
 		final String[] more = names.isEmpty() ? new String[] {}
@@ -478,7 +488,7 @@ public abstract class GitFileSystem extends FileSystem {
 
 		/** Important to compare without ties, otherwise some commits get collapsed. */
 		return ImmutableSortedSet.copyOf(compareWithoutTies, getCachedHistory().getGraph().nodes().stream()
-				.map((c) -> getAbsolutePath(GitStaticRev.commitId(c))).iterator());
+				.map((c) -> getAbsolutePath(GitRev.commitId(c))).iterator());
 	}
 
 	public GitLocalHistory getHistory() throws IOException {
@@ -561,10 +571,10 @@ public abstract class GitFileSystem extends FileSystem {
 
 		final ObjectLoader fileLoader = reader.open(gitObject.objectId, Constants.OBJ_BLOB);
 		verify(fileLoader.getType() == Constants.OBJ_BLOB);
-		final byte[] bytes = fileLoader.getBytes();
-		/**
-		 * Should not log here: if the charset is not UTF-8, this messes up the output.
-		 */
+		final byte[] bytes = fileLoader
+				.getBytes();/**
+							 * Should not log here: if the charset is not UTF-8, this messes up the output.
+							 */
 //		LOGGER.debug("Read: {}.", new String(bytes, StandardCharsets.UTF_8));
 		return new SeekableInMemoryByteChannel(bytes);
 	}
@@ -649,14 +659,21 @@ public abstract class GitFileSystem extends FileSystem {
 	private RevCommit getRevCommit(GitPath gitPath) throws IOException, NoSuchFileException {
 		final ObjectId commitId = gitPath.getCommitIdOrThrow();
 
-		final RevCommit revCommit;
-		try (RevWalk walk = new RevWalk(reader)) {
-			revCommit = walk.parseCommit(commitId);
+		try {
+			return getRevCommit(commitId);
 		} catch (@SuppressWarnings("unused") MissingObjectException e) {
 			throw new NoSuchFileException(gitPath.toString());
 		} catch (IncorrectObjectTypeException e) {
 			LOGGER.info("Tried to access a non-commit as a commit: " + e + ".");
 			throw new NoSuchFileException(gitPath.toString());
+		}
+	}
+
+	RevCommit getRevCommit(ObjectId possibleCommitId)
+			throws MissingObjectException, IncorrectObjectTypeException, IOException {
+		final RevCommit revCommit;
+		try (RevWalk walk = new RevWalk(reader)) {
+			revCommit = walk.parseCommit(possibleCommitId);
 		}
 		return revCommit;
 	}
@@ -695,6 +712,24 @@ public abstract class GitFileSystem extends FileSystem {
 		return gitObject;
 	}
 
+	io.github.oliviercailloux.git.fs.GitPath.GitObject getGitObject(RevTree rootTree, String relativePath)
+			throws IOException, PathNotFoundException {
+		final io.github.oliviercailloux.git.fs.GitPath.GitObject gitObject;
+		try (TreeWalk treeWalk = TreeWalk.forPath(repository, reader, relativePath, rootTree)) {
+			if (treeWalk == null) {
+				throw new PathNotFoundException();
+			}
+
+			final FileMode fileMode = treeWalk.getFileMode();
+			verify(fileMode != null);
+			final ObjectId objectId = treeWalk.getObjectId(0);
+			verify(!objectId.equals(ObjectId.zeroId()), relativePath);
+			gitObject = new io.github.oliviercailloux.git.fs.GitPath.GitObject(objectId, fileMode);
+			verify(!treeWalk.next(), relativePath);
+		}
+		return gitObject;
+	}
+
 	/**
 	 * Paths must have a root in the form of a sha1.
 	 */
@@ -719,6 +754,25 @@ public abstract class GitFileSystem extends FileSystem {
 	 */
 	public URI toUri() {
 		return gitProvider.getGitFileSystems().toUri(this);
+	}
+
+	/**
+	 * Note that if this method returns an object id, it means that this object id
+	 * exists in the database. But it may be a blob, a tree, … (at least if the
+	 * given git ref is a tag, not sure otherwise), see
+	 * https://git-scm.com/book/en/v2/Git-Internals-Git-References.
+	 */
+	Optional<ObjectId> getObjectId(String gitRef) throws IOException {
+		final Ref ref = repository.exactRef(gitRef);
+		if (ref == null) {
+			return Optional.empty();
+		}
+
+		verify(ref.getName().equals(gitRef));
+		verify(!ref.isSymbolic());
+		final ObjectId possibleCommitId = ref.getObjectId();
+		verifyNotNull(possibleCommitId);
+		return Optional.of(possibleCommitId);
 	}
 
 }
