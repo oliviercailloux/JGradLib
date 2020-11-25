@@ -350,11 +350,11 @@ public abstract class GitFileSystem extends FileSystem {
 	 * @param internalPath may start with <code>/</code>
 	 * @return
 	 */
-	public GitPath getAbsolutePath(GitRev root, String... internalPath) {
+	private GitPath getAbsolutePath(GitRev root, String... internalPath) {
 		return getAbsolutePath(root, ImmutableList.copyOf(internalPath));
 	}
 
-	private GitPath getAbsolutePath(ObjectId objectId, String... internalPath) {
+	public GitPath getAbsolutePath(ObjectId objectId, String... internalPath) {
 		return getAbsolutePath(GitRev.commitId(objectId), ImmutableList.copyOf(internalPath));
 	}
 

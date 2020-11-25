@@ -10,7 +10,7 @@ import java.util.Objects;
 import org.eclipse.jgit.errors.InvalidObjectIdException;
 import org.eclipse.jgit.lib.ObjectId;
 
-public class GitRev {
+class GitRev {
 	public static final GitRev DEFAULT = ref("refs/heads/main");
 	/**
 	 * Compares without access to the file system and including those roots that do
