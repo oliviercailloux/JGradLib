@@ -42,7 +42,7 @@ class StringFilesGraderTests {
 
 			final StringFilesGrader grader = new StringFilesGrader();
 			final GitPath implPath = gitFs.getAbsolutePath("impl");
-			final ObjectId implTop = implPath.getCommitId().get();
+			final ObjectId implTop = implPath.getRoot().getCommit();
 			grader.deadline = history.getCommitDateById(implTop).plus(Duration.ofSeconds(1));
 			final IGrade grade = grader.grade("Olivier Cailloux", gitFs, fakeGitHubHistory);
 

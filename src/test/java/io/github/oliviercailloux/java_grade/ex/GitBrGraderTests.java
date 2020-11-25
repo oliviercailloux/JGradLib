@@ -7,7 +7,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.Map;
-import java.util.Optional;
 
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.MergeResult;
@@ -112,8 +111,8 @@ public class GitBrGraderTests {
 		}
 		try (Repository repository = new FileRepository(wT.resolve(".git").toString())) {
 			try (GitFileSystem gitFs = new GitFileSystemProvider().newFileSystemFromRepository(repository)) {
-				final Optional<ObjectId> br1 = gitFs.getAbsolutePath("br1").getCommitId();
-				assertEquals(commitA, br1.get());
+				final ObjectId br1 = gitFs.getAbsolutePath("br1").getRoot().getCommit();
+				assertEquals(commitA, br1);
 
 				final GitBrGrader grader = new GitBrGrader();
 				grader.branchPrefix = "heads";
