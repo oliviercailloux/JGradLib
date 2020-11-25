@@ -10,6 +10,7 @@ import java.util.Optional;
 
 import org.eclipse.jgit.errors.IncorrectObjectTypeException;
 import org.eclipse.jgit.errors.MissingObjectException;
+import org.eclipse.jgit.lib.FileMode;
 import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.revwalk.RevTree;
@@ -141,6 +142,7 @@ public class GitPathRoot extends GitAbsolutePath {
 		return commit.get();
 	}
 
+	@Override
 	RevTree getRevTree() throws IOException, NoSuchFileException {
 		return getRevCommit().getTree();
 	}
@@ -168,6 +170,11 @@ public class GitPathRoot extends GitAbsolutePath {
 		 * which requires parsing the commit.
 		 */
 		return getRevCommit();
+	}
+
+	@Override
+	GitObject getGitObject() throws NoSuchFileException, IOException {
+		return new GitObject(getRevCommit(), FileMode.TREE);
 	}
 
 	@Override

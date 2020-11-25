@@ -1,6 +1,5 @@
 package io.github.oliviercailloux.git.fs;
 
-import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.base.Verify.verify;
@@ -9,35 +8,31 @@ import static io.github.oliviercailloux.jaris.exceptions.Unchecker.IO_UNCHECKER;
 
 import java.io.IOException;
 import java.net.URI;
-import java.nio.ByteBuffer;
-import java.nio.channels.SeekableByteChannel;
 import java.nio.file.AccessDeniedException;
 import java.nio.file.AccessMode;
 import java.nio.file.ClosedFileSystemException;
+import java.nio.file.DirectoryIteratorException;
 import java.nio.file.DirectoryStream;
-import java.nio.file.DirectoryStream.Filter;
 import java.nio.file.FileStore;
 import java.nio.file.FileSystem;
 import java.nio.file.InvalidPathException;
-import java.nio.file.LinkOption;
 import java.nio.file.NoSuchFileException;
-import java.nio.file.NotDirectoryException;
 import java.nio.file.Path;
 import java.nio.file.PathMatcher;
 import java.nio.file.ReadOnlyFileSystemException;
 import java.nio.file.WatchService;
-import java.nio.file.attribute.BasicFileAttributes;
-import java.nio.file.attribute.FileTime;
 import java.nio.file.attribute.UserPrincipalLookupService;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Stream;
 
-import org.eclipse.jgit.errors.CorruptObjectException;
 import org.eclipse.jgit.errors.IncorrectObjectTypeException;
 import org.eclipse.jgit.errors.MissingObjectException;
 import org.eclipse.jgit.lib.Constants;
@@ -54,10 +49,10 @@ import org.eclipse.jgit.treewalk.TreeWalk;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.VerifyException;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedSet;
+import com.google.common.collect.PeekingIterator;
 import com.google.common.collect.Sets;
 import com.google.common.graph.ImmutableGraph;
 import com.google.common.jimfs.Configuration;
@@ -65,7 +60,7 @@ import com.google.common.jimfs.Jimfs;
 
 import io.github.oliviercailloux.git.GitLocalHistory;
 import io.github.oliviercailloux.git.GitUtils;
-import io.github.oliviercailloux.utils.SeekableInMemoryByteChannel;
+import io.github.oliviercailloux.git.fs.GitPath.GitObject;
 
 /**
  * <p>
@@ -86,150 +81,104 @@ import io.github.oliviercailloux.utils.SeekableInMemoryByteChannel;
  * @see #getGitRootDirectories()
  */
 public abstract class GitFileSystem extends FileSystem {
-	private static class PathNotFoundException extends Exception {
+	static class PathNotFoundException extends Exception {
 	}
 
-	private static class DirectoryChannel implements SeekableByteChannel {
-		private boolean open;
+	static class TreeWalkIterator implements PeekingIterator<String> {
+		private TreeWalk walk;
+		private DirectoryIteratorException exception;
 
-		public DirectoryChannel() {
-			open = true;
+		private Boolean hasNext;
+		private boolean closed;
+
+		public TreeWalkIterator(TreeWalk walk) {
+			this.walk = checkNotNull(walk);
+			exception = null;
+			hasNext = null;
+			closed = false;
 		}
 
 		@Override
-		public void close() throws IOException {
-			open = false;
+		public boolean hasNext() throws DirectoryIteratorException {
+			if (exception != null) {
+				throw exception;
+			}
+
+			if (closed) {
+				return false;
+			}
+
+			if (hasNext == null) {
+				try {
+					hasNext = walk.next();
+				} catch (IOException e) {
+					exception = new DirectoryIteratorException(e);
+					throw exception;
+				}
+			}
+
+			return hasNext;
 		}
 
 		@Override
-		public boolean isOpen() {
-			return open;
+		public String peek() throws DirectoryIteratorException {
+			if (exception != null) {
+				throw exception;
+			}
+			if (hasNext == null) {
+				hasNext();
+			}
+			if (!hasNext) {
+				throw new NoSuchElementException();
+			}
+			return walk.getNameString();
 		}
 
 		@Override
-		public long position() throws IOException {
-			return 0;
+		public String next() throws DirectoryIteratorException {
+			final String current = peek();
+			hasNext = null;
+			return current;
 		}
 
 		@Override
-		public SeekableByteChannel position(long newPosition) throws IOException {
-			throw new IOException("is a folder");
+		public void remove() {
+			throw new UnsupportedOperationException();
 		}
 
-		@Override
-		public int read(ByteBuffer dst) throws IOException {
-			throw new IOException("is a folder");
-		}
-
-		@Override
-		public long size() throws IOException {
-			throw new IOException("is a folder");
-		}
-
-		@Override
-		public SeekableByteChannel truncate(long size) throws IOException {
-			throw new IOException("is a folder");
-		}
-
-		@Override
-		public int write(ByteBuffer src) throws IOException {
-			throw new IOException("is a folder");
-		}
-
-	}
-
-	private static class GitBasicFileAttributes implements BasicFileAttributes {
-		private ObjectId objectId;
-		private FileMode fileMode;
-		private long size;
-
-		public GitBasicFileAttributes(GitObject gitObject, long size) {
-			this.objectId = checkNotNull(gitObject.objectId);
-			this.fileMode = gitObject.fileMode;
-			checkArgument(fileMode == null || !fileMode.equals(FileMode.TYPE_GITLINK));
-			checkArgument(fileMode == null || !fileMode.equals(FileMode.TYPE_MASK));
-			checkArgument(fileMode == null || !fileMode.equals(FileMode.TYPE_MISSING));
-			this.size = size;
-		}
-
-		@Override
-		public FileTime creationTime() {
-			return FileTime.fromMillis(0);
-		}
-
-		@Override
-		public ObjectId fileKey() {
-			return objectId;
-		}
-
-		@Override
-		public boolean isDirectory() {
-			return fileMode == null || Objects.equals(fileMode, FileMode.TREE);
-		}
-
-		@Override
-		public boolean isOther() {
-			return false;
-		}
-
-		@Override
-		public boolean isRegularFile() {
-			return Objects.equals(fileMode, FileMode.REGULAR_FILE)
-					|| Objects.equals(fileMode, FileMode.EXECUTABLE_FILE);
-		}
-
-		@Override
-		public boolean isSymbolicLink() {
-			return Objects.equals(fileMode, FileMode.SYMLINK);
-		}
-
-		@Override
-		public FileTime lastAccessTime() {
-			return FileTime.fromMillis(0);
-		}
-
-		@Override
-		public FileTime lastModifiedTime() {
-			return FileTime.fromMillis(0);
-		}
-
-		@Override
-		public long size() {
-			return size;
+		public void close() {
+			closed = true;
+			walk.close();
 		}
 
 	}
 
-	/**
-	 * It would be clearer to have three kinds of git objects. One, with a file mode
-	 * (an objectid that has been found with a tree walker and corresponds to a file
-	 * or a sub-directory). Second, a commit that has been checked to exist,
-	 * together with its tree! Third, a commit that has not been checked to exist
-	 * (the object id was given right from the start and we never had to walk
-	 * anything).
-	 */
-	static class GitObject {
-		private final RevCommit commit;
-		private final ObjectId objectId;
-		private final FileMode fileMode;
+	static class TreeWalkDirectoryStream implements DirectoryStream<String> {
+		private final TreeWalkIterator iterator;
+		private boolean returned;
+		private boolean closed;
 
-		public GitObject(RevCommit commit, ObjectId objectId, FileMode fileMode) {
-			this.commit = checkNotNull(commit);
-			this.objectId = checkNotNull(objectId);
-			this.fileMode = checkNotNull(fileMode);
+		public TreeWalkDirectoryStream(TreeWalk walk) {
+			iterator = new TreeWalkIterator(walk);
+			returned = false;
+			closed = false;
 		}
 
-		RevCommit getCommit() {
-			return commit;
+		@Override
+		public void close() {
+			closed = true;
+			iterator.close();
 		}
 
-		ObjectId getObjectId() {
-			return objectId;
+		@Override
+		public Iterator<String> iterator() {
+			if (returned || closed) {
+				throw new IllegalStateException();
+			}
+			returned = true;
+			return iterator;
 		}
 
-		FileMode getFileMode() {
-			return fileMode;
-		}
 	}
 
 	@SuppressWarnings("unused")
@@ -258,6 +207,8 @@ public abstract class GitFileSystem extends FileSystem {
 	private Repository repository;
 	private boolean shouldCloseRepository;
 
+	private Set<TreeWalkDirectoryStream> toClose;
+
 	final GitPathRoot mainSlash = new GitPathRoot(this, GitRev.DEFAULT);
 	final GitEmptyPath defaultPath = new GitEmptyPath(mainSlash);
 
@@ -276,6 +227,7 @@ public abstract class GitFileSystem extends FileSystem {
 		reader.setAvoidUnreachableObjects(true);
 		isOpen = true;
 		history = null;
+		this.toClose = new LinkedHashSet<>();
 	}
 
 	void checkAccess(GitPath gitPath, AccessMode... modes)
@@ -300,11 +252,39 @@ public abstract class GitFileSystem extends FileSystem {
 	@Override
 	public void close() {
 		isOpen = false;
-		reader.close();
-		if (shouldCloseRepository) {
-			repository.close();
+
+		List<RuntimeException> closeExceptions = new ArrayList<>();
+		try {
+			reader.close();
+		} catch (RuntimeException e) {
+			closeExceptions.add(e);
 		}
-		provider().getGitFileSystems().hasBeenClosedEvent(this);
+		if (shouldCloseRepository) {
+			try {
+				repository.close();
+			} catch (RuntimeException e) {
+				closeExceptions.add(e);
+			}
+		}
+		for (TreeWalkDirectoryStream closeable : toClose) {
+			try {
+				closeable.close();
+			} catch (RuntimeException e) {
+				closeExceptions.add(e);
+			}
+		}
+		try {
+			provider().getGitFileSystems().hasBeenClosedEvent(this);
+		} catch (RuntimeException e) {
+			closeExceptions.add(e);
+		}
+		if (!closeExceptions.isEmpty()) {
+			final RuntimeException first = closeExceptions.remove(0);
+			if (!closeExceptions.isEmpty()) {
+				LOGGER.error("Further problems while closing: {}.", closeExceptions);
+			}
+			throw first;
+		}
 	}
 
 	/**
@@ -556,73 +536,27 @@ public abstract class GitFileSystem extends FileSystem {
 		return true;
 	}
 
-	SeekableByteChannel newByteChannel(GitPath gitPath) throws IOException {
+	byte[] getBytes(ObjectId objectId) throws IOException {
 		if (!isOpen) {
 			throw new ClosedFileSystemException();
 		}
 
-		final GitObject gitObject = getAndCheckGitObject(gitPath);
-		if (gitObject.fileMode == null || gitObject.fileMode.equals(FileMode.TYPE_TREE)) {
-			return new DirectoryChannel();
-		}
-		if (!gitObject.fileMode.equals(FileMode.TYPE_FILE)) {
-			throw new IOException("Unexpected file type: " + gitObject.fileMode);
-		}
-
-		final ObjectLoader fileLoader = reader.open(gitObject.objectId, Constants.OBJ_BLOB);
+		final ObjectLoader fileLoader = reader.open(objectId, Constants.OBJ_BLOB);
 		verify(fileLoader.getType() == Constants.OBJ_BLOB);
-		final byte[] bytes = fileLoader
-				.getBytes();/**
-							 * Should not log here: if the charset is not UTF-8, this messes up the output.
-							 */
-//		LOGGER.debug("Read: {}.", new String(bytes, StandardCharsets.UTF_8));
-		return new SeekableInMemoryByteChannel(bytes);
+		final byte[] bytes = fileLoader.getBytes();
+		return bytes;
 	}
 
-	DirectoryStream<GitPath> newDirectoryStream(GitPath dir, Filter<? super Path> filter) throws IOException {
+	@SuppressWarnings("resource")
+	DirectoryStream<String> iterate(RevTree tree) throws IOException {
 		if (!isOpen) {
 			throw new ClosedFileSystemException();
 		}
 
-		final GitObject gitObject = getAndCheckGitObject(dir);
-		if (!gitObject.fileMode.equals(FileMode.TYPE_TREE)) {
-			throw new NotDirectoryException(dir.toString());
-		}
-
-		final RevTree tree;
-		if (dir.toRelativePath().equals(defaultPath)) {
-			tree = gitObject.commit.getTree();
-		} else {
-			try (RevWalk walk = new RevWalk(reader)) {
-				tree = walk.parseTree(gitObject.objectId);
-			}
-		}
-
-		final ImmutableSet.Builder<GitPath> builder = ImmutableSet.builder();
-		try (TreeWalk treeWalk = new TreeWalk(reader)) {
-			treeWalk.addTree(tree);
-			treeWalk.setRecursive(false);
-			while (treeWalk.next()) {
-				final GitPath path = dir.resolve(GitPath.relative(this, JIM_FS.getPath(treeWalk.getNameString())));
-				if (!filter.accept(path)) {
-					continue;
-				}
-				builder.add(path);
-			}
-		}
-		final ImmutableSet<GitPath> built = builder.build();
-
-		return new DirectoryStream<>() {
-			@Override
-			public void close() throws IOException {
-				// nothing to do.
-			}
-
-			@Override
-			public Iterator<GitPath> iterator() {
-				return built.iterator();
-			}
-		};
+		TreeWalk treeWalk = new TreeWalk(reader);
+		treeWalk.addTree(tree);
+		treeWalk.setRecursive(false);
+		return new TreeWalkDirectoryStream(treeWalk);
 	}
 
 	@Override
@@ -635,20 +569,11 @@ public abstract class GitFileSystem extends FileSystem {
 		return gitProvider;
 	}
 
-	BasicFileAttributes readAttributes(GitPath gitPath, ImmutableSet<LinkOption> optionsSet) throws IOException {
-		final GitObject gitObject = getAndCheckGitObject(gitPath);
-
-		final ObjectLoader fileLoader = reader.open(gitObject.objectId);
-		verify(fileLoader.getType() == gitObject.fileMode.getObjectType(),
-				"Expected " + gitObject.fileMode + " but loaded " + fileLoader.getType());
-
-		final GitBasicFileAttributes gitBasicFileAttributes = new GitBasicFileAttributes(gitObject,
-				fileLoader.getSize());
-		if (!optionsSet.contains(LinkOption.NOFOLLOW_LINKS) && gitBasicFileAttributes.isSymbolicLink()) {
-			throw new UnsupportedOperationException(
-					"Path " + gitPath.toString() + "is a sym link; I do not follow symlinks yet.");
-		}
-		return gitBasicFileAttributes;
+	long getSize(GitObject gitObject) throws IOException {
+		final ObjectLoader fileLoader = reader.open(gitObject.getObjectId());
+		verify(fileLoader.getType() == gitObject.getFileMode().getObjectType(),
+				"Expected " + gitObject.getFileMode() + " but loaded " + fileLoader.getType());
+		return fileLoader.getSize();
 	}
 
 	@Override
@@ -669,8 +594,24 @@ public abstract class GitFileSystem extends FileSystem {
 		}
 	}
 
+	RevTree getRevTree(ObjectId treeId) throws IOException {
+		if (!isOpen) {
+			throw new ClosedFileSystemException();
+		}
+
+		final RevTree revTree;
+		try (RevWalk walk = new RevWalk(reader)) {
+			revTree = walk.parseTree(treeId);
+		}
+		return revTree;
+	}
+
 	RevCommit getRevCommit(ObjectId possibleCommitId)
 			throws MissingObjectException, IncorrectObjectTypeException, IOException {
+		if (!isOpen) {
+			throw new ClosedFileSystemException();
+		}
+
 		final RevCommit revCommit;
 		try (RevWalk walk = new RevWalk(reader)) {
 			revCommit = walk.parseCommit(possibleCommitId);
@@ -679,41 +620,14 @@ public abstract class GitFileSystem extends FileSystem {
 	}
 
 	GitObject getAndCheckGitObject(GitPath gitPath) throws IOException, NoSuchFileException {
-		final RevCommit commit = getRevCommit(gitPath);
-		final RevTree tree = commit.getTree();
-		final GitPath relativePath = gitPath.toRelativePath();
-
-		final GitObject gitObject;
-		if (relativePath.equals(defaultPath)) {
-			gitObject = new GitObject(commit, tree, FileMode.TREE);
-		} else {
-			/**
-			 * TreeWalk.forPath says “Empty path not permitted” if using "" or "/".
-			 */
-			LOGGER.debug("Searching for {} in {}.", relativePath, tree);
-			try (TreeWalk treeWalk = TreeWalk.forPath(repository, reader, relativePath.toString(), tree)) {
-				if (treeWalk == null) {
-					LOGGER.debug("Path " + relativePath + " not found.");
-					throw new NoSuchFileException(gitPath.toString());
-				}
-
-				final FileMode fileMode = treeWalk.getFileMode();
-				verify(fileMode != null);
-				final ObjectId objectId = treeWalk.getObjectId(0);
-				verify(!objectId.equals(ObjectId.zeroId()), gitPath.toString());
-				gitObject = new GitObject(commit, objectId, fileMode);
-				verify(!treeWalk.next());
-			} catch (MissingObjectException | IncorrectObjectTypeException e) {
-				throw new VerifyException(e);
-			} catch (CorruptObjectException e) {
-				throw new IOException(e);
-			}
-		}
-		return gitObject;
 	}
 
 	io.github.oliviercailloux.git.fs.GitPath.GitObject getGitObject(RevTree rootTree, String relativePath)
 			throws IOException, PathNotFoundException {
+		if (!isOpen) {
+			throw new ClosedFileSystemException();
+		}
+
 		final io.github.oliviercailloux.git.fs.GitPath.GitObject gitObject;
 		try (TreeWalk treeWalk = TreeWalk.forPath(repository, reader, relativePath, rootTree)) {
 			if (treeWalk == null) {
@@ -763,6 +677,10 @@ public abstract class GitFileSystem extends FileSystem {
 	 * https://git-scm.com/book/en/v2/Git-Internals-Git-References.
 	 */
 	Optional<ObjectId> getObjectId(String gitRef) throws IOException {
+		if (!isOpen) {
+			throw new ClosedFileSystemException();
+		}
+
 		final Ref ref = repository.exactRef(gitRef);
 		if (ref == null) {
 			return Optional.empty();

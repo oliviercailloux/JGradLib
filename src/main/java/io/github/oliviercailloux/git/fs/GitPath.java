@@ -622,10 +622,6 @@ public abstract class GitPath implements Path {
 		return rootStr + getInternalPath().toString();
 	}
 
-	GitObject getGitObject(Optional<RevTree> rootRevTree) {
-		getfilesys
-	}
-
 	/**
 	 * if this path is a reference, and this method returns an objectId, then it
 	 * implies existence of that commit root; otherwise (thus if the given path

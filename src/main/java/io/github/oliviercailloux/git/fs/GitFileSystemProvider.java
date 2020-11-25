@@ -484,7 +484,7 @@ public class GitFileSystemProvider extends FileSystemProvider {
 		}
 
 		final GitPath gitPath = (GitPath) path;
-		return gitPath.getFileSystem().newByteChannel(gitPath);
+		return gitPath.toAbsolutePath().newByteChannel();
 	}
 
 	/**
@@ -502,7 +502,7 @@ public class GitFileSystemProvider extends FileSystemProvider {
 	public DirectoryStream<Path> newDirectoryStream(Path dir, Filter<? super Path> filter) throws IOException {
 		checkArgument(dir instanceof GitPath);
 		final GitPath gitPath = (GitPath) dir;
-		final DirectoryStream<GitPath> newDirectoryStream = gitPath.getFileSystem().newDirectoryStream(gitPath, filter);
+		final DirectoryStream<GitPath> newDirectoryStream = gitPath.toAbsolutePath().newDirectoryStream(filter);
 		return new DirectoryStream<>() {
 
 			@Override
@@ -605,7 +605,7 @@ public class GitFileSystemProvider extends FileSystemProvider {
 
 		final ImmutableSet<LinkOption> optionsSet = ImmutableSet.copyOf(options);
 
-		return (A) gitPath.getFileSystem().readAttributes(gitPath, optionsSet);
+		return (A) gitPath.toAbsolutePath().readAttributes(optionsSet);
 	}
 
 	/**
