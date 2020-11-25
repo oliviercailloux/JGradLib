@@ -28,10 +28,12 @@ import java.nio.file.attribute.FileAttributeView;
 import java.nio.file.spi.FileSystemProvider;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 import org.eclipse.jgit.internal.storage.dfs.DfsRepository;
 import org.eclipse.jgit.internal.storage.file.FileRepository;
+import org.eclipse.jgit.lib.FileMode;
 import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 import org.slf4j.Logger;
@@ -40,6 +42,8 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Sets;
+
+import io.github.oliviercailloux.git.fs.GitPath.GitObject;
 
 /**
  * A (partial) implementation of {@link FileSystemProvider}, able to produce
@@ -581,7 +585,22 @@ public class GitFileSystemProvider extends FileSystemProvider {
 			throws ReadOnlyFileSystemException, AccessDeniedException, NoSuchFileException, IOException {
 		checkArgument(path instanceof GitPath);
 		final GitPath gitPath = (GitPath) path;
-		gitPath.getFileSystem().checkAccess(gitPath, modes);
+
+		final ImmutableSet<AccessMode> modesList = ImmutableSet.copyOf(modes);
+		if (modesList.contains(AccessMode.WRITE)) {
+			throw new ReadOnlyFileSystemException();
+		}
+		if (!Sets.difference(modesList, ImmutableSet.of(AccessMode.READ, AccessMode.EXECUTE)).isEmpty()) {
+			throw new UnsupportedOperationException();
+		}
+
+		final GitObject gitObject = gitPath.toAbsolutePath().getRoot().getGitObject();
+
+		if (modesList.contains(AccessMode.EXECUTE)) {
+			if (!Objects.equals(gitObject.getFileMode(), FileMode.EXECUTABLE_FILE)) {
+				throw new AccessDeniedException(gitPath.toString());
+			}
+		}
 	}
 
 	/**

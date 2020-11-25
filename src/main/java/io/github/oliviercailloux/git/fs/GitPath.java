@@ -622,46 +622,4 @@ public abstract class GitPath implements Path {
 		return rootStr + getInternalPath().toString();
 	}
 
-	/**
-	 * if this path is a reference, and this method returns an objectId, then it
-	 * implies existence of that commit root; otherwise (thus if the given path
-	 * contains an object id and not a reference), this method simply returns the
-	 * object id without checking for its validity.
-	 */
-	public Optional<ObjectId> getCommitId() throws IOException {
-		final GitRev effectiveRoot = getRootComponentOrDefault();
-
-		if (effectiveRoot.isCommitId()) {
-			return Optional.of(effectiveRoot.getCommitId());
-		}
-
-		final Optional<ObjectId> commitId;
-		final String effectiveRef = effectiveRoot.getGitRef();
-
-		/**
-		 * Should perhaps think about this. A Ref is symbolic and targets another Ref
-		 * (which may be an unborn branch), or non-symbolic and stores an OId. It may be
-		 * an annotated tag and hence is symbolic (?). Use rep.resolve to get an OId.
-		 * findRef for short-hand forms. getRefsByPrefix can be useful. getRef accepts
-		 * non-ref items such as MERGE_HEAD, …
-		 */
-		final Ref ref = getFileSystem().getRepository().exactRef(effectiveRef);
-		if (ref == null) {
-			LOGGER.debug("Rev str " + effectiveRef + " not found.");
-			commitId = Optional.empty();
-		} else {
-			commitId = Optional.ofNullable(ref.getLeaf().getObjectId());
-			if (commitId.isEmpty()) {
-				LOGGER.debug("Ref " + ref.getName() + " points to nothing existing.");
-			} else {
-				LOGGER.debug("Ref {} found: {}.", ref.getName(), commitId);
-			}
-		}
-		return commitId;
-	}
-
-	ObjectId getCommitIdOrThrow() throws IOException, NoSuchFileException {
-		return getCommitId().orElseThrow(() -> new NoSuchFileException(toString()));
-	}
-
 }

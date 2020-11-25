@@ -8,8 +8,6 @@ import static io.github.oliviercailloux.jaris.exceptions.Unchecker.IO_UNCHECKER;
 
 import java.io.IOException;
 import java.net.URI;
-import java.nio.file.AccessDeniedException;
-import java.nio.file.AccessMode;
 import java.nio.file.ClosedFileSystemException;
 import java.nio.file.DirectoryIteratorException;
 import java.nio.file.DirectoryStream;
@@ -19,7 +17,6 @@ import java.nio.file.InvalidPathException;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.PathMatcher;
-import java.nio.file.ReadOnlyFileSystemException;
 import java.nio.file.WatchService;
 import java.nio.file.attribute.UserPrincipalLookupService;
 import java.util.ArrayList;
@@ -28,7 +25,6 @@ import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.NoSuchElementException;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Stream;
@@ -50,10 +46,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.PeekingIterator;
-import com.google.common.collect.Sets;
 import com.google.common.graph.ImmutableGraph;
 import com.google.common.jimfs.Configuration;
 import com.google.common.jimfs.Jimfs;
@@ -230,25 +224,6 @@ public abstract class GitFileSystem extends FileSystem {
 		this.toClose = new LinkedHashSet<>();
 	}
 
-	void checkAccess(GitPath gitPath, AccessMode... modes)
-			throws ReadOnlyFileSystemException, AccessDeniedException, NoSuchFileException, IOException {
-		final ImmutableSet<AccessMode> modesList = ImmutableSet.copyOf(modes);
-		if (modesList.contains(AccessMode.WRITE)) {
-			throw new ReadOnlyFileSystemException();
-		}
-		if (!Sets.difference(modesList, ImmutableSet.of(AccessMode.READ, AccessMode.EXECUTE)).isEmpty()) {
-			throw new UnsupportedOperationException();
-		}
-
-		final GitObject gitObject = getAndCheckGitObject(gitPath);
-
-		if (modesList.contains(AccessMode.EXECUTE)) {
-			if (!Objects.equals(gitObject.fileMode, FileMode.EXECUTABLE_FILE)) {
-				throw new AccessDeniedException(gitPath.toString());
-			}
-		}
-	}
-
 	@Override
 	public void close() {
 		isOpen = false;
@@ -389,7 +364,7 @@ public abstract class GitFileSystem extends FileSystem {
 		final String[] more = names.isEmpty() ? new String[] {}
 				: names.subList(1, names.size()).toArray(new String[] {});
 		final Path internalPath = JIM_FS.getPath(first, more);
-		return GitPath.absolute(this, root, JIM_FS_SLASH.resolve(internalPath));
+		return GitAbsolutePath.givenRev(this, root, JIM_FS_SLASH.resolve(internalPath));
 	}
 
 	/**
@@ -435,7 +410,7 @@ public abstract class GitFileSystem extends FileSystem {
 		if (internalPath.isAbsolute()) {
 			throw new InvalidPathException(first, first + " makes this internal path absolute.");
 		}
-		return GitPath.relative(this, internalPath);
+		return GitRelativePath.relative(this, internalPath);
 	}
 
 	public GitLocalHistory getCachedHistory() {
@@ -494,6 +469,16 @@ public abstract class GitFileSystem extends FileSystem {
 			return 0;
 		}).thenComparing(Comparator.comparing(ObjectId::getName));
 		return compareWithoutTies;
+	}
+
+	/**
+	 * Paths must have a root in the form of a sha1.
+	 */
+	private Comparator<GitPath> getPathLexicographicTemporalComparator() {
+		final Comparator<ObjectId> compareWithoutTies = getLexicographicTemporalComparator();
+		return Comparator.comparing(
+				(GitPath p) -> IO_UNCHECKER.getUsing(() -> p.toAbsolutePath().getRoot().getCommit()),
+				compareWithoutTies);
 	}
 
 	@Override
@@ -581,19 +566,6 @@ public abstract class GitFileSystem extends FileSystem {
 		throw new UnsupportedOperationException();
 	}
 
-	private RevCommit getRevCommit(GitPath gitPath) throws IOException, NoSuchFileException {
-		final ObjectId commitId = gitPath.getCommitIdOrThrow();
-
-		try {
-			return getRevCommit(commitId);
-		} catch (@SuppressWarnings("unused") MissingObjectException e) {
-			throw new NoSuchFileException(gitPath.toString());
-		} catch (IncorrectObjectTypeException e) {
-			LOGGER.info("Tried to access a non-commit as a commit: " + e + ".");
-			throw new NoSuchFileException(gitPath.toString());
-		}
-	}
-
 	RevTree getRevTree(ObjectId treeId) throws IOException {
 		if (!isOpen) {
 			throw new ClosedFileSystemException();
@@ -619,16 +591,12 @@ public abstract class GitFileSystem extends FileSystem {
 		return revCommit;
 	}
 
-	GitObject getAndCheckGitObject(GitPath gitPath) throws IOException, NoSuchFileException {
-	}
-
-	io.github.oliviercailloux.git.fs.GitPath.GitObject getGitObject(RevTree rootTree, String relativePath)
-			throws IOException, PathNotFoundException {
+	GitObject getGitObject(RevTree rootTree, String relativePath) throws IOException, PathNotFoundException {
 		if (!isOpen) {
 			throw new ClosedFileSystemException();
 		}
 
-		final io.github.oliviercailloux.git.fs.GitPath.GitObject gitObject;
+		final GitObject gitObject;
 		try (TreeWalk treeWalk = TreeWalk.forPath(repository, reader, relativePath, rootTree)) {
 			if (treeWalk == null) {
 				throw new PathNotFoundException();
@@ -638,18 +606,10 @@ public abstract class GitFileSystem extends FileSystem {
 			verify(fileMode != null);
 			final ObjectId objectId = treeWalk.getObjectId(0);
 			verify(!objectId.equals(ObjectId.zeroId()), relativePath);
-			gitObject = new io.github.oliviercailloux.git.fs.GitPath.GitObject(objectId, fileMode);
+			gitObject = new GitObject(objectId, fileMode);
 			verify(!treeWalk.next(), relativePath);
 		}
 		return gitObject;
-	}
-
-	/**
-	 * Paths must have a root in the form of a sha1.
-	 */
-	private Comparator<GitPath> getPathLexicographicTemporalComparator() {
-		final Comparator<ObjectId> compareWithoutTies = getLexicographicTemporalComparator();
-		return Comparator.comparing((GitPath p) -> p.getRootComponent().getCommitId(), compareWithoutTies);
 	}
 
 	/**
