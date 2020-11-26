@@ -40,6 +40,7 @@ import io.github.oliviercailloux.git.GitLocalHistory;
 import io.github.oliviercailloux.git.GitUri;
 import io.github.oliviercailloux.git.fs.GitFileSystem;
 import io.github.oliviercailloux.git.fs.GitFileSystemProvider;
+import io.github.oliviercailloux.git.fs.GitPathRoot;
 import io.github.oliviercailloux.git.git_hub.model.GitHubHistory;
 import io.github.oliviercailloux.git.git_hub.model.GitHubToken;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
@@ -196,15 +197,15 @@ public class ExDepGitGraderSimpler {
 
 		final Graph<ObjectId> closure = ImmutableGraph.copyOf(Graphs.transitiveClosure(graph));
 		LOGGER.debug("Closure: {}.", closure.edges());
-		final Optional<ObjectId> myBranch = fs.getAbsolutePath("refs/heads/my-branch").getCommitId();
+		final GitPathRoot myBranchPathRoot = fs.getPathRoot("refs/heads/my-branch");
 
 		{
 			IGrade firstCommitMark = Mark.zero();
 			for (ObjectId commit : notMyCommits) {
 				final boolean childOfStarting = closure.hasEdgeConnecting(commit, COMMIT_STARTING);
 				final boolean parentOfMyBranch;
-				if (myBranch.isPresent()) {
-					parentOfMyBranch = closure.hasEdgeConnecting(myBranch.get(), commit);
+				if (myBranchPathRoot.exists()) {
+					parentOfMyBranch = closure.hasEdgeConnecting(myBranchPathRoot.getCommit(), commit);
 				} else {
 					parentOfMyBranch = false;
 				}

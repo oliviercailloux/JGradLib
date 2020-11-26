@@ -2,9 +2,7 @@ package io.github.oliviercailloux.git.fs;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
-import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.base.Verify.verify;
-import static com.google.common.base.Verify.verifyNotNull;
 import static io.github.oliviercailloux.jaris.exceptions.Unchecker.URI_UNCHECKER;
 
 import java.io.IOException;
@@ -26,62 +24,66 @@ import java.util.Optional;
 import org.eclipse.jgit.lib.FileMode;
 import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.lib.Ref;
-import org.eclipse.jgit.revwalk.RevCommit;
-import org.eclipse.jgit.revwalk.RevTree;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.collect.Streams;
-import com.google.common.jimfs.Jimfs;
-
 /**
- * An instance of this class has an optional root component and a (possibly
- * empty) sequence of names (strings). If it has no root component, then its
- * sequence of names is non empty.
+ * A git path has an optional root component and a (possibly empty) sequence of
+ * names (strings). It is also associated to a git file system.
+ *
+ * <h1>Corresponding commit</h1>
  * <p>
- * The root component, if it is present, consists in either a git reference (a
- * string which must start with <tt>refs/</tt>, such as
- * <tt>refs/heads/main</tt>) or a commit id (represented as an
+ * The root component, if it is present, represents a commit. It consists in
+ * either a git reference (a string which must start with <tt>refs/</tt>, such
+ * as <tt>refs/heads/main</tt>) or a commit id (represented as an
  * {@link ObjectId}).
  * <p>
- * The sequence of names represents a path inside a given commit. It either
- * consists of a unique empty name, or contains no empty name. Each name is a
- * string that does not contain any slash.
- * <p>
  * This path is absolute iff the root component is present.
+ * <p>
+ * Relative paths implicitly refer to the branch <tt>main</tt>.
+ * </p>
+ *
+ * <h1>Internal path</h1>
+ * <p>
+ * The sequence of names represents a path inside a given commit. Each name is a
+ * string that does not contain any slash. Names are not empty, except possibly
+ * the first name element when it is alone (in the special case of an empty
+ * path). If a git path has no root component, then its sequence of names is non
+ * empty.
+ * <p>
+ * A git path is <em>empty</em> iff it has no root component and a single name
+ * element which is the empty string. An empty path implicitly refers to the
+ * root of the branch <tt>main</tt>.
+ * </p>
  *
  * <h1>String form</h1>
  * <p>
  * The string form of a path consists in the string form of its root component,
  * if it has one, followed by its internal path.
- * <p>
- * The string form of a root component is <tt>/gitref/</tt>, where
+ * <ul>
+ * <li>The string form of a root component is <tt>/gitref/</tt>, where
  * <tt>gitref</tt> is a git reference; or <tt>/sha1/</tt>, where <tt>sha1</tt>
- * is a commit id.
- * <p>
- * Its internal path is a string that starts with a slash iff the path is
+ * is a commit id.</li>
+ * <li>Its internal path is a string that starts with a slash iff the path is
  * absolute, and is composed of the names that constitute its sequence of names,
- * separated by slashes.
- * <p>
- * An absolute git path string is a git path string that starts with
- * <code>/</code>.
+ * separated by slashes.</li>
+ * </ul>
  *
  * <h1>Possible cases</h1>
  * <p>
- * It follows from these rules and from the {@link GitFileSystem default path
- * rule} that an instance of this class matches exactly one of these two cases
- * (each admitting a special case).
+ * It follows from these rules that an instance of this class matches exactly
+ * one of these two cases (each admitting a special case).
  * <ul>
  * <li>It has no root component. Equivalently, its string form contains no
  * leading slash. Equivalently, its string form contains no two consecutive
- * slashes. Equivalently, it is a relative path. Implies that its sequence of
+ * slashes. Equivalently, it is a relative path. It implies that its sequence of
  * names is not empty. An example of string form is
  * <code>"some/path"</code>.</li>
  * <ul>
  * <li>As a special case, its sequence of names may consist in a unique empty
- * name. Equivalently, it represents the default path of the file system, that
- * is, the branch <tt>main</tt> and the root directory in that branch.
- * Equivalently, its string form is {@code ""}.</li>
+ * name. Equivalently, it is an empty path. Equivalently, its string form is
+ * {@code ""}. Such a path implicitly refers to the branch <tt>main</tt> and the
+ * root directory in that branch.</li>
  * </ul>
  * <li>It has a root component. Equivalently, its string form contains a leading
  * slash. Equivalently, its string form contains two consecutive slashes exactly
@@ -89,9 +91,11 @@ import com.google.common.jimfs.Jimfs;
  * names contain no empty name. An example of string form is
  * <code>"/refs/heads/main//some/path"</code>.</li>
  * <ul>
- * <li>As a special case, it may consist in a root component only. Equivalently,
- * its sequence of names is empty. Equivalently, its string form ends with two
- * slashes. An example of string form is <code>"/refs/heads/main//"</code>.</li>
+ * <li>As a special case, it may consist in a root component only, in other
+ * words, have an empty sequence of names. Equivalently, its string form ends
+ * with two slashes. An example of string form is
+ * <code>"/refs/heads/main//"</code>.</li>
+ * </ul>
  * </ul>
  *
  * <h1>Extended discussion</h1>
@@ -103,14 +107,9 @@ import com.google.common.jimfs.Jimfs;
  * <a href="https://git-scm.com/docs/git-check-ref-format">other</a>
  * <a href="https://stackoverflow.com/a/47208574/">forms</a>. This class
  * requires that the git reference starts with <tt>refs/</tt>, does not end with
- * <tt>/</tt> and does not contain <tt>//</tt> or <tt>\</tt> (these are also
- * official restrictions on git references as imposed by git).
- * <p>
- * This path is said to represent the default path of its file system, or
- * equivalently to be an empty path, iff it has no root component and its
- * sequence of names contains exactly one name that is empty. The sequence
- * containing exactly one name that is empty has <tt>""</tt> as string form.
- *
+ * <tt>/</tt> and does not contain <tt>//</tt> or <tt>\</tt> (git also imposes
+ * these restrictions on git references).
+ * </p>
  * <h2>Rationale</h2>
  * <p>
  * The special git reference <tt>HEAD</tt> is not accepted for simplification:
@@ -133,18 +132,18 @@ import com.google.common.jimfs.Jimfs;
  * referring to commit ids dynamically. Also, {@code Ref} is more general than
  * what is called here a git ref.
  * <p>
- * The fact that the path <tt>/someref//</tt> is considered as a root component
- * only, thus with an empty sequence of names, can appear surprising. Note first
- * that slash is a path separator, thus cannot be part of a name. The only other
- * possible choice is thus to consider that <tt>/someref//</tt> contains a
- * sequence of name of one element, being the empty string. An advantage of this
- * choice is that the sequence of names would be never empty (thereby easing
- * usage) and that it feels like a natural generalization of the case of
- * <tt>""</tt>, a path also containing one element being the empty string. But
- * from the wording of {@link Path#getFileName()}, it seems like this method
- * should return null iff the path is a root component only, and that what it
- * should return is distinct from the root component. Note that the Windows
- * implementation <a href=
+ * The fact that the path <tt>/somegitref//</tt> is considered as a root
+ * component only, thus with an empty sequence of names, can appear surprising.
+ * Note first that slash is a path separator, thus cannot be part of a name. The
+ * only other possible choice is thus to consider that <tt>/someref//</tt>
+ * contains a sequence of name of one element, being the empty string. An
+ * advantage of this choice is that the sequence of names would be never empty
+ * (thereby easing usage) and that it feels like a natural generalization of the
+ * case of <tt>""</tt>, a path also containing one element being the empty
+ * string. But from the wording of {@link Path#getFileName()}, it seems like
+ * that method should return null iff the path is a root component only, and
+ * that what it should return is distinct from the root component. Note that the
+ * Windows implementation <a href=
  * "https://github.com/openjdk/jdk/tree/450452bb8cb617682a3eb28ae651cb829a45dcc6/test/jdk/java/nio/file/Path/PathOps.java#L290">treats</a>
  * C:\ as a root component only, and returns {@code null} on
  * {@code getFileName()}. (And I believe that also under Windows, <tt>\</tt> is
@@ -152,14 +151,24 @@ import com.google.common.jimfs.Jimfs;
  * For sure, under Linux, <tt>/</tt> is a root component only. Thus, to behave
  * similarly, we have to return {@code null} to {@code getFileName()} on the
  * path <tt>/someref//</tt>, hence, to treat it as a root component only. (This
- * choice would also break the nice (internal) guarantee that the internal path
- * in a git path behaves like the sequence of names in a linux path, as
- * <tt>/</tt> under Linux is an empty sequence.)
+ * choice would also break the nice fact that the internal path in a git path
+ * behaves like the sequence of names in a linux path, as <tt>/</tt> under Linux
+ * is an empty sequence.)
  *
  */
 public abstract class GitPath implements Path {
+	@SuppressWarnings("unused")
+	private static final Logger LOGGER = LoggerFactory.getLogger(GitPath.class);
+
+	private static final Comparator<GitPath> COMPARATOR = Comparator.<GitPath, String>comparing(Path::toString);
+
+	private static final String QUERY_PARAMETER_ROOT = "root";
+
+	private static final String QUERY_PARAMETER_INTERNAL_PATH = "internal-path";
+
 	/**
-	 * Object verified to exist.
+	 * Object to associate to a git path, verified to exist in the git file system
+	 * corresponding to its corresponding path.
 	 */
 	static class GitObject {
 		private final ObjectId objectId;
@@ -179,15 +188,6 @@ public abstract class GitPath implements Path {
 		}
 	}
 
-	@SuppressWarnings("unused")
-	private static final Logger LOGGER = LoggerFactory.getLogger(GitPath.class);
-
-	private static final Comparator<GitPath> COMPARATOR = Comparator.<GitPath, String>comparing(Path::toString);
-
-	private static final String QUERY_PARAMETER_ROOT = "root";
-
-	private static final String QUERY_PARAMETER_INTERNAL_PATH = "internal-path";
-
 	static GitPath fromQueryString(GitFileSystem fs, Map<String, String> splitQuery) {
 		final Optional<String> rootValue = Optional.ofNullable(splitQuery.get(QUERY_PARAMETER_ROOT));
 		final Optional<String> internalPathValue = Optional.ofNullable(splitQuery.get(QUERY_PARAMETER_INTERNAL_PATH));
@@ -198,7 +198,7 @@ public abstract class GitPath implements Path {
 			final String internalPathString = internalPathValue.get();
 			final Path internalPath = GitFileSystem.JIM_FS_EMPTY.resolve(internalPathString);
 			checkArgument(internalPath.isAbsolute());
-			return GitAbsolutePath.givenRev(fs, GitRev.stringForm(rootString), internalPath);
+			return GitAbsolutePath.givenRoot(new GitPathRoot(fs, GitRev.stringForm(rootString)), internalPath);
 		}
 
 		final Path internalPath = GitFileSystem.JIM_FS_EMPTY.resolve(internalPathValue.orElse(""));
@@ -207,13 +207,15 @@ public abstract class GitPath implements Path {
 
 	/**
 	 * A quick way to create a copy of a path pointing at another internal path.
-	 * This is, exceptionally, a method that accepts a root with a relative internal
-	 * path.
+	 * This method, contrary to the other methods in this class, accepts a root with
+	 * a relative internal path.
 	 *
 	 * @param root         if internalPath is relative, must be the default root
-	 *                     (and then only its file system is unused)
+	 *                     (and then only its file system is used)
 	 * @param internalPath the new internal path.
+	 * @deprecated Try to use {@link #withPath(Path)}
 	 */
+	@Deprecated
 	static GitPath given(GitPathRoot root, Path internalPath) {
 		if (internalPath.isAbsolute()) {
 			return GitAbsolutePath.givenRoot(root, internalPath);
@@ -223,13 +225,35 @@ public abstract class GitPath implements Path {
 	}
 
 	/**
+	 * Returns a path associated to the same git file system as this path, and to
+	 * the same root as this path, if any; but referring to the given path.
+	 *
+	 * @param internalPath must be absolute iff this path is absolute.
+	 * @return an absolute path iff this path is absolute.
+	 */
+	GitPath withPath(Path internalPath) {
+		if (internalPath.equals(getInternalPath())) {
+			return this;
+		}
+
+		final GitPathRoot root = getRoot();
+
+		if (internalPath.isAbsolute()) {
+			checkArgument(root != null);
+			return GitAbsolutePath.givenRoot(root, internalPath);
+		}
+
+		checkArgument(root == null);
+		return GitRelativePath.relative(getFileSystem(), internalPath);
+	}
+
+	/**
 	 * Returns a {@code Path} object representing the absolute path of this path.
 	 *
 	 * <p>
 	 * If this path is already {@link Path#isAbsolute absolute} then this method
-	 * simply returns this path. Otherwise, this method resolves the path against
-	 * the {@link GitFileSystem default directory} and thus returns a path with a
-	 * root component referring to the <tt>main</tt> branch.
+	 * simply returns this path. Otherwise, this method returns a path with a root
+	 * component referring to the <tt>main</tt> branch.
 	 *
 	 * <p>
 	 * This method does not access the underlying file system and requires no
@@ -237,19 +261,37 @@ public abstract class GitPath implements Path {
 	 *
 	 */
 	@Override
-	public abstract GitAbsolutePath toAbsolutePath();
+	public GitPath toAbsolutePath() {
+		return toAbsolutePathAsAbsolutePath();
+	}
+
+	GitAbsolutePath toAbsolutePathAsAbsolutePath() {
+		return (GitAbsolutePath) toAbsolutePath();
+	}
+
+	/**
+	 * Equivalent to relativizing against this path’s root if it has one, or
+	 * returning itself otherwise. But permits optimization by returning less new
+	 * objects.
+	 */
+	abstract GitRelativePath toRelativePath();
 
 	/**
 	 * Linux style in-memory path, absolute iff has a root component iff this path
 	 * is absolute iff this path has a root component, may contain no names ("/",
 	 * good for root-only paths), may contain a single empty name ("", good for
-	 * default path).
+	 * empty paths).
 	 */
 	abstract Path getInternalPath();
 
 	@Override
 	public abstract GitFileSystem getFileSystem();
 
+	/**
+	 * Returns <code>true</code> iff this path has a root component.
+	 *
+	 * @return {@code true} if, and only if, this path is absolute
+	 */
 	@Override
 	public abstract boolean isAbsolute();
 
@@ -268,10 +310,15 @@ public abstract class GitPath implements Path {
 		return getInternalPath().getNameCount();
 	}
 
+	/**
+	 * @return a relative path with exactly one name element (which is empty iff
+	 *         this path is the empty path)
+	 */
 	@Override
 	public GitPath getName(int index) {
 		final Path name = getInternalPath().getName(index);
 		verify(!name.isAbsolute());
+		verify(name.getNameCount() == 1);
 		return GitRelativePath.relative(getFileSystem(), name);
 	}
 
@@ -281,6 +328,11 @@ public abstract class GitPath implements Path {
 		return GitRelativePath.relative(getFileSystem(), subpath);
 	}
 
+	/**
+	 * @return a relative path representing the name of the file or directory (an
+	 *         empty path iff this path is an empty path); or {@code null} if this
+	 *         path has zero elements
+	 */
 	@Override
 	public GitPath getFileName() {
 		final Path fileName = getInternalPath().getFileName();
@@ -296,14 +348,14 @@ public abstract class GitPath implements Path {
 		if (parent == null) {
 			return null;
 		}
-		return given(toAbsolutePath().getRoot(), parent);
+		return withPath(parent);
 	}
 
 	/**
 	 * Tests if this path starts with the given path.
 	 *
 	 * <p>
-	 * This path <em>starts</em> with the given path if this path's root component
+	 * This path <em>starts</em> with the given path if this path’s root component
 	 * <em>equals</em> the root component of the given path, and this path starts
 	 * with the same name elements as the given path. If the given path has more
 	 * name elements than this path then {@code false} is returned.
@@ -378,11 +430,11 @@ public abstract class GitPath implements Path {
 	 */
 	@Override
 	public GitPath normalize() {
-		return given(getRoot(), getInternalPath().normalize());
+		return withPath(getInternalPath().normalize());
 	}
 
 	/**
-	 * Resolve the given path against this path.
+	 * Resolves the given path against this path.
 	 *
 	 * <p>
 	 * If the {@code other} parameter is an {@link #isAbsolute() absolute} path
@@ -392,6 +444,8 @@ public abstract class GitPath implements Path {
 	 * to be a directory and resolves the given path against this path: this method
 	 * <em>joins</em> the given path to this path and returns a resulting path that
 	 * {@link #endsWith ends} with the given path.
+	 * <p>
+	 * This method does not access the file system.
 	 *
 	 * @see #relativize
 	 */
@@ -400,21 +454,47 @@ public abstract class GitPath implements Path {
 		if (!getFileSystem().equals(other.getFileSystem())) {
 			throw new IllegalArgumentException();
 		}
+
 		final GitPath p2 = (GitPath) other;
+
 		if (other.isAbsolute()) {
 			return p2;
 		}
-		return resolveRelative(p2);
+
+		return withPath(getInternalPath().resolve(p2.getInternalPath()));
 	}
 
-	private GitPath resolveRelative(GitPath p2) {
-		checkArgument(!p2.isAbsolute());
-
-		if (p2.toString().equals("")) {
-			return this;
+	/**
+	 * Resolves the given path against this path.
+	 *
+	 * <p>
+	 * If the {@code other} parameter represents an {@link #isAbsolute() absolute}
+	 * path (equivalently, if it starts with a <tt>/</tt>), then this method returns
+	 * the git path represented by {@code other}. If {@code other} is an empty
+	 * string then this method trivially returns this path. Otherwise this method
+	 * considers this path to be a directory and resolves the given path against
+	 * this path: this method <em>joins</em> the given path to this path and returns
+	 * a resulting path that {@link #endsWith ends} with the given path.
+	 * <p>
+	 * This is equivalent to converting the given path string to a {@code Path} and
+	 * resolving it against this {@code Path} in the manner specified by the
+	 * {@link #resolve(Path) resolve} method.
+	 * <p>
+	 * For example, suppose that a path represents "{@code foo/bar}", then invoking
+	 * this method with the path string "{@code gus}" will result in the git path
+	 * "{@code foo/bar/gus}".
+	 * <p>
+	 * This method does not access the file system.
+	 *
+	 * @see #relativize
+	 */
+	@Override
+	public GitPath resolve(String other) {
+		final boolean startsWithSlash = other.startsWith("/");
+		if (startsWithSlash) {
+			return getFileSystem().getAbsolutePath(other);
 		}
-		verify(getFileSystem().equals(p2.getFileSystem()));
-		return given(getRoot(), getInternalPath().resolve(p2.getInternalPath()));
+		return withPath(getInternalPath().resolve(other));
 	}
 
 	/**
@@ -462,6 +542,9 @@ public abstract class GitPath implements Path {
 		if (!Objects.equals(getRoot(), p2.getRoot())) {
 			throw new IllegalArgumentException();
 		}
+		if (p2.getNameCount() == 0) {
+			return toRelativePath();
+		}
 		return GitRelativePath.relative(getFileSystem(), getInternalPath().relativize(p2.getInternalPath()));
 	}
 
@@ -485,8 +568,8 @@ public abstract class GitPath implements Path {
 		final String escapedDirAndFile = QueryUtils.QUERY_ENTRY_ESCAPER.escape(getInternalPath().toString());
 		final StringBuilder queryBuilder = new StringBuilder();
 		if (getRoot() != null) {
-			queryBuilder.append(QUERY_PARAMETER_ROOT + "="
-					+ QueryUtils.QUERY_ENTRY_ESCAPER.escape(getRoot().toStaticRev().toString()));
+			queryBuilder
+					.append(QUERY_PARAMETER_ROOT + "=" + QueryUtils.QUERY_ENTRY_ESCAPER.escape(getRoot().toString()));
 			queryBuilder.append("&" + QUERY_PARAMETER_INTERNAL_PATH + "=" + escapedDirAndFile);
 		} else {
 			if (!getInternalPath().toString().isEmpty()) {
@@ -506,8 +589,6 @@ public abstract class GitPath implements Path {
 		 */
 		return URI.create(uriBasis + qMark + query);
 	}
-
-	abstract GitPath toRelativePath();
 
 	/**
 	 * At the moment, throws {@code UnsupportedOperationException}.
@@ -578,13 +659,12 @@ public abstract class GitPath implements Path {
 	 * Tests this path for equality with the given object.
 	 *
 	 * <p>
-	 * This method returns {@code true} iff the given object is a git path
-	 * associated to the same git file system as this path, and the paths have equal
-	 * root components (or they are both absent) and internal paths. The internal
-	 * paths are compared in a case-sensitive way (conforming to the Linux concept
-	 * of path equality). Equivalently, two git paths are equal iff they are
-	 * associated to the same git file system and have the same {@link GitPath
-	 * string forms}.
+	 * This method returns {@code true} iff the given object is a git path, their
+	 * git file systems are equal, and the paths have equal root components (or they
+	 * are both absent) and internal paths. The internal paths are compared in a
+	 * case-sensitive way (conforming to the Linux concept of path equality).
+	 * Equivalently, two git paths are equal iff they are associated to the same git
+	 * file system and have the same {@link GitPath string forms}.
 	 *
 	 * <p>
 	 * This method does not access the file system and the files are not required to
@@ -618,7 +698,7 @@ public abstract class GitPath implements Path {
 	 */
 	@Override
 	public String toString() {
-		final String rootStr = getRoot() == null ? "" : getRoot().toStaticRev().toString();
+		final String rootStr = getRoot() == null ? "" : getRoot().toString();
 		return rootStr + getInternalPath().toString();
 	}
 

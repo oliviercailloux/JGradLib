@@ -38,7 +38,7 @@ import io.github.oliviercailloux.git.GitLocalHistory;
 import io.github.oliviercailloux.git.GitUri;
 import io.github.oliviercailloux.git.fs.GitFileSystem;
 import io.github.oliviercailloux.git.fs.GitFileSystemProvider;
-import io.github.oliviercailloux.git.fs.GitPath;
+import io.github.oliviercailloux.git.fs.GitPathRoot;
 import io.github.oliviercailloux.git.git_hub.model.GitHubToken;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinatesWithPrefix;
 import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherV3;
@@ -180,8 +180,8 @@ public class PrintExecGrader {
 		}
 
 		final ImmutableSet<RevCommit> tips = fs.getCachedHistory().getTips();
-		final GitPath master = fs.getRelativePath("");
-		final ObjectId masterId = master.getCommitId().get();
+		final GitPathRoot master = fs.getRelativePath().toAbsolutePath().getRoot();
+		final ObjectId masterId = master.getCommit();
 		final ImmutableSet<RevCommit> bestTips = MarkHelper.findBestMatches(tips,
 				ImmutableList.of(o -> o.equals(masterId), o -> true));
 		checkState(bestTips.size() == 1);

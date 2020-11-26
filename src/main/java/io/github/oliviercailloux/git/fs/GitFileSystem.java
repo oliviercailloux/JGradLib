@@ -21,7 +21,6 @@ import java.nio.file.WatchService;
 import java.nio.file.attribute.UserPrincipalLookupService;
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -45,6 +44,7 @@ import org.eclipse.jgit.treewalk.TreeWalk;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.VerifyException;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.PeekingIterator;
@@ -62,76 +62,69 @@ import io.github.oliviercailloux.git.fs.GitPath.GitObject;
  * {@link GitPath} instances.
  * </p>
  * <p>
- * The <em>default</em> directory of a git file system refers to the root
- * directory of its <tt>main</tt> branch.
- * </p>
- * <p>
- * Must be {@link #close()}d to release resources associated with readers.
+ * Must be {@link #close() closed} to release resources associated with readers.
  * </p>
  *
  * @see #getAbsolutePath(String, String...)
- * @see #getAbsolutePath(GitRev, String...)
  * @see #getRelativePath(String...)
  * @see #getGitRootDirectories()
  */
 public abstract class GitFileSystem extends FileSystem {
+	@SuppressWarnings("unused")
+	private static final Logger LOGGER = LoggerFactory.getLogger(GitFileSystem.class);
+
+	/**
+	 * Used instead of {@link NoSuchFileException} at places where we can’t get the
+	 * string form of the path that is not found (because it is only known to the
+	 * caller).
+	 */
+	@SuppressWarnings("serial")
 	static class PathNotFoundException extends Exception {
 	}
 
 	static class TreeWalkIterator implements PeekingIterator<String> {
-		private TreeWalk walk;
-		private DirectoryIteratorException exception;
+		private final TreeWalk walk;
+		private Boolean hasNext = null;
 
-		private Boolean hasNext;
-		private boolean closed;
+		private String next;
 
 		public TreeWalkIterator(TreeWalk walk) {
 			this.walk = checkNotNull(walk);
-			exception = null;
 			hasNext = null;
-			closed = false;
+			next = null;
 		}
 
 		@Override
 		public boolean hasNext() throws DirectoryIteratorException {
-			if (exception != null) {
-				throw exception;
+			if (hasNext != null) {
+				return hasNext;
 			}
 
-			if (closed) {
-				return false;
+			try {
+				hasNext = walk.next();
+			} catch (IOException e) {
+				verify(hasNext == null);
+				throw new DirectoryIteratorException(e);
 			}
 
-			if (hasNext == null) {
-				try {
-					hasNext = walk.next();
-				} catch (IOException e) {
-					exception = new DirectoryIteratorException(e);
-					throw exception;
-				}
-			}
+			next = hasNext ? walk.getNameString() : null;
 
 			return hasNext;
 		}
 
 		@Override
 		public String peek() throws DirectoryIteratorException {
-			if (exception != null) {
-				throw exception;
-			}
-			if (hasNext == null) {
-				hasNext();
-			}
-			if (!hasNext) {
+			if (!hasNext()) {
 				throw new NoSuchElementException();
 			}
-			return walk.getNameString();
+			return next;
 		}
 
 		@Override
 		public String next() throws DirectoryIteratorException {
 			final String current = peek();
 			hasNext = null;
+			next = null;
 			return current;
 		}
 
@@ -141,7 +134,7 @@ public abstract class GitFileSystem extends FileSystem {
 		}
 
 		public void close() {
-			closed = true;
+			hasNext = false;
 			walk.close();
 		}
 
@@ -164,8 +157,33 @@ public abstract class GitFileSystem extends FileSystem {
 			iterator.close();
 		}
 
+		/**
+		 * As requested per the contract of {@link DirectoryStream}, invoking the
+		 * iterator method to obtain a second or subsequent iterator throws
+		 * IllegalStateException.
+		 * <p>
+		 * An important property of the directory stream's Iterator is that its hasNext
+		 * method is guaranteed to read-ahead by at least one element. If hasNext method
+		 * returns true, and is followed by a call to the next method, it is guaranteed
+		 * that the next method will not throw an exception due to an I/O error, or
+		 * because the stream has been closed. The Iterator does not support the remove
+		 * operation.
+		 * <p>
+		 * Once a directory stream is closed, then further access to the directory,
+		 * using the Iterator, behaves as if the end of stream has been reached. Due to
+		 * read-ahead, the Iterator may return one or more elements after the directory
+		 * stream has been closed.
+		 * <p>
+		 * If an I/O error is encountered when accessing the directory then it causes
+		 * the Iterator's hasNext or next methods to throw DirectoryIteratorException
+		 * with the IOException as the cause. As stated above, the hasNext method is
+		 * guaranteed to read-ahead by at least one element. This means that if hasNext
+		 * method returns true, and is followed by a call to the next method, then it is
+		 * guaranteed that the next method will not fail with a
+		 * DirectoryIteratorException.
+		 */
 		@Override
-		public Iterator<String> iterator() {
+		public PeekingIterator<String> iterator() {
 			if (returned || closed) {
 				throw new IllegalStateException();
 			}
@@ -174,9 +192,6 @@ public abstract class GitFileSystem extends FileSystem {
 		}
 
 	}
-
-	@SuppressWarnings("unused")
-	private static final Logger LOGGER = LoggerFactory.getLogger(GitFileSystem.class);
 
 	/**
 	 * It is crucial to always use the same instance of Jimfs, because Jimfs refuses
@@ -197,14 +212,14 @@ public abstract class GitFileSystem extends FileSystem {
 	private GitLocalHistory history;
 
 	private boolean isOpen;
-	private ObjectReader reader;
-	private Repository repository;
-	private boolean shouldCloseRepository;
+	private final ObjectReader reader;
+	private final Repository repository;
+	private final boolean shouldCloseRepository;
 
-	private Set<TreeWalkDirectoryStream> toClose;
+	private final Set<DirectoryStream<GitPath>> toClose;
 
 	final GitPathRoot mainSlash = new GitPathRoot(this, GitRev.DEFAULT);
-	final GitEmptyPath defaultPath = new GitEmptyPath(mainSlash);
+	final GitEmptyPath emptyPath = new GitEmptyPath(mainSlash);
 
 	/**
 	 * Git file system provides low-level access to read operations on a repository
@@ -241,9 +256,12 @@ public abstract class GitFileSystem extends FileSystem {
 				closeExceptions.add(e);
 			}
 		}
-		for (TreeWalkDirectoryStream closeable : toClose) {
+		for (@SuppressWarnings("resource")
+		DirectoryStream<GitPath> closeable : toClose) {
 			try {
 				closeable.close();
+			} catch (IOException e) {
+				throw new VerifyException("Close should not throw exceptions.", e);
 			} catch (RuntimeException e) {
 				closeExceptions.add(e);
 			}
@@ -269,6 +287,10 @@ public abstract class GitFileSystem extends FileSystem {
 	 * starts with <code>/</code>), this method behaves as if
 	 * {@link #getAbsolutePath(String, String...)} had been called. Otherwise, it
 	 * behaves as if {@link #getRelativePath(String...)} had been called.
+	 * <p>
+	 * No check is performed to ensure that the path refers to an existing git
+	 * object in this git file system.
+	 * </p>
 	 *
 	 * @param first the path string or initial part of the path string
 	 * @param more  additional strings to be joined to form the path string
@@ -286,7 +308,7 @@ public abstract class GitFileSystem extends FileSystem {
 		if (startsWithSlash) {
 			return getAbsolutePath(first, more);
 		}
-		return getRelativePath(allNames);
+		return GitRelativePath.relative(this, allNames);
 	}
 
 	/**
@@ -304,8 +326,8 @@ public abstract class GitFileSystem extends FileSystem {
 	 * {@link Path}) and is joined to form a path string using <code>/</code> as
 	 * separator. If {@code first} does not end with <code>//</code> (but ends with
 	 * <code>/</code>, as required), and if {@code more} does not start with
-	 * <code>/</code>, then a <code>/</code> is added so that there will be exactly
-	 * two slashes joining {@code first} to {@code more}.
+	 * <code>/</code>, then a <code>/</code> is added so that there will be two
+	 * slashes joining {@code first} to {@code more}.
 	 * </p>
 	 * <p>
 	 * For example, if {@code getAbsolutePath("/refs/heads/main/","foo","bar")} is
@@ -313,18 +335,20 @@ public abstract class GitFileSystem extends FileSystem {
 	 * converted to a {@code Path}.
 	 * </p>
 	 * <p>
-	 * A {@code Path} representing a default (or empty) path is returned iff names
-	 * contain only empty strings.
+	 * No check is performed to ensure that the path refers to an existing git
+	 * object in this git file system.
 	 * </p>
 	 *
 	 * @param first the string form of the root component, possibly followed by
-	 *              other path segments. Must start with <code>/</code>; must
-	 *              contain at most once <code>//</code>; if does not contain
-	 *              <code>//</code>, must end with <code>/</code>.
+	 *              other path segments. Must start with <tt>/refs/</tt> or
+	 *              <tt>/heads/</tt> or <tt>/tags/</tt> or be a slash followed by a
+	 *              40-characters long sha-1; must contain at most once
+	 *              <code>//</code>; if does not contain <code>//</code>, must end
+	 *              with <code>/</code>.
 	 * @param more  may start with <code>/</code>.
 	 * @return an absolute git path.
-	 * @throws InvalidPathException if {@code first} does not contain a valid root
-	 *                              component
+	 * @throws InvalidPathException if {@code first} does not contain a syntaxically
+	 *                              valid root component
 	 * @see GitPath
 	 */
 	public GitPath getAbsolutePath(String first, String... more) throws InvalidPathException {
@@ -332,39 +356,69 @@ public abstract class GitFileSystem extends FileSystem {
 		final ImmutableList<String> internalPath;
 		if (first.contains("//")) {
 			final int startDoubleSlash = first.indexOf("//");
-			final String beforeDoubleSlash = first.substring(0, startDoubleSlash);
-			final String afterDoubleSlash = first.substring(startDoubleSlash + 2);
-			rootStringForm = beforeDoubleSlash + "/";
-			internalPath = Stream.concat(Stream.of(afterDoubleSlash), Stream.of(more))
+			final String beforeMiddleOfDoubleSlash = first.substring(0, startDoubleSlash + 1);
+			final String afterMiddleOfDoubleSlash = first.substring(startDoubleSlash + 1);
+			rootStringForm = beforeMiddleOfDoubleSlash;
+			internalPath = Stream.concat(Stream.of(afterMiddleOfDoubleSlash), Stream.of(more))
 					.collect(ImmutableList.toImmutableList());
 		} else {
 			rootStringForm = first;
-			internalPath = ImmutableList.copyOf(more);
+			final List<String> givenMore = new ArrayList<>(ImmutableList.copyOf(more));
+			if (!givenMore.isEmpty() && !givenMore.get(0).startsWith("/")) {
+				givenMore.set(0, "/" + givenMore.get(0));
+			}
+			internalPath = ImmutableList.copyOf(givenMore);
 		}
+		verify(internalPath.isEmpty() || internalPath.get(0).startsWith("/"));
 
-		return getAbsolutePath(GitRev.stringForm(rootStringForm), internalPath);
+		return GitAbsolutePath.givenRoot(new GitPathRoot(this, GitRev.stringForm(rootStringForm)), internalPath);
 	}
 
 	/**
-	 * @param root
-	 * @param internalPath may start with <code>/</code>
-	 * @return
+	 * Returns a git path referring to a commit designated by its id. No check is
+	 * performed to ensure that the commit exists.
+	 *
+	 * @param commitId     the commit to refer to
+	 * @param internalPath may start with a slash.
+	 * @return an absolute path
+	 * @see GitPath
 	 */
-	private GitPath getAbsolutePath(GitRev root, String... internalPath) {
-		return getAbsolutePath(root, ImmutableList.copyOf(internalPath));
+	public GitPath getAbsolutePath(ObjectId commitId, String... internalPath) {
+		final List<String> givenMore = new ArrayList<>(ImmutableList.copyOf(internalPath));
+		if (!givenMore.isEmpty() && !givenMore.get(0).startsWith("/")) {
+			givenMore.set(0, "/" + givenMore.get(0));
+		}
+		return GitAbsolutePath.givenRoot(new GitPathRoot(this, GitRev.commitId(commitId)), givenMore);
 	}
 
-	public GitPath getAbsolutePath(ObjectId objectId, String... internalPath) {
-		return getAbsolutePath(GitRev.commitId(objectId), ImmutableList.copyOf(internalPath));
+	/**
+	 * Returns a git path referring to a commit designated by its id. No check is
+	 * performed to ensure that the commit exists.
+	 *
+	 * @param rootStringForm the string form of the root component. Must start with
+	 *                       <tt>/refs/</tt> or <tt>/heads/</tt> or <tt>/tags/</tt>
+	 *                       or be a 40-characters long sha-1 surrounded by slash
+	 *                       characters; must end with <tt>/</tt>; may not contain
+	 *                       <tt>//</tt> nor <tt>\</tt>.
+	 * @return a git path root
+	 * @throws InvalidPathException if {@code rootStringForm} does not contain a
+	 *                              syntaxically valid root component
+	 * @see GitPathRoot
+	 */
+	public GitPathRoot getPathRoot(String rootStringForm) throws InvalidPathException {
+		return new GitPathRoot(this, GitRev.stringForm(rootStringForm));
 	}
 
-	private GitPath getAbsolutePath(GitRev root, List<String> names) {
-		checkNotNull(root);
-		final String first = names.isEmpty() ? "" : names.get(0);
-		final String[] more = names.isEmpty() ? new String[] {}
-				: names.subList(1, names.size()).toArray(new String[] {});
-		final Path internalPath = JIM_FS.getPath(first, more);
-		return GitAbsolutePath.givenRev(this, root, JIM_FS_SLASH.resolve(internalPath));
+	/**
+	 * Returns a git path referring to a commit designated by its id. No check is
+	 * performed to ensure that the commit exists.
+	 *
+	 * @param commitId the commit to refer to
+	 * @return an git path root
+	 * @see GitPathRoot
+	 */
+	public GitPathRoot getPathRoot(ObjectId commitId) {
+		return new GitPathRoot(this, GitRev.commitId(commitId));
 	}
 
 	/**
@@ -382,8 +436,12 @@ public abstract class GitFileSystem extends FileSystem {
 	 * path string {@code "foo/bar"} is converted to a {@code Path}.
 	 * </p>
 	 * <p>
-	 * The <em>empty</em> path is returned iff names contain only empty strings. It
-	 * refers to the {@link GitFileSystem default directory} of this file system.
+	 * An <em>empty</em> path is returned iff names contain only empty strings. It
+	 * then implicitly refers to the main branch of this git file system.
+	 * </p>
+	 * <p>
+	 * No check is performed to ensure that the path refers to an existing git
+	 * object in this git file system.
 	 * </p>
 	 *
 	 * @param names the internal path; its first element (if any) may not start with
@@ -394,23 +452,7 @@ public abstract class GitFileSystem extends FileSystem {
 	 * @see GitPath
 	 */
 	public GitPath getRelativePath(String... names) throws InvalidPathException {
-		return getRelativePath(ImmutableList.copyOf(names));
-	}
-
-	private GitPath getRelativePath(ImmutableList<String> names) throws InvalidPathException {
-		/**
-		 * NOT equivalent to resolve each component to the previous part, starting with
-		 * JIM_FS_EMPTY: if one starts with a slash, this makes the resulting path
-		 * absolute.
-		 */
-		final String first = names.isEmpty() ? "" : names.get(0);
-		final String[] more = names.isEmpty() ? new String[] {}
-				: names.subList(1, names.size()).toArray(new String[] {});
-		final Path internalPath = JIM_FS.getPath(first, more);
-		if (internalPath.isAbsolute()) {
-			throw new InvalidPathException(first, first + " makes this internal path absolute.");
-		}
-		return GitRelativePath.relative(this, internalPath);
+		return GitRelativePath.relative(this, ImmutableList.copyOf(names));
 	}
 
 	public GitLocalHistory getCachedHistory() {
@@ -423,13 +465,27 @@ public abstract class GitFileSystem extends FileSystem {
 		throw new UnsupportedOperationException();
 	}
 
+	@Override
+	public ImmutableSortedSet<Path> getRootDirectories() {
+		if (!isOpen) {
+			throw new ClosedFileSystemException();
+		}
+
+		IO_UNCHECKER.call(() -> getHistory());
+
+		final Comparator<Path> compareWithoutTies = Comparator.comparing((p) -> ((GitPath) p),
+				getPathLexicographicTemporalComparator());
+		return ImmutableSortedSet.copyOf(compareWithoutTies,
+				getCachedHistory().getGraph().nodes().stream().map(this::getAbsolutePath).iterator());
+	}
+
 	/**
 	 * Retrieve the set of all commits of this repository. This is equivalent to
 	 * calling {@link #getRootDirectories()}, but with a more precise type. Each git
 	 * path in the returned set consists in only a root component, and this root
-	 * component is a commit SHA-1.
+	 * component is a commit id.
 	 *
-	 * @return absolute paths whose root components are commit SHA-1s, ordered with
+	 * @return absolute paths whose root components are commit ids, ordered with
 	 *         earlier commits coming first.
 	 */
 	public ImmutableSortedSet<GitPath> getGitRootDirectories() {
@@ -442,8 +498,8 @@ public abstract class GitFileSystem extends FileSystem {
 		final Comparator<GitPath> compareWithoutTies = getPathLexicographicTemporalComparator();
 
 		/** Important to compare without ties, otherwise some commits get collapsed. */
-		return ImmutableSortedSet.copyOf(compareWithoutTies, getCachedHistory().getGraph().nodes().stream()
-				.map((c) -> getAbsolutePath(GitRev.commitId(c))).iterator());
+		return ImmutableSortedSet.copyOf(compareWithoutTies,
+				getCachedHistory().getGraph().nodes().stream().map((c) -> getAbsolutePath(c)).iterator());
 	}
 
 	public GitLocalHistory getHistory() throws IOException {
@@ -487,20 +543,6 @@ public abstract class GitFileSystem extends FileSystem {
 	}
 
 	@Override
-	public ImmutableSortedSet<Path> getRootDirectories() {
-		if (!isOpen) {
-			throw new ClosedFileSystemException();
-		}
-
-		IO_UNCHECKER.call(() -> getHistory());
-
-		final Comparator<Path> compareWithoutTies = Comparator.comparing((p) -> ((GitPath) p),
-				getPathLexicographicTemporalComparator());
-		return ImmutableSortedSet.copyOf(compareWithoutTies,
-				getCachedHistory().getGraph().nodes().stream().map(this::getAbsolutePath).iterator());
-	}
-
-	@Override
 	public String getSeparator() {
 		verify(JIM_FS.getSeparator().equals("/"));
 		return "/";
@@ -533,12 +575,12 @@ public abstract class GitFileSystem extends FileSystem {
 	}
 
 	@SuppressWarnings("resource")
-	DirectoryStream<String> iterate(RevTree tree) throws IOException {
+	TreeWalkDirectoryStream iterate(RevTree tree) throws IOException {
 		if (!isOpen) {
 			throw new ClosedFileSystemException();
 		}
 
-		TreeWalk treeWalk = new TreeWalk(reader);
+		final TreeWalk treeWalk = new TreeWalk(reader);
 		treeWalk.addTree(tree);
 		treeWalk.setRecursive(false);
 		return new TreeWalkDirectoryStream(treeWalk);
@@ -555,6 +597,10 @@ public abstract class GitFileSystem extends FileSystem {
 	}
 
 	long getSize(GitObject gitObject) throws IOException {
+		if (!isOpen) {
+			throw new ClosedFileSystemException();
+		}
+
 		final ObjectLoader fileLoader = reader.open(gitObject.getObjectId());
 		verify(fileLoader.getType() == gitObject.getFileMode().getObjectType(),
 				"Expected " + gitObject.getFileMode() + " but loaded " + fileLoader.getType());
@@ -651,6 +697,10 @@ public abstract class GitFileSystem extends FileSystem {
 		final ObjectId possibleCommitId = ref.getObjectId();
 		verifyNotNull(possibleCommitId);
 		return Optional.of(possibleCommitId);
+	}
+
+	void toClose(DirectoryStream<GitPath> stream) {
+		toClose.add(stream);
 	}
 
 }

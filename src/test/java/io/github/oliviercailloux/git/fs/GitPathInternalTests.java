@@ -91,9 +91,9 @@ public class GitPathInternalTests {
 		assertEquals("/refs/heads/main//ploum.txt",
 				getGitPath(main, "/").resolve(getGitPath(main, "/ploum.txt")).toString());
 		assertEquals("/refs/heads/main//",
-				getGitPath(GitRev.ref("refs/something"), "/").resolve(getGitPath(main, "/")).toString());
+				getGitPath(GitRev.shortRef("refs/something"), "/").resolve(getGitPath(main, "/")).toString());
 		assertEquals("/refs/heads/main//ploum.txt",
-				getGitPath(GitRev.ref("refs/something"), "/").resolve(getGitPath(main, "/ploum.txt")).toString());
+				getGitPath(GitRev.shortRef("refs/something"), "/").resolve(getGitPath(main, "/ploum.txt")).toString());
 		assertEquals("/refs/heads/main//truc", getGitPath(main, "/truc").resolve(getGitPath(null, "")).toString());
 		assertEquals("/refs/heads/main//truc/ploum.txt",
 				getGitPath(main, "/truc").resolve(getGitPath(null, "ploum.txt")).toString());
@@ -101,9 +101,9 @@ public class GitPathInternalTests {
 		assertEquals("/refs/heads/main//ploum.txt",
 				getGitPath(main, "/truc").resolve(getGitPath(main, "/ploum.txt")).toString());
 		assertEquals("/refs/heads/main//",
-				getGitPath(GitRev.ref("refs/something"), "/truc").resolve(getGitPath(main, "/")).toString());
-		assertEquals("/refs/heads/main//ploum.txt",
-				getGitPath(GitRev.ref("refs/something"), "/truc").resolve(getGitPath(main, "/ploum.txt")).toString());
+				getGitPath(GitRev.shortRef("refs/something"), "/truc").resolve(getGitPath(main, "/")).toString());
+		assertEquals("/refs/heads/main//ploum.txt", getGitPath(GitRev.shortRef("refs/something"), "/truc")
+				.resolve(getGitPath(main, "/ploum.txt")).toString());
 
 		assertEquals("", getGitPath(null, "").relativize(getGitPath(null, "")).toString());
 		assertEquals("chose", getGitPath(null, "truc").relativize(getGitPath(null, "truc/chose")).toString());
@@ -131,7 +131,8 @@ public class GitPathInternalTests {
 
 	private GitPath getGitPath(GitRev root, String dirAndFile) {
 		if (root != null) {
-			return GitAbsolutePath.givenRev(GitFileSystemCreatePathsTests.GIT_FILE_FILE_SYSTEM_MOCKED, root,
+			return GitAbsolutePath.givenRoot(
+					new GitPathRoot(GitFileSystemCreatePathsTests.GIT_FILE_FILE_SYSTEM_MOCKED, root),
 					GitFileSystem.JIM_FS.getPath(dirAndFile));
 		}
 		return GitRelativePath.relative(GitFileSystemCreatePathsTests.GIT_FILE_FILE_SYSTEM_MOCKED,

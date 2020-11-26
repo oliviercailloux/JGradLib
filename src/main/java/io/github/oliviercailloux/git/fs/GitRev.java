@@ -10,14 +10,32 @@ import java.util.Objects;
 import org.eclipse.jgit.errors.InvalidObjectIdException;
 import org.eclipse.jgit.lib.ObjectId;
 
+/**
+ * Contains either a git ref or a commit id.
+ * <ul>
+ * <li>A git ref is a string that starts with refs/, does not contain "//" or
+ * "\" and does not end with "/".</li>
+ * <li>A commit id is a SHA-1.</li>
+ * </ul>
+ * <p>
+ * This object is not associated to a file system, in other words, it only
+ * contains “static” information and it may not represent anything that exists
+ * in a file system. Its checks are only syntactic.
+ * <p>
+ * May be created using a git ref short form: this starts with refs/ or heads/
+ * or tags/.
+ * <p>
+ * The string form of a git rev is "/" then the git ref then "//", or "/" then a
+ * 40 (?) characters lower case number in hexadecimal form then "//".
+ */
 class GitRev {
-	public static final GitRev DEFAULT = ref("refs/heads/main");
+	public static final GitRev DEFAULT = shortRef("refs/heads/main");
 	/**
 	 * Compares without access to the file system and including those roots that do
-	 * not exist an underlying file system. This object does not implement
-	 * Comparable because is not the only natural implementation of a comparison.
-	 * For example, with access to a given file system, one could want to order
-	 * roots by commit date.
+	 * not exist in an underlying file system. This object does not implement
+	 * Comparable because multiple implementations of comparisons exist that could
+	 * be considered natural. For example, with access to a given file system, one
+	 * could want to order roots by commit date.
 	 */
 	static final Comparator<GitRev> SYNTAXIC_COMPARATOR = Comparator.comparingInt((GitRev r) -> r.isRef() ? 0 : 1)
 			.thenComparing(GitRev::toString);
@@ -26,7 +44,7 @@ class GitRev {
 		checkPath(stringForm.startsWith("/"), stringForm, "Must start with /");
 		checkPath(stringForm.endsWith("/"), stringForm, "Must end with /");
 		checkPath(!stringForm.equals("/"), stringForm, "Must not be /");
-		return refOrCommitId(stringForm.substring(1, stringForm.length() - 1));
+		return shortRefOrCommitId(stringForm.substring(1, stringForm.length() - 1));
 	}
 
 	private static void checkPath(boolean check, String input, String reason) throws InvalidPathException {
@@ -35,26 +53,34 @@ class GitRev {
 		}
 	}
 
-	public static GitRev refOrCommitId(String refOrCommitId) throws InvalidPathException {
-		if (refOrCommitId.startsWith("refs/") || refOrCommitId.startsWith("heads/")
-				|| refOrCommitId.startsWith("tags/")) {
-			return ref(refOrCommitId);
+	/**
+	 * @param shortRefOrCommitId must start with <tt>refs/</tt> or <tt>heads/</tt>
+	 *                           or <tt>tags/</tt> or be a commit id. May not end
+	 *                           with <tt>/</tt>, nor contain <tt>//</tt> or
+	 *                           <tt>\</tt>.
+	 * @return
+	 * @throws InvalidPathException
+	 */
+	public static GitRev shortRefOrCommitId(String shortRefOrCommitId) throws InvalidPathException {
+		if (shortRefOrCommitId.startsWith("refs/") || shortRefOrCommitId.startsWith("heads/")
+				|| shortRefOrCommitId.startsWith("tags/")) {
+			return shortRef(shortRefOrCommitId);
 		}
 		final ObjectId commitId;
 		try {
-			commitId = ObjectId.fromString(refOrCommitId);
+			commitId = ObjectId.fromString(shortRefOrCommitId);
 		} catch (InvalidObjectIdException e) {
-			throw new InvalidPathException(refOrCommitId, e.getMessage());
+			throw new InvalidPathException(shortRefOrCommitId, e.getMessage());
 		}
 		return commitId(commitId);
 	}
 
-	public static GitRev ref(String ref) {
+	public static GitRev shortRef(String shortRef) {
 		final String extendedRef;
-		if (ref.startsWith("refs/")) {
-			extendedRef = ref;
-		} else if (ref.startsWith("heads/") || ref.startsWith("tags/")) {
-			extendedRef = "refs/" + ref;
+		if (shortRef.startsWith("refs/")) {
+			extendedRef = shortRef;
+		} else if (shortRef.startsWith("heads/") || shortRef.startsWith("tags/")) {
+			extendedRef = "refs/" + shortRef;
 		} else {
 			throw new IllegalArgumentException("The given ref must start with refs/, heads/, or tags/.");
 		}
@@ -85,8 +111,8 @@ class GitRev {
 		return new GitRev(null, objectId);
 	}
 
-	private String gitRef;
-	private ObjectId commitId;
+	private final String gitRef;
+	private final ObjectId commitId;
 
 	private GitRev(String gitRef, ObjectId commitId) {
 		final boolean hasObjectId = commitId != null;
@@ -103,24 +129,43 @@ class GitRev {
 		this.commitId = commitId;
 	}
 
+	/**
+	 * @return <code>true</code> iff not {@link #isCommitId()}
+	 */
 	public boolean isRef() {
 		return gitRef != null;
 	}
 
+	/**
+	 * @return <code>true</code> iff not {@link #isRef()}
+	 */
 	public boolean isCommitId() {
 		return commitId != null;
 	}
 
+	/**
+	 * Must contain a ref.
+	 *
+	 * @return starts with "heads/", does not contain "//", does not contain "\",
+	 *         does not end with "/"
+	 */
 	public String getGitRef() {
 		checkState(gitRef != null);
 		return gitRef;
 	}
 
+	/**
+	 * Must contain a commit id.
+	 */
 	public ObjectId getCommitId() {
 		checkState(commitId != null);
 		return commitId;
 	}
 
+	/**
+	 * A git rev equals another one iff they contain equal git refs, or they contain
+	 * equal commit ids.
+	 */
 	@Override
 	public boolean equals(Object o2) {
 		if (!(o2 instanceof GitRev)) {
@@ -135,6 +180,9 @@ class GitRev {
 		return Objects.hash(gitRef, commitId);
 	}
 
+	/**
+	 * @return the string form of this git rev
+	 */
 	@Override
 	public String toString() {
 		return "/" + (gitRef == null ? commitId.getName() : gitRef) + "/";

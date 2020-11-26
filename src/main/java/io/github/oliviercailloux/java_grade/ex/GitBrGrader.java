@@ -35,6 +35,7 @@ import io.github.oliviercailloux.git.GitUri;
 import io.github.oliviercailloux.git.fs.GitFileSystem;
 import io.github.oliviercailloux.git.fs.GitFileSystemProvider;
 import io.github.oliviercailloux.git.fs.GitPath;
+import io.github.oliviercailloux.git.fs.GitPathRoot;
 import io.github.oliviercailloux.git.git_hub.model.GitHubHistory;
 import io.github.oliviercailloux.git.git_hub.model.GitHubToken;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinatesWithPrefix;
@@ -162,13 +163,13 @@ public class GitBrGrader {
 		}
 
 		@SuppressWarnings("unlikely-arg-type")
-		final Optional<ObjectId> br1 = fs.getAbsolutePath(branchPrefix + "/br1").getCommitId()
+		final Optional<ObjectId> br1 = getObjectId(fs.getPathRoot(branchPrefix + "/br1"))
 				.filter(o -> ownGraph.nodes().contains(o));
 		@SuppressWarnings("unlikely-arg-type")
-		final Optional<ObjectId> br2 = fs.getAbsolutePath(branchPrefix + "/br2").getCommitId()
+		final Optional<ObjectId> br2 = getObjectId(fs.getPathRoot(branchPrefix + "/br2"))
 				.filter(o -> ownGraph.nodes().contains(o));
 		@SuppressWarnings("unlikely-arg-type")
-		final Optional<ObjectId> br3 = fs.getAbsolutePath(branchPrefix + "/br3").getCommitId()
+		final Optional<ObjectId> br3 = getObjectId(fs.getPathRoot(branchPrefix + "/br3"))
 				.filter(o -> ownGraph.nodes().contains(o));
 
 		final Set<ObjectId> startCandidates = new LinkedHashSet<>();
@@ -313,6 +314,13 @@ public class GitBrGrader {
 		builder.put(GitBrCriterion.COMMIT_D, 1.5d);
 		builder.put(GitBrCriterion.BR, 2d);
 		return WeightingGrade.from(subGrades, builder.build(), comment);
+	}
+
+	private Optional<ObjectId> getObjectId(GitPathRoot root) throws IOException {
+		if (!root.exists()) {
+			return Optional.empty();
+		}
+		return Optional.of(root.getCommit());
 	}
 
 	private IGrade getAContentGrade(GitFileSystem fs, Optional<ObjectId> commit) {

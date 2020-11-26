@@ -233,8 +233,8 @@ public class GitReadTests {
 			try (GitFileSystem gitFs = GitFileSystemProvider.getInstance().newFileSystemFromDfsRepository(repo)) {
 				final ImmutableSet<GitPath> subEntries = ImmutableSet.of(gitFs.getRelativePath("dir"),
 						gitFs.getRelativePath("file1.txt"), gitFs.getRelativePath("file2.txt"));
-				assertEquals(subEntries,
-						ImmutableSet.copyOf(gitFs.getRelativePath().toAbsolutePath().newDirectoryStream(p -> true)));
+				assertEquals(subEntries, ImmutableSet
+						.copyOf(gitFs.getRelativePath().toAbsolutePathAsAbsolutePath().newDirectoryStream(p -> true)));
 				assertEquals(subEntries, Files.list(gitFs.getRelativePath()).collect(ImmutableSet.toImmutableSet()));
 			}
 		}

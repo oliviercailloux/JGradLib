@@ -8,7 +8,6 @@ import java.io.IOException;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.NotDirectoryException;
 import java.nio.file.Path;
-import java.util.Optional;
 
 import org.eclipse.jgit.lib.FileMode;
 import org.eclipse.jgit.revwalk.RevTree;
@@ -20,24 +19,32 @@ import com.google.common.jimfs.Jimfs;
 
 import io.github.oliviercailloux.git.fs.GitFileSystem.PathNotFoundException;
 
-class GitPathNonRoot extends GitAbsolutePath {
+/**
+ * A git path with a root component and a non empty sequence of non-empty names.
+ */
+class GitAbsolutePathWithInternal extends GitAbsolutePath {
 	@SuppressWarnings("unused")
-	private static final Logger LOGGER = LoggerFactory.getLogger(GitPathNonRoot.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(GitAbsolutePathWithInternal.class);
 
-	private GitPathRoot root;
-	private Path internalPath;
+	private final GitPathRoot root;
+	private final Path internalPath;
 
-	GitPathNonRoot(GitPathRoot root, Path internalPath) {
+	GitAbsolutePathWithInternal(GitPathRoot root, Path internalPath) {
 		this.root = checkNotNull(root);
 		this.internalPath = checkNotNull(internalPath);
 		checkArgument(internalPath.isAbsolute());
 		verify(internalPath.getRoot() != null);
 		checkArgument(internalPath.getNameCount() >= 1);
 		checkArgument(internalPath.getFileSystem().provider().getScheme().equals(Jimfs.URI_SCHEME));
-		final boolean noSlashInNames = Streams.stream(internalPath).noneMatch(p -> p.toString().contains("/"));
-		verify(noSlashInNames);
+		final boolean slashInNames = Streams.stream(internalPath).anyMatch(p -> p.toString().contains("/"));
+		verify(!slashInNames);
 		final boolean hasEmptyName = Streams.stream(internalPath).anyMatch(p -> p.toString().isEmpty());
 		verify(!hasEmptyName);
+	}
+
+	@Override
+	public GitAbsolutePath toAbsolutePath() {
+		return this;
 	}
 
 	@Override
@@ -56,23 +63,14 @@ class GitPathNonRoot extends GitAbsolutePath {
 	}
 
 	@Override
-	GitRelativeInternalPath toRelativePath() {
-		return new GitRelativeInternalPath(this);
+	GitRelativePathWithInternal toRelativePath() {
+		return new GitRelativePathWithInternal(this);
 	}
 
 	@Override
 	GitObject getGitObject() throws NoSuchFileException, IOException {
-		return getGitObject(Optional.empty());
-	}
-
-	GitObject getGitObject(Optional<RevTree> rootTree) throws IOException, NoSuchFileException {
 		final String relative = toRelativePath().getInternalPath().toString();
-		final RevTree tree;
-		if (rootTree.isPresent()) {
-			tree = rootTree.get();
-		} else {
-			tree = getRoot().getRevTree();
-		}
+		final RevTree tree = getRoot().getRevTree();
 		LOGGER.debug("Searching for {} in {}.", relative, tree);
 		final GitObject gitObject;
 		try {
@@ -85,16 +83,7 @@ class GitPathNonRoot extends GitAbsolutePath {
 
 	@Override
 	RevTree getRevTree() throws NoSuchFileException, NotDirectoryException, IOException {
-		return getRevTree(Optional.empty());
-	}
-
-	RevTree getRevTree(Optional<GitObject> gitObject) throws NoSuchFileException, NotDirectoryException, IOException {
-		final GitObject obj;
-		if (gitObject.isPresent()) {
-			obj = gitObject.get();
-		} else {
-			obj = getGitObject();
-		}
+		final GitObject obj = getGitObject();
 
 		if (!obj.getFileMode().equals(FileMode.TYPE_TREE)) {
 			throw new NotDirectoryException(toString());

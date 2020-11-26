@@ -18,9 +18,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * This is not a git rev, although it shares some similar characteristics with a
- * git rev. Its string form ends with // (whereas the string form of a git rev
- * ends with a single /); and it never equals a git rev.
+ * A git path root is an absolute git path that has an empty sequence of names.
+ * In other words, it consists in a root component only. Its string form ends
+ * with <tt>//</tt>.
+ *
+ * @see GitPath
  */
 public class GitPathRoot extends GitAbsolutePath {
 	@SuppressWarnings("unused")
@@ -30,6 +32,11 @@ public class GitPathRoot extends GitAbsolutePath {
 
 	private final GitRev gitRev;
 
+	/**
+	 * This is not a git rev, although it shares some similar characteristics with a
+	 * git rev. Its string form ends with //, whereas the string form of a git rev
+	 * ends with a single /; and it never equals a git rev.
+	 */
 	GitPathRoot(GitFileSystem fileSystem, GitRev gitRev) {
 		this.fileSystem = checkNotNull(fileSystem);
 		this.gitRev = checkNotNull(gitRev);
@@ -45,28 +52,65 @@ public class GitPathRoot extends GitAbsolutePath {
 		return fileSystem;
 	}
 
+	/**
+	 * Returns itself.
+	 *
+	 * @return itself
+	 */
 	@Override
 	public GitPathRoot getRoot() {
 		return this;
 	}
 
+	/**
+	 * Returns this path.
+	 */
 	@Override
-	GitEmptyPath toRelativePath() {
-		return fileSystem.defaultPath;
+	public GitPathRoot toAbsolutePath() {
+		return this;
 	}
 
-	public GitRev toStaticRev() {
+	@Override
+	GitEmptyPath toRelativePath() {
+		return fileSystem.emptyPath;
+	}
+
+	GitRev toStaticRev() {
 		return gitRev;
 	}
 
+	/**
+	 * Indicates whether this root component contains a git ref or a commit id.
+	 *
+	 * @return <code>true</code> iff this root component contains a git ref;
+	 *         equivalently, iff this root component does not contain a commit id.
+	 */
 	public boolean isRef() {
 		return gitRev.isRef();
 	}
 
+	/**
+	 * Indicates whether this root component contains a commit id or a git ref.
+	 *
+	 * @return <code>true</code> iff this root component contains a commit id;
+	 *         equivalently, iff this root component does not contain a git ref.
+	 */
 	public boolean isCommitId() {
 		return gitRev.isCommitId();
 	}
 
+	/**
+	 * Returns the git ref contained in this root component, if any. The returned
+	 * string starts with <tt>heads/</tt>, does not contain <tt>//</tt>, does not
+	 * contain <tt>\</tt>, and does not end with <tt>/</tt>.
+	 * <p>
+	 * This method does not access the file system.
+	 *
+	 * @return the git ref contained in this root component.
+	 * @throws IllegalArgumentException iff this root component does not contain a
+	 *                                  git ref
+	 * @see #isRef()
+	 */
 	public String getGitRef() {
 		/**
 		 * Returning a JGit Ref here is another possibility. But 1) a Ref is much more
@@ -81,15 +125,35 @@ public class GitPathRoot extends GitAbsolutePath {
 		return gitRev.getGitRef();
 	}
 
+	/**
+	 * Returns the commit id contained in this root component, if any. The method is
+	 * called <tt>static</tt> because the returned id is simply the one that was
+	 * given when constructing this path. This method does not attempt to check that
+	 * the returned id indeed corresponds to some commit in this file system.
+	 *
+	 * @return the commit id contained in this root component.
+	 * @throws IllegalArgumentException iff this root component does not contain a
+	 *                                  commit id
+	 * @see #isCommitId()
+	 */
 	public ObjectId getStaticCommitId() {
 		return gitRev.getCommitId();
 	}
 
 	/**
-	 * Returns <code>true</code> iff the commit referred to by this path root exists
-	 * in this git repository.
+	 * Returns <code>true</code> iff the commit referred to (possibly indirectly) by
+	 * this git path root exists in the associated git file system.
+	 * <p>
+	 * Returns <code>false</code> when either:
+	 * <ul>
+	 * <li>this path root contains a git ref which does not exist in this
+	 * repository;</li>
+	 * <li>this path root contains a git ref which refers to a git object that is
+	 * not a commit;</li>
+	 * <li>this path root contains a commit id that does not exist.</li>
 	 *
-	 * @throws IOException
+	 * @throws IOException if an error occurs while accessing the underlying
+	 *                     repository
 	 *
 	 * @see #getCommit()
 	 */

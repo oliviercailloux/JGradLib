@@ -197,9 +197,9 @@ public class GitFileSystemProvider extends FileSystemProvider {
 	 * </p>
 	 * <p>
 	 * In the current version of this library, it must be associated with the
-	 * {@link FileSystems#getDefault() default} file system (because of
+	 * {@link FileSystems#getDefault() default} file system because of
 	 * <a href="https://www.eclipse.org/forums/index.php/m/1828091/">limitations</a>
-	 * of JGit; please vote
+	 * of JGit (please vote
 	 * <a href="https://bugs.eclipse.org/bugs/show_bug.cgi?id=526500">here</a> to
 	 * voice your concern: the bug will already be <a href=
 	 * "https://bugs.eclipse.org/bugs/buglist.cgi?component=JGit&resolution=---&order=votes%20DESC">quite
@@ -488,7 +488,7 @@ public class GitFileSystemProvider extends FileSystemProvider {
 		}
 
 		final GitPath gitPath = (GitPath) path;
-		return gitPath.toAbsolutePath().newByteChannel();
+		return gitPath.toAbsolutePathAsAbsolutePath().newByteChannel();
 	}
 
 	/**
@@ -506,7 +506,8 @@ public class GitFileSystemProvider extends FileSystemProvider {
 	public DirectoryStream<Path> newDirectoryStream(Path dir, Filter<? super Path> filter) throws IOException {
 		checkArgument(dir instanceof GitPath);
 		final GitPath gitPath = (GitPath) dir;
-		final DirectoryStream<GitPath> newDirectoryStream = gitPath.toAbsolutePath().newDirectoryStream(filter);
+		final DirectoryStream<GitPath> newDirectoryStream = gitPath.toAbsolutePathAsAbsolutePath()
+				.newDirectoryStream(filter);
 		return new DirectoryStream<>() {
 
 			@Override
@@ -624,7 +625,7 @@ public class GitFileSystemProvider extends FileSystemProvider {
 
 		final ImmutableSet<LinkOption> optionsSet = ImmutableSet.copyOf(options);
 
-		return (A) gitPath.toAbsolutePath().readAttributes(optionsSet);
+		return (A) gitPath.toAbsolutePathAsAbsolutePath().readAttributes(optionsSet);
 	}
 
 	/**

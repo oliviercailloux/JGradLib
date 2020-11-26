@@ -124,12 +124,11 @@ public class CoffeeGrader {
 
 	public IGrade grade(String owner, GitFileSystem fs, GitHubHistory gitHubHistory) throws IOException {
 		fs.getHistory();
-		final GitPath gitSourcePath = fs.getDefaultPath();
-		final Optional<ObjectId> masterIdOpt = gitSourcePath.getCommitId();
-		if (masterIdOpt.isEmpty()) {
+		final GitPath gitSourcePath = fs.getRelativePath();
+		if (!gitSourcePath.getRoot().exists()) {
 			return Mark.zero("Found no master commit.");
 		}
-		final ObjectId masterId = masterIdOpt.get();
+		final ObjectId masterId = gitSourcePath.getRoot().getCommit();
 		final Instant commitDate = gitHubHistory.getCommitDate(masterId);
 		if (commitDate.isAfter(DEADLINE)) {
 			LOGGER.warn("Should diminish the grade!");
