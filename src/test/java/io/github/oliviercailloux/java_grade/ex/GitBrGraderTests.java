@@ -57,7 +57,7 @@ public class GitBrGraderTests {
 			repository.create(true);
 			new GitCloner().clone(gitUri, repository);
 
-			try (GitFileSystem gitFs = new GitFileSystemProvider().newFileSystemFromRepository(repository)) {
+			try (GitFileSystem gitFs = GitFileSystemProvider.getInstance().newFileSystemFromRepository(repository)) {
 				final GitLocalHistory history = gitFs.getHistory();
 				final GitHubHistory fakeGitHubHistory = GitBrGraderTests.getMinGitHubHistory(history.getGraph());
 				final IGrade grade = new GitBrGrader().grade("me", gitFs, fakeGitHubHistory);
@@ -110,7 +110,7 @@ public class GitBrGraderTests {
 			}
 		}
 		try (Repository repository = new FileRepository(wT.resolve(".git").toString())) {
-			try (GitFileSystem gitFs = new GitFileSystemProvider().newFileSystemFromRepository(repository)) {
+			try (GitFileSystem gitFs = GitFileSystemProvider.getInstance().newFileSystemFromRepository(repository)) {
 				final ObjectId br1 = gitFs.getAbsolutePath("br1").getRoot().getCommit();
 				assertEquals(commitA, br1);
 

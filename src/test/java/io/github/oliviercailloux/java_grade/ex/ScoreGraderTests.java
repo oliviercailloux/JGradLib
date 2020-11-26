@@ -12,8 +12,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.github.oliviercailloux.git.JGit;
-import io.github.oliviercailloux.git.fs.GitFileSystemProvider;
 import io.github.oliviercailloux.git.fs.GitFileSystem;
+import io.github.oliviercailloux.git.fs.GitFileSystemProvider;
 import io.github.oliviercailloux.git.git_hub.model.GitHubHistory;
 import io.github.oliviercailloux.grade.IGrade;
 import io.github.oliviercailloux.grade.format.HtmlGrades;
@@ -27,7 +27,7 @@ class ScoreGraderTests {
 	void testDoesNotCompile() throws Exception {
 		final Path basePath = Path.of(getClass().getResource("score").toURI()).resolve("empty impl");
 		try (Repository repository = JGit.createRepository(new PersonIdent("Me", "email"), basePath)) {
-			try (GitFileSystem gitFs = new GitFileSystemProvider().newFileSystemFromRepository(repository)) {
+			try (GitFileSystem gitFs = GitFileSystemProvider.getInstance().newFileSystemFromRepository(repository)) {
 				final GitHubHistory fakeGitHubHistory = GitBrGraderTests
 						.getMinGitHubHistory(gitFs.getHistory().getGraph());
 				final IGrade grade = new ScoreGrader().grade("wrongname", gitFs, fakeGitHubHistory);
@@ -40,7 +40,7 @@ class ScoreGraderTests {
 	void testBad() throws Exception {
 		final Path basePath = Path.of(getClass().getResource("score").toURI()).resolve("bad impl");
 		try (Repository repository = JGit.createRepository(new PersonIdent("Me", "email"), basePath)) {
-			try (GitFileSystem gitFs = new GitFileSystemProvider().newFileSystemFromRepository(repository)) {
+			try (GitFileSystem gitFs = GitFileSystemProvider.getInstance().newFileSystemFromRepository(repository)) {
 				final GitHubHistory fakeGitHubHistory = GitBrGraderTests
 						.getMinGitHubHistory(gitFs.getHistory().getGraph());
 				final IGrade grade = new ScoreGrader().grade("wrongname", gitFs, fakeGitHubHistory);
@@ -53,7 +53,7 @@ class ScoreGraderTests {
 	void testGood() throws Exception {
 		final Path basePath = Path.of(getClass().getResource("score").toURI()).resolve("full impl");
 		try (Repository repository = JGit.createRepository(new PersonIdent("Me", "email"), basePath)) {
-			try (GitFileSystem gitFs = new GitFileSystemProvider().newFileSystemFromRepository(repository)) {
+			try (GitFileSystem gitFs = GitFileSystemProvider.getInstance().newFileSystemFromRepository(repository)) {
 				final GitHubHistory fakeGitHubHistory = GitBrGraderTests
 						.getMinGitHubHistory(gitFs.getHistory().getGraph());
 				final IGrade grade = new ScoreGrader().grade("Me", gitFs, fakeGitHubHistory);

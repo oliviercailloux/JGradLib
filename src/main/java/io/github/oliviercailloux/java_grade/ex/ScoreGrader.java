@@ -32,9 +32,9 @@ import com.google.common.jimfs.Jimfs;
 import io.github.oliviercailloux.git.GitCloner;
 import io.github.oliviercailloux.git.GitLocalHistory;
 import io.github.oliviercailloux.git.GitUri;
+import io.github.oliviercailloux.git.fs.GitFileSystem;
 import io.github.oliviercailloux.git.fs.GitFileSystemProvider;
 import io.github.oliviercailloux.git.fs.GitPath;
-import io.github.oliviercailloux.git.fs.GitFileSystem;
 import io.github.oliviercailloux.git.git_hub.model.GitHubHistory;
 import io.github.oliviercailloux.git.git_hub.model.GitHubToken;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinatesWithPrefix;
@@ -119,7 +119,8 @@ public class ScoreGrader {
 	public IGrade grade(RepositoryCoordinatesWithPrefix coord, Path projectDir) throws IOException {
 		new GitCloner().download(GitUri.fromUri(coord.asURI()), projectDir);
 
-		try (GitFileSystem fs = new GitFileSystemProvider().newFileSystemFromGitDir(projectDir.resolve(".git"))) {
+		try (GitFileSystem fs = GitFileSystemProvider.getInstance()
+				.newFileSystemFromGitDir(projectDir.resolve(".git"))) {
 			final GitHubHistory gitHubHistory = GraderOrchestrator.getGitHubHistory(coord);
 			final IGrade grade = grade(coord.getUsername(), fs, gitHubHistory);
 			LOGGER.info("Grade {}: {}.", coord, grade);

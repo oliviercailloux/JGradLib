@@ -22,9 +22,9 @@ import com.google.common.collect.ImmutableSet;
 
 import io.github.oliviercailloux.git.GitCloner;
 import io.github.oliviercailloux.git.GitUri;
+import io.github.oliviercailloux.git.fs.GitFileSystem;
 import io.github.oliviercailloux.git.fs.GitFileSystemProvider;
 import io.github.oliviercailloux.git.fs.GitPath;
-import io.github.oliviercailloux.git.fs.GitFileSystem;
 import io.github.oliviercailloux.git.git_hub.model.GitHubToken;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinatesWithPrefix;
@@ -104,8 +104,8 @@ public class HarvestIds {
 		final Path projectsBaseDir = Paths.get("../../Java L3/En cours").resolve(prefix);
 		final Path projectDir = projectsBaseDir.resolve(coord.getRepositoryName());
 		new GitCloner().download(GitUri.fromUri(coord.asURI()), projectDir);
-		try (GitFileSystem fs = IO_UNCHECKER
-				.getUsing(() -> new GitFileSystemProvider().newFileSystemFromGitDir(projectDir.resolve(".git")))) {
+		try (GitFileSystem fs = IO_UNCHECKER.getUsing(
+				() -> GitFileSystemProvider.getInstance().newFileSystemFromGitDir(projectDir.resolve(".git")))) {
 			return getId(fs);
 		}
 	}

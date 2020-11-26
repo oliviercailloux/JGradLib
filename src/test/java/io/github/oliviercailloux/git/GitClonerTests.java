@@ -36,8 +36,8 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.MoreCollectors;
 import com.google.common.graph.Traverser;
 
-import io.github.oliviercailloux.git.fs.GitFileSystemProvider;
 import io.github.oliviercailloux.git.fs.GitFileSystem;
+import io.github.oliviercailloux.git.fs.GitFileSystemProvider;
 import io.github.oliviercailloux.git.git_hub.model.GitHubToken;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.git.git_hub.model.v3.CommitGitHubDescription;
@@ -179,12 +179,11 @@ class GitClonerTests {
 			// new
 			// GitCloner().clone(GitUri.fromGitUri(URI.create("https://github.com/github/testrepo.git")),
 			// repo);
-			new GitCloner().clone(GitUri.fromUri(URI.create("https://github.com/oliviercailloux/testrel.git")),
-					repo);
+			new GitCloner().clone(GitUri.fromUri(URI.create("https://github.com/oliviercailloux/testrel.git")), repo);
 			final Ref head = repo.findRef(Constants.HEAD);
 			assertNotNull(head);
 			assertEquals("e26c142665bb9f560d59b18fd80763ef45e29324", head.getLeaf().getObjectId().getName());
-			try (GitFileSystem gitFs = new GitFileSystemProvider().newFileSystemFromDfsRepository(repo)) {
+			try (GitFileSystem gitFs = GitFileSystemProvider.getInstance().newFileSystemFromDfsRepository(repo)) {
 				assertTrue(Files.exists(gitFs.getAbsolutePath("master")));
 				assertTrue(Files.exists(gitFs.getAbsolutePath("master", "Test.html")));
 				assertFalse(Files.exists(gitFs.getAbsolutePath("master", "test.html")));
@@ -206,12 +205,11 @@ class GitClonerTests {
 		final Path gitDir = Utils.getTempUniqueDirectory("git-test");
 		Git.init().setBare(true).setDirectory(gitDir.toFile()).call();
 		try (Repository repo = new FileRepository(gitDir.toString())) {
-			new GitCloner().clone(GitUri.fromUri(URI.create("https://github.com/oliviercailloux/testrel.git")),
-					repo);
+			new GitCloner().clone(GitUri.fromUri(URI.create("https://github.com/oliviercailloux/testrel.git")), repo);
 			final Ref head = repo.findRef("HEAD");
 			assertEquals("e26c142665bb9f560d59b18fd80763ef45e29324", head.getLeaf().getObjectId().getName());
 		}
-		try (GitFileSystem gitFs = new GitFileSystemProvider().newFileSystemFromGitDir(gitDir)) {
+		try (GitFileSystem gitFs = GitFileSystemProvider.getInstance().newFileSystemFromGitDir(gitDir)) {
 			assertTrue(Files.exists(gitFs.getAbsolutePath("master")));
 			assertTrue(Files.exists(gitFs.getAbsolutePath("master", "Test.html")));
 			assertFalse(Files.exists(gitFs.getAbsolutePath("master", "test.html")));

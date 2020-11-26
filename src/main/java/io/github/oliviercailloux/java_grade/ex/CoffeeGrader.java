@@ -114,7 +114,8 @@ public class CoffeeGrader {
 	public IGrade grade(RepositoryCoordinatesWithPrefix coord, Path projectDir) throws IOException {
 		new GitCloner().download(GitUri.fromUri(coord.asURI()), projectDir);
 
-		try (GitFileSystem fs = new GitFileSystemProvider().newFileSystemFromGitDir(projectDir.resolve(".git"))) {
+		try (GitFileSystem fs = GitFileSystemProvider.getInstance()
+				.newFileSystemFromGitDir(projectDir.resolve(".git"))) {
 			final GitHubHistory gitHubHistory = GraderOrchestrator.getGitHubHistory(coord);
 			final IGrade grade = grade(coord.getUsername(), fs, gitHubHistory);
 			LOGGER.info("Grade {}: {}.", coord, grade);

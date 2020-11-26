@@ -32,7 +32,7 @@ class StringFilesGraderTests {
 
 	@Test
 	void testGood() throws Exception {
-		try (GitFileSystem gitFs = new GitFileSystemProvider()
+		try (GitFileSystem gitFs = GitFileSystemProvider.getInstance()
 				.newFileSystemFromGitDir(Path.of("../../Samples/string files/.git"))) {
 			final GitLocalHistory history = gitFs.getHistory();
 			final ImmutableGraph<ObjectId> graphO = Utils.asImmutableGraph(history.getGraph(), o -> o);

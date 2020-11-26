@@ -135,7 +135,8 @@ public class ExDepGitGraderSimpler {
 		final Path projectDir = projectsBaseDir.resolve(coord.getRepositoryName());
 		new GitCloner().download(GitUri.fromUri(coord.asURI()), projectDir);
 		final ImmutableMap.Builder<Instant, IGrade> possibleGradesBuilder = ImmutableMap.builder();
-		try (GitFileSystem fs = new GitFileSystemProvider().newFileSystemFromGitDir(projectDir.resolve(".git"))) {
+		try (GitFileSystem fs = GitFileSystemProvider.getInstance()
+				.newFileSystemFromGitDir(projectDir.resolve(".git"))) {
 			for (Instant acceptUntil : considered) {
 				final GitLocalHistory filtered = fs.getHistory()
 						.filter(o -> !gitHubHistory.getCommitDate(o).isAfter(acceptUntil));
@@ -156,7 +157,8 @@ public class ExDepGitGraderSimpler {
 		final Path projectDir = projectsBaseDir.resolve(coord.getRepositoryName());
 		new GitCloner().download(GitUri.fromUri(coord.asURI()), projectDir);
 
-		try (GitFileSystem fs = new GitFileSystemProvider().newFileSystemFromGitDir(projectDir.resolve(".git"))) {
+		try (GitFileSystem fs = GitFileSystemProvider.getInstance()
+				.newFileSystemFromGitDir(projectDir.resolve(".git"))) {
 			final GitHubHistory gitHubHistory = GraderOrchestrator.getGitHubHistory(coord);
 			final GitLocalHistory filtered = GraderOrchestrator.getFilteredHistory(fs, gitHubHistory, DEADLINE);
 			final IGrade grade = grade(coord.getOwner(), fs, filtered);

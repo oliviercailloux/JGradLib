@@ -144,7 +144,8 @@ public class PrintExecGrader {
 		final Path projectDir = projectsBaseDir.resolve(coord.getRepositoryName());
 		new GitCloner().download(GitUri.fromUri(coord.asURI()), projectDir);
 
-		try (GitFileSystem fs = new GitFileSystemProvider().newFileSystemFromGitDir(projectDir.resolve(".git"))) {
+		try (GitFileSystem fs = GitFileSystemProvider.getInstance()
+				.newFileSystemFromGitDir(projectDir.resolve(".git"))) {
 			final IGrade grade = grade(coord.getUsername(), fs, COMPILE_BASE_DIR);
 			LOGGER.debug("Grade {}: {}.", coord, grade);
 			return grade;

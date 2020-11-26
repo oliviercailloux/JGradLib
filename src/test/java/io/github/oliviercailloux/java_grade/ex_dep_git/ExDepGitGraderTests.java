@@ -21,8 +21,8 @@ import org.slf4j.LoggerFactory;
 
 import io.github.oliviercailloux.git.GitCloner;
 import io.github.oliviercailloux.git.GitUri;
-import io.github.oliviercailloux.git.fs.GitFileSystemProvider;
 import io.github.oliviercailloux.git.fs.GitFileSystem;
+import io.github.oliviercailloux.git.fs.GitFileSystemProvider;
 import io.github.oliviercailloux.grade.IGrade;
 import io.github.oliviercailloux.utils.Utils;
 
@@ -33,13 +33,12 @@ class ExDepGitGraderTests {
 
 	@Test
 	void testGradeBad() throws Exception {
-		final GitUri gitUri = GitUri
-				.fromUri(URI.create("https://github.com/oliviercailloux/google-or-tools-java.git"));
+		final GitUri gitUri = GitUri.fromUri(URI.create("https://github.com/oliviercailloux/google-or-tools-java.git"));
 		try (Repository repository = new InMemoryRepository(new DfsRepositoryDescription("myrepo"))) {
 			repository.create(true);
 			new GitCloner().clone(gitUri, repository);
 
-			try (GitFileSystem gitFs = new GitFileSystemProvider().newFileSystemFromRepository(repository)) {
+			try (GitFileSystem gitFs = GitFileSystemProvider.getInstance().newFileSystemFromRepository(repository)) {
 				final IGrade grade = new ExDepGitGraderSimpler().grade("me", gitFs, gitFs.getHistory());
 				assertEquals(0d, grade.getPoints());
 			}
@@ -48,8 +47,7 @@ class ExDepGitGraderTests {
 
 	@Test
 	void testGradeFull() throws Exception {
-		final GitUri gitUri = GitUri
-				.fromUri(URI.create("https://github.com/oliviercailloux/google-or-tools-java.git"));
+		final GitUri gitUri = GitUri.fromUri(URI.create("https://github.com/oliviercailloux/google-or-tools-java.git"));
 		/**
 		 * Too hard to do with the plumbing API: need to commit to change an existing
 		 * non-trivial commit; then merge it with another non-trivial commit. I think
@@ -81,7 +79,7 @@ class ExDepGitGraderTests {
 			}
 		}
 		try (Repository repository = new FileRepository(wT.resolve(".git").toString())) {
-			try (GitFileSystem gitFs = new GitFileSystemProvider().newFileSystemFromRepository(repository)) {
+			try (GitFileSystem gitFs = GitFileSystemProvider.getInstance().newFileSystemFromRepository(repository)) {
 				final IGrade grade = new ExDepGitGraderSimpler().grade("teststudent", gitFs, gitFs.getHistory());
 //				Files.writeString(Path.of("grade.json"),
 //						JsonbUtils.toJsonObject(grade, JsonGrade.asAdapter()).toString());
