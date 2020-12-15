@@ -1,39 +1,66 @@
 package io.github.oliviercailloux.git;
 
-import static com.google.common.base.Preconditions.checkArgument;
-
 import java.time.Instant;
 import java.util.Map;
 
 import org.eclipse.jgit.lib.ObjectId;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.graph.Graph;
 import com.google.common.graph.ImmutableGraph;
 
-public class GitHistory {
-	@SuppressWarnings("unused")
-	private static final Logger LOGGER = LoggerFactory.getLogger(GitHistory.class);
+/**
+ * A history of commits. It can use the author dates, the commit dates, or dates
+ * from any other source. It guarantees that every node in the graph has an
+ * associated date.
+ * <p>
+ * An alternative design would admit partial date information (some nodes being
+ * associated to no date). But this complicates use, and is really only useful,
+ * probably, for push dates coming from GitHub, which are incomplete. Better,
+ * for that specific use case, complete the information, as done in
+ * {@link GitHubHistory}.
+ */
+public interface GitHistory {
 
+	/**
+	 * @param graph
+	 * @param dates its keyset must contain all nodes of the graph.
+	 */
 	public static GitHistory create(Graph<ObjectId> graph, Map<ObjectId, Instant> dates) {
-		return new GitHistory(graph, dates);
+		return GitHistoryImpl.create(graph, dates);
 	}
 
-	private final ImmutableGraph<ObjectId> graph;
+	/**
+	 * @return the nodes of the {@link #getGraph() graph} that have no children (no
+	 *         predecessor); equivalently, the smallest set of nodes from which all
+	 *         nodes are reachable by following the “successors” (parent-of)
+	 *         relation.
+	 *
+	 * @return empty iff the graph is empty.
+	 */
+	public ImmutableSet<ObjectId> getLeaves();
 
-	private final ImmutableMap<ObjectId, Instant> dates;
+	/**
+	 * @throws IllegalArgumentException iff the given commit id is not a node of the
+	 *                                  {@link #getGraph() graph}.
+	 */
+	public Instant getCommitDate(ObjectId commitId);
 
-	private GitHistory(Graph<ObjectId> graph, Map<ObjectId, Instant> dates) {
-		this.graph = ImmutableGraph.copyOf(graph);
-		this.dates = ImmutableMap.copyOf(dates);
-	}
+	/**
+	 * @return a map whose key set equals the nodes of the {@link #getGraph() graph}
+	 */
+	public ImmutableMap<ObjectId, Instant> getCommitDates();
 
-	public ImmutableGraph<ObjectId> getGraph() {
-		return graph;
-	}
+	/**
+	 * Returns a graph representing the has-as-parent relation: the successors of a
+	 * node are its parents; following the successors (parent) relation goes back in
+	 * time; following the predecessors (child) relation goes back in time; a pair
+	 * (a, b) in the graph represents a child a and its parent b.
+	 *
+	 * @return a DAG (thus, irreflexive)
+	 */
+	public ImmutableGraph<ObjectId> getGraph();
 
 	/**
 	 * The parents to which everything points; the starting points in time of the
@@ -55,35 +82,6 @@ public class GitHistory {
 	 *
 	 * @return empty iff the graph is empty.
 	 */
-	public ImmutableSet<ObjectId> getRoots() {
-		/**
-		 * We could start from any given node and simply follow the successor
-		 * (has-as-parent) relation, but that finds only one root.
-		 */
-		final ImmutableSet<ObjectId> roots = getGraph().nodes().stream()
-				.filter((n) -> getGraph().successors(n).isEmpty()).collect(ImmutableSet.toImmutableSet());
-		return roots;
-	}
-
-	/**
-	 * @return the nodes with no children (no predecessor), from which the
-	 *         “successors” (parent-of) relation starts.
-	 *
-	 * @return empty iff the graph is empty.
-	 */
-	public ImmutableSet<ObjectId> getLeaves() {
-		final ImmutableSet<ObjectId> leaves = getGraph().nodes().stream()
-				.filter((n) -> getGraph().predecessors(n).isEmpty()).collect(ImmutableSet.toImmutableSet());
-		return leaves;
-	}
-
-	public Instant getCommitDate(ObjectId commitId) {
-		checkArgument(dates.containsKey(commitId));
-		return dates.get(commitId);
-	}
-
-	public ImmutableMap<ObjectId, Instant> getCommitDates() {
-		return dates;
-	}
+	public ImmutableSet<ObjectId> getRoots();
 
 }
