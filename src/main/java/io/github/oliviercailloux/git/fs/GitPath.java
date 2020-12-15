@@ -7,6 +7,9 @@ import static io.github.oliviercailloux.jaris.exceptions.Unchecker.URI_UNCHECKER
 
 import java.io.IOException;
 import java.net.URI;
+import java.nio.file.DirectoryIteratorException;
+import java.nio.file.DirectoryStream;
+import java.nio.file.DirectoryStream.Filter;
 import java.nio.file.FileSystem;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
@@ -17,15 +20,23 @@ import java.nio.file.WatchEvent.Modifier;
 import java.nio.file.WatchKey;
 import java.nio.file.WatchService;
 import java.util.Comparator;
+import java.util.Iterator;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Function;
 
 import org.eclipse.jgit.lib.FileMode;
 import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.lib.Ref;
+import org.eclipse.jgit.revwalk.RevTree;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.collect.PeekingIterator;
+
+import io.github.oliviercailloux.git.fs.GitFileSystem.TreeWalkDirectoryStream;
 
 /**
  * A git path has an optional root component and a (possibly empty) sequence of
@@ -185,6 +196,90 @@ public abstract class GitPath implements Path {
 
 		FileMode getFileMode() {
 			return fileMode;
+		}
+	}
+
+	private static class TransformedPeekingIterator implements PeekingIterator<GitPath> {
+		private PeekingIterator<String> delegate;
+		private final Function<String, GitPath> transform;
+
+		public TransformedPeekingIterator(PeekingIterator<String> delegate, Function<String, GitPath> transform) {
+			this.delegate = checkNotNull(delegate);
+			this.transform = checkNotNull(transform);
+		}
+
+		@Override
+		public boolean hasNext() {
+			return delegate.hasNext();
+		}
+
+		@Override
+		public GitPath peek() {
+			return transform.apply(delegate.peek());
+		}
+
+		@Override
+		public GitPath next() {
+			return transform.apply(delegate.next());
+		}
+
+		@Override
+		public void remove() {
+			delegate.remove();
+		}
+	}
+
+	private static class PathIterator implements PeekingIterator<GitPath> {
+		private final PeekingIterator<GitPath> unfilteredIterator;
+		private final Filter<? super GitPath> filter;
+		private GitPath next;
+
+		public PathIterator(PeekingIterator<GitPath> unfilteredIterator, Filter<? super GitPath> filter) {
+			this.unfilteredIterator = checkNotNull(unfilteredIterator);
+			this.filter = checkNotNull(filter);
+			next = null;
+		}
+
+		@Override
+		public GitPath peek() throws DirectoryIteratorException {
+			if (next == null) {
+				if (!hasNext()) {
+					throw new NoSuchElementException();
+				}
+			}
+			verify(hasNext());
+			verify(next != null);
+			return next;
+		}
+
+		@Override
+		public boolean hasNext() {
+			if (next != null) {
+				return true;
+			}
+			boolean accepted = false;
+			while (unfilteredIterator.hasNext() && !accepted) {
+				next = unfilteredIterator.next();
+				verify(next != null);
+				try {
+					accepted = filter.accept(next);
+				} catch (IOException e) {
+					throw new DirectoryIteratorException(e);
+				}
+			}
+			return accepted;
+		}
+
+		@Override
+		public GitPath next() {
+			final GitPath current = peek();
+			next = null;
+			return current;
+		}
+
+		@Override
+		public void remove() {
+			throw new UnsupportedOperationException();
 		}
 	}
 
@@ -568,8 +663,8 @@ public abstract class GitPath implements Path {
 		final String escapedDirAndFile = QueryUtils.QUERY_ENTRY_ESCAPER.escape(getInternalPath().toString());
 		final StringBuilder queryBuilder = new StringBuilder();
 		if (getRoot() != null) {
-			queryBuilder
-					.append(QUERY_PARAMETER_ROOT + "=" + QueryUtils.QUERY_ENTRY_ESCAPER.escape(getRoot().toString()));
+			queryBuilder.append(QUERY_PARAMETER_ROOT + "="
+					+ QueryUtils.QUERY_ENTRY_ESCAPER.escape(getRoot().toStaticRev().toString()));
 			queryBuilder.append("&" + QUERY_PARAMETER_INTERNAL_PATH + "=" + escapedDirAndFile);
 		} else {
 			if (!getInternalPath().toString().isEmpty()) {
@@ -678,13 +773,13 @@ public abstract class GitPath implements Path {
 			return false;
 		}
 		final GitPath p2 = (GitPath) o2;
-		return Objects.equals(toAbsolutePath().getRoot(), p2.toAbsolutePath().getRoot())
+		return Objects.equals(toAbsolutePath().getRoot().toStaticRev(), p2.toAbsolutePath().getRoot().toStaticRev())
 				&& getInternalPath().equals(p2.getInternalPath());
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(getFileSystem(), getRoot(), getInternalPath());
+		return Objects.hash(getFileSystem(), getRoot() == null ? null : getRoot().toStaticRev(), getInternalPath());
 	}
 
 	/**
@@ -698,8 +793,67 @@ public abstract class GitPath implements Path {
 	 */
 	@Override
 	public String toString() {
-		final String rootStr = getRoot() == null ? "" : getRoot().toString();
+		final String rootStr = getRoot() == null ? "" : getRoot().toStaticRev().toString();
 		return rootStr + getInternalPath().toString();
+	}
+
+	@SuppressWarnings("resource")
+	DirectoryStream<GitPath> newDirectoryStream(Filter<? super GitPath> filter) throws IOException {
+		/**
+		 * Note: this can’t be moved to GitAbsolutePath: a directory stream on a
+		 * relative path differs by resolving against a relative path.
+		 */
+		// TODO test directory stream.
+		final RevTree tree = toAbsolutePathAsAbsolutePath().getRevTree();
+		final TreeWalkDirectoryStream directoryStream = getFileSystem().iterate(tree);
+
+		final DirectoryStream<GitPath> toReturn = new DirectoryStream<>() {
+			@Override
+			public void close() throws IOException {
+				directoryStream.close();
+			}
+
+			/**
+			 * As requested per the contract of {@link DirectoryStream}, invoking the
+			 * iterator method to obtain a second or subsequent iterator throws
+			 * IllegalStateException.
+			 * <p>
+			 * An important property of the directory stream's Iterator is that its hasNext
+			 * method is guaranteed to read-ahead by at least one element. If hasNext method
+			 * returns true, and is followed by a call to the next method, it is guaranteed
+			 * that the next method will not throw an exception due to an I/O error, or
+			 * because the stream has been closed. The Iterator does not support the remove
+			 * operation.
+			 * <p>
+			 * Once a directory stream is closed, then further access to the directory,
+			 * using the Iterator, behaves as if the end of stream has been reached. Due to
+			 * read-ahead, the Iterator may return one or more elements after the directory
+			 * stream has been closed.
+			 * <p>
+			 * If an I/O error is encountered when accessing the directory then it causes
+			 * the Iterator's hasNext or next methods to throw DirectoryIteratorException
+			 * with the IOException as the cause. As stated above, the hasNext method is
+			 * guaranteed to read-ahead by at least one element. This means that if hasNext
+			 * method returns true, and is followed by a call to the next method, then it is
+			 * guaranteed that the next method will not fail with a
+			 * DirectoryIteratorException.
+			 */
+			@Override
+			public Iterator<GitPath> iterator() {
+				final PeekingIterator<String> namesIterator = directoryStream.iterator();
+				final TransformedPeekingIterator unfilteredPathIterator = new TransformedPeekingIterator(namesIterator,
+						s -> resolveRelativePath(s));
+				return new PathIterator(unfilteredPathIterator, filter);
+			}
+		};
+		getFileSystem().toClose(toReturn);
+		return toReturn;
+	}
+
+	GitPath resolveRelativePath(String directoryEntry) {
+		verify(!directoryEntry.isEmpty());
+		verify(!directoryEntry.startsWith("/"));
+		return resolve(directoryEntry);
 	}
 
 }

@@ -29,7 +29,6 @@ import org.eclipse.jgit.lib.ObjectId;
  * 40 (?) characters lower case number in hexadecimal form then "//".
  */
 class GitRev {
-	public static final GitRev DEFAULT = shortRef("refs/heads/main");
 	/**
 	 * Compares without access to the file system and including those roots that do
 	 * not exist in an underlying file system. This object does not implement
@@ -146,8 +145,8 @@ class GitRev {
 	/**
 	 * Must contain a ref.
 	 *
-	 * @return starts with "heads/", does not contain "//", does not contain "\",
-	 *         does not end with "/"
+	 * @return starts with <tt>refs/</tt>, does not contain <tt>//</tt>, does not
+	 *         contain <tt>\</tt>, does not end with <tt>/</tt>
 	 */
 	public String getGitRef() {
 		checkState(gitRef != null);

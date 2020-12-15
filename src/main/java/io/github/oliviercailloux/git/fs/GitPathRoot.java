@@ -6,16 +6,22 @@ import static com.google.common.base.Verify.verify;
 import java.io.IOException;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
+import java.time.ZonedDateTime;
+import java.util.Date;
 import java.util.Optional;
+import java.util.TimeZone;
 
 import org.eclipse.jgit.errors.IncorrectObjectTypeException;
 import org.eclipse.jgit.errors.MissingObjectException;
 import org.eclipse.jgit.lib.FileMode;
 import org.eclipse.jgit.lib.ObjectId;
+import org.eclipse.jgit.lib.PersonIdent;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.revwalk.RevTree;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.collect.ImmutableList;
 
 /**
  * A git path root is an absolute git path that has an empty sequence of names.
@@ -25,8 +31,18 @@ import org.slf4j.LoggerFactory;
  * @see GitPath
  */
 public class GitPathRoot extends GitAbsolutePath {
+	public static final GitRev DEFAULT_GIT_REF = GitRev.shortRef("refs/heads/main");
+
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(GitPathRoot.class);
+
+	private static ZonedDateTime getCreationTime(PersonIdent ident) {
+		final Date creationInstant = ident.getWhen();
+		final TimeZone creationZone = ident.getTimeZone();
+		final ZonedDateTime creationTime = ZonedDateTime.ofInstant(creationInstant.toInstant(),
+				creationZone.toZoneId());
+		return creationTime;
+	}
 
 	private final GitFileSystem fileSystem;
 
@@ -101,7 +117,7 @@ public class GitPathRoot extends GitAbsolutePath {
 
 	/**
 	 * Returns the git ref contained in this root component, if any. The returned
-	 * string starts with <tt>heads/</tt>, does not contain <tt>//</tt>, does not
+	 * string starts with <tt>refs/</tt>, does not contain <tt>//</tt>, does not
 	 * contain <tt>\</tt>, and does not end with <tt>/</tt>.
 	 * <p>
 	 * This method does not access the file system.
@@ -221,7 +237,7 @@ public class GitPathRoot extends GitAbsolutePath {
 	 * @throws IOException
 	 * @throws NoSuchFileException
 	 */
-	public RevCommit getCommit() throws IOException, NoSuchFileException {
+	public Commit getCommit() throws IOException, NoSuchFileException {
 		/**
 		 * I considered using dynamic fetching in the returned object: if the user only
 		 * wants the commit id, we don’t need to parse the commit, thus, we could parse
@@ -233,16 +249,16 @@ public class GitPathRoot extends GitAbsolutePath {
 		 * (part of) the history, and this requires accessing the parent-of relation,
 		 * which requires parsing the commit.
 		 */
-		return getRevCommit();
+		final RevCommit revCommit = getRevCommit();
+		final PersonIdent authorIdent = revCommit.getAuthorIdent();
+		final PersonIdent committerIdent = revCommit.getCommitterIdent();
+		return Commit.create(revCommit, authorIdent.getName(), authorIdent.getEmailAddress(),
+				getCreationTime(authorIdent), committerIdent.getName(), committerIdent.getEmailAddress(),
+				getCreationTime(committerIdent), ImmutableList.copyOf(revCommit.getParents()));
 	}
 
 	@Override
 	GitObject getGitObject() throws NoSuchFileException, IOException {
-		return new GitObject(getRevCommit(), FileMode.TREE);
-	}
-
-	@Override
-	public String toString() {
-		return gitRev.toString();
+		return new GitObject(getRevTree(), FileMode.TREE);
 	}
 }

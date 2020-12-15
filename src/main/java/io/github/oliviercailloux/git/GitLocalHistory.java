@@ -20,7 +20,7 @@ import com.google.common.graph.ImmutableGraph;
 
 import io.github.oliviercailloux.utils.Utils;
 
-public class GitLocalHistory extends GitRawHistoryDecorator<RevCommit> implements GitHistory<RevCommit> {
+public class GitLocalHistory extends GitRawHistoryDecorator<RevCommit> implements GitCurrentHistory<RevCommit> {
 	public static GitLocalHistory from(Iterable<RevCommit> commits) {
 		final Graph<RevCommit> graph = Utils.asGraph((c) -> Arrays.asList(c.getParents()),
 				ImmutableSet.copyOf(commits));

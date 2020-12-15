@@ -6,6 +6,9 @@ import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.util.List;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
  * A git path with no root component and a non-empty sequence of names.
  * <p>
@@ -16,6 +19,8 @@ import java.util.List;
  * instead of relative.
  */
 abstract class GitRelativePath extends GitPath {
+	@SuppressWarnings("unused")
+	private static final Logger LOGGER = LoggerFactory.getLogger(GitRelativePath.class);
 
 	private static Path toJimFsRelativePath(List<String> names) throws InvalidPathException {
 		/**

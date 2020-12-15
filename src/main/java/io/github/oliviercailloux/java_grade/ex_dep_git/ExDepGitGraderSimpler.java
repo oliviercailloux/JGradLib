@@ -207,7 +207,7 @@ public class ExDepGitGraderSimpler {
 				final boolean childOfStarting = closure.hasEdgeConnecting(commit, COMMIT_STARTING);
 				final boolean parentOfMyBranch;
 				if (myBranchPathRoot.exists()) {
-					parentOfMyBranch = closure.hasEdgeConnecting(myBranchPathRoot.getCommit(), commit);
+					parentOfMyBranch = closure.hasEdgeConnecting(myBranchPathRoot.getCommit().getId(), commit);
 				} else {
 					parentOfMyBranch = false;
 				}

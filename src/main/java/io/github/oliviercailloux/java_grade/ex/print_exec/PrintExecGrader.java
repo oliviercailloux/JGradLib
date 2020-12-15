@@ -182,7 +182,7 @@ public class PrintExecGrader {
 
 		final ImmutableSet<RevCommit> tips = fs.getCachedHistory().getTips();
 		final GitPathRoot master = fs.getRelativePath().toAbsolutePath().getRoot();
-		final ObjectId masterId = master.getCommit();
+		final ObjectId masterId = master.getCommit().getId();
 		final ImmutableSet<RevCommit> bestTips = MarkHelper.findBestMatches(tips,
 				ImmutableList.of(o -> o.equals(masterId), o -> true));
 		checkState(bestTips.size() == 1);

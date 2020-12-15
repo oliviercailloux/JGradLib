@@ -34,7 +34,7 @@ public class GitPathInternalTests {
 
 	@Test
 	void testBasics() throws Exception {
-		final GitRev main = GitRev.DEFAULT;
+		final GitRev main = GitPathRoot.DEFAULT_GIT_REF;
 		assertThrows(IllegalArgumentException.class, () -> getGitPath(main, ""));
 		assertThrows(IllegalArgumentException.class, () -> getGitPath(main, "ploum"));
 		assertThrows(IllegalArgumentException.class, () -> getGitPath(null, "/"));

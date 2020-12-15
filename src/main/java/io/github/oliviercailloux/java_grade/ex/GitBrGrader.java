@@ -321,7 +321,7 @@ public class GitBrGrader {
 		if (!root.exists()) {
 			return Optional.empty();
 		}
-		return Optional.of(root.getCommit());
+		return Optional.of(root.getCommit().getId());
 	}
 
 	private IGrade getAContentGrade(GitFileSystem fs, Optional<ObjectId> commit) {

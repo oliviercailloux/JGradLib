@@ -134,13 +134,13 @@ class GitFileSystemCreationAndUriTests {
 					gitFs.getAbsolutePath(ObjectId.zeroId(), "/dir/sub").toUri().toString());
 
 			assertEquals(uriBasis + "?root=/refs/heads/main/&internal-path=/",
-					gitFs.getAbsolutePath("/refs/heads/main").toUri().toString());
+					gitFs.getAbsolutePath("/refs/heads/main/").toUri().toString());
 			assertEquals(uriBasis + "?root=/refs/heads/main/&internal-path=/",
-					gitFs.getAbsolutePath("/refs/heads/main", "/").toUri().toString());
+					gitFs.getAbsolutePath("/refs/heads/main/", "/").toUri().toString());
 			assertEquals(uriBasis + "?root=/refs/heads/main/&internal-path=/dir/sub",
-					gitFs.getAbsolutePath("/refs/heads/main", "/dir/sub").toUri().toString());
+					gitFs.getAbsolutePath("/refs/heads/main/", "/dir/sub").toUri().toString());
 			assertEquals(uriBasis + "?root=/refs/tags/and%26equals%3Dquestion?/&internal-path=/",
-					gitFs.getAbsolutePath("/refs/tags/and&equals=question?").toUri().toString());
+					gitFs.getAbsolutePath("/refs/tags/and&equals=question?/").toUri().toString());
 		}
 	}
 }

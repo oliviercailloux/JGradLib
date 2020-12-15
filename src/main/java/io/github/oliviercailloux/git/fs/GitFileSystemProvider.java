@@ -506,8 +506,7 @@ public class GitFileSystemProvider extends FileSystemProvider {
 	public DirectoryStream<Path> newDirectoryStream(Path dir, Filter<? super Path> filter) throws IOException {
 		checkArgument(dir instanceof GitPath);
 		final GitPath gitPath = (GitPath) dir;
-		final DirectoryStream<GitPath> newDirectoryStream = gitPath.toAbsolutePathAsAbsolutePath()
-				.newDirectoryStream(filter);
+		final DirectoryStream<GitPath> newDirectoryStream = gitPath.newDirectoryStream(filter);
 		return new DirectoryStream<>() {
 
 			@Override
@@ -595,7 +594,7 @@ public class GitFileSystemProvider extends FileSystemProvider {
 			throw new UnsupportedOperationException();
 		}
 
-		final GitObject gitObject = gitPath.toAbsolutePath().getRoot().getGitObject();
+		final GitObject gitObject = gitPath.toAbsolutePathAsAbsolutePath().getGitObject();
 
 		if (modesList.contains(AccessMode.EXECUTE)) {
 			if (!Objects.equals(gitObject.getFileMode(), FileMode.EXECUTABLE_FILE)) {

@@ -29,7 +29,7 @@ import com.google.common.graph.GraphBuilder;
 import com.google.common.graph.Graphs;
 import com.google.common.graph.ImmutableGraph;
 
-import io.github.oliviercailloux.git.GitHistory;
+import io.github.oliviercailloux.git.GitCurrentHistory;
 import io.github.oliviercailloux.git.GitRawHistoryDecorator;
 
 /**
@@ -65,7 +65,7 @@ import io.github.oliviercailloux.git.GitRawHistoryDecorator;
  * @author Olivier Cailloux
  *
  */
-public class GitHubHistory extends GitRawHistoryDecorator<ObjectId> implements GitHistory<ObjectId> {
+public class GitHubHistory extends GitRawHistoryDecorator<ObjectId> implements GitCurrentHistory<ObjectId> {
 
 	public static GitHubHistory given(Graph<ObjectId> history, Map<ObjectId, Instant> commitDates,
 			Map<ObjectId, Instant> pushedDates) {

@@ -23,6 +23,7 @@ import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
 
 import io.github.oliviercailloux.git.JGit;
 
@@ -37,8 +38,8 @@ public class GitReadTests {
 			final ImmutableList<ObjectId> commits = JGit.createRepoWithSubDir(repo);
 			try (GitFileSystem gitFs = GitFileSystemProvider.getInstance().newFileSystemFromDfsRepository(repo)) {
 				assertEquals("Hello, world", Files.readString(gitFs.getRelativePath("file1.txt")));
-				assertEquals("Hello, world", Files.readString(gitFs.getRelativePath("./file1.txt")));
-				assertEquals("Hello, world", Files.readString(gitFs.getRelativePath(".", "dir", "..", "/file1.txt")));
+//				assertEquals("Hello, world", Files.readString(gitFs.getRelativePath("./file1.txt")));TODO
+//				assertEquals("Hello, world", Files.readString(gitFs.getRelativePath(".", "dir", "..", "/file1.txt")));
 				assertEquals("Hello from sub dir", Files.readString(gitFs.getRelativePath("dir", "file.txt")));
 				assertEquals("Hello, world", Files.readString(gitFs.getRelativePath("file1.txt").toAbsolutePath()));
 				assertThrows(NoSuchFileException.class,
@@ -101,7 +102,19 @@ public class GitReadTests {
 		}
 	}
 
-//	@Test
+	@Test
+	void testAttributes() throws Exception {
+		try (DfsRepository repo = new InMemoryRepository(new DfsRepositoryDescription("myrepo"))) {
+			final ImmutableList<ObjectId> commits = JGit.createRepoWithSubDir(repo);
+			try (GitFileSystem gitFs = GitFileSystemProvider.getInstance().newFileSystemFromDfsRepository(repo)) {
+				assertThrows(NoSuchFileException.class,
+						() -> ((GitAbsolutePath) gitFs.getAbsolutePath(commits.get(0), "/ploum.txt"))
+								.readAttributes(ImmutableSet.of()));
+			}
+		}
+	}
+
+	// @Test
 	void testRealPath() throws Exception {
 		try (DfsRepository repo = new InMemoryRepository(new DfsRepositoryDescription("myrepo"))) {
 			final ImmutableList<ObjectId> commits = JGit.createRepoWithSubDir(repo);
@@ -180,7 +193,19 @@ public class GitReadTests {
 				final ImmutableSet<RevCommit> commitsOrdered = gitFs.getHistory().getCommitDates().keySet();
 				final ImmutableSet<GitPath> commitPaths = commitsOrdered.stream().map((c) -> gitFs.getAbsolutePath(c))
 						.collect(ImmutableSet.toImmutableSet());
-				assertEquals(commitPaths, gitFs.getGitRootDirectories());
+				assertEquals(commitPaths, gitFs.getCommits());
+			}
+		}
+	}
+
+	@Test
+	void testRefs() throws Exception {
+		try (DfsRepository repo = new InMemoryRepository(new DfsRepositoryDescription("myrepo"))) {
+			JGit.createBasicRepo(repo);
+			try (GitFileSystem gitFs = GitFileSystemProvider.getInstance().newFileSystemFromDfsRepository(repo)) {
+				final ImmutableSet<GitPathRoot> refPaths = gitFs.getRefs();
+				assertEquals(1, refPaths.size());
+				assertEquals("refs/heads/main", Iterables.getOnlyElement(refPaths).getGitRef());
 			}
 		}
 	}
@@ -233,9 +258,16 @@ public class GitReadTests {
 			try (GitFileSystem gitFs = GitFileSystemProvider.getInstance().newFileSystemFromDfsRepository(repo)) {
 				final ImmutableSet<GitPath> subEntries = ImmutableSet.of(gitFs.getRelativePath("dir"),
 						gitFs.getRelativePath("file1.txt"), gitFs.getRelativePath("file2.txt"));
-				assertEquals(subEntries, ImmutableSet
-						.copyOf(gitFs.getRelativePath().toAbsolutePathAsAbsolutePath().newDirectoryStream(p -> true)));
+				final ImmutableSet<GitPath> subEntriesAbsolute = ImmutableSet.of(
+						gitFs.getRelativePath("dir").toAbsolutePath(),
+						gitFs.getRelativePath("file1.txt").toAbsolutePath(),
+						gitFs.getRelativePath("file2.txt").toAbsolutePath());
+				assertEquals(subEntries, ImmutableSet.copyOf(gitFs.getRelativePath().newDirectoryStream(p -> true)));
 				assertEquals(subEntries, Files.list(gitFs.getRelativePath()).collect(ImmutableSet.toImmutableSet()));
+				assertEquals(subEntriesAbsolute,
+						ImmutableSet.copyOf(gitFs.getRelativePath().toAbsolutePath().newDirectoryStream(p -> true)));
+				assertEquals(subEntriesAbsolute,
+						Files.list(gitFs.getRelativePath().toAbsolutePath()).collect(ImmutableSet.toImmutableSet()));
 			}
 		}
 	}

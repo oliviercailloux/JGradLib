@@ -83,6 +83,11 @@ public class DefaultFsTests {
 		}
 
 		try (FileSystem jimFs = Jimfs.newFileSystem(Configuration.unix())) {
+			assertEquals("a/a/a", jimFs.getPath("a", "/", "/", "a", "//a").toString());
+			assertEquals("/b", jimFs.getPath("a").resolve("//b").toString());
+		}
+
+		try (FileSystem jimFs = Jimfs.newFileSystem(Configuration.unix())) {
 			final Path root = jimFs.getPath("/");
 			assertEquals("/", root.toString());
 			assertEquals(0, root.getNameCount());

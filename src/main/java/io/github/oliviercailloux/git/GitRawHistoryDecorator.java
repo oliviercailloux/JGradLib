@@ -24,7 +24,7 @@ import com.google.common.graph.MutableGraph;
 
 import io.github.oliviercailloux.utils.Utils;
 
-public class GitRawHistoryDecorator<E extends ObjectId> implements GitHistory<E> {
+public class GitRawHistoryDecorator<E extends ObjectId> implements GitCurrentHistory<E> {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(GitRawHistoryDecorator.class);
 
@@ -129,7 +129,7 @@ public class GitRawHistoryDecorator<E extends ObjectId> implements GitHistory<E>
 
 	}
 
-	public static <E extends ObjectId> GitHistory<E> wrap(GitRawHistory<E> raw) {
+	public static <E extends ObjectId> GitCurrentHistory<E> wrap(GitRawHistory<E> raw) {
 		return new GitRawHistoryDecorator<>(raw);
 	}
 
@@ -192,17 +192,17 @@ public class GitRawHistoryDecorator<E extends ObjectId> implements GitHistory<E>
 		return raw.getCommitDates();
 	}
 
-	public GitHistory<E> filter(Predicate<E> predicate) {
+	public GitCurrentHistory<E> filter(Predicate<E> predicate) {
 		return wrap(filter(raw, predicate));
 	}
 
 	@Override
 	public boolean equals(Object o2) {
-		if (!(o2 instanceof GitHistory<?>)) {
+		if (!(o2 instanceof GitCurrentHistory<?>)) {
 			return false;
 		}
 
-		final GitHistory<?> h2 = (GitHistory<?>) o2;
+		final GitCurrentHistory<?> h2 = (GitCurrentHistory<?>) o2;
 		return getGraph().equals(h2.getGraph()) && getCommitDates().equals(h2.getCommitDates());
 	}
 

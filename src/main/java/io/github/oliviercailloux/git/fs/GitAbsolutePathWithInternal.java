@@ -64,12 +64,16 @@ class GitAbsolutePathWithInternal extends GitAbsolutePath {
 
 	@Override
 	GitRelativePathWithInternal toRelativePath() {
-		return new GitRelativePathWithInternal(this);
+		if (root.toStaticRev().equals(GitPathRoot.DEFAULT_GIT_REF)) {
+			return new GitRelativePathWithInternal(this);
+		}
+		return new GitRelativePathWithInternal(
+				new GitAbsolutePathWithInternal(getFileSystem().mainSlash, getInternalPath()));
 	}
 
 	@Override
 	GitObject getGitObject() throws NoSuchFileException, IOException {
-		final String relative = toRelativePath().getInternalPath().toString();
+		final String relative = GitFileSystem.JIM_FS_SLASH.relativize(getInternalPath()).toString();
 		final RevTree tree = getRoot().getRevTree();
 		LOGGER.debug("Searching for {} in {}.", relative, tree);
 		final GitObject gitObject;

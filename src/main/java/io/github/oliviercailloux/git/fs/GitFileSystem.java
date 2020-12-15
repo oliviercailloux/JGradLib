@@ -4,9 +4,9 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.base.Verify.verify;
 import static com.google.common.base.Verify.verifyNotNull;
-import static io.github.oliviercailloux.jaris.exceptions.Unchecker.IO_UNCHECKER;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.net.URI;
 import java.nio.file.ClosedFileSystemException;
 import java.nio.file.DirectoryIteratorException;
@@ -20,7 +20,6 @@ import java.nio.file.PathMatcher;
 import java.nio.file.WatchService;
 import java.nio.file.attribute.UserPrincipalLookupService;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -46,9 +45,8 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.base.VerifyException;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSortedSet;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.PeekingIterator;
-import com.google.common.graph.ImmutableGraph;
 import com.google.common.jimfs.Configuration;
 import com.google.common.jimfs.Jimfs;
 
@@ -202,7 +200,8 @@ public abstract class GitFileSystem extends FileSystem {
 	 * problems, but as it seems logically better to have these references here
 	 * anyway, I did not investigate).
 	 */
-	static final FileSystem JIM_FS = Jimfs.newFileSystem(Configuration.unix());
+	static final FileSystem JIM_FS = Jimfs
+			.newFileSystem(Configuration.unix().toBuilder().setWorkingDirectory("/").build());
 
 	static final Path JIM_FS_EMPTY = JIM_FS.getPath("");
 
@@ -218,7 +217,7 @@ public abstract class GitFileSystem extends FileSystem {
 
 	private final Set<DirectoryStream<GitPath>> toClose;
 
-	final GitPathRoot mainSlash = new GitPathRoot(this, GitRev.DEFAULT);
+	final GitPathRoot mainSlash = new GitPathRoot(this, GitPathRoot.DEFAULT_GIT_REF);
 	final GitEmptyPath emptyPath = new GitEmptyPath(mainSlash);
 
 	/**
@@ -303,11 +302,13 @@ public abstract class GitFileSystem extends FileSystem {
 	public GitPath getPath(String first, String... more) {
 		final ImmutableList<String> allNames = Stream.concat(Stream.of(first), Stream.of(more))
 				.collect(ImmutableList.toImmutableList());
+
 		final boolean startsWithSlash = allNames.stream().filter(n -> !n.isEmpty()).findFirst()
 				.map(s -> s.startsWith("/")).orElse(false);
 		if (startsWithSlash) {
 			return getAbsolutePath(first, more);
 		}
+
 		return GitRelativePath.relative(this, allNames);
 	}
 
@@ -364,7 +365,9 @@ public abstract class GitFileSystem extends FileSystem {
 		} else {
 			rootStringForm = first;
 			final List<String> givenMore = new ArrayList<>(ImmutableList.copyOf(more));
-			if (!givenMore.isEmpty() && !givenMore.get(0).startsWith("/")) {
+			if (givenMore.isEmpty()) {
+				givenMore.add("/");
+			} else if (!givenMore.get(0).startsWith("/")) {
 				givenMore.set(0, "/" + givenMore.get(0));
 			}
 			internalPath = ImmutableList.copyOf(givenMore);
@@ -385,7 +388,9 @@ public abstract class GitFileSystem extends FileSystem {
 	 */
 	public GitPath getAbsolutePath(ObjectId commitId, String... internalPath) {
 		final List<String> givenMore = new ArrayList<>(ImmutableList.copyOf(internalPath));
-		if (!givenMore.isEmpty() && !givenMore.get(0).startsWith("/")) {
+		if (givenMore.isEmpty()) {
+			givenMore.add("/");
+		} else if (!givenMore.get(0).startsWith("/")) {
 			givenMore.set(0, "/" + givenMore.get(0));
 		}
 		return GitAbsolutePath.givenRoot(new GitPathRoot(this, GitRev.commitId(commitId)), givenMore);
@@ -465,41 +470,80 @@ public abstract class GitFileSystem extends FileSystem {
 		throw new UnsupportedOperationException();
 	}
 
+	/**
+	 * Retrieve the set of all commits of this repository. Consider calling rather
+	 * {@link #getGitRootDirectories()}, whose type is more precise.
+	 *
+	 * @return absolute path roots referring to commit ids.
+	 * @throws UncheckedIOException if an I/O error occurs (I have no idea why the
+	 *                              Java Files API does not want an IOException
+	 *                              here)
+	 */
 	@Override
-	public ImmutableSortedSet<Path> getRootDirectories() {
-		if (!isOpen) {
-			throw new ClosedFileSystemException();
-		}
-
-		IO_UNCHECKER.call(() -> getHistory());
-
-		final Comparator<Path> compareWithoutTies = Comparator.comparing((p) -> ((GitPath) p),
-				getPathLexicographicTemporalComparator());
-		return ImmutableSortedSet.copyOf(compareWithoutTies,
-				getCachedHistory().getGraph().nodes().stream().map(this::getAbsolutePath).iterator());
+	public ImmutableSet<Path> getRootDirectories() throws UncheckedIOException {
+		final ImmutableSet<ObjectId> allCommits = getAllCommits();
+		final ImmutableSet<Path> paths = allCommits.stream().map(this::getPathRoot)
+				.collect(ImmutableSet.toImmutableSet());
+		return paths;
 	}
 
 	/**
-	 * Retrieve the set of all commits of this repository. This is equivalent to
-	 * calling {@link #getRootDirectories()}, but with a more precise type. Each git
-	 * path in the returned set consists in only a root component, and this root
-	 * component is a commit id.
+	 * Retrieve the set of all commits of this repository reachable from some ref.
+	 * This is equivalent to calling {@link #getRootDirectories()}, but with a more
+	 * precise type.
 	 *
-	 * @return absolute paths whose root components are commit ids, ordered with
-	 *         earlier commits coming first.
+	 * @return absolute path roots, all referring to commit ids (no ref).
+	 * @throws UncheckedIOException if an I/O error occurs (using an Unchecked
+	 *                              variant to mimic the behavior of
+	 *                              {@link #getRootDirectories()})
 	 */
-	public ImmutableSortedSet<GitPath> getGitRootDirectories() {
+	public ImmutableSet<GitPathRoot> getCommits() throws UncheckedIOException {
+		final ImmutableSet<ObjectId> allCommits = getAllCommits();
+		final ImmutableSet<GitPathRoot> paths = allCommits.stream().map(this::getPathRoot)
+				.collect(ImmutableSet.toImmutableSet());
+		return paths;
+	}
+
+	/**
+	 * Returns a set containing one git path root for each git ref (of the form
+	 * <tt>/refs/…</tt>) contained in this git file system. This does not consider
+	 * HEAD or other special references, but considers both branches and tags.
+	 *
+	 * @return git path roots referencing git refs (not commit ids).
+	 *
+	 * @throws IOException if an I/O error occurs
+	 */
+	public ImmutableSet<GitPathRoot> getRefs() throws IOException {
 		if (!isOpen) {
 			throw new ClosedFileSystemException();
 		}
 
-		IO_UNCHECKER.call(() -> getHistory());
+		final List<Ref> refs = repository.getRefDatabase().getRefsByPrefix(Constants.R_REFS);
+		return refs.stream().map(r -> getPathRoot("/" + r.getName() + "/")).collect(ImmutableSet.toImmutableSet());
+	}
 
-		final Comparator<GitPath> compareWithoutTies = getPathLexicographicTemporalComparator();
+	private ImmutableSet<ObjectId> getAllCommits() throws UncheckedIOException {
+		if (!isOpen) {
+			throw new ClosedFileSystemException();
+		}
 
-		/** Important to compare without ties, otherwise some commits get collapsed. */
-		return ImmutableSortedSet.copyOf(compareWithoutTies,
-				getCachedHistory().getGraph().nodes().stream().map((c) -> getAbsolutePath(c)).iterator());
+		final ImmutableSet<ObjectId> allCommits;
+		try (RevWalk walk = new RevWalk(reader)) {
+			/**
+			 * Not easy to get really all commits, so we are content with returning only the
+			 * ones reachable from some ref: this is the normal behavior of git, it seems
+			 * (https://stackoverflow.com/questions/4786972).
+			 */
+			final List<Ref> refs = repository.getRefDatabase().getRefsByPrefix(Constants.R_REFS);
+			walk.setRetainBody(false);
+			for (Ref ref : refs) {
+				walk.markStart(walk.parseCommit(ref.getLeaf().getObjectId()));
+			}
+			allCommits = ImmutableSet.copyOf(walk);
+		} catch (IOException e) {
+			throw new UncheckedIOException(e);
+		}
+		return allCommits;
 	}
 
 	public GitLocalHistory getHistory() throws IOException {
@@ -507,34 +551,6 @@ public abstract class GitFileSystem extends FileSystem {
 			history = GitUtils.getHistory(repository);
 		}
 		return history;
-	}
-
-	Comparator<ObjectId> getLexicographicTemporalComparator() {
-		getCachedHistory();
-		final Comparator<ObjectId> comparingDates = Comparator.comparing(o -> history.getCommitDateById(o));
-		final Comparator<ObjectId> compareWithoutTies = comparingDates.thenComparing((c1, c2) -> {
-			final ImmutableGraph<RevCommit> graph = history.getTransitivelyClosedGraph();
-			if (graph.hasEdgeConnecting(history.getCommit(c2), history.getCommit(c1))) {
-				/** c1 < c2 */
-				return -1;
-			}
-			if (graph.hasEdgeConnecting(history.getCommit(c1), history.getCommit(c2))) {
-				/** c1 child-of c2 thus c1 comes after (is greater than) c2 temporally. */
-				return 1;
-			}
-			return 0;
-		}).thenComparing(Comparator.comparing(ObjectId::getName));
-		return compareWithoutTies;
-	}
-
-	/**
-	 * Paths must have a root in the form of a sha1.
-	 */
-	private Comparator<GitPath> getPathLexicographicTemporalComparator() {
-		final Comparator<ObjectId> compareWithoutTies = getLexicographicTemporalComparator();
-		return Comparator.comparing(
-				(GitPath p) -> IO_UNCHECKER.getUsing(() -> p.toAbsolutePath().getRoot().getCommit()),
-				compareWithoutTies);
 	}
 
 	@Override
@@ -603,7 +619,8 @@ public abstract class GitFileSystem extends FileSystem {
 
 		final ObjectLoader fileLoader = reader.open(gitObject.getObjectId());
 		verify(fileLoader.getType() == gitObject.getFileMode().getObjectType(),
-				"Expected " + gitObject.getFileMode() + " but loaded " + fileLoader.getType());
+				String.format("Expected file mode %s and object type %s but loaded object type %s",
+						gitObject.getFileMode(), gitObject.getFileMode().getObjectType(), fileLoader.getType()));
 		return fileLoader.getSize();
 	}
 

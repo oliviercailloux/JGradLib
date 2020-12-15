@@ -15,7 +15,7 @@ class GitEmptyPath extends GitRelativePath {
 
 	GitEmptyPath(GitPathRoot absoluteEquivalent) {
 		this.absoluteEquivalent = checkNotNull(absoluteEquivalent);
-		checkArgument(absoluteEquivalent.getRoot().toStaticRev().equals(GitRev.DEFAULT));
+		checkArgument(absoluteEquivalent.getRoot().toStaticRev().equals(GitPathRoot.DEFAULT_GIT_REF));
 	}
 
 	/**

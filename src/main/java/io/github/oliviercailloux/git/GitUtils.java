@@ -33,16 +33,6 @@ public class GitUtils {
 		final ZonedDateTime authorCreationTime = getCreationTime(authorIdent);
 		final PersonIdent committerIdent = commit.getCommitterIdent();
 		final ZonedDateTime committerCreationTime = getCreationTime(committerIdent);
-		/**
-		 * Authoring comes logically before committing, but because the dates are set by
-		 * the client, manual tampering (or incorrect clock) may cause author time to be
-		 * after committer time. This is rare in practice, but happens. For example, see
-		 * <a href=
-		 * "https://api.github.com/repos/checkstyle/checkstyle/commits/812b3416dcda571de5e6f7abd9d4e4c68c4dcdcf">this
-		 * commit</a> in the checkstyle project, authored at "2017-07-09T05:01:28Z" but
-		 * committed (by someone else) at "2017-07-09T04:42:52Z", twenty minutes
-		 * earlier!
-		 */
 		checkArgument(!authorCreationTime.isAfter(committerCreationTime),
 				String.format("Author %s, creation time: %s, committer %s, creation time: %s", authorIdent.getName(),
 						authorCreationTime, committerIdent.getName(), committerCreationTime));

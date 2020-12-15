@@ -111,7 +111,7 @@ public class GitBrGraderTests {
 		}
 		try (Repository repository = new FileRepository(wT.resolve(".git").toString())) {
 			try (GitFileSystem gitFs = GitFileSystemProvider.getInstance().newFileSystemFromRepository(repository)) {
-				final ObjectId br1 = gitFs.getAbsolutePath("br1").getRoot().getCommit();
+				final ObjectId br1 = gitFs.getAbsolutePath("br1").getRoot().getCommit().getId();
 				assertEquals(commitA, br1);
 
 				final GitBrGrader grader = new GitBrGrader();

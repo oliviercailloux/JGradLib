@@ -129,7 +129,7 @@ public class CoffeeGrader {
 		if (!gitSourcePath.getRoot().exists()) {
 			return Mark.zero("Found no master commit.");
 		}
-		final ObjectId masterId = gitSourcePath.getRoot().getCommit();
+		final ObjectId masterId = gitSourcePath.getRoot().getCommit().getId();
 		final Instant commitDate = gitHubHistory.getCommitDate(masterId);
 		if (commitDate.isAfter(DEADLINE)) {
 			LOGGER.warn("Should diminish the grade!");
