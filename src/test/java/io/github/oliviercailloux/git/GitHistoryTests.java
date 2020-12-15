@@ -61,7 +61,7 @@ class GitHistoryTests {
 			final GitRaw raw = new GitRaw(graph);
 			basic = new GitLocalHistory(raw);
 			for (RevCommit c : basic.getGraph().nodes()) {
-				LOGGER.info("Creation time: {}.", GitUtils.getCreationTime(c));
+				LOGGER.debug("Creation time: {}.", GitUtils.getCreationTime(c));
 			}
 			LOGGER.info("Pred 90: {}.", raw.getGraph()
 					.predecessors(basic.getCommit(ObjectId.fromString("909320dd00b118fe2a3a3362bb37a8806c7a367c"))));
