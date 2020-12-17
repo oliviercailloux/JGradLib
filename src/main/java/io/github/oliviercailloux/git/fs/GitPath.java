@@ -301,25 +301,6 @@ public abstract class GitPath implements Path {
 	}
 
 	/**
-	 * A quick way to create a copy of a path pointing at another internal path.
-	 * This method, contrary to the other methods in this class, accepts a root with
-	 * a relative internal path.
-	 *
-	 * @param root         if internalPath is relative, must be the default root
-	 *                     (and then only its file system is used)
-	 * @param internalPath the new internal path.
-	 * @deprecated Try to use {@link #withPath(Path)}
-	 */
-	@Deprecated
-	static GitPath given(GitPathRoot root, Path internalPath) {
-		if (internalPath.isAbsolute()) {
-			return GitAbsolutePath.givenRoot(root, internalPath);
-		}
-		verify(root.equals(root.getFileSystem().mainSlash));
-		return GitRelativePath.relative(root.getFileSystem(), internalPath);
-	}
-
-	/**
 	 * Returns a path associated to the same git file system as this path, and to
 	 * the same root as this path, if any; but referring to the given path.
 	 *
@@ -366,7 +347,7 @@ public abstract class GitPath implements Path {
 
 	/**
 	 * Equivalent to relativizing against this path’s root if it has one, or
-	 * returning itself otherwise. But permits optimization by returning less new
+	 * returning itself otherwise. But permits optimization by returning fewer new
 	 * objects.
 	 */
 	abstract GitRelativePath toRelativePath();
