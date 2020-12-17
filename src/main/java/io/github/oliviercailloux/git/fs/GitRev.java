@@ -121,7 +121,7 @@ class GitRev {
 			assert gitRef != null;
 			checkArgument(gitRef.startsWith("refs/"));
 			checkArgument(!gitRef.endsWith("/"));
-			checkArgument(!gitRef.contains("//"));
+			checkArgument(!gitRef.contains("//"), "May not contain '//': " + gitRef);
 			checkArgument(!gitRef.contains("\\"));
 		}
 		this.gitRef = gitRef;

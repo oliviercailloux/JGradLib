@@ -21,8 +21,6 @@ import org.eclipse.jgit.revwalk.RevTree;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.collect.ImmutableList;
-
 /**
  * A git path root is an absolute git path that has an empty sequence of names.
  * In other words, it consists in a root component only. Its string form ends
@@ -35,14 +33,6 @@ public class GitPathRoot extends GitAbsolutePath {
 
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(GitPathRoot.class);
-
-	private static ZonedDateTime getCreationTime(PersonIdent ident) {
-		final Date creationInstant = ident.getWhen();
-		final TimeZone creationZone = ident.getTimeZone();
-		final ZonedDateTime creationTime = ZonedDateTime.ofInstant(creationInstant.toInstant(),
-				creationZone.toZoneId());
-		return creationTime;
-	}
 
 	private final GitFileSystem fileSystem;
 
@@ -249,12 +239,7 @@ public class GitPathRoot extends GitAbsolutePath {
 		 * (part of) the history, and this requires accessing the parent-of relation,
 		 * which requires parsing the commit.
 		 */
-		final RevCommit revCommit = getRevCommit();
-		final PersonIdent authorIdent = revCommit.getAuthorIdent();
-		final PersonIdent committerIdent = revCommit.getCommitterIdent();
-		return Commit.create(revCommit, authorIdent.getName(), authorIdent.getEmailAddress(),
-				getCreationTime(authorIdent), committerIdent.getName(), committerIdent.getEmailAddress(),
-				getCreationTime(committerIdent), ImmutableList.copyOf(revCommit.getParents()));
+		return Commit.create(getRevCommit());
 	}
 
 	@Override

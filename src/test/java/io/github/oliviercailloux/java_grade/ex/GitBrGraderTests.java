@@ -111,11 +111,11 @@ public class GitBrGraderTests {
 		}
 		try (Repository repository = new FileRepository(wT.resolve(".git").toString())) {
 			try (GitFileSystem gitFs = GitFileSystemProvider.getInstance().newFileSystemFromRepository(repository)) {
-				final ObjectId br1 = gitFs.getAbsolutePath("br1").getRoot().getCommit().getId();
+				final ObjectId br1 = gitFs.getPathRoot("/refs/heads/br1/").getCommit().getId();
 				assertEquals(commitA, br1);
 
 				final GitBrGrader grader = new GitBrGrader();
-				grader.branchPrefix = "heads";
+				grader.branchPrefix = "/refs/heads";
 				final GitHubHistory fakeGitHubHistory = GitBrGraderTests
 						.getMinGitHubHistory(gitFs.getHistory().getGraph());
 				final IGrade grade = grader.grade("teststudent", gitFs, fakeGitHubHistory);

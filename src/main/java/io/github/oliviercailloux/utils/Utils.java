@@ -88,21 +88,21 @@ public class Utils {
 		return getTempDirectory().resolve(prefix + " " + Utils.ISO_BASIC_UTC_FORMATTER.format(Instant.now()));
 	}
 
-	public static <E> Graph<E> asGraph(SuccessorsFunction<E> successorsFunction, Set<E> tips) {
+	public static <E, F extends E> Graph<E> asGraph(SuccessorsFunction<F> successorsFunction, Set<F> roots) {
 		checkNotNull(successorsFunction);
-		checkNotNull(tips);
-		checkArgument(tips.stream().allMatch(t -> t != null));
+		checkNotNull(roots);
+		checkArgument(roots.stream().allMatch(t -> t != null));
 
-		final Queue<E> toConsider = new LinkedList<>(tips);
-		final Set<E> seen = new LinkedHashSet<>(tips);
+		final Queue<F> toConsider = new LinkedList<>(roots);
+		final Set<F> seen = new LinkedHashSet<>(roots);
 
 		final MutableGraph<E> mutableGraph = GraphBuilder.directed().build();
 		while (!toConsider.isEmpty()) {
-			final E current = toConsider.remove();
+			final F current = toConsider.remove();
 			Verify.verify(current != null);
 			mutableGraph.addNode(current);
-			final Iterable<? extends E> successors = successorsFunction.successors(current);
-			for (E successor : successors) {
+			final Iterable<? extends F> successors = successorsFunction.successors(current);
+			for (F successor : successors) {
 				checkArgument(successor != null);
 				mutableGraph.putEdge(current, successor);
 				if (!seen.contains(successor)) {

@@ -101,7 +101,7 @@ public class GitBrGrader {
 	}
 
 	GitBrGrader() {
-		branchPrefix = "origin";
+		branchPrefix = "/refs/remote/origin";
 	}
 
 	public IGrade grade(RepositoryCoordinatesWithPrefix coord) throws IOException {
@@ -164,13 +164,13 @@ public class GitBrGrader {
 		}
 
 		@SuppressWarnings("unlikely-arg-type")
-		final Optional<ObjectId> br1 = getObjectId(fs.getPathRoot(branchPrefix + "/br1"))
+		final Optional<ObjectId> br1 = getObjectId(fs.getPathRoot(branchPrefix + "/br1/"))
 				.filter(o -> ownGraph.nodes().contains(o));
 		@SuppressWarnings("unlikely-arg-type")
-		final Optional<ObjectId> br2 = getObjectId(fs.getPathRoot(branchPrefix + "/br2"))
+		final Optional<ObjectId> br2 = getObjectId(fs.getPathRoot(branchPrefix + "/br2/"))
 				.filter(o -> ownGraph.nodes().contains(o));
 		@SuppressWarnings("unlikely-arg-type")
-		final Optional<ObjectId> br3 = getObjectId(fs.getPathRoot(branchPrefix + "/br3"))
+		final Optional<ObjectId> br3 = getObjectId(fs.getPathRoot(branchPrefix + "/br3/"))
 				.filter(o -> ownGraph.nodes().contains(o));
 
 		final Set<ObjectId> startCandidates = new LinkedHashSet<>();
@@ -327,7 +327,7 @@ public class GitBrGrader {
 	private IGrade getAContentGrade(GitFileSystem fs, Optional<ObjectId> commit) {
 		final IGrade grade;
 		if (commit.isPresent()) {
-			final GitPath file = fs.getAbsolutePath(commit.get().getName(), "hello.txt");
+			final GitPath file = fs.getAbsolutePath(commit.get(), "/hello.txt");
 			final String exactTarget = "first try";
 			grade = Marks.fileMatchesGrade(file, exactTarget, Marks.extend(exactTarget));
 		} else {
@@ -340,7 +340,7 @@ public class GitBrGrader {
 	private IGrade getBContentGrade(GitFileSystem fs, Optional<ObjectId> commit) {
 		final IGrade grade;
 		if (commit.isPresent()) {
-			final GitPath file = fs.getAbsolutePath(commit.get().getName(), "hello.txt");
+			final GitPath file = fs.getAbsolutePath(commit.get(), "/hello.txt");
 			final String exactTarget = "second try";
 			grade = Marks.fileMatchesGrade(file, exactTarget, Marks.extend(exactTarget));
 		} else {
@@ -353,7 +353,7 @@ public class GitBrGrader {
 	private IGrade getCContentGrade(GitFileSystem fs, Optional<ObjectId> commit) {
 		final IGrade grade;
 		if (commit.isPresent()) {
-			final GitPath file = fs.getAbsolutePath(commit.get().getName(), "supplements.txt");
+			final GitPath file = fs.getAbsolutePath(commit.get(), "/supplements.txt");
 			final String exactTarget = "Hello, world";
 			final Pattern approximateTarget = Marks.extend("Hello,?\\h*world");
 			grade = Marks.fileMatchesGrade(file, exactTarget, approximateTarget);
@@ -367,7 +367,7 @@ public class GitBrGrader {
 	private IGrade getDContentGrade(GitFileSystem fs, Optional<ObjectId> commit) {
 		final IGrade grade;
 		if (commit.isPresent()) {
-			final GitPath file = fs.getAbsolutePath(commit.get().getName(), "hello.txt");
+			final GitPath file = fs.getAbsolutePath(commit.get(), "/hello.txt");
 			final String exactTarget = "first try\nsecond try";
 			final Pattern approximateTarget = Marks.extend("first try[\\h\\v]*second try");
 			grade = Marks.fileMatchesGrade(file, exactTarget, approximateTarget);

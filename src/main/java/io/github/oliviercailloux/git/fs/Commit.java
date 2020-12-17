@@ -3,10 +3,14 @@ package io.github.oliviercailloux.git.fs;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import java.time.ZonedDateTime;
+import java.util.Date;
 import java.util.List;
 import java.util.Objects;
+import java.util.TimeZone;
 
 import org.eclipse.jgit.lib.ObjectId;
+import org.eclipse.jgit.lib.PersonIdent;
+import org.eclipse.jgit.revwalk.RevCommit;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
@@ -22,6 +26,22 @@ import com.google.common.collect.ImmutableList;
  * earlier!
  */
 public class Commit {
+	private static ZonedDateTime getCreationTime(PersonIdent ident) {
+		final Date creationInstant = ident.getWhen();
+		final TimeZone creationZone = ident.getTimeZone();
+		final ZonedDateTime creationTime = ZonedDateTime.ofInstant(creationInstant.toInstant(),
+				creationZone.toZoneId());
+		return creationTime;
+	}
+
+	static Commit create(RevCommit revCommit) {
+		final PersonIdent authorIdent = revCommit.getAuthorIdent();
+		final PersonIdent committerIdent = revCommit.getCommitterIdent();
+		return Commit.create(revCommit, authorIdent.getName(), authorIdent.getEmailAddress(),
+				getCreationTime(authorIdent), committerIdent.getName(), committerIdent.getEmailAddress(),
+				getCreationTime(committerIdent), ImmutableList.copyOf(revCommit.getParents()));
+	}
+
 	static Commit create(ObjectId id, String authorName, String authorEmail, ZonedDateTime authorDate,
 			String committerName, String committerEmail, ZonedDateTime committerDate, List<ObjectId> parents) {
 		return new Commit(id, authorName, authorEmail, authorDate, committerName, committerEmail, committerDate,

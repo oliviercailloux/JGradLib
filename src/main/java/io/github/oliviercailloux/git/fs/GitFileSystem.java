@@ -472,7 +472,7 @@ public abstract class GitFileSystem extends FileSystem {
 
 	/**
 	 * Retrieve the set of all commits of this repository. Consider calling rather
-	 * {@link #getGitRootDirectories()}, whose type is more precise.
+	 * {@link #getCommits()}, whose type is more precise.
 	 *
 	 * @return absolute path roots referring to commit ids.
 	 * @throws UncheckedIOException if an I/O error occurs (I have no idea why the
@@ -548,7 +548,7 @@ public abstract class GitFileSystem extends FileSystem {
 
 	public GitLocalHistory getHistory() throws IOException {
 		if (history == null) {
-			history = GitUtils.getHistory(repository);
+			history = GitUtils.getOldHistory(repository);
 		}
 		return history;
 	}

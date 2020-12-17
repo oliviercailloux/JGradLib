@@ -45,7 +45,7 @@ public class GitCloner {
 	private static final Unchecker<GitAPIException, IllegalStateException> UNCHECKER = Unchecker
 			.wrappingWith(IllegalStateException::new);
 
-	public static GitCloner newInstance() {
+	public static GitCloner create() {
 		return new GitCloner();
 	}
 
