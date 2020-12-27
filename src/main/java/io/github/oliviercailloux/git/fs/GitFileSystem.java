@@ -2,7 +2,6 @@ package io.github.oliviercailloux.git.fs;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
-import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.base.Verify.verify;
 import static com.google.common.base.Verify.verifyNotNull;
 
@@ -58,9 +57,6 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.PeekingIterator;
 import com.google.common.jimfs.Configuration;
 import com.google.common.jimfs.Jimfs;
-
-import io.github.oliviercailloux.git.GitLocalHistory;
-import io.github.oliviercailloux.git.GitUtils;
 
 /**
  * <p>
@@ -333,8 +329,6 @@ public abstract class GitFileSystem extends FileSystem {
 	static final Path JIM_FS_SLASH = JIM_FS.getPath("/");
 
 	private final GitFileSystemProvider gitProvider;
-	private GitLocalHistory history;
-
 	private boolean isOpen;
 	private final ObjectReader reader;
 	private final Repository repository;
@@ -359,7 +353,6 @@ public abstract class GitFileSystem extends FileSystem {
 		reader = repository.newObjectReader();
 		reader.setAvoidUnreachableObjects(true);
 		isOpen = true;
-		history = null;
 		this.toClose = new LinkedHashSet<>();
 	}
 
@@ -585,11 +578,6 @@ public abstract class GitFileSystem extends FileSystem {
 		return GitRelativePath.relative(this, ImmutableList.copyOf(names));
 	}
 
-	public GitLocalHistory getCachedHistory() {
-		checkState(history != null);
-		return history;
-	}
-
 	@Override
 	public Iterable<FileStore> getFileStores() {
 		throw new UnsupportedOperationException();
@@ -669,13 +657,6 @@ public abstract class GitFileSystem extends FileSystem {
 			throw new UncheckedIOException(e);
 		}
 		return allCommits;
-	}
-
-	public GitLocalHistory getHistory() throws IOException {
-		if (history == null) {
-			history = GitUtils.getOldHistory(repository);
-		}
-		return history;
 	}
 
 	@Override
