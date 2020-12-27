@@ -190,8 +190,8 @@ public class ImapSearchPredicate implements Predicate<Message> {
 		return MESSAGING_UNCHECKER.getUsing(() -> m.getSentDate().toInstant());
 	}
 
-	private SearchTerm term;
-	private Predicate<Message> predicate;
+	private final SearchTerm term;
+	private final Predicate<Message> predicate;
 
 	private ImapSearchPredicate(SearchTerm term, Predicate<Message> predicate) {
 		this.term = checkNotNull(term);
