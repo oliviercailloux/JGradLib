@@ -355,9 +355,7 @@ public abstract class GitPath implements Path {
 	 *
 	 */
 	@Override
-	public GitPath toAbsolutePath() {
-		return toAbsolutePathAsAbsolutePath();
-	}
+	public abstract GitPath toAbsolutePath();
 
 	GitAbsolutePath toAbsolutePathAsAbsolutePath() {
 		return (GitAbsolutePath) toAbsolutePath();
@@ -435,7 +433,7 @@ public abstract class GitPath implements Path {
 			return null;
 		}
 		verify(!fileName.isAbsolute());
-		return withPath(fileName);
+		return GitRelativePath.relative(getFileSystem(), fileName);
 	}
 
 	@Override
