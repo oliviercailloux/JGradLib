@@ -34,8 +34,10 @@ import org.eclipse.jgit.revwalk.RevTree;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.PeekingIterator;
 
+import io.github.oliviercailloux.git.fs.GitFileSystem.PathCouldNotBeFoundException;
 import io.github.oliviercailloux.git.fs.GitFileSystem.TreeWalkDirectoryStream;
 
 /**
@@ -182,12 +184,28 @@ public abstract class GitPath implements Path {
 	 * corresponding to its corresponding path.
 	 */
 	static class GitObject {
+		/**
+		 * @param realPath absolute jim fs path
+		 */
+		public static GitObject given(Path realPath, ObjectId objectId, FileMode fileMode) {
+			return new GitObject(realPath, objectId, fileMode);
+		}
+
+		private final Path realPath;
 		private final ObjectId objectId;
 		private final FileMode fileMode;
 
-		public GitObject(ObjectId objectId, FileMode fileMode) {
+		private GitObject(Path realPath, ObjectId objectId, FileMode fileMode) {
+			this.realPath = checkNotNull(realPath);
 			this.objectId = checkNotNull(objectId);
 			this.fileMode = checkNotNull(fileMode);
+		}
+
+		/**
+		 * @return an absolute jim fs path
+		 */
+		Path getRealPath() {
+			return realPath;
 		}
 
 		ObjectId getObjectId() {
@@ -395,13 +413,14 @@ public abstract class GitPath implements Path {
 		final Path name = getInternalPath().getName(index);
 		verify(!name.isAbsolute());
 		verify(name.getNameCount() == 1);
-		return GitRelativePath.relative(getFileSystem(), name);
+		return withPath(name);
 	}
 
 	@Override
 	public GitPath subpath(int beginIndex, int endIndex) {
 		final Path subpath = getInternalPath().subpath(beginIndex, endIndex);
-		return GitRelativePath.relative(getFileSystem(), subpath);
+		verify(!subpath.isAbsolute());
+		return withPath(subpath);
 	}
 
 	/**
@@ -415,7 +434,8 @@ public abstract class GitPath implements Path {
 		if (fileName == null) {
 			return null;
 		}
-		return GitRelativePath.relative(getFileSystem(), fileName);
+		verify(!fileName.isAbsolute());
+		return withPath(fileName);
 	}
 
 	@Override
@@ -667,42 +687,49 @@ public abstract class GitPath implements Path {
 	}
 
 	/**
-	 * At the moment, throws {@code UnsupportedOperationException}.
+	 * Returns the <em>real</em> path of an existing file.
+	 *
+	 * <p>
+	 * This method derives from this path, an {@link #isAbsolute absolute} path that
+	 * locates the {@link Files#isSameFile same} file as this path, but with name
+	 * elements that represent the actual name of the directories and the file:
+	 * symbolic links are resolved; and redundant name elements are removed.
+	 *
+	 * <p>
+	 * The {@code options} array may be used to indicate how symbolic links are
+	 * handled. By default, symbolic links are resolved to their final target, thus,
+	 * the resulting path contains no symbolic links. If the option
+	 * {@link LinkOption#NOFOLLOW_LINKS NOFOLLOW_LINKS} is present and the given
+	 * path contains symbolic links, this method throws
+	 * PathCouldNotBeFoundException.
+	 *
+	 * @param options options indicating how symbolic links are handled
+	 *
+	 * @return an absolute path that represents the same path as the file located by
+	 *         this object but with no symbolic links and no special name elements
+	 *         {@code .} or {@code ..}
+	 *
+	 * @throws IOException       if the file does not exist or an I/O error occurs,
+	 *                           or (in deviation from the spec) if it can’t be
+	 *                           determined whether this file exists due to the path
+	 *                           containing symbolic links whereas symbolic links
+	 *                           can’t be followed. I have no idea what the spec
+	 *                           wants the implementor to do in such a case, apart
+	 *                           perhaps from returning the original path, which
+	 *                           would seem quite surprising to me; and in
+	 *                           supplement, the readAttributes method is supposed
+	 *                           (from Files.exists) to throw an IOException when it
+	 *                           can’t be determined whether the file exists for
+	 *                           that same reason.
+	 * @throws SecurityException In case the underlying file system can’t be
+	 *                           accessed
 	 */
 	@Override
-	public Path toRealPath(LinkOption... options) throws IOException, NoSuchFileException {
-		/**
-		 * Not easy to get right. For example, given "a/../b", if no link, I have to
-		 * normalize to "b"; if contains a link (e.g. a → c/d), I have to either leave
-		 * it alone ("a/../b"), or follow the link and normalize ("c/b").
-		 */
-		throw new UnsupportedOperationException();
-//		final GitPath absolutePath = toAbsolutePath();
-//		final GitObject gitObject = fileSystem.getAndCheckGitObject(absolutePath);
-//		final String revStrPossiblyResolved;
-//		if (ImmutableSet.copyOf(options).contains(LinkOption.NOFOLLOW_LINKS)) {
-//			revStrPossiblyResolved = absolutePath.getNonEmptyRevStr();
-//		} else {
-//			revStrPossiblyResolved = gitObject.getCommit().getName();
-//		}
-//		/**
-//		 * Shouldn’t use toRealPath here as this path does not exist in JimFs. Replacing
-//		 * by normalize down here is not adequate either, as JGit does not consider that
-//		 * ./someexistingdir exists; and normalizing before checking would be confusing
-//		 * when this would lose symbolic links information, I suppose (though this would
-//		 * be nice to do systematically and correctly, also for the rest of the API).
-//		 */
-//		/**
-//		 * TODO https://www.eclipse.org/forums/index.php?t=msg&th=1103986 1. check if it
-//		 * is a link; if so, crash if wants to follow links. 2. Instead of crashing, add
-//		 * a method that gets link target (one step): /link/stuff/ → /blah/bloh/stuff/;
-//		 * add this to the set of currently followed links or throws if already in the
-//		 * set; add method that follows through all steps then clears the set if it
-//		 * ends. Also follow the links to other file systems if the user explicitly
-//		 * allowed at creation time to get out of a given repository (otherwise,
-//		 * dangerous).
-//		 */
-//		return new GitPath(fileSystem, revStrPossiblyResolved, absolutePath.dirAndFile);
+	public Path toRealPath(LinkOption... options)
+			throws IOException, PathCouldNotBeFoundException, NoSuchFileException {
+		final boolean followLinks = !ImmutableSet.copyOf(options).contains(LinkOption.NOFOLLOW_LINKS);
+		final GitAbsolutePath absolute = toAbsolutePathAsAbsolutePath();
+		return absolute.withPath(absolute.getGitObject(followLinks).getRealPath());
 	}
 
 	/**
@@ -785,7 +812,7 @@ public abstract class GitPath implements Path {
 		 * relative path differs by resolving against a relative path.
 		 */
 		// TODO test directory stream.
-		final RevTree tree = toAbsolutePathAsAbsolutePath().getRevTree();
+		final RevTree tree = toAbsolutePathAsAbsolutePath().getRevTree(true);
 		final TreeWalkDirectoryStream directoryStream = getFileSystem().iterate(tree);
 
 		final DirectoryStream<GitPath> toReturn = new DirectoryStream<>() {

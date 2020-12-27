@@ -10,6 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.net.URI;
+import java.nio.file.DirectoryStream;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
@@ -23,6 +24,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
 import com.google.common.jimfs.Configuration;
 import com.google.common.jimfs.Jimfs;
 
@@ -34,6 +37,20 @@ public class DefaultFsTests {
 
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(DefaultFsTests.class);
+
+	@Test
+	void testListLinks() throws Exception {
+		final ImmutableSet<Path> content = Files.list(Path.of("/var/")).collect(ImmutableSet.toImmutableSet());
+		LOGGER.info("Content: {}.", content);
+		final ImmutableSet<Path> locks;
+		try (DirectoryStream<Path> stream = Files.newDirectoryStream(Path.of("/var/"),
+				f -> f.getFileName().toString().equals("lock"))) {
+			locks = ImmutableSet.copyOf(stream);
+		}
+		final Path lock = Iterables.getOnlyElement(locks);
+		LOGGER.info("Lock: {}.", lock);
+		assertTrue(Files.isSymbolicLink(lock));
+	}
 
 	@Test
 	void testDefault() throws Exception {

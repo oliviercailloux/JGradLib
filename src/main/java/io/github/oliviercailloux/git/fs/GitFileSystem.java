@@ -8,6 +8,7 @@ import static com.google.common.base.Verify.verifyNotNull;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.ClosedFileSystemException;
 import java.nio.file.DirectoryIteratorException;
 import java.nio.file.DirectoryStream;
@@ -19,10 +20,13 @@ import java.nio.file.Path;
 import java.nio.file.PathMatcher;
 import java.nio.file.WatchService;
 import java.nio.file.attribute.UserPrincipalLookupService;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Stream;
@@ -40,12 +44,15 @@ import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.revwalk.RevTree;
 import org.eclipse.jgit.revwalk.RevWalk;
 import org.eclipse.jgit.treewalk.TreeWalk;
+import org.eclipse.jgit.treewalk.filter.PathFilter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.MoreObjects;
 import com.google.common.base.VerifyException;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.PeekingIterator;
 import com.google.common.jimfs.Configuration;
 import com.google.common.jimfs.Jimfs;
@@ -77,7 +84,33 @@ public abstract class GitFileSystem extends FileSystem {
 	 * caller).
 	 */
 	@SuppressWarnings("serial")
-	static class PathNotFoundException extends Exception {
+	static class NoContextNoSuchFileException extends Exception {
+
+		public NoContextNoSuchFileException() {
+			super();
+		}
+
+		public NoContextNoSuchFileException(String message) {
+			super(message);
+		}
+
+	}
+
+	/**
+	 * We could not determine which file this path locates, or even whether it
+	 * exists, because we may not follow links but the path does contain links.
+	 */
+	@SuppressWarnings("serial")
+	public static class PathCouldNotBeFoundException extends IOException {
+
+		public PathCouldNotBeFoundException() {
+			super();
+		}
+
+		public PathCouldNotBeFoundException(String message) {
+			super(message);
+		}
+
 	}
 
 	static class TreeWalkIterator implements PeekingIterator<String> {
@@ -188,7 +221,44 @@ public abstract class GitFileSystem extends FileSystem {
 			returned = true;
 			return iterator;
 		}
+	}
 
+	static class TreeVisit {
+		private final ObjectId objectId;
+		private final List<String> remainingNames;
+
+		public TreeVisit(ObjectId objectId, List<String> remainingNames) {
+			this.objectId = checkNotNull(objectId);
+			this.remainingNames = checkNotNull(remainingNames);
+		}
+
+		public ObjectId getObjectId() {
+			return objectId;
+		}
+
+		public List<String> getRemainingNames() {
+			return remainingNames;
+		}
+
+		@Override
+		public boolean equals(Object o2) {
+			if (!(o2 instanceof TreeVisit)) {
+				return false;
+			}
+			final TreeVisit t2 = (TreeVisit) o2;
+			return objectId.equals(t2.objectId) && remainingNames.equals(t2.remainingNames);
+		}
+
+		@Override
+		public int hashCode() {
+			return Objects.hash(objectId, remainingNames);
+		}
+
+		@Override
+		public String toString() {
+			return MoreObjects.toStringHelper(this).add("objectId", objectId).add("remainingNames", remainingNames)
+					.toString();
+		}
 	}
 
 	/**
@@ -590,6 +660,10 @@ public abstract class GitFileSystem extends FileSystem {
 		return bytes;
 	}
 
+	/**
+	 * Does nothing with links, i.e., just lists them as any other entries. Just
+	 * like the default FS on Linux.
+	 */
 	@SuppressWarnings("resource")
 	TreeWalkDirectoryStream iterate(RevTree tree) throws IOException {
 		if (!isOpen) {
@@ -654,25 +728,129 @@ public abstract class GitFileSystem extends FileSystem {
 		return revCommit;
 	}
 
-	GitObject getGitObject(RevTree rootTree, String relativePath) throws IOException, PathNotFoundException {
+	GitObject getGitObject(RevTree rootTree, Path relativePath, boolean followLinks)
+			throws IOException, PathCouldNotBeFoundException, NoContextNoSuchFileException {
 		if (!isOpen) {
 			throw new ClosedFileSystemException();
 		}
 
-		final GitObject gitObject;
-		try (TreeWalk treeWalk = TreeWalk.forPath(repository, reader, relativePath, rootTree)) {
-			if (treeWalk == null) {
-				throw new PathNotFoundException();
-			}
+		/**
+		 * https://www.eclipse.org/forums/index.php?t=msg&th=1103986
+		 *
+		 * Set up a stack of trees, starting with a one-entry stack containing the root
+		 * tree.
+		 *
+		 * And a stack of remaining names.
+		 *
+		 * Pick first name, obtain its tree, push on the tree stack. If not a tree but a
+		 * blob, and no remaining name, we’re done. If is a symlink, then that’s even
+		 * more remaining names enqueued on the stack. If the name is .., then need to
+		 * pop the stack of trees instead of reading. If ".", then just skip it.
+		 */
+		final Deque<ObjectId> trees = new ArrayDeque<>();
+		trees.addFirst(rootTree);
 
-			final FileMode fileMode = treeWalk.getFileMode();
-			verify(fileMode != null);
-			final ObjectId objectId = treeWalk.getObjectId(0);
-			verify(!objectId.equals(ObjectId.zeroId()), relativePath);
-			gitObject = new GitObject(objectId, fileMode);
-			verify(!treeWalk.next(), relativePath);
+		final Set<TreeVisit> visited = new LinkedHashSet<>();
+
+		final Deque<String> remainingNames = new ArrayDeque<>(
+				ImmutableList.copyOf(Iterables.transform(relativePath, Path::toString)));
+
+		Path currentPath = JIM_FS_SLASH;
+		GitObject currentGitObject = GitObject.given(currentPath, rootTree, FileMode.TREE);
+
+		try (TreeWalk treeWalk = new TreeWalk(repository, reader)) {
+			treeWalk.addTree(rootTree);
+			LOGGER.debug("Starting search for {}, {}.", relativePath,
+					followLinks ? "following links" : "not following links");
+			while (!remainingNames.isEmpty()) {
+				final TreeVisit visit = new TreeVisit(trees.peek(), ImmutableList.copyOf(remainingNames));
+				LOGGER.debug("Adding {} to visited.", visit);
+				final boolean added = visited.add(visit);
+				if (!added) {
+					verify(followLinks,
+							"Should not cycle when not following links, but seems to cycle anyway: " + visit);
+					throw new NoContextNoSuchFileException("Cycle at " + remainingNames);
+				}
+
+				final String currentName = remainingNames.pop();
+				LOGGER.debug("Considering '{}'.", currentName);
+				if (currentName.equals(".")) {
+				} else if (currentName.equals("")) {
+				} else if (currentName.equals("..")) {
+					trees.pop();
+					if (trees.isEmpty()) {
+						throw new NoContextNoSuchFileException("Attempt to move to parent of root.");
+					}
+					final ObjectId currentTree = trees.peek();
+					treeWalk.reset(currentTree);
+					LOGGER.debug("Moving current to the parent of {}.", currentPath);
+//					currentPath = currentPath.getNameCount() == 1 ? Path.of("") : currentPath.getParent();
+					currentPath = currentPath.getParent();
+					assert currentPath != null;
+					currentGitObject = GitObject.given(currentPath, currentTree, FileMode.TREE);
+				} else {
+					currentPath = currentPath.resolve(currentName);
+					LOGGER.debug("Moved current to: {}.", currentPath);
+
+					final String absoluteCurrent = currentPath.toString();
+					verify(absoluteCurrent.startsWith("/"));
+					final PathFilter filter = PathFilter.create(absoluteCurrent.substring(1));
+					treeWalk.setFilter(filter);
+					treeWalk.setRecursive(false);
+
+					final boolean toNext = treeWalk.next();
+					if (!toNext) {
+						throw new NoContextNoSuchFileException("Could not find " + currentPath);
+					}
+					verify(filter.isDone(treeWalk));
+
+					final FileMode fileMode = treeWalk.getFileMode();
+					assert (fileMode != null);
+					final ObjectId objectId = treeWalk.getObjectId(0);
+					currentGitObject = GitObject.given(currentPath, objectId, fileMode);
+
+					verify(!objectId.equals(ObjectId.zeroId()), absoluteCurrent);
+
+					if (fileMode.equals(FileMode.REGULAR_FILE) || fileMode.equals(FileMode.EXECUTABLE_FILE)) {
+						if (!remainingNames.isEmpty()) {
+							throw new NoContextNoSuchFileException(String.format(
+									"Path '%s' is a file, but remaining path is '%s'.", currentPath, remainingNames));
+						}
+					} else if (fileMode.equals(FileMode.SYMLINK)) {
+						if (!followLinks) {
+							if (!remainingNames.isEmpty()) {
+								throw new PathCouldNotBeFoundException(String.format(
+										"Path '%s' is a link, but I may not follow the links, and the remaining path is '%s'.",
+										currentPath, remainingNames));
+							}
+						} else {
+							final String linkContent = new String(getBytes(objectId), StandardCharsets.UTF_8);
+							final Path target = Path.of(linkContent);
+							if (target.isAbsolute()) {
+								throw new NoContextNoSuchFileException("Link reference must be relative.");
+							}
+							final ImmutableList<String> targetNames = ImmutableList
+									.copyOf(Iterables.transform(target, Path::toString));
+							LOGGER.debug("Link found; moving current to the parent of {}; prefixing {} to names.",
+									currentPath, targetNames);
+							currentPath = currentPath.getParent();
+							targetNames.reverse().stream().forEachOrdered(remainingNames::addFirst);
+							/**
+							 * Need to reset, otherwise searching again (in the next iteration) will fail.
+							 */
+							treeWalk.reset(trees.peek());
+						}
+					} else if (fileMode.equals(FileMode.TREE)) {
+						LOGGER.debug("Found tree, entering.");
+						trees.addFirst(objectId);
+						treeWalk.enterSubtree();
+					} else {
+						throw new UnsupportedOperationException("Unknown file mode: " + fileMode.toString());
+					}
+				}
+			}
 		}
-		return gitObject;
+		return currentGitObject;
 	}
 
 	/**

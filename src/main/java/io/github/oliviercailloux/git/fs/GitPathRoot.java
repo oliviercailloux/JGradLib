@@ -6,16 +6,12 @@ import static com.google.common.base.Verify.verify;
 import java.io.IOException;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
-import java.time.ZonedDateTime;
-import java.util.Date;
 import java.util.Optional;
-import java.util.TimeZone;
 
 import org.eclipse.jgit.errors.IncorrectObjectTypeException;
 import org.eclipse.jgit.errors.MissingObjectException;
 import org.eclipse.jgit.lib.FileMode;
 import org.eclipse.jgit.lib.ObjectId;
-import org.eclipse.jgit.lib.PersonIdent;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.revwalk.RevTree;
 import org.slf4j.Logger;
@@ -213,6 +209,10 @@ public class GitPathRoot extends GitAbsolutePath {
 	}
 
 	@Override
+	RevTree getRevTree(boolean followLinks) throws IOException, NoSuchFileException {
+		return getRevTree();
+	}
+
 	RevTree getRevTree() throws IOException, NoSuchFileException {
 		return getRevCommit().getTree();
 	}
@@ -243,7 +243,7 @@ public class GitPathRoot extends GitAbsolutePath {
 	}
 
 	@Override
-	GitObject getGitObject() throws NoSuchFileException, IOException {
-		return new GitObject(getRevTree(), FileMode.TREE);
+	GitObject getGitObject(boolean followLinks) throws NoSuchFileException, IOException {
+		return GitObject.given(GitFileSystem.JIM_FS_SLASH, getRevTree(), FileMode.TREE);
 	}
 }

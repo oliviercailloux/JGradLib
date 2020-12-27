@@ -488,7 +488,7 @@ public class GitFileSystemProvider extends FileSystemProvider {
 		}
 
 		final GitPath gitPath = (GitPath) path;
-		return gitPath.toAbsolutePathAsAbsolutePath().newByteChannel();
+		return gitPath.toAbsolutePathAsAbsolutePath().newByteChannel(true);
 	}
 
 	/**
@@ -594,7 +594,7 @@ public class GitFileSystemProvider extends FileSystemProvider {
 			throw new UnsupportedOperationException();
 		}
 
-		final GitObject gitObject = gitPath.toAbsolutePathAsAbsolutePath().getGitObject();
+		final GitObject gitObject = gitPath.toAbsolutePathAsAbsolutePath().getGitObject(true);
 
 		if (modesList.contains(AccessMode.EXECUTE)) {
 			if (!Objects.equals(gitObject.getFileMode(), FileMode.EXECUTABLE_FILE)) {

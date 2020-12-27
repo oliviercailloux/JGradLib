@@ -17,8 +17,13 @@ import java.nio.file.NotDirectoryException;
 import org.eclipse.jgit.internal.storage.dfs.DfsRepository;
 import org.eclipse.jgit.internal.storage.dfs.DfsRepositoryDescription;
 import org.eclipse.jgit.internal.storage.dfs.InMemoryRepository;
+import org.eclipse.jgit.internal.storage.file.FileRepository;
 import org.eclipse.jgit.lib.ObjectId;
+import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.revwalk.RevCommit;
+import org.eclipse.jgit.revwalk.RevTree;
+import org.eclipse.jgit.treewalk.TreeWalk;
+import org.eclipse.jgit.treewalk.filter.PathFilter;
 import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.ImmutableList;
@@ -31,6 +36,11 @@ import io.github.oliviercailloux.git.JGit;
  * Tests about actual reading from a repo, using the Files API.
  */
 public class GitReadTests {
+	public static void main(String[] args) throws Exception {
+		try (Repository repo = new FileRepository("/tmp/ploum/.git")) {
+			JGit.createRepoWithLink(repo);
+		}
+	}
 
 	@Test
 	void testReadFiles() throws Exception {
@@ -38,8 +48,10 @@ public class GitReadTests {
 			final ImmutableList<ObjectId> commits = JGit.createRepoWithSubDir(repo);
 			try (GitFileSystem gitFs = GitFileSystemProvider.getInstance().newFileSystemFromDfsRepository(repo)) {
 				assertEquals("Hello, world", Files.readString(gitFs.getRelativePath("file1.txt")));
-//				assertEquals("Hello, world", Files.readString(gitFs.getRelativePath("./file1.txt")));TODO
-//				assertEquals("Hello, world", Files.readString(gitFs.getRelativePath(".", "dir", "..", "/file1.txt")));
+				assertEquals("Hello, world", Files.readString(gitFs.getRelativePath("./file1.txt")));
+				assertEquals("Hello, world", Files.readString(gitFs.getRelativePath(".", "dir", "..", "/file1.txt")));
+				assertEquals("Hello, world",
+						Files.readString(gitFs.getRelativePath(".", "dir", "..", "/file1.txt").toAbsolutePath()));
 				assertEquals("Hello from sub dir", Files.readString(gitFs.getRelativePath("dir", "file.txt")));
 				assertEquals("Hello, world", Files.readString(gitFs.getRelativePath("file1.txt").toAbsolutePath()));
 				assertThrows(NoSuchFileException.class,
@@ -60,44 +72,99 @@ public class GitReadTests {
 	@Test
 	void testReadLinks() throws Exception {
 		try (DfsRepository repo = new InMemoryRepository(new DfsRepositoryDescription("myrepo"))) {
-//			final ImmutableList<ObjectId> commits = JGit.createRepoWithSubDir(repo);
+			final ImmutableList<ObjectId> commits = JGit.createRepoWithLink(repo);
+
 			try (GitFileSystem gitFs = GitFileSystemProvider.getInstance().newFileSystemFromDfsRepository(repo)) {
 				/**
 				 * TODO should read links transparently, as indicated in the package-summary of
 				 * the nio package. Thus, assuming dir is a symlink to otherdir, reading
 				 * dir/file.txt should read otherdir/file.txt. This is also what git operations
 				 * do naturally: checking out dir will restore it as a symlink to otherdir
-				 * (https://stackoverflow.com/a/954575/). Consider implementing
+				 * (https://stackoverflow.com/a/954575). Consider implementing
 				 * Provider#readLinks and so on.
 				 *
 				 * Note that a git repository does not have the concept of hard links
-				 * (https://stackoverflow.com/a/3731139/).
+				 * (https://stackoverflow.com/a/3731139).
 				 */
-				assertFalse(true);
+				assertEquals("Hello, world", Files.readString(gitFs.getAbsolutePath(commits.get(0), "/file1.txt")));
+				assertEquals("Hello, world", Files.readString(gitFs.getAbsolutePath(commits.get(0), "/link.txt")));
+				assertEquals("Hello instead", Files.readString(gitFs.getAbsolutePath(commits.get(1), "/link.txt")));
+				assertEquals("Hello instead", Files.readString(gitFs.getAbsolutePath(commits.get(2), "/dir/link")));
+				assertEquals("Hello instead",
+						Files.readString(gitFs.getAbsolutePath(commits.get(2), "/dir/linkToParent/dir/link")));
+				assertEquals("Hello instead", Files.readString(
+						gitFs.getAbsolutePath(commits.get(2), "/dir/linkToParent/dir/linkToParent/dir/link")));
+				assertFalse(Files.exists(gitFs.getAbsolutePath(commits.get(3), "/dir/link")));
+				assertFalse(Files.exists(gitFs.getAbsolutePath(commits.get(3), "/dir/linkToParent/dir/link")));
+				assertTrue(Files.exists(gitFs.getAbsolutePath(commits.get(3), "/dir/link"), LinkOption.NOFOLLOW_LINKS));
+				assertFalse(Files.exists(gitFs.getAbsolutePath(commits.get(3), "/dir/linkToParent/dir/link"),
+						LinkOption.NOFOLLOW_LINKS));
+				assertFalse(Files.exists(gitFs.getAbsolutePath(commits.get(2), "/dir/cyclingLink")));
+				assertTrue(Files.exists(gitFs.getAbsolutePath(commits.get(2), "/dir/cyclingLink"),
+						LinkOption.NOFOLLOW_LINKS));
 			}
 		}
 	}
 
 	@Test
 	void testExists() throws Exception {
-		try (DfsRepository repo = new InMemoryRepository(new DfsRepositoryDescription("myrepo"))) {
-			final ImmutableList<ObjectId> commits = JGit.createRepoWithSubDir(repo);
-			try (GitFileSystem gitFs = GitFileSystemProvider.getInstance().newFileSystemFromDfsRepository(repo)) {
+		try (DfsRepository repository = new InMemoryRepository(new DfsRepositoryDescription("myrepo"))) {
+			final ImmutableList<ObjectId> commits = JGit.createRepoWithSubDir(repository);
+			try (GitFileSystem gitFs = GitFileSystemProvider.getInstance().newFileSystemFromDfsRepository(repository)) {
 				assertEquals(ImmutableSet.copyOf(commits), gitFs.getHistory().getCommitDates().keySet());
 				assertTrue(Files.exists(gitFs.getRelativePath()));
 				assertTrue(Files.exists(gitFs.getRelativePath().toAbsolutePath()));
 				assertTrue(Files.exists(gitFs.getAbsolutePath("/refs/heads/main/")));
 				assertFalse(Files.exists(gitFs.getAbsolutePath("/refs/nothing/")));
 				assertFalse(Files.exists(gitFs.getAbsolutePath(ObjectId.zeroId())));
-				assertTrue(Files.exists(gitFs.getAbsolutePath(commits.get(0), "/file1.txt")));
-				assertFalse(Files.exists(gitFs.getAbsolutePath(commits.get(0), "/ploum.txt")));
 				assertTrue(Files.exists(gitFs.getAbsolutePath(commits.get(0))));
+				assertFalse(Files.exists(gitFs.getAbsolutePath(commits.get(0), "/ploum.txt")));
+				assertTrue(Files.exists(gitFs.getAbsolutePath(commits.get(0), "/file1.txt")));
 				assertFalse(Files.exists(gitFs.getRelativePath("ploum.txt")));
 				assertFalse(Files.exists(gitFs.getRelativePath("ploum.txt").toAbsolutePath()));
 				assertFalse(Files.exists(gitFs.getRelativePath("dir/ploum.txt")));
 				assertTrue(Files.exists(gitFs.getRelativePath("file1.txt")));
-				assertTrue(Files.exists(gitFs.getRelativePath("dir/file.txt")));
 				assertTrue(Files.exists(gitFs.getRelativePath("dir")));
+				assertTrue(Files.exists(gitFs.getRelativePath("dir/file.txt")));
+			}
+		}
+	}
+
+	/**
+	 * Just some experiments with a TreeWalk.
+	 */
+	@Test
+	void testTreeWalk() throws Exception {
+		try (DfsRepository repository = new InMemoryRepository(new DfsRepositoryDescription("myrepo"))) {
+			JGit.createRepoWithSubDir(repository);
+			try (GitFileSystem gitFs = GitFileSystemProvider.getInstance().newFileSystemFromDfsRepository(repository)) {
+				final RevTree root = gitFs.getRelativePath().toAbsolutePath().getRoot().getRevTree();
+				try (TreeWalk treeWalk = new TreeWalk(repository)) {
+					treeWalk.addTree(root);
+					final PathFilter filter = PathFilter.create("dir");
+					treeWalk.setFilter(filter);
+					treeWalk.setRecursive(false);
+					final boolean foundDir = treeWalk.next();
+					assertTrue(foundDir);
+				}
+				try (TreeWalk treeWalk = new TreeWalk(repository)) {
+					treeWalk.addTree(root);
+					final PathFilter filter = PathFilter.create("dir/file.txt");
+					treeWalk.setFilter(filter);
+					treeWalk.setRecursive(false);
+					final boolean foundDir = treeWalk.next();
+					assertTrue(foundDir);
+				}
+				try (TreeWalk treeWalk = new TreeWalk(repository)) {
+					treeWalk.addTree(root);
+					final PathFilter filter = PathFilter.create("dir");
+					treeWalk.setFilter(filter);
+					treeWalk.setRecursive(false);
+					final boolean foundDir = treeWalk.next();
+					assertTrue(foundDir);
+					treeWalk.enterSubtree();
+					assertTrue(treeWalk.next());
+				}
 			}
 		}
 	}

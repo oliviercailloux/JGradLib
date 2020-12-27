@@ -192,7 +192,7 @@ abstract class GitAbsolutePath extends GitPath {
 	 *
 	 * @return guaranteed to exist
 	 */
-	abstract GitObject getGitObject() throws NoSuchFileException, IOException;
+	abstract GitObject getGitObject(boolean followLinks) throws NoSuchFileException, IOException;
 
 	/**
 	 * Returns a rev tree iff this path refers to a directory, and the commit tree
@@ -202,10 +202,10 @@ abstract class GitAbsolutePath extends GitPath {
 	 * @throws NotDirectoryException
 	 * @throws IOException
 	 */
-	abstract RevTree getRevTree() throws NoSuchFileException, NotDirectoryException, IOException;
+	abstract RevTree getRevTree(boolean followLinks) throws NoSuchFileException, NotDirectoryException, IOException;
 
-	SeekableByteChannel newByteChannel() throws NoSuchFileException, IOException {
-		final GitObject gitObject = getGitObject();
+	SeekableByteChannel newByteChannel(boolean followLinks) throws NoSuchFileException, IOException {
+		final GitObject gitObject = getGitObject(followLinks);
 		if (gitObject.getFileMode().equals(FileMode.TYPE_TREE)) {
 			return new DirectoryChannel();
 		}
@@ -223,15 +223,14 @@ abstract class GitAbsolutePath extends GitPath {
 	}
 
 	BasicFileAttributes readAttributes(Set<LinkOption> optionsSet) throws NoSuchFileException, IOException {
-		final GitObject gitObject = getGitObject();
+		final boolean followLinks = !optionsSet.contains(LinkOption.NOFOLLOW_LINKS);
+		final GitObject gitObject = getGitObject(followLinks);
 
 		LOGGER.info("Reading attributes of {}.", toString());
 		final GitBasicFileAttributes gitBasicFileAttributes = new GitBasicFileAttributes(gitObject,
 				getFileSystem().getSize(gitObject));
-		if (!optionsSet.contains(LinkOption.NOFOLLOW_LINKS) && gitBasicFileAttributes.isSymbolicLink()) {
-			// TODO
-			throw new UnsupportedOperationException(
-					"Path " + toString() + "is a sym link; I do not follow symlinks yet.");
+		if (followLinks) {
+			verify(!gitBasicFileAttributes.isSymbolicLink());
 		}
 		return gitBasicFileAttributes;
 	}

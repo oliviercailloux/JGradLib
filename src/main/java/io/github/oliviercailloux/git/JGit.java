@@ -1,6 +1,7 @@
 package io.github.oliviercailloux.git;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Verify.verify;
 import static io.github.oliviercailloux.jaris.exceptions.Unchecker.IO_UNCHECKER;
 
 import java.io.IOException;
@@ -8,6 +9,7 @@ import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.FileSystem;
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.stream.Stream;
@@ -104,6 +106,52 @@ public class JGit {
 		}
 	}
 
+	public static ImmutableList<ObjectId> createRepoWithLink(Repository repository) throws IOException {
+		repository.create(true);
+		final ObjectDatabase objectDatabase = repository.getObjectDatabase();
+
+		try (FileSystem jimFs = Jimfs.newFileSystem(Configuration.unix());
+				ObjectInserter inserter = objectDatabase.newInserter()) {
+			final Path workDir = jimFs.getPath("");
+			final PersonIdent personIdent = new PersonIdent("Me", "email");
+			final ImmutableList.Builder<ObjectId> builder = ImmutableList.builder();
+
+			final Path file1 = workDir.resolve("file1.txt");
+			Files.writeString(file1, "Hello, world");
+			final Path link = workDir.resolve("link.txt");
+			Files.createSymbolicLink(link, file1);
+			verify(Files.isSymbolicLink(link));
+			final ObjectId commitStart = insertCommit(inserter, personIdent, workDir, ImmutableList.of(),
+					"First commit");
+			builder.add(commitStart);
+
+			Files.writeString(file1, "Hello instead");
+			final ObjectId commit2 = insertCommit(inserter, personIdent, workDir, ImmutableList.of(commitStart),
+					"Second commit");
+			builder.add(commit2);
+
+			final Path subDirectory = workDir.resolve("dir");
+			Files.createDirectory(subDirectory);
+			Files.createSymbolicLink(subDirectory.resolve("link"), jimFs.getPath("../link.txt"));
+			Files.createSymbolicLink(subDirectory.resolve("linkToParent"), jimFs.getPath(".."));
+			Files.createSymbolicLink(subDirectory.resolve("cyclingLink"), jimFs.getPath("../dir/cyclingLink"));
+			final ObjectId commit3 = insertCommit(inserter, personIdent, workDir, ImmutableList.of(commit2),
+					"Third commit");
+			builder.add(commit3);
+
+			Files.delete(file1);
+			final ObjectId commit4 = insertCommit(inserter, personIdent, workDir, ImmutableList.of(commit3),
+					"Fourth commit");
+			builder.add(commit4);
+
+			final ImmutableList<ObjectId> commits = builder.build();
+
+			setMain(repository, commits.get(commits.size() - 1));
+
+			return commits;
+		}
+	}
+
 	public static ImmutableList<ObjectId> createRepoWithSubDir(Repository repository) throws IOException {
 		repository.create(true);
 		final ObjectDatabase objectDatabase = repository.getObjectDatabase();
@@ -180,15 +228,31 @@ public class JGit {
 				final String entryName = relEntry.getFileName().toString();
 				/** Work around Jimfs bug, see https://github.com/google/jimfs/issues/105 . */
 				final Path entry = relEntry.toAbsolutePath();
-//				final Path entry = relEntry;
-				if (Files.isRegularFile(entry)) {
+				if (Files.isRegularFile(entry, LinkOption.NOFOLLOW_LINKS)) {
+					LOGGER.debug("Creating regular: {}.", entry);
 					final String fileContent = Files.readString(entry);
 					final ObjectId fileOId = inserter.insert(Constants.OBJ_BLOB,
 							fileContent.getBytes(StandardCharsets.UTF_8));
 					treeFormatter.append(entryName, FileMode.REGULAR_FILE, fileOId);
-				} else if (Files.isDirectory(entry)) {
+				} else if (Files.isDirectory(entry, LinkOption.NOFOLLOW_LINKS)) {
 					final ObjectId tree = insertTree(inserter, entry);
 					treeFormatter.append(entryName, FileMode.TREE, tree);
+				} else if (Files.isSymbolicLink(entry)) {
+					LOGGER.debug("Creating link: {}.", entry);
+					final String destSlashSeparated;
+					{
+						final Path dest = Files.readSymbolicLink(entry);
+						final String separator = dest.getFileSystem().getSeparator();
+						if (dest.getFileSystem().provider().getScheme().equals("file") && separator.equals("\\")) {
+							destSlashSeparated = dest.toString().replace("\\", "/");
+						} else {
+							checkArgument(separator.equals("/"));
+							destSlashSeparated = dest.toString();
+						}
+					}
+					final byte[] destAsBytes = destSlashSeparated.getBytes(Constants.CHARACTER_ENCODING);
+					final ObjectId fileOId = inserter.insert(Constants.OBJ_BLOB, destAsBytes);
+					treeFormatter.append(entryName, FileMode.SYMLINK, fileOId);
 				} else {
 					throw new IllegalArgumentException("Unknown entry: " + entry);
 				}
