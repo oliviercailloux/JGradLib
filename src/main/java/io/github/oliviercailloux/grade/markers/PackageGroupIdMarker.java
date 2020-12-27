@@ -9,17 +9,7 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Streams;
 
-import io.github.oliviercailloux.git.FileContent;
-import io.github.oliviercailloux.grade.context.FilesSource;
-
 class PackageGroupIdMarker {
-	public static ImmutableList<Path> relativeTo(FilesSource source, Path start) {
-		final ImmutableList<Path> relativizedPaths = source.asFileContents().stream().map(FileContent::getPath)
-				.filter((p) -> p.startsWith(start)).map((p) -> start.relativize(p))
-				.collect(ImmutableList.toImmutableList());
-		return relativizedPaths;
-	}
-
 	public static boolean hasPrefix(Path relativizedPath, List<String> groupIdElements) {
 		final ImmutableList<String> pathAsStrings = Streams.stream(relativizedPath).map(Path::toString)
 				.collect(ImmutableList.toImmutableList());

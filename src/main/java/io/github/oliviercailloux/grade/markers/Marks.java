@@ -5,18 +5,13 @@ import static io.github.oliviercailloux.jaris.exceptions.Unchecker.IO_UNCHECKER;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.slf4j.Logger;
@@ -25,20 +20,12 @@ import org.slf4j.LoggerFactory;
 import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.primitives.Booleans;
 
-import io.github.oliviercailloux.git.ComplexClient;
 import io.github.oliviercailloux.grade.Criterion;
 import io.github.oliviercailloux.grade.CriterionGradeWeight;
 import io.github.oliviercailloux.grade.IGrade;
 import io.github.oliviercailloux.grade.Mark;
 import io.github.oliviercailloux.grade.WeightingGrade;
-import io.github.oliviercailloux.grade.context.FilesSource;
-import io.github.oliviercailloux.grade.context.GitContext;
-import io.github.oliviercailloux.grade.context.GitFullContext;
-import io.github.oliviercailloux.grade.context.PomContext;
-import io.github.oliviercailloux.grade.contexters.MavenManager;
-import io.github.oliviercailloux.grade.contexters.PomSupplier;
 
 /**
  *
@@ -64,68 +51,6 @@ public class Marks {
 		}
 	}
 
-	public static IGrade packageGroupIdGrade(FilesSource wholeSource, PomSupplier pomSupplier, PomContext pomContext) {
-		final List<String> groupIdElements = pomContext.getGroupIdElements();
-		if (groupIdElements.isEmpty()) {
-			return Mark.zero("No group id.");
-		}
-		final ImmutableList<Path> pathsRelativeToMain = PackageGroupIdMarker.relativeTo(wholeSource,
-				pomSupplier.getSrcMainJavaFolder());
-		final Optional<Path> firstWronglyPrefixedInMain = pathsRelativeToMain.stream()
-				.filter((p) -> !PackageGroupIdMarker.hasPrefix(p, groupIdElements)).findFirst();
-		final ImmutableList<Path> pathsRelativeToTest = PackageGroupIdMarker.relativeTo(wholeSource,
-				pomSupplier.getSrcTestJavaFolder());
-		final Optional<Path> firstWronglyPrefixedInTest = pathsRelativeToTest.stream()
-				.filter((p) -> !PackageGroupIdMarker.hasPrefix(p, groupIdElements)).findFirst();
-		final boolean pass;
-		final String comment;
-		if (pathsRelativeToMain.isEmpty()) {
-			pass = false;
-			comment = "No source.";
-		} else if (!firstWronglyPrefixedInMain.isEmpty()) {
-			pass = false;
-			comment = String.format("%s not prefixed by group id (%s) as expected.", firstWronglyPrefixedInMain.get(),
-					groupIdElements);
-		} else if (!firstWronglyPrefixedInTest.isEmpty()) {
-			pass = false;
-			comment = String.format("%s not prefixed by group id (%s) as expected.", firstWronglyPrefixedInTest.get(),
-					groupIdElements);
-		} else {
-			pass = true;
-			comment = "";
-		}
-		return Mark.given(pass ? 1d : 0d, comment);
-	}
-
-	public static IGrade noDerivedFilesGrade(FilesSource wholeSource) {
-		if (wholeSource.asFileContents().isEmpty()) {
-			return Mark.zero();
-		}
-
-		final List<String> comments = new ArrayList<>();
-		final boolean noClasspath = wholeSource.filterOnPath(Predicates.equalTo(Paths.get(".classpath")))
-				.asFileContents().isEmpty();
-		final boolean noProject = wholeSource.filterOnPath(Predicates.equalTo(Paths.get(".project"))).asFileContents()
-				.isEmpty();
-		final boolean noSettings = wholeSource.filterOnPath((p) -> p.startsWith(".settings")).asFileContents()
-				.isEmpty();
-		final boolean noTarget = wholeSource.filterOnPath((p) -> p.startsWith("target")).asFileContents().isEmpty();
-		if (!noClasspath) {
-			comments.add("Found derived: .classpath.");
-		}
-		if (!noProject) {
-			comments.add("Found derived: .project.");
-		}
-		if (!noSettings) {
-			comments.add("Found derived: .settings/.");
-		}
-		if (!noTarget) {
-			comments.add("Found derived: target/.");
-		}
-		return Mark.given(Booleans.countTrue(noClasspath, noProject, noSettings, noTarget) / 4d,
-				comments.stream().collect(Collectors.joining(" ")));
-	}
-
 	public static IGrade noDerivedFilesGrade(Path projectRoot) {
 		final ImmutableSet<Path> forbidden = ImmutableSet.of(projectRoot.resolve(".classpath"),
 				projectRoot.resolve(".project"), projectRoot.resolve(".settings/"), projectRoot.resolve("target/"),
@@ -142,18 +67,6 @@ public class Marks {
 		}
 
 		return Mark.binary(contains && noForbidden);
-	}
-
-	/**
-	 * The project must be checked out at the version to be tested, at the path
-	 * indicated by the project directory of the client.
-	 */
-	public static IGrade mavenCompileGrade(GitContext context, PomSupplier pomSupplier) {
-		final MavenManager mavenManager = new MavenManager();
-		final Optional<Path> projectRelativeRootOpt = pomSupplier.getMavenRelativeRoot();
-		return Mark.given(Booleans.countTrue(projectRelativeRootOpt.isPresent() && mavenManager.compile(
-				context.getClient().getProjectDirectory().resolve(projectRelativeRootOpt.get().resolve("pom.xml")))),
-				"");
 	}
 
 	public static IGrade travisConfGrade(String travisContent) {
@@ -202,50 +115,6 @@ public class Marks {
 						distAndDeducibleLanguage, 1d / 3d)));
 	}
 
-	public static IGrade gitRepoGrade(GitFullContext context) {
-		final ComplexClient client = context.getClient();
-
-		final IGrade grade;
-		if (!client.existsCached()) {
-			grade = Mark.zero("Repository not found");
-		} else if (!client.hasContentCached()) {
-			grade = Mark.zero("Repository found but is empty");
-		} else if (!context.getMainCommit().isPresent()) {
-			grade = Mark.zero("Repository found with content but no suitable commit found");
-		} else {
-			grade = Mark.one();
-		}
-
-		return grade;
-	}
-
-	public static IGrade timeGrade(GitFullContext contextSupplier, Instant deadline,
-			Function<Duration, Double> timeScorer) {
-		final ComplexClient client = contextSupplier.getClient();
-
-		if (!client.hasContentCached() || !contextSupplier.getMainCommit().isPresent()) {
-			return Mark.one();
-		}
-
-		final Instant submitted = contextSupplier.getSubmittedTime();
-
-		final Instant tooLate = deadline.plus(Duration.ofSeconds(1));
-		final Duration tardiness = Duration.between(tooLate, submitted);
-
-		LOGGER.debug("Last: {}, deadline: {}, tardiness: {}.", submitted, deadline, tardiness);
-		final Mark grade;
-		if (tardiness.compareTo(Duration.ZERO) > 0) {
-			LOGGER.warn("Last event after deadline: {}.", submitted);
-			final double penalty = timeScorer.apply(tardiness);
-			checkArgument(0d <= penalty && penalty <= 1d);
-			grade = Mark.given(penalty, "Last event after deadline: "
-					+ ZonedDateTime.ofInstant(submitted, ZoneId.of("Europe/Paris")) + ", " + tardiness + " late.");
-		} else {
-			grade = Mark.one();
-		}
-		return grade;
-	}
-
 	public static IGrade timeGrade(Instant submitted, Instant deadline, Function<Duration, Double> timeScorer) {
 		final Duration tardiness = Duration.between(deadline, submitted);
 
@@ -261,39 +130,6 @@ public class Marks {
 			grade = Mark.one();
 		}
 		return grade;
-	}
-
-	public static IGrade packageGroupId(FilesSource wholeSource, PomSupplier pomSupplier, PomContext pomContext) {
-		final List<String> groupIdElements = pomContext.getGroupIdElements();
-		if (groupIdElements.isEmpty()) {
-			return Mark.zero("No group id.");
-		}
-		final ImmutableList<Path> pathsRelativeToMain = PackageGroupIdMarker.relativeTo(wholeSource,
-				pomSupplier.getSrcMainJavaFolder());
-		final Optional<Path> firstWronglyPrefixedInMain = pathsRelativeToMain.stream()
-				.filter((p) -> !PackageGroupIdMarker.hasPrefix(p, groupIdElements)).findFirst();
-		final ImmutableList<Path> pathsRelativeToTest = PackageGroupIdMarker.relativeTo(wholeSource,
-				pomSupplier.getSrcTestJavaFolder());
-		final Optional<Path> firstWronglyPrefixedInTest = pathsRelativeToTest.stream()
-				.filter((p) -> !PackageGroupIdMarker.hasPrefix(p, groupIdElements)).findFirst();
-		final boolean pass;
-		final String comment;
-		if (pathsRelativeToMain.isEmpty()) {
-			pass = false;
-			comment = "No source.";
-		} else if (!firstWronglyPrefixedInMain.isEmpty()) {
-			pass = false;
-			comment = String.format("%s not prefixed by group id (%s) as expected.", firstWronglyPrefixedInMain.get(),
-					groupIdElements);
-		} else if (!firstWronglyPrefixedInTest.isEmpty()) {
-			pass = false;
-			comment = String.format("%s not prefixed by group id (%s) as expected.", firstWronglyPrefixedInTest.get(),
-					groupIdElements);
-		} else {
-			pass = true;
-			comment = "";
-		}
-		return Mark.given(Booleans.countTrue(pass), comment);
 	}
 
 	public static IGrade fileMatchesGrade(Path file, String exactTarget, Pattern approximateTarget) {

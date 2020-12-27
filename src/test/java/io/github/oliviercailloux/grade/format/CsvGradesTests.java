@@ -15,7 +15,6 @@ import io.github.oliviercailloux.grade.GradeTestsHelper;
 import io.github.oliviercailloux.grade.WeightingGrade;
 import io.github.oliviercailloux.grade.comm.StudentOnGitHub;
 import io.github.oliviercailloux.grade.comm.StudentOnMyCourse;
-import io.github.oliviercailloux.grade.format.CsvGrades;
 
 class CsvGradesTests {
 	@SuppressWarnings("unused")

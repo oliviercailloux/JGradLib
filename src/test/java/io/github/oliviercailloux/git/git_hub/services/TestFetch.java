@@ -1,6 +1,5 @@
 package io.github.oliviercailloux.git.git_hub.services;
 
-import static com.google.common.base.Preconditions.checkState;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -18,7 +17,6 @@ import javax.ws.rs.client.Invocation.Builder;
 import javax.ws.rs.core.Response;
 
 import org.eclipse.jgit.lib.ObjectId;
-import org.eclipse.jgit.revwalk.RevCommit;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,13 +25,7 @@ import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.ImmutableSortedMap;
-import com.google.common.collect.Sets;
-import com.google.common.graph.GraphBuilder;
-import com.google.common.graph.ImmutableGraph;
 
-import io.github.oliviercailloux.git.ComplexClient;
-import io.github.oliviercailloux.git.GitLocalHistory;
 import io.github.oliviercailloux.git.git_hub.model.GitHubHistory;
 import io.github.oliviercailloux.git.git_hub.model.GitHubToken;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
@@ -266,38 +258,6 @@ public class TestFetch {
 	}
 
 	@Test
-	void testGitHubHistoryCLut() throws Exception {
-		final RepositoryCoordinates coordinates = RepositoryCoordinates.from("oliviercailloux", "CLut");
-		try (GitHubFetcherQL fetcher = GitHubFetcherQL.using(GitHubToken.getRealInstance())) {
-			LOGGER.info("Proceeding with {}.", coordinates);
-			final ComplexClient client = ComplexClient.aboutAndUsing(coordinates, Path.of("/tmp/"));
-			final boolean retrieved = client.tryRetrieve();
-			checkState(retrieved);
-			final GitLocalHistory historyFromWorkTree = client.getWholeHistory();
-
-			final GitHubHistory gHH = fetcher.getGitHubHistory(coordinates);
-			final ImmutableMap<ObjectId, Instant> pushedDatesWithDeductions = gHH.getCorrectedAndCompletedPushedDates();
-
-			final ImmutableGraph<RevCommit> g1 = historyFromWorkTree.getGraph();
-			final ImmutableGraph<ObjectId> g2 = gHH.getGraph();
-
-			checkState(historyFromWorkTree.getRoots().equals(gHH.getRoots()));
-			checkState(g1.equals(g2), "Nb: " + g1.edges().size() + ", " + g2.edges().size() + "; Diff: "
-					+ Sets.symmetricDifference(g1.edges(), g2.edges()) + ".");
-			checkState(gHH.getGraph().nodes().equals(pushedDatesWithDeductions.keySet()));
-
-			checkState(gHH.getCommitDates().equals(historyFromWorkTree.getCommitDates()));
-
-			final ImmutableGraph<Object> expectedPatch = GraphBuilder.directed().immutable()
-					.putEdge(ObjectId.fromString("21af8bffc747eaee04217b9c8bb9e3e4a3a6293d"),
-							ObjectId.fromString("4016d7b1b09e2a188fb99d30d1ca5b0f726a4a3d"))
-					.build();
-			assertEquals(expectedPatch, gHH.getPatchedKnowns());
-			assertTrue(gHH.getPushedBeforeCommitted().isEmpty());
-		}
-	}
-
-	@Test
 	public void testGitHubHistoryJBiblio() throws Exception {
 		final RepositoryCoordinates coord = RepositoryCoordinates.from("oliviercailloux", "J-Biblio");
 		try (GitHubFetcherQL fetcher = GitHubFetcherQL.using(GitHubToken.getRealInstance())) {
@@ -312,38 +272,6 @@ public class TestFetch {
 	}
 
 	@Test
-	void testGitHubHistorySampleRestClient() throws Exception {
-		final RepositoryCoordinates coordinates = RepositoryCoordinates.from("oliviercailloux", "sample-rest-client");
-		try (GitHubFetcherQL fetcher = GitHubFetcherQL.using(GitHubToken.getRealInstance())) {
-			LOGGER.info("Proceeding with {}.", coordinates);
-			final ComplexClient client = ComplexClient.aboutAndUsing(coordinates, Path.of("/tmp/"));
-			final boolean retrieved = client.tryRetrieve();
-			checkState(retrieved);
-			final GitLocalHistory historyFromWorkTree = client.getWholeHistory();
-
-			final GitHubHistory gHH = fetcher.getGitHubHistory(coordinates);
-			final ImmutableMap<ObjectId, Instant> pushedDatesWithDeductions = gHH.getCorrectedAndCompletedPushedDates();
-
-			final ImmutableGraph<RevCommit> g1 = historyFromWorkTree.getGraph();
-			final ImmutableGraph<ObjectId> g2 = gHH.getGraph();
-
-			checkState(historyFromWorkTree.getRoots().equals(gHH.getRoots()));
-			checkState(g1.equals(g2), "Nb: " + g1.edges().size() + ", " + g2.edges().size() + "; Diff: "
-					+ Sets.symmetricDifference(g1.edges(), g2.edges()) + ".");
-			checkState(gHH.getGraph().nodes().equals(pushedDatesWithDeductions.keySet()));
-
-			checkState(gHH.getCommitDates().equals(historyFromWorkTree.getCommitDates()));
-
-			final ImmutableGraph<Object> expectedPatch = GraphBuilder.directed().immutable()
-					.putEdge(ObjectId.fromString("5d15007fde7cb7b62dc14a601cc18f5174174ada"),
-							ObjectId.fromString("8d3a2ae555b0c82917db2ede5a5fd3d1cbe6f903"))
-					.build();
-			assertEquals(expectedPatch, gHH.getPatchedKnowns());
-			assertTrue(gHH.getPushedBeforeCommitted().isEmpty());
-		}
-	}
-
-	@Test
 	void testSearchForPrefixedRepositories() throws Exception {
 		try (GitHubFetcherV3 rawFetcher = GitHubFetcherV3.using(GitHubToken.getRealInstance())) {
 			final ImmutableList<RepositoryCoordinatesWithPrefix> depGit = rawFetcher
@@ -353,69 +281,6 @@ public class TestFetch {
 			final ImmutableList<RepositoryCoordinatesWithPrefix> noMatch = rawFetcher
 					.getRepositoriesWithPrefix("oliviercailloux-org", "Invalid-prefix");
 			assertEquals(ImmutableList.of(), noMatch);
-		}
-	}
-
-	public static void main(String[] args) throws Exception {
-		final ImmutableList<RepositoryCoordinates> allCoordinates;
-		try (GitHubFetcherV3 fetcher = GitHubFetcherV3.using(GitHubToken.getRealInstance())) {
-			allCoordinates = fetcher.getUserRepositories("oliviercailloux");
-		}
-//		allCoordinates = ImmutableList.of(RepositoryCoordinates.from("oliviercailloux", "Collaborative-exams"));
-//		allCoordinates = ImmutableList.of(RepositoryCoordinates.from("oliviercailloux", "Collaborative-exams-2016"));
-//		allCoordinates = ImmutableList.of(RepositoryCoordinates.from("checkstyle", "checkstyle"));
-//		allCoordinates = ImmutableList.of(RepositoryCoordinates.from("oliviercailloux", "checkstyle"));
-
-		/**
-		 * TODO interesting: updating the oliviercailloux/checkstyle or cloning the
-		 * checkstyle/checkstyle repository fails with Graphs.subgraphHasCycle
-		 * recursion.
-		 */
-		try (GitHubFetcherQL fetcher = GitHubFetcherQL.using(GitHubToken.getRealInstance())) {
-			for (RepositoryCoordinates coordinates : allCoordinates) {
-				final ComplexClient client = ComplexClient.aboutAndUsing(coordinates, Path.of("/tmp/"));
-				final boolean retrieved = client.tryRetrieve();
-				checkState(retrieved);
-				final GitLocalHistory historyFromWorkTree = client.getWholeHistory();
-
-				final GitHubHistory gHH = fetcher.getGitHubHistory(coordinates);
-				final ImmutableMap<ObjectId, Instant> pushedDatesWithDeductions = gHH
-						.getCorrectedAndCompletedPushedDates();
-
-				final ImmutableGraph<RevCommit> g1 = historyFromWorkTree.getGraph();
-				final ImmutableGraph<ObjectId> g2 = gHH.getGraph();
-
-				checkState(historyFromWorkTree.getRoots().equals(gHH.getRoots()));
-				checkState(g1.equals(g2), "Nb: " + g1.edges().size() + ", " + g2.edges().size() + "; Diff: "
-						+ Sets.symmetricDifference(g1.edges(), g2.edges()) + ".");
-//				checkState(g1.equals((Graph<ObjectId>) Graphs.inducedSubgraph(g2, g1.nodes())),
-//						"Nb: " + g1.edges().size() + ", " + g2.edges().size() + "; Diff: "
-//								+ Sets.symmetricDifference(g1.edges(), g2.edges()) + ".");
-//				if (!g1.equals(g2)) {
-//					LOGGER.warn("Nb: " + g1.edges().size() + ", " + g2.edges().size() + "; Diff: "
-//							+ Sets.symmetricDifference(g1.edges(), g2.edges()) + ".");
-//				}
-				checkState(gHH.getGraph().nodes().equals(pushedDatesWithDeductions.keySet()));
-
-				final ImmutableSortedMap<Instant, ImmutableSet<ObjectId>> refsBySortedPushedDates = gHH
-						.getRefsBySortedPushedDates(false);
-				if (!refsBySortedPushedDates.isEmpty()) {
-					final Instant lastPush = refsBySortedPushedDates.lastKey();
-					LOGGER.info("Last commits: {}, {}.", lastPush, refsBySortedPushedDates.get(lastPush));
-				} else {
-					assertTrue(gHH.getPushedDates().isEmpty());
-					LOGGER.warn("No pushed dates.");
-				}
-
-				checkState(gHH.getCommitDates().equals(historyFromWorkTree.getCommitDates()));
-
-				if (!gHH.getPatchedKnowns().nodes().isEmpty()) {
-					LOGGER.warn("Patched knowns: {}.", gHH.getPatchedKnowns());
-				}
-				if (!gHH.getPushedBeforeCommitted().isEmpty()) {
-					LOGGER.warn("Pushed before committed: {}.", gHH.getPushedBeforeCommitted());
-				}
-			}
 		}
 	}
 

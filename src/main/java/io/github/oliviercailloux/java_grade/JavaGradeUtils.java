@@ -24,7 +24,6 @@ import java.util.stream.Collectors;
 
 import com.google.common.collect.ImmutableList;
 
-import io.github.oliviercailloux.git.FileContent;
 import io.github.oliviercailloux.grade.GradingException;
 import io.github.oliviercailloux.grade.IGrade;
 import io.github.oliviercailloux.grade.Mark;
@@ -35,14 +34,13 @@ public class JavaGradeUtils {
 	/**
 	 * @return an empty path if the given source declares no package.
 	 */
-	public static Path getPackage(FileContent source) {
-		final String code = source.getContent();
+	public static Path getPackage(String code) {
 		final Matcher matcher = Pattern.compile("^package (?<PKG>[^;]+);").matcher(code);
 		final String pkg = matcher.find() ? matcher.group("PKG") : "";
 		final ImmutableList<String> pkgElements = pkg.equals("") ? ImmutableList.of()
 				: ImmutableList.copyOf(pkg.split("."));
-		assert !pkgElements.contains("") : String.format("Pkg: %s, split: %s (%d).", pkg, pkgElements,
-				pkgElements.size());
+		assert !pkgElements.contains("")
+				: String.format("Pkg: %s, split: %s (%d).", pkg, pkgElements, pkgElements.size());
 		try {
 			final Path pkgPath = Path
 					.of(pkgElements.stream().collect(Collectors.joining(FileSystems.getDefault().getSeparator())));

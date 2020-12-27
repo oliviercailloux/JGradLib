@@ -13,9 +13,10 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.ImmutableList;
 
 import io.github.oliviercailloux.grade.GradingException;
-import io.github.oliviercailloux.grade.context.PomContext;
 
-public class PomContexter implements PomContext {
+public class PomContexter {
+	@SuppressWarnings("unused")
+	private static final Logger LOGGER = LoggerFactory.getLogger(PomContexter.class);
 	private final String pomContent;
 	private String groupId;
 	/**
@@ -51,22 +52,16 @@ public class PomContexter implements PomContext {
 		}
 	}
 
-	@SuppressWarnings("unused")
-	private static final Logger LOGGER = LoggerFactory.getLogger(PomContexter.class);
-
-	@Override
 	public boolean isGroupIdValid() {
 		final ImmutableList<String> validStart = ImmutableList.of("io", "github");
 		return groupIdElements != null && groupIdElements.size() >= 3
 				&& groupIdElements.subList(0, 2).equals(validStart);
 	}
 
-	@Override
 	public String getGroupId() {
 		return groupId;
 	}
 
-	@Override
 	public List<String> getGroupIdElements() {
 		assert groupIdElements != null;
 		return groupIdElements;
