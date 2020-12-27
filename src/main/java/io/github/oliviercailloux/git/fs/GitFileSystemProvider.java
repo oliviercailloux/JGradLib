@@ -18,6 +18,7 @@ import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.NoSuchFileException;
+import java.nio.file.NotLinkException;
 import java.nio.file.OpenOption;
 import java.nio.file.Path;
 import java.nio.file.ReadOnlyFileSystemException;
@@ -43,7 +44,8 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Sets;
 
-import io.github.oliviercailloux.git.fs.GitPath.GitObject;
+import io.github.oliviercailloux.git.fs.GitFileSystem.FollowLinksBehavior;
+import io.github.oliviercailloux.git.fs.GitFileSystem.GitObject;
 
 /**
  * A (partial) implementation of {@link FileSystemProvider}, able to produce
@@ -594,7 +596,8 @@ public class GitFileSystemProvider extends FileSystemProvider {
 			throw new UnsupportedOperationException();
 		}
 
-		final GitObject gitObject = gitPath.toAbsolutePathAsAbsolutePath().getGitObject(true);
+		final GitObject gitObject = gitPath.toAbsolutePathAsAbsolutePath()
+				.getGitObject(FollowLinksBehavior.FOLLOW_ALL_LINKS);
 
 		if (modesList.contains(AccessMode.EXECUTE)) {
 			if (!Objects.equals(gitObject.getFileMode(), FileMode.EXECUTABLE_FILE)) {
@@ -611,6 +614,10 @@ public class GitFileSystemProvider extends FileSystemProvider {
 		throw new UnsupportedOperationException();
 	}
 
+	/**
+	 * TODO arguably, read "link.txt" should read the link itself, when not
+	 * following links.
+	 */
 	@SuppressWarnings("unchecked")
 	@Override
 	public <A extends BasicFileAttributes> A readAttributes(Path path, Class<A> type, LinkOption... options)
@@ -642,6 +649,19 @@ public class GitFileSystemProvider extends FileSystemProvider {
 	public void setAttribute(Path path, String attribute, Object value, LinkOption... options)
 			throws ReadOnlyFileSystemException {
 		throw new ReadOnlyFileSystemException();
+	}
+
+	/**
+	 * TODO I wonder about the missing NoSuchFileException and the strange
+	 * NotLinkException “optional specific”.
+	 */
+	@Override
+	public Path readSymbolicLink(Path link)
+			throws IOException, NoSuchFileException, NotLinkException, AbsoluteLinkException, SecurityException {
+		checkArgument(link instanceof GitPath);
+
+		final GitPath gitPath = (GitPath) link;
+		return gitPath.toAbsolutePathAsAbsolutePath().readSymbolicLink();
 	}
 
 }

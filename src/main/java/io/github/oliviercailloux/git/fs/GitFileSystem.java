@@ -1,5 +1,6 @@
 package io.github.oliviercailloux.git.fs;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.base.Verify.verify;
@@ -14,6 +15,7 @@ import java.nio.file.DirectoryIteratorException;
 import java.nio.file.DirectoryStream;
 import java.nio.file.FileStore;
 import java.nio.file.FileSystem;
+import java.nio.file.FileSystems;
 import java.nio.file.InvalidPathException;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
@@ -59,7 +61,6 @@ import com.google.common.jimfs.Jimfs;
 
 import io.github.oliviercailloux.git.GitLocalHistory;
 import io.github.oliviercailloux.git.GitUtils;
-import io.github.oliviercailloux.git.fs.GitPath.GitObject;
 
 /**
  * <p>
@@ -69,6 +70,17 @@ import io.github.oliviercailloux.git.fs.GitPath.GitObject;
  * <p>
  * Must be {@link #close() closed} to release resources associated with readers.
  * </p>
+ * <p>
+ * Reads links transparently, as indicated in the package-summary of the nio
+ * package. Thus, assuming dir is a symlink to otherdir, reading dir/file.txt
+ * reads otherdir/file.txt. This is also what git operations do naturally:
+ * checking out dir will restore it as a symlink to otherdir
+ * (https://stackoverflow.com/a/954575). Consider implementing
+ * Provider#readLinks and so on.
+ *
+ * Note that a git repository does not have the concept of hard links
+ * (https://stackoverflow.com/a/3731139).
+ *
  *
  * @see #getAbsolutePath(String, String...)
  * @see #getRelativePath(String...)
@@ -96,19 +108,20 @@ public abstract class GitFileSystem extends FileSystem {
 
 	}
 
-	/**
-	 * We could not determine which file this path locates, or even whether it
-	 * exists, because we may not follow links but the path does contain links.
-	 */
 	@SuppressWarnings("serial")
-	public static class PathCouldNotBeFoundException extends IOException {
+	static class NoContextAbsoluteLinkException extends Exception {
 
-		public PathCouldNotBeFoundException() {
-			super();
+		private Path absoluteTarget;
+
+		public NoContextAbsoluteLinkException(Path absoluteTarget) {
+			super(absoluteTarget.toString());
+			this.absoluteTarget = checkNotNull(absoluteTarget);
+			checkArgument(absoluteTarget.isAbsolute());
+			checkArgument(absoluteTarget.getFileSystem().equals(FileSystems.getDefault()));
 		}
 
-		public PathCouldNotBeFoundException(String message) {
-			super(message);
+		public Path getTarget() {
+			return absoluteTarget;
 		}
 
 	}
@@ -259,6 +272,48 @@ public abstract class GitFileSystem extends FileSystem {
 			return MoreObjects.toStringHelper(this).add("objectId", objectId).add("remainingNames", remainingNames)
 					.toString();
 		}
+	}
+
+	/**
+	 * Object to associate to a git path, verified to exist in the git file system
+	 * corresponding to its corresponding path.
+	 */
+	static class GitObject {
+		/**
+		 * @param realPath absolute jim fs path
+		 */
+		public static GitObject given(Path realPath, ObjectId objectId, FileMode fileMode) {
+			return new GitObject(realPath, objectId, fileMode);
+		}
+
+		private final Path realPath;
+		private final ObjectId objectId;
+		private final FileMode fileMode;
+
+		private GitObject(Path realPath, ObjectId objectId, FileMode fileMode) {
+			this.realPath = checkNotNull(realPath);
+			this.objectId = checkNotNull(objectId);
+			this.fileMode = checkNotNull(fileMode);
+		}
+
+		/**
+		 * @return an absolute jim fs path
+		 */
+		Path getRealPath() {
+			return realPath;
+		}
+
+		ObjectId getObjectId() {
+			return objectId;
+		}
+
+		FileMode getFileMode() {
+			return fileMode;
+		}
+	}
+
+	static enum FollowLinksBehavior {
+		DO_NOT_FOLLOW_LINKS, FOLLOW_LINKS_BUT_END, FOLLOW_ALL_LINKS
 	}
 
 	/**
@@ -728,7 +783,7 @@ public abstract class GitFileSystem extends FileSystem {
 		return revCommit;
 	}
 
-	GitObject getGitObject(RevTree rootTree, Path relativePath, boolean followLinks)
+	GitObject getGitObject(RevTree rootTree, Path relativePath, FollowLinksBehavior behavior)
 			throws IOException, PathCouldNotBeFoundException, NoContextNoSuchFileException {
 		if (!isOpen) {
 			throw new ClosedFileSystemException();
@@ -760,14 +815,13 @@ public abstract class GitFileSystem extends FileSystem {
 
 		try (TreeWalk treeWalk = new TreeWalk(repository, reader)) {
 			treeWalk.addTree(rootTree);
-			LOGGER.debug("Starting search for {}, {}.", relativePath,
-					followLinks ? "following links" : "not following links");
+			LOGGER.debug("Starting search for {}, {}.", relativePath, behavior);
 			while (!remainingNames.isEmpty()) {
 				final TreeVisit visit = new TreeVisit(trees.peek(), ImmutableList.copyOf(remainingNames));
 				LOGGER.debug("Adding {} to visited.", visit);
 				final boolean added = visited.add(visit);
 				if (!added) {
-					verify(followLinks,
+					verify(behavior != FollowLinksBehavior.DO_NOT_FOLLOW_LINKS,
 							"Should not cycle when not following links, but seems to cycle anyway: " + visit);
 					throw new NoContextNoSuchFileException("Cycle at " + remainingNames);
 				}
@@ -817,17 +871,32 @@ public abstract class GitFileSystem extends FileSystem {
 									"Path '%s' is a file, but remaining path is '%s'.", currentPath, remainingNames));
 						}
 					} else if (fileMode.equals(FileMode.SYMLINK)) {
-						if (!followLinks) {
+						final boolean followThisLink;
+						switch (behavior) {
+						case DO_NOT_FOLLOW_LINKS:
 							if (!remainingNames.isEmpty()) {
 								throw new PathCouldNotBeFoundException(String.format(
 										"Path '%s' is a link, but I may not follow the links, and the remaining path is '%s'.",
 										currentPath, remainingNames));
 							}
-						} else {
-							final String linkContent = new String(getBytes(objectId), StandardCharsets.UTF_8);
-							final Path target = Path.of(linkContent);
-							if (target.isAbsolute()) {
-								throw new NoContextNoSuchFileException("Link reference must be relative.");
+							followThisLink = false;
+							break;
+						case FOLLOW_ALL_LINKS:
+							followThisLink = true;
+							break;
+						case FOLLOW_LINKS_BUT_END:
+							followThisLink = !remainingNames.isEmpty();
+							break;
+						default:
+							throw new VerifyException();
+						}
+						if (followThisLink) {
+							Path target;
+							try {
+								target = getLinkTarget(objectId);
+							} catch (NoContextAbsoluteLinkException e) {
+								throw new PathCouldNotBeFoundException(
+										"Absolute link target encountered: " + e.getTarget());
 							}
 							final ImmutableList<String> targetNames = ImmutableList
 									.copyOf(Iterables.transform(target, Path::toString));
@@ -851,6 +920,18 @@ public abstract class GitFileSystem extends FileSystem {
 			}
 		}
 		return currentGitObject;
+	}
+
+	/**
+	 * @return a relative jim fs path
+	 */
+	Path getLinkTarget(ObjectId objectId) throws IOException, NoContextAbsoluteLinkException {
+		final String linkContent = new String(getBytes(objectId), StandardCharsets.UTF_8);
+		final Path target = JIM_FS.getPath(linkContent);
+		if (target.isAbsolute()) {
+			throw new NoContextAbsoluteLinkException(Path.of(linkContent));
+		}
+		return target;
 	}
 
 	/**

@@ -37,7 +37,8 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.PeekingIterator;
 
-import io.github.oliviercailloux.git.fs.GitFileSystem.PathCouldNotBeFoundException;
+import io.github.oliviercailloux.git.fs.GitFileSystem.FollowLinksBehavior;
+import io.github.oliviercailloux.git.fs.GitFileSystem.GitObject;
 import io.github.oliviercailloux.git.fs.GitFileSystem.TreeWalkDirectoryStream;
 
 /**
@@ -178,44 +179,6 @@ public abstract class GitPath implements Path {
 	private static final String QUERY_PARAMETER_ROOT = "root";
 
 	private static final String QUERY_PARAMETER_INTERNAL_PATH = "internal-path";
-
-	/**
-	 * Object to associate to a git path, verified to exist in the git file system
-	 * corresponding to its corresponding path.
-	 */
-	static class GitObject {
-		/**
-		 * @param realPath absolute jim fs path
-		 */
-		public static GitObject given(Path realPath, ObjectId objectId, FileMode fileMode) {
-			return new GitObject(realPath, objectId, fileMode);
-		}
-
-		private final Path realPath;
-		private final ObjectId objectId;
-		private final FileMode fileMode;
-
-		private GitObject(Path realPath, ObjectId objectId, FileMode fileMode) {
-			this.realPath = checkNotNull(realPath);
-			this.objectId = checkNotNull(objectId);
-			this.fileMode = checkNotNull(fileMode);
-		}
-
-		/**
-		 * @return an absolute jim fs path
-		 */
-		Path getRealPath() {
-			return realPath;
-		}
-
-		ObjectId getObjectId() {
-			return objectId;
-		}
-
-		FileMode getFileMode() {
-			return fileMode;
-		}
-	}
 
 	private static class TransformedPeekingIterator implements PeekingIterator<GitPath> {
 		private PeekingIterator<String> delegate;
@@ -719,15 +682,20 @@ public abstract class GitPath implements Path {
 	 *                           (from Files.exists) to throw an IOException when it
 	 *                           can’t be determined whether the file exists for
 	 *                           that same reason.
-	 * @throws SecurityException In case the underlying file system can’t be
-	 *                           accessed
+	 * @throws SecurityException In case a relevant part of the underlying file
+	 *                           system can’t be accessed
 	 */
 	@Override
 	public Path toRealPath(LinkOption... options)
 			throws IOException, PathCouldNotBeFoundException, NoSuchFileException {
 		final boolean followLinks = !ImmutableSet.copyOf(options).contains(LinkOption.NOFOLLOW_LINKS);
 		final GitAbsolutePath absolute = toAbsolutePathAsAbsolutePath();
-		return absolute.withPath(absolute.getGitObject(followLinks).getRealPath());
+		final GitObject gitObject = absolute.getGitObject(
+				followLinks ? FollowLinksBehavior.FOLLOW_ALL_LINKS : FollowLinksBehavior.DO_NOT_FOLLOW_LINKS);
+		if (!followLinks && gitObject.getFileMode() == FileMode.SYMLINK) {
+			throw new PathCouldNotBeFoundException("Path ends with a sym link: " + toString());
+		}
+		return absolute.withPath(gitObject.getRealPath());
 	}
 
 	/**

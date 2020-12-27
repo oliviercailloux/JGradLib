@@ -10,6 +10,7 @@ import java.nio.channels.SeekableByteChannel;
 import java.nio.file.LinkOption;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.NotDirectoryException;
+import java.nio.file.NotLinkException;
 import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileTime;
@@ -23,6 +24,9 @@ import org.eclipse.jgit.revwalk.RevTree;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.github.oliviercailloux.git.fs.GitFileSystem.FollowLinksBehavior;
+import io.github.oliviercailloux.git.fs.GitFileSystem.GitObject;
+import io.github.oliviercailloux.git.fs.GitFileSystem.NoContextAbsoluteLinkException;
 import io.github.oliviercailloux.utils.SeekableInMemoryByteChannel;
 
 /**
@@ -192,7 +196,7 @@ abstract class GitAbsolutePath extends GitPath {
 	 *
 	 * @return guaranteed to exist
 	 */
-	abstract GitObject getGitObject(boolean followLinks) throws NoSuchFileException, IOException;
+	abstract GitObject getGitObject(FollowLinksBehavior behavior) throws NoSuchFileException, IOException;
 
 	/**
 	 * Returns a rev tree iff this path refers to a directory, and the commit tree
@@ -205,7 +209,8 @@ abstract class GitAbsolutePath extends GitPath {
 	abstract RevTree getRevTree(boolean followLinks) throws NoSuchFileException, NotDirectoryException, IOException;
 
 	SeekableByteChannel newByteChannel(boolean followLinks) throws NoSuchFileException, IOException {
-		final GitObject gitObject = getGitObject(followLinks);
+		final GitObject gitObject = getGitObject(
+				followLinks ? FollowLinksBehavior.FOLLOW_ALL_LINKS : FollowLinksBehavior.DO_NOT_FOLLOW_LINKS);
 		if (gitObject.getFileMode().equals(FileMode.TYPE_TREE)) {
 			return new DirectoryChannel();
 		}
@@ -224,7 +229,8 @@ abstract class GitAbsolutePath extends GitPath {
 
 	BasicFileAttributes readAttributes(Set<LinkOption> optionsSet) throws NoSuchFileException, IOException {
 		final boolean followLinks = !optionsSet.contains(LinkOption.NOFOLLOW_LINKS);
-		final GitObject gitObject = getGitObject(followLinks);
+		final GitObject gitObject = getGitObject(
+				followLinks ? FollowLinksBehavior.FOLLOW_ALL_LINKS : FollowLinksBehavior.DO_NOT_FOLLOW_LINKS);
 
 		LOGGER.info("Reading attributes of {}.", toString());
 		final GitBasicFileAttributes gitBasicFileAttributes = new GitBasicFileAttributes(gitObject,
@@ -233,5 +239,20 @@ abstract class GitAbsolutePath extends GitPath {
 			verify(!gitBasicFileAttributes.isSymbolicLink());
 		}
 		return gitBasicFileAttributes;
+	}
+
+	GitPath readSymbolicLink()
+			throws IOException, NoSuchFileException, NotLinkException, AbsoluteLinkException, SecurityException {
+		final GitObject gitObject = getGitObject(FollowLinksBehavior.FOLLOW_LINKS_BUT_END);
+		if (!gitObject.getFileMode().equals(FileMode.SYMLINK)) {
+			throw new NotLinkException(toString());
+		}
+		Path target;
+		try {
+			target = getFileSystem().getLinkTarget(gitObject.getObjectId());
+		} catch (NoContextAbsoluteLinkException e) {
+			throw new AbsoluteLinkException(this, e.getTarget());
+		}
+		return GitRelativePath.relative(getFileSystem(), target);
 	}
 }

@@ -17,8 +17,9 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.Streams;
 import com.google.common.jimfs.Jimfs;
 
+import io.github.oliviercailloux.git.fs.GitFileSystem.FollowLinksBehavior;
+import io.github.oliviercailloux.git.fs.GitFileSystem.GitObject;
 import io.github.oliviercailloux.git.fs.GitFileSystem.NoContextNoSuchFileException;
-import io.github.oliviercailloux.git.fs.GitFileSystem.PathCouldNotBeFoundException;
 
 /**
  * A git path with a root component and a non empty sequence of non-empty names.
@@ -74,13 +75,14 @@ class GitAbsolutePathWithInternal extends GitAbsolutePath {
 	}
 
 	@Override
-	GitObject getGitObject(boolean followLinks) throws NoSuchFileException, PathCouldNotBeFoundException, IOException {
+	GitObject getGitObject(FollowLinksBehavior behavior)
+			throws NoSuchFileException, PathCouldNotBeFoundException, IOException {
 		final Path relative = GitFileSystem.JIM_FS_SLASH.relativize(getInternalPath());
 		final RevTree tree = getRoot().getRevTree();
 		LOGGER.debug("Searching for {} in {}.", relative, tree);
 		final GitObject gitObject;
 		try {
-			gitObject = getFileSystem().getGitObject(tree, relative, followLinks);
+			gitObject = getFileSystem().getGitObject(tree, relative, behavior);
 		} catch (@SuppressWarnings("unused") NoContextNoSuchFileException e) {
 			throw new NoSuchFileException(toString(), null, e.getMessage());
 		}
@@ -89,7 +91,8 @@ class GitAbsolutePathWithInternal extends GitAbsolutePath {
 
 	@Override
 	RevTree getRevTree(boolean followLinks) throws NoSuchFileException, NotDirectoryException, IOException {
-		final GitObject obj = getGitObject(followLinks);
+		final GitObject obj = getGitObject(
+				followLinks ? FollowLinksBehavior.FOLLOW_ALL_LINKS : FollowLinksBehavior.DO_NOT_FOLLOW_LINKS);
 
 		if (!obj.getFileMode().equals(FileMode.TYPE_TREE)) {
 			throw new NotDirectoryException(toString());

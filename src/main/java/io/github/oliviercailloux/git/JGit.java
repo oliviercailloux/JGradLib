@@ -120,6 +120,8 @@ public class JGit {
 			Files.writeString(file1, "Hello, world");
 			final Path link = workDir.resolve("link.txt");
 			Files.createSymbolicLink(link, file1);
+			final Path absoluteLink = workDir.resolve("absolute link");
+			Files.createSymbolicLink(absoluteLink, workDir.resolve("/absolute"));
 			verify(Files.isSymbolicLink(link));
 			final ObjectId commitStart = insertCommit(inserter, personIdent, workDir, ImmutableList.of(),
 					"First commit");

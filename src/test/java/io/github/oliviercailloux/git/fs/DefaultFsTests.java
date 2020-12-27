@@ -39,17 +39,24 @@ public class DefaultFsTests {
 	private static final Logger LOGGER = LoggerFactory.getLogger(DefaultFsTests.class);
 
 	@Test
-	void testListLinks() throws Exception {
-		final ImmutableSet<Path> content = Files.list(Path.of("/var/")).collect(ImmutableSet.toImmutableSet());
-		LOGGER.info("Content: {}.", content);
-		final ImmutableSet<Path> locks;
-		try (DirectoryStream<Path> stream = Files.newDirectoryStream(Path.of("/var/"),
-				f -> f.getFileName().toString().equals("lock"))) {
-			locks = ImmutableSet.copyOf(stream);
+	void testLinks() throws Exception {
+		{
+			final ImmutableSet<Path> content = Files.list(Path.of("/var/")).collect(ImmutableSet.toImmutableSet());
+			LOGGER.info("Content: {}.", content);
+			final ImmutableSet<Path> locks;
+			try (DirectoryStream<Path> stream = Files.newDirectoryStream(Path.of("/var/"),
+					f -> f.getFileName().toString().equals("lock"))) {
+				locks = ImmutableSet.copyOf(stream);
+			}
+			final Path lock = Iterables.getOnlyElement(locks);
+			LOGGER.info("Lock: {}.", lock);
+			assertTrue(Files.isSymbolicLink(lock));
 		}
-		final Path lock = Iterables.getOnlyElement(locks);
-		LOGGER.info("Lock: {}.", lock);
-		assertTrue(Files.isSymbolicLink(lock));
+		{
+			final Path target = Files.readSymbolicLink(Path.of("/usr/lib/jvm/default-java"));
+			LOGGER.info("Target: {}.", target);
+			assertFalse(target.isAbsolute());
+		}
 	}
 
 	@Test

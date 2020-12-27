@@ -17,6 +17,9 @@ import org.eclipse.jgit.revwalk.RevTree;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.github.oliviercailloux.git.fs.GitFileSystem.FollowLinksBehavior;
+import io.github.oliviercailloux.git.fs.GitFileSystem.GitObject;
+
 /**
  * A git path root is an absolute git path that has an empty sequence of names.
  * In other words, it consists in a root component only. Its string form ends
@@ -243,7 +246,7 @@ public class GitPathRoot extends GitAbsolutePath {
 	}
 
 	@Override
-	GitObject getGitObject(boolean followLinks) throws NoSuchFileException, IOException {
+	GitObject getGitObject(FollowLinksBehavior behavior) throws NoSuchFileException, IOException {
 		return GitObject.given(GitFileSystem.JIM_FS_SLASH, getRevTree(), FileMode.TREE);
 	}
 }
