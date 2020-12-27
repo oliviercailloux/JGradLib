@@ -68,8 +68,9 @@ class GitAbsolutePathWithInternal extends GitAbsolutePath {
 		if (root.toStaticRev().equals(GitPathRoot.DEFAULT_GIT_REF)) {
 			return new GitRelativePathWithInternal(this);
 		}
+		final GitFileSystem fileSystem = getFileSystem();
 		return new GitRelativePathWithInternal(
-				new GitAbsolutePathWithInternal(getFileSystem().mainSlash, getInternalPath()));
+				new GitAbsolutePathWithInternal(fileSystem.mainSlash, getInternalPath()));
 	}
 
 	@Override
