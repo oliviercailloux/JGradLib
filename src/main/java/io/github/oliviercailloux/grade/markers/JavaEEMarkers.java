@@ -1,25 +1,33 @@
 package io.github.oliviercailloux.grade.markers;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Optional;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.github.oliviercailloux.grade.IGrade;
 import io.github.oliviercailloux.grade.Mark;
-import io.github.oliviercailloux.grade.context.FilesSource;
+import io.github.oliviercailloux.jaris.exceptions.Unchecker;
 
 public class JavaEEMarkers {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(JavaEEMarkers.class);
 
-	public static IGrade getNoJsp(FilesSource source) {
-		final FilesSource sourcer = source.filterOnPath((p) -> p.getFileName().toString().endsWith(".jsp"));
-		LOGGER.debug("Found as potential JSPs: {}.", sourcer.getContents().keySet());
-		return Mark.binary(sourcer.asFileContents().isEmpty(), "Not using outdated JSPs", "Using outdated JSPs");
+	public static IGrade getNoJsp(Path source) {
+		final Optional<Path> jsp = Unchecker.IO_UNCHECKER
+				.getUsing(() -> Files.find(source, 99, (p, b) -> p.getFileName().toString().endsWith(".jsp")))
+				.findAny();
+		LOGGER.debug("Found as potential JSPs: {}.", jsp);
+		return Mark.binary(jsp.isEmpty(), "Not using outdated JSPs", "Using outdated JSPs");
 	}
 
-	public static IGrade getNoWebXml(FilesSource source) {
-		final FilesSource sourcer = source.filterOnPath((p) -> p.getFileName().toString().equals("web.xml"));
-		return Mark.binary(sourcer.asFileContents().isEmpty(), "No spurious web.xml", "Spurious web.xml");
+	public static IGrade getNoWebXml(Path source) {
+		final Optional<Path> found = Unchecker.IO_UNCHECKER
+				.getUsing(() -> Files.find(source, 99, (p, b) -> p.getFileName().toString().endsWith("web.xml")))
+				.findAny();
+		return Mark.binary(found.isEmpty(), "No spurious web.xml", "Spurious web.xml");
 	}
 
 }
