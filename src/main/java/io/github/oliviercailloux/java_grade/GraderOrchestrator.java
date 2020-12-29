@@ -19,9 +19,9 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.graph.ImmutableGraph;
 
+import io.github.oliviercailloux.git.GitHubHistory;
 import io.github.oliviercailloux.git.GitLocalHistory;
 import io.github.oliviercailloux.git.fs.GitFileSystem;
-import io.github.oliviercailloux.git.git_hub.model.GitHubHistory;
 import io.github.oliviercailloux.git.git_hub.model.GitHubToken;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherQL;
@@ -32,20 +32,20 @@ import io.github.oliviercailloux.grade.mycourse.json.StudentsReaderFromJson;
 
 public class GraderOrchestrator {
 
-	public static GitHubHistory getGitHubHistory(RepositoryCoordinates coord) {
+	public static GitHubHistory getReversedGitHubHistory(RepositoryCoordinates coord) {
 		final GitHubHistory gitHubHistory;
 		try (GitHubFetcherQL fetcher = GitHubFetcherQL.using(GitHubToken.getRealInstance())) {
-			gitHubHistory = fetcher.getGitHubHistory(coord);
+			gitHubHistory = fetcher.getReversedGitHubHistory(coord);
 		}
-		final ImmutableGraph<ObjectId> patched = gitHubHistory.getPatchedKnowns();
+		final ImmutableGraph<ObjectId> patched = gitHubHistory.getPatchedPushCommits();
 		if (!patched.nodes().isEmpty()) {
 			LOGGER.warn("Patched: {}.", patched);
 		}
 		return gitHubHistory;
 	}
 
-	public static GitLocalHistory getFilteredHistory(GitFileSystem fs, GitHubHistory gitHubHistory,
-			Instant deadline) throws IOException {
+	public static GitLocalHistory getFilteredHistory(GitFileSystem fs, GitHubHistory gitHubHistory, Instant deadline)
+			throws IOException {
 		final ImmutableSortedSet<Instant> pushedDates = gitHubHistory.getRefsBySortedPushedDates(true).keySet();
 		final Optional<Instant> lastOnTimeOpt = Optional.ofNullable(pushedDates.floor(deadline));
 		final Instant lastOnTime = lastOnTimeOpt.orElse(Instant.MIN);

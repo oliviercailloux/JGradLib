@@ -36,9 +36,10 @@ import com.google.common.collect.ImmutableSetMultimap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Streams;
 import com.google.common.graph.Graph;
+import com.google.common.graph.Graphs;
 import com.google.common.io.Resources;
 
-import io.github.oliviercailloux.git.git_hub.model.GitHubHistory;
+import io.github.oliviercailloux.git.GitHubHistory;
 import io.github.oliviercailloux.git.git_hub.model.GitHubRealToken;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.git.git_hub.model.graph_ql.PushedDatesAnswer;
@@ -134,7 +135,7 @@ public class GitHubFetcherQL implements AutoCloseable {
 		return repo;
 	}
 
-	public GitHubHistory getGitHubHistory(RepositoryCoordinates coordinates) {
+	public GitHubHistory getReversedGitHubHistory(RepositoryCoordinates coordinates) {
 		/**
 		 * I build the graph while asking queries: I need to be able to detect when I’m
 		 * back at some commit I know already. Thus, parse the initial request, build a
@@ -179,13 +180,16 @@ public class GitHubFetcherQL implements AutoCloseable {
 		final ImmutableBiMap<ObjectId, CommitNode> oidToNode = byOid.asMap().entrySet().stream().collect(
 				ImmutableBiMap.toImmutableBiMap((e) -> e.getKey(), (e) -> Iterables.getOnlyElement(e.getValue())));
 
-		final Graph<ObjectId> history = Utils.asGraph((o) -> oidToNode.get(o).getParents(), oidToNode.keySet());
+		final Graph<ObjectId> history = Graphs
+				.transpose(Utils.asGraph((o) -> oidToNode.get(o).getParents(), oidToNode.keySet()));
+		final ImmutableMap<ObjectId, Instant> authorDates = oidToNode.values().stream()
+				.collect(ImmutableMap.toImmutableMap((c) -> c.getOid(), (c) -> c.getAuthoredDate()));
 		final ImmutableMap<ObjectId, Instant> commitDates = oidToNode.values().stream()
 				.collect(ImmutableMap.toImmutableMap((c) -> c.getOid(), (c) -> c.getCommittedDate()));
-		final ImmutableMap<ObjectId, Instant> pushedDates = oidToNode.values().stream()
+		final ImmutableMap<ObjectId, Instant> pushDates = oidToNode.values().stream()
 				.filter((c) -> c.getPushedDate().isPresent())
 				.collect(ImmutableMap.toImmutableMap((c) -> c.getOid(), (c) -> c.getPushedDate().get()));
-		return GitHubHistory.given(history, commitDates, pushedDates);
+		return GitHubHistory.create(history, authorDates, commitDates, pushDates);
 	}
 
 	private JsonObject query(String queryName, List<String> fragmentNames, JsonObject variables) {

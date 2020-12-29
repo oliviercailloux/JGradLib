@@ -30,13 +30,14 @@ import com.google.common.collect.Sets;
 import com.google.common.graph.ImmutableGraph;
 
 import io.github.oliviercailloux.git.GitCloner;
+import io.github.oliviercailloux.git.GitHistory;
+import io.github.oliviercailloux.git.GitHubHistory;
 import io.github.oliviercailloux.git.GitLocalHistory;
 import io.github.oliviercailloux.git.GitUri;
 import io.github.oliviercailloux.git.fs.GitFileSystem;
 import io.github.oliviercailloux.git.fs.GitFileSystemProvider;
 import io.github.oliviercailloux.git.fs.GitPath;
 import io.github.oliviercailloux.git.fs.GitPathRoot;
-import io.github.oliviercailloux.git.git_hub.model.GitHubHistory;
 import io.github.oliviercailloux.git.git_hub.model.GitHubToken;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinatesWithPrefix;
 import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherV3;
@@ -111,32 +112,29 @@ public class GitBrGrader {
 
 		try (GitFileSystem fs = GitFileSystemProvider.getInstance()
 				.newFileSystemFromGitDir(projectDir.resolve(".git"))) {
-			final GitHubHistory gitHubHistory = GraderOrchestrator.getGitHubHistory(coord);
+			final GitHubHistory gitHubHistory = GraderOrchestrator.getReversedGitHubHistory(coord);
 			final IGrade grade = grade(coord.getUsername(), fs, gitHubHistory);
 			LOGGER.info("Grade {}: {}.", coord, grade);
 			return grade;
 		}
 	}
 
-	public IGrade grade(String owner, GitFileSystem fs, GitHubHistory gitHubHistory) throws IOException {
-		final GitLocalHistory filtered = GraderOrchestrator.getFilteredHistory(fs, gitHubHistory, DEADLINE);
-		final Set<ObjectId> keptIds = ImmutableSet.copyOf(filtered.getGraph().nodes());
-		final Set<ObjectId> allIds = gitHubHistory.getGraph().nodes();
-		Verify.verify(allIds.containsAll(keptIds));
-		final Set<ObjectId> excludedIds = Sets.difference(allIds, keptIds);
+	public IGrade grade(String owner, GitFileSystem fs, GitHubHistory reversedGitHubHistory) throws IOException {
+		final GitHistory history = reversedGitHubHistory.getConsistentPushHistory();
+		final GitHistory reversedFiltered = history.filter(o -> !history.getCommitDate(o).isAfter(DEADLINE));
+		final Set<ObjectId> excludedIds = history.getGraph().nodes().stream()
+				.filter(o -> history.getCommitDate(o).isAfter(DEADLINE)).collect(ImmutableSet.toImmutableSet());
 		final String comment;
 		if (excludedIds.isEmpty()) {
 			comment = "";
 		} else {
-			comment = "Excluded the following commits (pushed too late): "
-					+ excludedIds.stream()
-							.map(o -> o.getName().substring(0, 7) + " (" + gitHubHistory
-									.getCorrectedAndCompletedPushedDates().get(o).atZone(ZoneId.systemDefault()) + ")")
-							.collect(Collectors.joining("; "));
+			comment = "Excluded the following commits (pushed too late): " + excludedIds.stream()
+					.map(o -> o.getName().substring(0, 7) + " ("
+							+ history.getCommitDate(o).atZone(ZoneId.systemDefault()) + ")")
+					.collect(Collectors.joining("; "));
 		}
 
-		LOGGER.debug("Graph filtered history: {}.", filtered.getGraph().edges());
-		fs.getHistory();
+		LOGGER.debug("Graph filtered history: {}.", reversedFiltered.getGraph().edges());
 		final GitLocalHistory manual = filtered
 				.filter(o -> !JavaMarkHelper.committerIsGitHub(fs.getCachedHistory().getCommit(o)));
 		LOGGER.debug("Graph manual: {}.", manual.getGraph().edges());

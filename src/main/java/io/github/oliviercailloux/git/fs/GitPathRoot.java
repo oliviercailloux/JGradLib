@@ -17,6 +17,8 @@ import org.eclipse.jgit.revwalk.RevTree;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.collect.ImmutableList;
+
 import io.github.oliviercailloux.git.fs.GitFileSystem.FollowLinksBehavior;
 import io.github.oliviercailloux.git.fs.GitFileSystem.GitObject;
 
@@ -244,6 +246,17 @@ public class GitPathRoot extends GitAbsolutePath {
 		 * relation, which requires parsing the commit.
 		 */
 		return Commit.create(getFileSystem(), getRevCommit());
+	}
+
+	public ImmutableList<GitPathRoot> getParents() throws IOException, NoSuchFileException {
+		final RevCommit revCommit = getRevCommit();
+		final ImmutableList<RevCommit> parents = ImmutableList.copyOf(revCommit.getParents());
+
+		final ImmutableList.Builder<GitPathRoot> builder = ImmutableList.builder();
+		for (ObjectId parentId : parents) {
+			builder.add(getFileSystem().getPathRoot(parentId));
+		}
+		return builder.build();
 	}
 
 	@Override
