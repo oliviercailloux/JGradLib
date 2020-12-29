@@ -248,7 +248,7 @@ public class GitPathRoot extends GitAbsolutePath {
 		return Commit.create(getFileSystem(), getRevCommit());
 	}
 
-	public ImmutableList<GitPathRoot> getParents() throws IOException, NoSuchFileException {
+	public ImmutableList<GitPathRoot> getParentCommits() throws IOException, NoSuchFileException {
 		final RevCommit revCommit = getRevCommit();
 		final ImmutableList<RevCommit> parents = ImmutableList.copyOf(revCommit.getParents());
 
