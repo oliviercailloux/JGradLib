@@ -236,16 +236,15 @@ public class GitPathRoot extends GitAbsolutePath {
 		/**
 		 * I considered using dynamic fetching in the returned object: if the user only
 		 * wants the commit id, we don’t need to parse the commit, thus, we could parse
-		 * the commit on-demand. But this introduces complexities (the commit id may
-		 * throw an IO Exception and the user must be aware that it works only when the
-		 * fs is not closed yet, which may be surprising, contrary to getParents() which
-		 * more naturally requires an open fs), and we don’t gain much: I can’t imagine
-		 * cases where the user will want a vast series of commit ids without having to
-		 * parse them. Mostly, a vast series of commits would come from a desire to
-		 * browse (part of) the history, and this requires accessing the parent-of
-		 * relation, which requires parsing the commit.
+		 * the commit on-demand. But this introduces complexities (we have to document
+		 * that sometimes, the Commit is bound to a file system and should be fetched
+		 * while the fs is still open), and we don’t gain much: I can’t imagine cases
+		 * where the user will want a vast series of commit ids without having to parse
+		 * them. Mostly, a vast series of commits would come from a desire to browse
+		 * (part of) the history, and this requires accessing the parent-of relation,
+		 * which requires parsing the commit.
 		 */
-		return Commit.create(getFileSystem(), getRevCommit());
+		return Commit.create(getRevCommit());
 	}
 
 	public ImmutableList<GitPathRoot> getParentCommits() throws IOException, NoSuchFileException {
