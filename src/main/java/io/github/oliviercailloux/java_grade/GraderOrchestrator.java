@@ -44,17 +44,6 @@ public class GraderOrchestrator {
 		return gitHubHistory;
 	}
 
-	public static GitLocalHistory getFilteredHistory(GitFileSystem fs, GitHubHistory gitHubHistory, Instant deadline)
-			throws IOException {
-		final ImmutableSortedSet<Instant> pushedDates = gitHubHistory.getRefsBySortedPushedDates(true).keySet();
-		final Optional<Instant> lastOnTimeOpt = Optional.ofNullable(pushedDates.floor(deadline));
-		final Instant lastOnTime = lastOnTimeOpt.orElse(Instant.MIN);
-		LOGGER.debug("Last on time: {}.", lastOnTime);
-		final GitLocalHistory filtered = fs.getHistory()
-				.filter(o -> !gitHubHistory.getCorrectedAndCompletedPushedDates().get(o).isAfter(lastOnTime));
-		return filtered;
-	}
-
 	public static ImmutableList<RepositoryCoordinates> readRepositories(String org, String prefix) {
 		final ImmutableList<RepositoryCoordinates> repositories;
 		try (GitHubFetcherV3 fetcher = GitHubFetcherV3.using(GitHubToken.getRealInstance())) {
