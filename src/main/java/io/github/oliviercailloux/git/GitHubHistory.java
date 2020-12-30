@@ -105,6 +105,10 @@ public class GitHubHistory {
 		return GitHistory.create(graph, commitDates);
 	}
 
+	public ImmutableMap<ObjectId, Instant> getPushDates() {
+		return pushDates;
+	}
+
 	/**
 	 * Many null values among the pushedDate information sent by GitHub. Also,
 	 * there’s probably occasional bugs, where a commit is reportedly pushed before

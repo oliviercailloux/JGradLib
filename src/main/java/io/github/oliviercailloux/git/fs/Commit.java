@@ -76,8 +76,24 @@ public class Commit {
 		return id;
 	}
 
+	public String getAuthorName() {
+		return authorName;
+	}
+
+	public String getAuthorEmail() {
+		return authorEmail;
+	}
+
 	public ZonedDateTime getAuthorDate() {
 		return authorDate;
+	}
+
+	public String getCommitterName() {
+		return committerName;
+	}
+
+	public String getCommitterEmail() {
+		return committerEmail;
 	}
 
 	public ZonedDateTime getCommitterDate() {

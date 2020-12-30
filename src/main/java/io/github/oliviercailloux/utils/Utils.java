@@ -22,6 +22,8 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
+import java.util.List;
+import java.util.ListIterator;
 import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
@@ -34,6 +36,8 @@ import org.slf4j.LoggerFactory;
 import com.google.common.base.Strings;
 import com.google.common.base.Verify;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterators;
+import com.google.common.collect.PeekingIterator;
 import com.google.common.graph.EndpointPair;
 import com.google.common.graph.Graph;
 import com.google.common.graph.GraphBuilder;
@@ -174,6 +178,20 @@ public class Utils {
 				return FileVisitResult.CONTINUE;
 			}
 		});
+	}
+
+	public static <E> ImmutableGraph<E> asGraph(List<E> elements) {
+		final MutableGraph<E> builder = GraphBuilder.directed().allowsSelfLoops(false).build();
+		final ListIterator<E> iterator = elements.listIterator();
+		final PeekingIterator<E> peekingIterator = Iterators.peekingIterator(iterator);
+		while (peekingIterator.hasNext()) {
+			final E e1 = peekingIterator.next();
+			if (peekingIterator.hasNext()) {
+				final E e2 = peekingIterator.peek();
+				builder.putEdge(e1, e2);
+			}
+		}
+		return ImmutableGraph.copyOf(builder);
 	}
 
 }

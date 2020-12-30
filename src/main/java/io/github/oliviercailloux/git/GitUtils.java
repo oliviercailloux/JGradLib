@@ -1,17 +1,18 @@
 package io.github.oliviercailloux.git;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static io.github.oliviercailloux.jaris.exceptions.Unchecker.IO_UNCHECKER;
 
 import java.io.IOException;
-import java.nio.file.NoSuchFileException;
+import java.io.UncheckedIOException;
 import java.time.Instant;
 import java.time.ZonedDateTime;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
 import java.util.List;
-import java.util.Set;
 import java.util.TimeZone;
+import java.util.function.Function;
 
 import org.eclipse.jgit.lib.Constants;
 import org.eclipse.jgit.lib.ObjectId;
@@ -23,7 +24,6 @@ import org.eclipse.jgit.revwalk.RevWalk;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -31,7 +31,6 @@ import com.google.common.graph.Graph;
 import com.google.common.graph.Graphs;
 import com.google.common.graph.ImmutableGraph;
 
-import io.github.oliviercailloux.git.fs.Commit;
 import io.github.oliviercailloux.git.fs.GitFileSystem;
 import io.github.oliviercailloux.git.fs.GitPathRoot;
 import io.github.oliviercailloux.utils.Utils;
@@ -97,52 +96,22 @@ public class GitUtils {
 	}
 
 	public static GitHistory getHistory(GitFileSystem gitFs) throws IOException {
-		final ImmutableSet<GitPathRoot> paths = gitFs.getCommits();
-		final ImmutableBiMap<GitPathRoot, Commit> commits = asCommitsMap(paths);
-		final ImmutableMap<Commit, List<Commit>> parents = asParentCommitsMap(commits.values());
+		final ImmutableGraph<GitPathRoot> graphOfPaths = gitFs.getCommitsGraph();
 
-		final Graph<Commit> graph = Graphs.transpose(Utils.asGraph(parents::get, commits.values()));
+		final Function<GitPathRoot, ObjectId> getId = IO_UNCHECKER.wrapFunction(p -> p.getCommit().getId());
+		final Function<GitPathRoot, Instant> getDate = IO_UNCHECKER
+				.wrapFunction(p -> p.getCommit().getCommitterDate().toInstant());
 
-		final ImmutableMap<ObjectId, Instant> dates = commits.values().stream()
-				.collect(ImmutableMap.toImmutableMap(c -> c.getId(), c -> c.getCommitterDate().toInstant()));
+		try {
+			final ImmutableGraph<ObjectId> graphOfIds = Utils.asImmutableGraph(graphOfPaths, getId);
 
-		final ImmutableGraph<ObjectId> graphOfIds = Utils.asImmutableGraph(graph, c -> c.getId());
-		return GitHistory.create(graphOfIds, dates);
-	}
+			final ImmutableMap<ObjectId, Instant> dates = graphOfPaths.nodes().stream()
+					.collect(ImmutableMap.toImmutableMap(getId, getDate));
 
-	public static ImmutableGraph<GitPathRoot> getCommitGraph(GitFileSystem gitFs) throws IOException {
-		final ImmutableSet<GitPathRoot> paths = gitFs.getCommits();
-		final ImmutableMap<GitPathRoot, List<GitPathRoot>> parents = asParentsMap(paths);
-
-		final Graph<GitPathRoot> graph = Graphs.transpose(Utils.asGraph(parents::get, paths));
-		return ImmutableGraph.copyOf(graph);
-	}
-
-	private static ImmutableMap<GitPathRoot, List<GitPathRoot>> asParentsMap(Set<GitPathRoot> paths)
-			throws IOException, NoSuchFileException {
-		final ImmutableMap.Builder<GitPathRoot, List<GitPathRoot>> parentsBuilder = ImmutableMap.builder();
-		for (GitPathRoot path : paths) {
-			parentsBuilder.put(path, path.getParents());
+			return GitHistory.create(graphOfIds, dates);
+		} catch (UncheckedIOException e) {
+			throw new IOException(e.getCause());
 		}
-		return parentsBuilder.build();
-	}
-
-	private static ImmutableMap<Commit, List<Commit>> asParentCommitsMap(Set<Commit> paths)
-			throws IOException, NoSuchFileException {
-		final ImmutableMap.Builder<Commit, List<Commit>> parentsBuilder = ImmutableMap.builder();
-		for (Commit path : paths) {
-			parentsBuilder.put(path, path.getParents());
-		}
-		return parentsBuilder.build();
-	}
-
-	private static ImmutableBiMap<GitPathRoot, Commit> asCommitsMap(Set<GitPathRoot> paths)
-			throws IOException, NoSuchFileException {
-		final ImmutableBiMap.Builder<GitPathRoot, Commit> parentsBuilder = ImmutableBiMap.builder();
-		for (GitPathRoot path : paths) {
-			parentsBuilder.put(path, path.getCommit());
-		}
-		return parentsBuilder.build();
 	}
 
 }

@@ -22,22 +22,27 @@ import org.eclipse.jgit.internal.storage.dfs.InMemoryRepository;
 import org.eclipse.jgit.internal.storage.file.FileRepository;
 import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.lib.Repository;
-import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.revwalk.RevTree;
 import org.eclipse.jgit.treewalk.TreeWalk;
 import org.eclipse.jgit.treewalk.filter.PathFilter;
 import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 
 import io.github.oliviercailloux.git.JGit;
+import io.github.oliviercailloux.utils.Utils;
 
 /**
  * Tests about actual reading from a repo, using the Files API.
  */
 public class GitReadTests {
+	@SuppressWarnings("unused")
+	private static final Logger LOGGER = LoggerFactory.getLogger(GitReadTests.class);
+
 	public static void main(String[] args) throws Exception {
 		try (Repository repo = new FileRepository("/tmp/ploum/.git")) {
 			JGit.createRepoWithLink(repo);
@@ -119,7 +124,6 @@ public class GitReadTests {
 		try (DfsRepository repository = new InMemoryRepository(new DfsRepositoryDescription("myrepo"))) {
 			final ImmutableList<ObjectId> commits = JGit.createRepoWithSubDir(repository);
 			try (GitFileSystem gitFs = GitFileSystemProvider.getInstance().newFileSystemFromDfsRepository(repository)) {
-				assertEquals(ImmutableSet.copyOf(commits), gitFs.getHistory().getCommitDates().keySet());
 				assertTrue(Files.exists(gitFs.getRelativePath()));
 				assertTrue(Files.exists(gitFs.getRelativePath().toAbsolutePath()));
 				assertTrue(Files.exists(gitFs.getAbsolutePath("/refs/heads/main/")));
@@ -330,14 +334,20 @@ public class GitReadTests {
 	}
 
 	@Test
-	void testRoots() throws Exception {
-		try (DfsRepository repo = new InMemoryRepository(new DfsRepositoryDescription("myrepo"))) {
-			JGit.createBasicRepo(repo);
-			try (GitFileSystem gitFs = GitFileSystemProvider.getInstance().newFileSystemFromDfsRepository(repo)) {
-				final ImmutableSet<RevCommit> commitsOrdered = gitFs.getHistory().getCommitDates().keySet();
-				final ImmutableSet<GitPath> commitPaths = commitsOrdered.stream().map((c) -> gitFs.getAbsolutePath(c))
-						.collect(ImmutableSet.toImmutableSet());
-				assertEquals(commitPaths, gitFs.getCommits());
+	void testGraph() throws Exception {
+		try (DfsRepository repository = new InMemoryRepository(new DfsRepositoryDescription("myrepo"))) {
+			final ImmutableList<ObjectId> commits = JGit.createBasicRepo(repository);
+			try (GitFileSystem gitFs = GitFileSystemProvider.getInstance().newFileSystemFromDfsRepository(repository)) {
+				LOGGER.debug("Commits: {}.", commits);
+				assertEquals(Utils.asImmutableGraph(Utils.asGraph(commits), gitFs::getPathRoot),
+						gitFs.getCommitsGraph());
+			}
+		}
+		try (DfsRepository repository = new InMemoryRepository(new DfsRepositoryDescription("myrepo"))) {
+			final ImmutableList<ObjectId> commits = JGit.createRepoWithSubDir(repository);
+			try (GitFileSystem gitFs = GitFileSystemProvider.getInstance().newFileSystemFromDfsRepository(repository)) {
+				assertEquals(Utils.asImmutableGraph(Utils.asGraph(commits), gitFs::getPathRoot),
+						gitFs.getCommitsGraph());
 			}
 		}
 	}

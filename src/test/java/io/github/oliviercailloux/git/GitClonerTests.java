@@ -7,7 +7,6 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.io.File;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -54,7 +53,7 @@ class GitClonerTests {
 		try (GitHubFetcherV3 fetcher = GitHubFetcherV3.using(GitHubToken.getRealInstance())) {
 			final List<CommitGitHubDescription> commits = fetcher
 					.getCommitsGitHubDescriptions(RepositoryCoordinates.from("oliviercailloux", "testrel"), false);
-			shas = commits.stream().map((c) -> c.getSha()).collect(ImmutableList.toImmutableList());
+			shas = commits.stream().map(CommitGitHubDescription::getSha).collect(ImmutableList.toImmutableList());
 		}
 
 		final GitCloner cloner = new GitCloner();
@@ -62,8 +61,18 @@ class GitClonerTests {
 		final Path httpsPath = Utils.getTempDirectory()
 				.resolve("testrel cloned using https " + Utils.ISO_BASIC_UTC_FORMATTER.format(Instant.now()));
 		cloner.download(GitUri.fromUri(URI.create("https://github.com/oliviercailloux/testrel/")), httpsPath);
-		final File httpsGitDirAsFile = httpsPath.resolve(".git").toFile();
-		final GitLocalHistory historyFromHttpsClone = GitUtils.getHistory(httpsGitDirAsFile);
+
+		final Path sshPath = Utils.getTempDirectory()
+				.resolve("testrel cloned using ssh " + Utils.ISO_BASIC_UTC_FORMATTER.format(Instant.now()));
+
+		final GitHistory historyFromHttpsClone;
+		final ObjectId masterId;
+		try (Repository repo = new FileRepository(httpsPath.resolve(".git").toFile())) {
+			historyFromHttpsClone = GitUtils.getHistory(repo);
+			final Ref master = repo.exactRef("refs/heads/master");
+			masterId = master.getObjectId();
+		}
+
 		/**
 		 * Compare only the root rather than everything because the list obtained from
 		 * GitHub contains only the master branch, thus, might be less than the full
@@ -71,31 +80,29 @@ class GitClonerTests {
 		 */
 		assertEquals(shas.reverse().get(0),
 				historyFromHttpsClone.getRoots().stream().collect(MoreCollectors.onlyElement()));
-		final ObjectId masterId;
-		try (Repository repo = new FileRepository(httpsGitDirAsFile)) {
-			final Ref master = repo.exactRef("refs/heads/master");
-			masterId = master.getObjectId();
-		}
-		final List<ObjectId> commitsToMaster = ImmutableList
-				.copyOf(Traverser.forGraph(historyFromHttpsClone.getRawGraph()).depthFirstPostOrder(masterId));
+		final List<ObjectId> commitsToMaster = ImmutableList.copyOf(
+				Traverser.forGraph(historyFromHttpsClone.getGraph()::predecessors).depthFirstPostOrder(masterId));
 		assertEquals(shas.reverse(), commitsToMaster);
 
-		final Path sshPath = Utils.getTempDirectory()
-				.resolve("testrel cloned using ssh " + Utils.ISO_BASIC_UTC_FORMATTER.format(Instant.now()));
 		cloner.download(GitUri.fromUri(URI.create("ssh://git@github.com/oliviercailloux/testrel.git")), sshPath);
-		assertEquals(historyFromHttpsClone, GitUtils.getHistory(sshPath.resolve(".git").toFile()));
+		try (Repository repo2 = new FileRepository(sshPath.resolve(".git").toFile())) {
+			assertEquals(historyFromHttpsClone, GitUtils.getHistory(repo2));
+		}
 
 		final Path filePath = Utils.getTempDirectory().resolve("testrel cloned using file transport to ssh clone "
 				+ Utils.ISO_BASIC_UTC_FORMATTER.format(Instant.now()));
 		cloner.download(GitUri.fromUri(sshPath.toUri()), filePath);
+
 		/**
 		 * This clone does not clone the clone’s origin branches that are not local to
 		 * the clone. Thus, their histories might differ.
 		 */
-		final GitLocalHistory historyFromFileClone = GitUtils.getHistory(filePath.resolve(".git").toFile());
-		final ImmutableList<ObjectId> commitsToMasterInFileClone = ImmutableList
-				.copyOf(Traverser.forGraph(historyFromFileClone.getRawGraph()).depthFirstPostOrder(masterId));
-		assertEquals(commitsToMaster, commitsToMasterInFileClone);
+		try (Repository repo3 = new FileRepository(filePath.resolve(".git").toFile())) {
+			final GitHistory historyFromFileClone = GitUtils.getHistory(repo3);
+			final ImmutableList<ObjectId> commitsToMasterInFileClone = ImmutableList.copyOf(
+					Traverser.forGraph(historyFromFileClone.getGraph()::predecessors).depthFirstPostOrder(masterId));
+			assertEquals(commitsToMaster, commitsToMasterInFileClone);
+		}
 
 		Files.writeString(sshPath.resolve("newfile.txt"), "newcontent");
 		final RevCommit newCommit;
@@ -113,7 +120,10 @@ class GitClonerTests {
 
 		/** Should update and fetch the new commit. */
 		cloner.download(GitUri.fromUri(sshPath.toUri()), filePath);
-		final GitLocalHistory enlargedHistory = GitUtils.getHistory(filePath.resolve(".git").toFile());
+		final GitHistory enlargedHistory;
+		try (Repository repo = new FileRepository(filePath.resolve(".git").toFile())) {
+			enlargedHistory = GitUtils.getHistory(repo);
+		}
 		assertNotEquals(historyFromHttpsClone, enlargedHistory);
 		final ImmutableSet<ObjectId> expectedEnlargedCommits = ImmutableSet.<ObjectId>builder().addAll(commitsToMaster)
 				.add(newCommit).build();
@@ -184,18 +194,17 @@ class GitClonerTests {
 			assertNotNull(head);
 			assertEquals("e26c142665bb9f560d59b18fd80763ef45e29324", head.getLeaf().getObjectId().getName());
 			try (GitFileSystem gitFs = GitFileSystemProvider.getInstance().newFileSystemFromDfsRepository(repo)) {
-				assertTrue(Files.exists(gitFs.getAbsolutePath("master")));
-				assertTrue(Files.exists(gitFs.getAbsolutePath("master", "Test.html")));
-				assertFalse(Files.exists(gitFs.getAbsolutePath("master", "test.html")));
-				assertTrue(Files.exists(gitFs.getAbsolutePath("dev", "Test.html")));
-				assertTrue(Files.exists(gitFs.getRelativePath("Test.html")));
-				assertFalse(Files.exists(gitFs.getRelativePath("does not exist.txt")));
+				assertTrue(Files.exists(gitFs.getAbsolutePath("/refs/heads/master/")));
+				assertTrue(Files.exists(gitFs.getAbsolutePath("/refs/heads/master/", "Test.html")));
+				assertFalse(Files.exists(gitFs.getAbsolutePath("/refs/heads/master/", "test.html")));
+				assertTrue(Files.exists(gitFs.getAbsolutePath("/refs/heads/dev/", "Test.html")));
+				assertFalse(Files.exists(gitFs.getAbsolutePath("/refs/heads/master/", "does not exist.txt")));
 				assertFalse(
-						Files.exists(gitFs.getAbsolutePath("FFFFFFFFb0e12c98d1e424a767a91c8d9d2f3f34", "Test.html")));
+						Files.exists(gitFs.getAbsolutePath("/FFFFFFFFb0e12c98d1e424a767a91c8d9d2f3f34/", "Test.html")));
 				assertFalse(
-						Files.exists(gitFs.getAbsolutePath("c0170a38b0e12c98d1e424a767a91c8d9d2f3f34", "Test.html")));
+						Files.exists(gitFs.getAbsolutePath("/c0170a38b0e12c98d1e424a767a91c8d9d2f3f34/", "Test.html")));
 				assertTrue(
-						Files.exists(gitFs.getAbsolutePath("c0170a38b0e12c98d1e424a767a91c8d9d2f3f34", "ploum.txt")));
+						Files.exists(gitFs.getAbsolutePath("/c0170a38b0e12c98d1e424a767a91c8d9d2f3f34/", "ploum.txt")));
 			}
 		}
 	}
@@ -210,15 +219,14 @@ class GitClonerTests {
 			assertEquals("e26c142665bb9f560d59b18fd80763ef45e29324", head.getLeaf().getObjectId().getName());
 		}
 		try (GitFileSystem gitFs = GitFileSystemProvider.getInstance().newFileSystemFromGitDir(gitDir)) {
-			assertTrue(Files.exists(gitFs.getAbsolutePath("master")));
-			assertTrue(Files.exists(gitFs.getAbsolutePath("master", "Test.html")));
-			assertFalse(Files.exists(gitFs.getAbsolutePath("master", "test.html")));
-			assertTrue(Files.exists(gitFs.getAbsolutePath("dev", "Test.html")));
-			assertTrue(Files.exists(gitFs.getRelativePath("Test.html")));
-			assertFalse(Files.exists(gitFs.getRelativePath("does not exist.txt")));
-			assertFalse(Files.exists(gitFs.getAbsolutePath("FFFFFFFFb0e12c98d1e424a767a91c8d9d2f3f34", "Test.html")));
-			assertFalse(Files.exists(gitFs.getAbsolutePath("c0170a38b0e12c98d1e424a767a91c8d9d2f3f34", "Test.html")));
-			assertTrue(Files.exists(gitFs.getAbsolutePath("c0170a38b0e12c98d1e424a767a91c8d9d2f3f34", "ploum.txt")));
+			assertTrue(Files.exists(gitFs.getAbsolutePath("/refs/heads/master/")));
+			assertTrue(Files.exists(gitFs.getAbsolutePath("/refs/heads/master/", "Test.html")));
+			assertFalse(Files.exists(gitFs.getAbsolutePath("/refs/heads/master/", "test.html")));
+			assertTrue(Files.exists(gitFs.getAbsolutePath("/refs/heads/dev/", "Test.html")));
+			assertFalse(Files.exists(gitFs.getAbsolutePath("/refs/heads/master/", "does not exist.txt")));
+			assertFalse(Files.exists(gitFs.getAbsolutePath("/FFFFFFFFb0e12c98d1e424a767a91c8d9d2f3f34/", "Test.html")));
+			assertFalse(Files.exists(gitFs.getAbsolutePath("/c0170a38b0e12c98d1e424a767a91c8d9d2f3f34/", "Test.html")));
+			assertTrue(Files.exists(gitFs.getAbsolutePath("/c0170a38b0e12c98d1e424a767a91c8d9d2f3f34/", "ploum.txt")));
 		}
 	}
 

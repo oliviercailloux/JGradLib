@@ -4,12 +4,14 @@ import static com.google.common.base.Preconditions.checkArgument;
 
 import java.time.Instant;
 import java.util.Map;
+import java.util.Objects;
 import java.util.function.Predicate;
 
 import org.eclipse.jgit.lib.ObjectId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
@@ -192,6 +194,25 @@ public class GitHistory {
 //		 */
 //		final ImmutableGraph<E> outGraph = builder.build();
 //		return raw(outGraph, Maps.filterKeys(history.getCommitDates(), predicate::test));
+	}
+
+	@Override
+	public boolean equals(Object o2) {
+		if (!(o2 instanceof GitHistory)) {
+			return false;
+		}
+		final GitHistory h2 = (GitHistory) o2;
+		return graph.equals(h2.graph) && dates.equals(h2.dates);
+	}
+
+	@Override
+	public int hashCode() {
+		return Objects.hash(graph, dates);
+	}
+
+	@Override
+	public String toString() {
+		return MoreObjects.toStringHelper(this).add("Graph", graph).add("Dates", dates).toString();
 	}
 
 }

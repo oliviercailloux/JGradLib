@@ -7,13 +7,14 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Instant;
-import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -27,13 +28,15 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
+import com.google.common.graph.Graphs;
 import com.google.common.graph.ImmutableGraph;
 
 import io.github.oliviercailloux.git.GitCloner;
 import io.github.oliviercailloux.git.GitHistory;
 import io.github.oliviercailloux.git.GitHubHistory;
-import io.github.oliviercailloux.git.GitLocalHistory;
 import io.github.oliviercailloux.git.GitUri;
+import io.github.oliviercailloux.git.GitUtils;
+import io.github.oliviercailloux.git.fs.Commit;
 import io.github.oliviercailloux.git.fs.GitFileSystem;
 import io.github.oliviercailloux.git.fs.GitFileSystemProvider;
 import io.github.oliviercailloux.git.fs.GitPath;
@@ -120,56 +123,44 @@ public class GitBrGrader {
 	}
 
 	public IGrade grade(String owner, GitFileSystem fs, GitHubHistory reversedGitHubHistory) throws IOException {
+		checkArgument(!owner.equals(JavaMarkHelper.GIT_HUB_COMMITTER));
+
+		final ImmutableGraph<GitPathRoot> commitGraph = GitUtils.getCommitGraph(fs);
 		final GitHistory history = reversedGitHubHistory.getConsistentPushHistory();
-		final GitHistory reversedFiltered = history.filter(o -> !history.getCommitDate(o).isAfter(DEADLINE));
-		final Set<ObjectId> excludedIds = history.getGraph().nodes().stream()
-				.filter(o -> history.getCommitDate(o).isAfter(DEADLINE)).collect(ImmutableSet.toImmutableSet());
+		final Predicate<GitPathRoot> onTimePath = p -> !history.getCommitDate(p.getCommit().getId()).isAfter(DEADLINE);
+		final ImmutableSet<GitPathRoot> onTimeCommits = commitGraph.nodes().stream().filter(onTimePath)
+				.collect(ImmutableSet.toImmutableSet());
+		final ImmutableSet<GitPathRoot> lateCommits = commitGraph.nodes().stream().filter(onTimePath.negate())
+				.collect(ImmutableSet.toImmutableSet());
+		final ImmutableGraph<GitPathRoot> onTimeCommitsGraph = Utils
+				.asImmutableGraph(Graphs.inducedSubgraph(commitGraph, onTimeCommits));
+
+		final Function<GitPathRoot, Commit> asCommit = p -> p.getCommit();
+
 		final String comment;
-		if (excludedIds.isEmpty()) {
+		if (lateCommits.isEmpty()) {
 			comment = "";
 		} else {
-			comment = "Excluded the following commits (pushed too late): " + excludedIds.stream()
-					.map(o -> o.getName().substring(0, 7) + " ("
-							+ history.getCommitDate(o).atZone(ZoneId.systemDefault()) + ")")
+			comment = "Excluded the following commits (pushed too late): " + lateCommits.stream().map(asCommit)
+					.map(c -> c.getId().getName().substring(0, 7) + " (" + c.getCommitterDate() + ")")
 					.collect(Collectors.joining("; "));
 		}
 
-		LOGGER.debug("Graph filtered history: {}.", reversedFiltered.getGraph().edges());
-		final GitLocalHistory manual = filtered
-				.filter(o -> !JavaMarkHelper.committerIsGitHub(fs.getCachedHistory().getCommit(o)));
-		LOGGER.debug("Graph manual: {}.", manual.getGraph().edges());
-		final ImmutableGraph<ObjectId> graph = Utils.asImmutableGraph(manual.getGraph(), o -> o);
-		LOGGER.debug("Graph copied from manual: {}.", graph.edges());
-
-		if (graph.nodes().isEmpty()) {
-			return Mark.zero("Found no manual commit (not counting commits from GitHub).");
-		}
-
-		final Set<RevCommit> unfiltered = fs.getHistory().getGraph().nodes();
-		@SuppressWarnings("unlikely-arg-type")
-		final boolean containsAll = unfiltered.containsAll(graph.nodes());
-		Verify.verify(containsAll);
+		LOGGER.debug("Commits on time: {}.", onTimeCommitsGraph.edges());
 
 		final ImmutableMap.Builder<Criterion, IGrade> gradeBuilder = ImmutableMap.builder();
 
-		final GitLocalHistory ownHistory = filtered
-				.filter(o -> JavaMarkHelper.committerAndAuthorIs(fs.getCachedHistory().getCommit(o), owner));
-		final ImmutableGraph<RevCommit> ownGraph = ownHistory.getGraph();
-		gradeBuilder.put(JavaCriterion.ID, Mark.binary(ownGraph.nodes().size() >= 1));
+		final Predicate<GitPathRoot> rightPerson = p -> JavaMarkHelper.committerAndAuthorIs(p, owner);
 
-		if (!graph.nodes().containsAll(ownGraph.nodes())) {
-			LOGGER.warn("Risk of accessing a commit beyond deadline (e.g. master!).");
-		}
+		gradeBuilder.put(JavaCriterion.ID,
+				Mark.binary(onTimeCommits.stream().filter(rightPerson).findAny().isPresent()));
 
-		@SuppressWarnings("unlikely-arg-type")
-		final Optional<ObjectId> br1 = getObjectId(fs.getPathRoot(branchPrefix + "/br1/"))
-				.filter(o -> ownGraph.nodes().contains(o));
-		@SuppressWarnings("unlikely-arg-type")
-		final Optional<ObjectId> br2 = getObjectId(fs.getPathRoot(branchPrefix + "/br2/"))
-				.filter(o -> ownGraph.nodes().contains(o));
-		@SuppressWarnings("unlikely-arg-type")
-		final Optional<ObjectId> br3 = getObjectId(fs.getPathRoot(branchPrefix + "/br3/"))
-				.filter(o -> ownGraph.nodes().contains(o));
+		final Optional<GitPathRoot> br1 = Optional.of(fs.getPathRoot(branchPrefix + "/br1/")).filter(p -> p.exists())
+				.filter(rightPerson);
+		final Optional<GitPathRoot> br2 = Optional.of(fs.getPathRoot(branchPrefix + "/br2/")).filter(p -> p.exists())
+				.filter(rightPerson);
+		final Optional<GitPathRoot> br3 = Optional.of(fs.getPathRoot(branchPrefix + "/br3/")).filter(p -> p.exists())
+				.filter(rightPerson);
 
 		final Set<ObjectId> startCandidates = new LinkedHashSet<>();
 		final ImmutableSet<RevCommit> roots = ownHistory.getRoots();

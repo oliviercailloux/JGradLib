@@ -4,6 +4,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Verify.verify;
 import static com.google.common.base.Verify.verifyNotNull;
+import static io.github.oliviercailloux.jaris.exceptions.Unchecker.IO_UNCHECKER;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -30,6 +31,7 @@ import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Stream;
 
 import org.eclipse.jgit.errors.IncorrectObjectTypeException;
@@ -55,8 +57,12 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.PeekingIterator;
+import com.google.common.graph.Graphs;
+import com.google.common.graph.ImmutableGraph;
 import com.google.common.jimfs.Configuration;
 import com.google.common.jimfs.Jimfs;
+
+import io.github.oliviercailloux.utils.Utils;
 
 /**
  * <p>
@@ -585,7 +591,8 @@ public abstract class GitFileSystem extends FileSystem {
 
 	/**
 	 * Retrieve the set of all commits of this repository. Consider calling rather
-	 * {@link #getCommits()}, whose type is more precise.
+	 * <code>{@link #getCommitsGraph()}.getNodes()</code>, whose type is more
+	 * precise.
 	 *
 	 * @return absolute path roots referring to commit ids.
 	 * @throws UncheckedIOException if an I/O error occurs (I have no idea why the
@@ -594,9 +601,8 @@ public abstract class GitFileSystem extends FileSystem {
 	 */
 	@Override
 	public ImmutableSet<Path> getRootDirectories() throws UncheckedIOException {
-		final ImmutableSet<ObjectId> allCommits = getAllCommits();
-		final ImmutableSet<Path> paths = allCommits.stream().map(this::getPathRoot)
-				.collect(ImmutableSet.toImmutableSet());
+		final ImmutableSet<ObjectId> commits = getCommits();
+		final ImmutableSet<Path> paths = commits.stream().map(this::getPathRoot).collect(ImmutableSet.toImmutableSet());
 		return paths;
 	}
 
@@ -610,11 +616,15 @@ public abstract class GitFileSystem extends FileSystem {
 	 *                              variant to mimic the behavior of
 	 *                              {@link #getRootDirectories()})
 	 */
-	public ImmutableSet<GitPathRoot> getCommits() throws UncheckedIOException {
-		final ImmutableSet<ObjectId> allCommits = getAllCommits();
-		final ImmutableSet<GitPathRoot> paths = allCommits.stream().map(this::getPathRoot)
+	public ImmutableGraph<GitPathRoot> getCommitsGraph() throws UncheckedIOException {
+		final ImmutableSet<ObjectId> commits = getCommits();
+		final ImmutableSet<GitPathRoot> paths = commits.stream().map(this::getPathRoot)
 				.collect(ImmutableSet.toImmutableSet());
-		return paths;
+
+		final Function<GitPathRoot, List<GitPathRoot>> getParents = IO_UNCHECKER
+				.wrapFunction(p -> p.getParentCommits());
+
+		return ImmutableGraph.copyOf(Graphs.transpose(Utils.asGraph(getParents::apply, paths)));
 	}
 
 	/**
@@ -635,7 +645,7 @@ public abstract class GitFileSystem extends FileSystem {
 		return refs.stream().map(r -> getPathRoot("/" + r.getName() + "/")).collect(ImmutableSet.toImmutableSet());
 	}
 
-	private ImmutableSet<ObjectId> getAllCommits() throws UncheckedIOException {
+	private ImmutableSet<ObjectId> getCommits() throws UncheckedIOException {
 		if (!isOpen) {
 			throw new ClosedFileSystemException();
 		}

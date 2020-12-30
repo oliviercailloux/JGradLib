@@ -26,7 +26,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
-import io.github.oliviercailloux.git.git_hub.model.GitHubHistory;
+import io.github.oliviercailloux.git.GitHistory;
+import io.github.oliviercailloux.git.GitHubHistory;
 import io.github.oliviercailloux.git.git_hub.model.GitHubToken;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinatesWithPrefix;
@@ -53,10 +54,14 @@ public class TestFetch {
 	public void testFetchFiles() throws Exception {
 		final RepositoryCoordinates coord = RepositoryCoordinates.from("oliviercailloux", "projets");
 		try (GitHubFetcherQL fetcher = GitHubFetcherQL.using(GitHubToken.getRealInstance())) {
-			final Optional<RepositoryWithFiles> found = fetcher.getRepositoryWithFiles(coord,
-					Paths.get("Autres énoncés/"));
+			final Optional<RepositoryWithFiles> found = fetcher.getRepositoryWithFiles(coord, Path.of("2D Library/"));
 			final RepositoryWithFiles repo = found.get();
-			assertEquals(8, repo.getContentFromFileNames().size());
+			assertEquals(1, repo.getContentFromFileNames().size());
+		}
+		try (GitHubFetcherQL fetcher = GitHubFetcherQL.using(GitHubToken.getRealInstance())) {
+			final Optional<RepositoryWithFiles> found = fetcher.getRepositoryWithFiles(coord, Path.of(""));
+			final RepositoryWithFiles repo = found.get();
+			assertEquals(13, repo.getContentFromFileNames().size());
 		}
 	}
 
@@ -195,29 +200,30 @@ public class TestFetch {
 	public void testGitHubHistoryProjets() throws Exception {
 		final RepositoryCoordinates coord = RepositoryCoordinates.from("oliviercailloux", "projets");
 		try (GitHubFetcherQL fetcher = GitHubFetcherQL.using(GitHubToken.getRealInstance())) {
-			final GitHubHistory gHH = fetcher.getGitHubHistory(coord);
-			final ImmutableMap<ObjectId, Instant> pushedDates = gHH.getPushedDates();
-			final ImmutableMap<ObjectId, Instant> compPushedDates = gHH.getCorrectedAndCompletedPushedDates();
+			final GitHubHistory gHH = fetcher.getReversedGitHubHistory(coord);
+			final ImmutableMap<ObjectId, Instant> pushDates = gHH.getPushDates();
+			final GitHistory consistentHistory = gHH.getConsistentPushHistory();
+			final ImmutableMap<ObjectId, Instant> compPushedDates = consistentHistory.getCommitDates();
 
 			assertEquals(ImmutableSet.of(ObjectId.fromString("f96c728044e885fceaf4a3ae926f1a13dd329758")),
-					gHH.getRoots());
+					consistentHistory.getRoots());
 			assertTrue(gHH.getGraph().nodes().size() >= 164);
 			assertEquals(gHH.getGraph().nodes(), compPushedDates.keySet());
-			assertTrue(gHH.getPatchedKnowns().nodes().isEmpty());
+			assertTrue(gHH.getPatchedPushCommits().nodes().isEmpty());
 
 			assertEquals(Instant.parse("2019-05-24T15:24:11Z"),
-					pushedDates.get(ObjectId.fromString("81d36d64a5f6304d38b965897b9dc2ef3513a628")));
+					pushDates.get(ObjectId.fromString("81d36d64a5f6304d38b965897b9dc2ef3513a628")));
 			assertEquals(Instant.parse("2019-05-24T15:24:11Z"),
 					compPushedDates.get(ObjectId.fromString("81d36d64a5f6304d38b965897b9dc2ef3513a628")));
 			assertEquals(Instant.parse("2019-05-06T14:57:15Z"),
-					pushedDates.get(ObjectId.fromString("dbd7a9439cc79e365dde71930634a9051c82d596")));
+					pushDates.get(ObjectId.fromString("dbd7a9439cc79e365dde71930634a9051c82d596")));
 			assertEquals(Instant.parse("2019-05-06T14:57:15Z"),
 					compPushedDates.get(ObjectId.fromString("dbd7a9439cc79e365dde71930634a9051c82d596")));
-			assertEquals(null, pushedDates.get(ObjectId.fromString("967489122c5d485bda8b571b2835dafa77af787f")));
+			assertEquals(null, pushDates.get(ObjectId.fromString("967489122c5d485bda8b571b2835dafa77af787f")));
 			assertEquals(Instant.parse("2019-05-03T14:25:04Z"),
 					compPushedDates.get(ObjectId.fromString("967489122c5d485bda8b571b2835dafa77af787f")));
 			assertEquals(Instant.parse("2019-05-03T14:25:04Z"),
-					pushedDates.get(ObjectId.fromString("3cc31dd1d5a5210b269f0a01d26fd2a670bc4404")));
+					pushDates.get(ObjectId.fromString("3cc31dd1d5a5210b269f0a01d26fd2a670bc4404")));
 			assertEquals(Instant.parse("2019-05-03T14:25:04Z"),
 					compPushedDates.get(ObjectId.fromString("3cc31dd1d5a5210b269f0a01d26fd2a670bc4404")));
 		}
@@ -227,33 +233,35 @@ public class TestFetch {
 	void testGitHubHistoryFiltered() throws Exception {
 		final RepositoryCoordinates coord = RepositoryCoordinates.from("oliviercailloux", "projets");
 		try (GitHubFetcherQL fetcher = GitHubFetcherQL.using(GitHubToken.getRealInstance())) {
-			final GitHubHistory gHH = fetcher.getGitHubHistory(coord);
-			final ImmutableMap<ObjectId, Instant> pushedDates = gHH.getPushedDates();
-			final ImmutableMap<ObjectId, Instant> compPushedDates = gHH.getCorrectedAndCompletedPushedDates();
-			final ObjectId c50 = ObjectId.fromString("50241f2a198f0eec686b19d235cd50c90614ac03");
-			assertEquals(Instant.parse("2016-09-23T13:00:33Z"), pushedDates.get(c50));
-			final ObjectId cc2 = ObjectId.fromString("c2e245e7a7ca785fe8410213db89f142dda13bcf");
-			assertEquals(Instant.parse("2016-09-23T13:01:18Z"), pushedDates.get(cc2));
-			final ObjectId cc6 = ObjectId.fromString("cc61d5dd68156cb5429da29c23729d169639a64d");
-			assertEquals(Instant.parse("2016-09-23T13:02:36Z"), pushedDates.get(cc6));
+			final GitHubHistory gHH = fetcher.getReversedGitHubHistory(coord);
+			final ImmutableMap<ObjectId, Instant> pushDates = gHH.getPushDates();
+			final GitHistory consistentHistory = gHH.getConsistentPushHistory();
+			final ImmutableMap<ObjectId, Instant> compPushedDates = consistentHistory.getCommitDates();
 
-			final GitHubHistory filtered = gHH
-					.filter((o) -> compPushedDates.get(o).isBefore(Instant.parse("2016-09-23T13:01:30Z")));
+			final ObjectId c50 = ObjectId.fromString("50241f2a198f0eec686b19d235cd50c90614ac03");
+			assertEquals(Instant.parse("2016-09-23T13:00:33Z"), pushDates.get(c50));
+			final ObjectId cc2 = ObjectId.fromString("c2e245e7a7ca785fe8410213db89f142dda13bcf");
+			assertEquals(Instant.parse("2016-09-23T13:01:18Z"), pushDates.get(cc2));
+			final ObjectId cc6 = ObjectId.fromString("cc61d5dd68156cb5429da29c23729d169639a64d");
+			assertEquals(Instant.parse("2016-09-23T13:02:36Z"), pushDates.get(cc6));
+
+			final GitHistory filtered = consistentHistory
+					.filter(o -> compPushedDates.get(o).isBefore(Instant.parse("2016-09-23T13:01:30Z")));
 			assertTrue(gHH.getGraph().nodes().size() >= 164);
 			assertEquals(16, filtered.getGraph().nodes().size());
 			assertTrue(filtered.getGraph().nodes().contains(c50));
 			assertTrue(filtered.getGraph().nodes().contains(cc2));
 			assertFalse(filtered.getGraph().nodes().contains(cc6));
 			assertEquals(16, filtered.getGraph().edges().size());
-			assertEquals(ImmutableSet.of(c50), filtered.getGraph().successors(cc2));
-			assertEquals(ImmutableSet.of(cc2), filtered.getGraph().predecessors(c50));
-			assertEquals(ImmutableSet.of(), filtered.getGraph().predecessors(cc2));
+			assertEquals(ImmutableSet.of(c50), filtered.getGraph().predecessors(cc2));
+			assertEquals(ImmutableSet.of(cc2), filtered.getGraph().successors(c50));
+			assertEquals(ImmutableSet.of(), filtered.getGraph().successors(cc2));
 
-			final GitHubHistory filteredAgain = filtered.filter(Predicates.alwaysTrue());
+			final GitHistory filteredAgain = filtered.filter(Predicates.alwaysTrue());
 			assertEquals(filtered, filteredAgain);
 
-			final GitHubHistory notReallyFiltered = gHH.filter(Predicates.alwaysTrue());
-			assertEquals(gHH, notReallyFiltered);
+			final GitHistory notReallyFiltered = consistentHistory.filter(Predicates.alwaysTrue());
+			assertEquals(consistentHistory, notReallyFiltered);
 		}
 	}
 
@@ -261,11 +269,12 @@ public class TestFetch {
 	public void testGitHubHistoryJBiblio() throws Exception {
 		final RepositoryCoordinates coord = RepositoryCoordinates.from("oliviercailloux", "J-Biblio");
 		try (GitHubFetcherQL fetcher = GitHubFetcherQL.using(GitHubToken.getRealInstance())) {
-			final GitHubHistory gHH = fetcher.getGitHubHistory(coord);
-			final ImmutableMap<ObjectId, Instant> pushedDates = gHH.getPushedDates();
-			final ImmutableMap<ObjectId, Instant> compPushedDates = gHH.getCorrectedAndCompletedPushedDates();
+			final GitHubHistory gHH = fetcher.getReversedGitHubHistory(coord);
+			final ImmutableMap<ObjectId, Instant> pushDates = gHH.getPushDates();
+			final GitHistory consistentHistory = gHH.getConsistentPushHistory();
+			final ImmutableMap<ObjectId, Instant> compPushedDates = consistentHistory.getCommitDates();
 
-			assertEquals(ImmutableMap.of(), pushedDates);
+			assertEquals(ImmutableMap.of(), pushDates);
 			assertEquals(ImmutableSet.of(Instant.MIN), ImmutableSet.copyOf(compPushedDates.values()));
 			assertEquals(compPushedDates.keySet(), gHH.getGraph().nodes());
 		}
@@ -275,9 +284,9 @@ public class TestFetch {
 	void testSearchForPrefixedRepositories() throws Exception {
 		try (GitHubFetcherV3 rawFetcher = GitHubFetcherV3.using(GitHubToken.getRealInstance())) {
 			final ImmutableList<RepositoryCoordinatesWithPrefix> depGit = rawFetcher
-					.getRepositoriesWithPrefix("oliviercailloux-org", "dep-git");
+					.getRepositoriesWithPrefix("oliviercailloux", "jmcda");
 			LOGGER.debug("Found: {}.", depGit);
-			assertTrue(20 < depGit.size() && depGit.size() < 50, "" + depGit.size());
+			assertTrue(10 < depGit.size() && depGit.size() < 13, "" + depGit.size());
 			final ImmutableList<RepositoryCoordinatesWithPrefix> noMatch = rawFetcher
 					.getRepositoriesWithPrefix("oliviercailloux-org", "Invalid-prefix");
 			assertEquals(ImmutableList.of(), noMatch);

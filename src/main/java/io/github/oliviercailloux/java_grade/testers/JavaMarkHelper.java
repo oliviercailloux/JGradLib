@@ -18,6 +18,9 @@ import org.slf4j.LoggerFactory;
 
 import com.sun.management.UnixOperatingSystemMXBean;
 
+import io.github.oliviercailloux.git.fs.Commit;
+import io.github.oliviercailloux.git.fs.GitPathRoot;
+
 public class JavaMarkHelper {
 
 	@SuppressWarnings("unused")
@@ -25,6 +28,8 @@ public class JavaMarkHelper {
 
 	final static Pattern HAS_JUNIT_TEST_CONTENT = Pattern
 			.compile("(\\h*@Test)|(org\\.junit\\.jupiter\\.api\\.Assertions)");
+
+	public static final String GIT_HUB_COMMITTER = "GitHub";
 
 	public static boolean isSurefireTestFile(Path path) {
 		final boolean ok = path.startsWith("src/test/java")
@@ -47,6 +52,23 @@ public class JavaMarkHelper {
 	 * When the GitHub GUI is used, the committer is set to GitHub
 	 * <noreply@github.com> while the author seems to be the logged user.
 	 */
+	public static boolean committerIsGitHub(Commit commit) {
+		return commit.getCommitterName().equals(GIT_HUB_COMMITTER);
+	}
+
+	/**
+	 * When the GitHub GUI is used, the committer is set to GitHub
+	 * <noreply@github.com> while the author seems to be the logged user.
+	 *
+	 */
+	public static boolean committerIsGitHub(GitPathRoot commit) throws NoSuchFileException, IOException {
+		return committerIsGitHub(commit.getCommit());
+	}
+
+	/**
+	 * When the GitHub GUI is used, the committer is set to GitHub
+	 * <noreply@github.com> while the author seems to be the logged user.
+	 */
 	public static boolean committerIsGitHub(RevCommit commit) {
 		return commit.getCommitterIdent().getName().equals("GitHub");
 	}
@@ -55,6 +77,14 @@ public class JavaMarkHelper {
 		checkNotNull(name);
 		final boolean committerIsRight = commit.getCommitterIdent().getName().equals(name);
 		final boolean authorIsRight = commit.getAuthorIdent().getName().equals(name);
+		return committerIsRight && authorIsRight;
+	}
+
+	public static boolean committerAndAuthorIs(GitPathRoot commit, String name)
+			throws NoSuchFileException, IOException {
+		checkNotNull(name);
+		final boolean committerIsRight = commit.getCommit().getCommitterName().equals(name);
+		final boolean authorIsRight = commit.getCommit().getAuthorName().equals(name);
 		return committerIsRight && authorIsRight;
 	}
 
