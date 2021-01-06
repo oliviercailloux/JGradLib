@@ -4,6 +4,8 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 import java.util.Objects;
 
+import com.google.common.base.MoreObjects;
+
 class CriterionImpl implements Criterion {
 
 	private final String name;
@@ -33,6 +35,6 @@ class CriterionImpl implements Criterion {
 
 	@Override
 	public String toString() {
-		return getName();
+		return MoreObjects.toStringHelper(this).addValue(name).toString();
 	}
 }

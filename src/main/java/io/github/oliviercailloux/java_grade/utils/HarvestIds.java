@@ -75,8 +75,6 @@ public class HarvestIds {
 			repositories = fetcher.getRepositoriesWithPrefix("oliviercailloux-org", prefix);
 		}
 		final ImmutableList<RepositoryCoordinatesWithPrefix> effectiveRepositories = repositories;
-//		final ImmutableList<RepositoryCoordinatesWithPrefix> effectiveRepositories = ImmutableList
-//				.of(RepositoryCoordinates.from("oliviercailloux-org", "commit-GabG02"));
 		final ImmutableList<RepositoryCoordinatesWithPrefix> matching = effectiveRepositories.stream()
 				.filter(r -> pattern.matcher(r.getRepositoryName()).matches()).collect(ImmutableList.toImmutableList());
 
