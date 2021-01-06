@@ -1,12 +1,10 @@
 package io.github.oliviercailloux.email;
 
-import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import java.io.UnsupportedEncodingException;
 import java.nio.charset.StandardCharsets;
 import java.util.Objects;
-import java.util.Optional;
 
 import javax.mail.internet.InternetAddress;
 
@@ -15,35 +13,37 @@ import com.google.common.base.VerifyException;
 
 public class EmailAddressAndPersonal {
 	public static EmailAddressAndPersonal given(String address) {
-		return new EmailAddressAndPersonal(EmailAddress.given(address), Optional.empty());
+		return new EmailAddressAndPersonal(EmailAddress.given(address), "");
 	}
 
 	public static EmailAddressAndPersonal given(String address, String personal) {
-		return new EmailAddressAndPersonal(EmailAddress.given(address), Optional.of(personal));
+		return new EmailAddressAndPersonal(EmailAddress.given(address), personal);
 	}
 
 	private EmailAddress address;
-	private Optional<String> personal;
+	private String personal;
 
-	private EmailAddressAndPersonal(EmailAddress address, Optional<String> personal) {
+	private EmailAddressAndPersonal(EmailAddress address, String personal) {
 		this.address = checkNotNull(address);
 		this.personal = checkNotNull(personal);
-		checkArgument(personal.isEmpty() || !personal.get().isEmpty());
 	}
 
 	public EmailAddress getAddress() {
 		return address;
 	}
 
-	public Optional<String> getPersonal() {
+	/**
+	 * @return empty for no personal.
+	 */
+	public String getPersonal() {
 		return personal;
 	}
 
 	public InternetAddress asInternetAddress() {
 		try {
 			final InternetAddress internetAddress = address.asInternetAddress();
-			if (personal.isPresent()) {
-				internetAddress.setPersonal(personal.get(), StandardCharsets.UTF_8.name());
+			if (!personal.isEmpty()) {
+				internetAddress.setPersonal(personal, StandardCharsets.UTF_8.name());
 			}
 			return internetAddress;
 		} catch (UnsupportedEncodingException e) {
@@ -52,7 +52,7 @@ public class EmailAddressAndPersonal {
 	}
 
 	public String asRfcAddressString() {
-		return personal.isPresent() ? (personal.get() + " <" + address + ">") : address.getAddress();
+		return personal.isEmpty() ? address.getAddress() : (personal + " <" + address + ">");
 	}
 
 	@Override

@@ -63,14 +63,14 @@ public class ImapSearchPredicate implements Predicate<Message> {
 
 	public static ImapSearchPredicate recipientAddressEquals(RecipientType recipientType, String address) {
 		checkArgument(address.toLowerCase(Locale.ROOT).equals(address));
-		final EmailAddressAndPersonal emailAddress = EmailAddressAndPersonal.given(address);
+		final EmailAddress emailAddress = EmailAddress.given(address);
 		return new ImapSearchPredicate(new RecipientTerm(recipientType, emailAddress.asInternetAddress()),
 				(m) -> recipientAddressEquals(recipientType, address, m));
 	}
 
 	public static ImapSearchPredicate fromAddressEquals(String address) {
 		checkArgument(address.toLowerCase(Locale.ROOT).equals(address));
-		final EmailAddressAndPersonal emailAddress = EmailAddressAndPersonal.given(address);
+		final EmailAddress emailAddress = EmailAddress.given(address);
 		return new ImapSearchPredicate(new FromTerm(emailAddress.asInternetAddress()),
 				(m) -> fromAddressEquals(address, m));
 	}
