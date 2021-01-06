@@ -3,17 +3,13 @@
     "comment": "",
     "subGrades": [
         {
-            "criterion": {
-                "name": "l"
-            },
+            "criterion": "l",
             "grade": {
                 "points": 0.10250000000000009,
                 "comment": "",
                 "subGrades": [
                     {
-                        "criterion": {
-                            "name": "ll"
-                        },
+                        "criterion": "ll",
                         "grade": {
                             "points": 0.1,
                             "comment": "Far left"
@@ -21,9 +17,7 @@
                         "weight": 0.25
                     },
                     {
-                        "criterion": {
-                            "name": "lc"
-                        },
+                        "criterion": "lc",
                         "grade": {
                             "points": 0.2,
                             "comment": "Left center"
@@ -31,25 +25,19 @@
                         "weight": 0.25
                     },
                     {
-                        "criterion": {
-                            "name": "lr"
-                        },
+                        "criterion": "lr",
                         "grade": {
                             "points": 0.05500000000000016,
                             "comment": "",
                             "subGrades": [
                                 {
-                                    "criterion": {
-                                        "name": "C1"
-                                    },
+                                    "criterion": "C1",
                                     "grade": {
                                         "points": 1.0,
                                         "comment": "A comment",
                                         "subGrades": [
                                             {
-                                                "criterion": {
-                                                    "name": "criterion"
-                                                },
+                                                "criterion": "criterion",
                                                 "grade": {
                                                     "points": 1.0,
                                                     "comment": ""
@@ -61,9 +49,7 @@
                                     "weight": 0.4
                                 },
                                 {
-                                    "criterion": {
-                                        "name": "C2"
-                                    },
+                                    "criterion": "C2",
                                     "grade": {
                                         "points": 0.3,
                                         "comment": "comment"
@@ -71,9 +57,7 @@
                                     "weight": 0.6
                                 },
                                 {
-                                    "criterion": {
-                                        "name": "Trap 1"
-                                    },
+                                    "criterion": "Trap 1",
                                     "grade": {
                                         "points": 0.3,
                                         "comment": "not great"
@@ -81,9 +65,7 @@
                                     "weight": -0.75
                                 },
                                 {
-                                    "criterion": {
-                                        "name": "Trap 2"
-                                    },
+                                    "criterion": "Trap 2",
                                     "grade": {
                                         "points": 1.0,
                                         "comment": "well done buddy"
@@ -99,9 +81,7 @@
             "weight": 0.3333333333333333
         },
         {
-            "criterion": {
-                "name": "r"
-            },
+            "criterion": "r",
             "grade": {
                 "points": 0.4,
                 "comment": "Far right"

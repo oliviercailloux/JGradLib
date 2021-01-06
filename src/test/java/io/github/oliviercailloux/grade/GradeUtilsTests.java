@@ -40,12 +40,25 @@ public class GradeUtilsTests {
 		final Mark ll = Mark.given(0.1d, "Far left");
 		final Mark lc = Mark.given(0.2d, "Left center");
 		final IGrade lr = GradeTestsHelper.getComplexGradeWithPenalty();
-		final ImmutableMap<Criterion, IGrade> leafs = ImmutableMap.of(cr, r, cll, ll, clc, lc, clr, lr);
+		final ImmutableMap<Criterion, IGrade> leafs = ImmutableMap.of(cll, ll, clc, lc, clr, lr, cr, r);
 
 		final IGrade actual = GradeUtils.toGrade(root, tree, leafs);
 
 		final IGrade expected = JsonGrade
 				.asGrade(Files.readString(Path.of(getClass().getResource("Unbalanced grade.json").toURI())));
+		assertEquals(expected.getSubGrades().keySet(), actual.getSubGrades().keySet());
+		assertEquals(expected.getSubGrades().get(cr), actual.getSubGrades().get(cr));
+		assertEquals(expected.getSubGrades().get(cl).getSubGrades().get(cll),
+				actual.getSubGrades().get(cl).getSubGrades().get(cll));
+		assertEquals(expected.getSubGrades().get(cl).getSubGrades().get(clc),
+				actual.getSubGrades().get(cl).getSubGrades().get(clc));
+		assertEquals(actual.getSubGrades().get(cl).getSubGrades().get(clr), lr);
+		assertEquals(expected.getSubGrades().get(cl).getSubGrades().get(clr).getSubGrades(), lr.getSubGrades());
+		assertEquals(expected.getSubGrades().get(cl).getSubGrades().get(clr),
+				actual.getSubGrades().get(cl).getSubGrades().get(clr));
+		assertEquals(expected.getSubGrades().get(cl).getSubGrades(), actual.getSubGrades().get(cl).getSubGrades());
+		assertEquals(expected.getSubGrades().get(cl), actual.getSubGrades().get(cl));
+		assertEquals(expected.getSubGrades(), actual.getSubGrades());
 		assertEquals(expected, actual);
 	}
 }

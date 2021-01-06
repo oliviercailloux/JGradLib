@@ -42,12 +42,11 @@ public class Marks {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(Marks.class);
 
-	public static enum MarksCriterion implements Criterion {
+	public static enum MarksCriterion {
 		FILE_EXISTS, FILE_CONTENTS_MATCH_EXACTLY, FILE_CONTENTS_MATCH_APPROXIMATELY;
 
-		@Override
-		public String getName() {
-			return toString();
+		public Criterion asCriterion() {
+			return Criterion.given(toString());
 		}
 	}
 
@@ -141,10 +140,11 @@ public class Marks {
 				? Mark.binary(matchesExactly, "", String.format("Expected \"%s\", found \"%s\".", exactTarget, content))
 				: Mark.zero();
 		return WeightingGrade.from(ImmutableList.of(
-				CriterionGradeWeight.from(MarksCriterion.FILE_EXISTS, Mark.binary(exists), 0.5d),
-				CriterionGradeWeight.from(MarksCriterion.FILE_CONTENTS_MATCH_APPROXIMATELY,
+				CriterionGradeWeight.from(MarksCriterion.FILE_EXISTS.asCriterion(), Mark.binary(exists), 0.5d),
+				CriterionGradeWeight.from(MarksCriterion.FILE_CONTENTS_MATCH_APPROXIMATELY.asCriterion(),
 						Mark.binary(matchesApproximately), 0.4d),
-				CriterionGradeWeight.from(MarksCriterion.FILE_CONTENTS_MATCH_EXACTLY, matchesExactlyMark, 0.1d)));
+				CriterionGradeWeight.from(MarksCriterion.FILE_CONTENTS_MATCH_EXACTLY.asCriterion(), matchesExactlyMark,
+						0.1d)));
 	}
 
 	public static Pattern extend(String basis) {

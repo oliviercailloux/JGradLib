@@ -3,10 +3,7 @@
 	"comment": "Weighted average",
 	"subGrades": [
 		{
-			"criterion": {
-				"class": "io.github.oliviercailloux.java_grade.JavaCriterion",
-				"name": "COMMIT"
-			},
+			"criterion": "COMMIT",
 			"grade": {
 				"points": 1.0,
 				"comment": ""
@@ -14,10 +11,7 @@
 			"weight": 0.2
 		},
 		{
-			"criterion": {
-				"class": "io.github.oliviercailloux.java_grade.JavaCriterion",
-				"name": "ID"
-			},
+			"criterion": "ID",
 			"grade": {
 				"points": 1.0,
 				"comment": ""

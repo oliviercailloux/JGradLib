@@ -3,17 +3,13 @@
     "comment": "Complex grade",
     "subGrades": [
         {
-            "criterion": {
-                "name": "C1"
-            },
+            "criterion": "C1",
             "grade": {
                 "points": 1.0,
                 "comment": "A comment",
                 "subGrades": [
                     {
-                        "criterion": {
-                            "name": "criterion"
-                        },
+                        "criterion": "criterion",
                         "grade": {
                             "points": 1.0,
                             "comment": ""
@@ -25,9 +21,7 @@
             "weight": 0.4
         },
         {
-            "criterion": {
-                "name": "C2"
-            },
+            "criterion": "C2",
             "grade": {
                 "points": 0.3,
                 "comment": "comment"

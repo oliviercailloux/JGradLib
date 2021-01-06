@@ -2,7 +2,6 @@ package io.github.oliviercailloux.grade.format.json;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.charset.StandardCharsets;
 
@@ -14,7 +13,6 @@ import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.Resources;
@@ -76,13 +74,21 @@ public class JsonGradeTest {
 	}
 
 	@Test
+	void gradeSingletonNoNameRead() throws Exception {
+		final String json = Resources.toString(this.getClass().getResource("SingletonGradeNoName.json"),
+				StandardCharsets.UTF_8);
+		assertThrows(JsonbException.class,
+				() -> JsonGrade.asWeightingGrade(PrintableJsonObjectFactory.wrapPrettyPrintedString(json)));
+	}
+
+	@Test
 	void criterionGradeWeightSingletonRead() throws Exception {
 		final Criterion criterion = Criterion.given("criterion");
 		final CriterionGradeWeight expected = CriterionGradeWeight.from(criterion, Mark.given(1d, ""), 1d);
 
 		final String json = Resources.toString(this.getClass().getResource("CriterionGradeWeight.json"),
 				StandardCharsets.UTF_8);
-		final CriterionGradeWeight read = JsonGrade.usingSophisticatedCriteria().toCriterionGradeWeightAdapter()
+		final CriterionGradeWeight read = JsonGrade.create().toCriterionGradeWeightAdapter()
 				.adaptFromJson(PrintableJsonObjectFactory.wrapPrettyPrintedString(json));
 		assertEquals(expected, read);
 	}
@@ -111,20 +117,6 @@ public class JsonGradeTest {
 	}
 
 	@Test
-	void gradeComplexWithInvalidClassRead() throws Exception {
-		final WeightingGrade expected = GradeTestsHelper.getComplexGrade();
-
-		final PrintableJsonObject jsonComplexGrade = PrintableJsonObjectFactory.wrapPrettyPrintedString(Resources
-				.toString(getClass().getResource("ComplexGradeWithInvalidClass.json"), StandardCharsets.UTF_8));
-
-		final Exception exc = assertThrows(JsonbException.class, () -> JsonGrade.asGrade(jsonComplexGrade));
-		assertTrue(Throwables.getCausalChain(exc).stream().anyMatch(t -> t instanceof ClassNotFoundException));
-
-		final IGrade read = JsonGrade.usingSimpleCriteria().instanceAsGrade(jsonComplexGrade);
-		assertEquals(expected, read);
-	}
-
-	@Test
 	void gradeDoubleRead() throws Exception {
 		/**
 		 * This grade was read in the wrong order when using a set instead of a list as
@@ -134,6 +126,7 @@ public class JsonGradeTest {
 				Resources.toString(getClass().getResource("DoubleGrade.json"), StandardCharsets.UTF_8));
 		LOGGER.debug("Wrapped: {}.", jsonGrade);
 		final WeightingGrade read = (WeightingGrade) JsonGrade.asGrade(jsonGrade);
-		assertEquals(ImmutableList.of(JavaCriterion.COMMIT, JavaCriterion.ID), read.getSubGrades().keySet().asList());
+		assertEquals(ImmutableList.of(JavaCriterion.COMMIT.asCriterion(), JavaCriterion.ID.asCriterion()),
+				read.getSubGrades().keySet().asList());
 	}
 }

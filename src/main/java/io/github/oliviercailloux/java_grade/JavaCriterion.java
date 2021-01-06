@@ -2,7 +2,7 @@ package io.github.oliviercailloux.java_grade;
 
 import io.github.oliviercailloux.grade.Criterion;
 
-public enum JavaCriterion implements Criterion {
+public enum JavaCriterion {
 
 	POM,
 	/**
@@ -15,9 +15,8 @@ public enum JavaCriterion implements Criterion {
 	 */
 	ID, COMPILE, NO_WARNINGS, NO_DERIVED_FILES;
 
-	@Override
-	public String getName() {
-		return toString();
+	public Criterion asCriterion() {
+		return Criterion.given(toString());
 	}
 
 }

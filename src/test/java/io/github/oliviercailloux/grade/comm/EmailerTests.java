@@ -26,6 +26,7 @@ import javax.mail.search.RecipientTerm;
 import javax.mail.search.SearchTerm;
 import javax.mail.search.SubjectTerm;
 
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -370,6 +371,7 @@ public class EmailerTests {
 	}
 
 	@Test
+	@Disabled("Old grade format")
 	void testZohoFetch() throws Exception {
 		try (Emailer emailer = Emailer.instance()) {
 			emailer.connectToStore(Emailer.getZohoImapSession(), EmailerDauphineHelper.USERNAME_OTHERS,
@@ -449,6 +451,7 @@ public class EmailerTests {
 	}
 
 	@Test
+	@Disabled("Old grade format")
 	void testRetrieveExistant() throws Exception {
 		try (GradesInEmails sendEmails = GradesInEmails.newInstance()) {
 			sendEmails.getEmailer().connectToStore(Emailer.getZohoImapSession(), EmailerDauphineHelper.USERNAME_OTHERS,
@@ -481,6 +484,7 @@ public class EmailerTests {
 	}
 
 	@Test
+	@Disabled("Old grade format")
 	void testRetrieveMultOneMatch() throws Exception {
 		try (GradesInEmails sendEmails = GradesInEmails.newInstance()) {
 			sendEmails.getEmailer().connectToStore(Emailer.getZohoImapSession(), EmailerDauphineHelper.USERNAME_OTHERS,
@@ -495,6 +499,7 @@ public class EmailerTests {
 	}
 
 	@Test
+	@Disabled("Old grade format")
 	void testRetrieveMultTwoMatches() throws Exception {
 		try (GradesInEmails sendEmails = GradesInEmails.newInstance()) {
 			sendEmails.getEmailer().connectToStore(Emailer.getZohoImapSession(), EmailerDauphineHelper.USERNAME_OTHERS,

@@ -1,0 +1,14 @@
+{
+	"points": 1.0,
+	"comment": "A comment",
+	"subGrades": [
+		{
+			"criterion": {},
+			"grade": {
+				"points": 1.0,
+				"comment": ""
+			},
+			"weight": 1.0
+		}
+	]
+}

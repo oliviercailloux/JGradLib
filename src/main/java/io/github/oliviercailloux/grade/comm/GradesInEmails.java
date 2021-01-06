@@ -95,15 +95,7 @@ public class GradesInEmails implements AutoCloseable {
 	}
 
 	public static GradesInEmails newInstance() {
-		/**
-		 * Useful when a class has changed path and thus can’t be found anymore when
-		 * reading the grade from the e-mail.
-		 */
-		return new GradesInEmails(JsonGrade.usingSimpleCriteria().instanceAsAdapter());
-	}
-
-	public static GradesInEmails usingSophisticatedCriteria() {
-		return new GradesInEmails(JsonGrade.usingSophisticatedCriteria().instanceAsAdapter());
+		return new GradesInEmails(JsonGrade.create().instanceAsAdapter());
 	}
 
 	private final Emailer emailer;

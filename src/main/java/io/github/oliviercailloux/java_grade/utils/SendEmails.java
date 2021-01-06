@@ -71,7 +71,7 @@ public class SendEmails {
 		final Stats stats = Stats.of(points);
 		final Map<Integer, Double> quartiles = Quantiles.quartiles().indexes(1, 2, 3).compute(points);
 
-		try (GradesInEmails gradesInEmails = GradesInEmails.usingSophisticatedCriteria()) {
+		try (GradesInEmails gradesInEmails = GradesInEmails.newInstance()) {
 			@SuppressWarnings("resource")
 			final Emailer emailer = gradesInEmails.getEmailer();
 			EmailerDauphineHelper.connect(emailer);

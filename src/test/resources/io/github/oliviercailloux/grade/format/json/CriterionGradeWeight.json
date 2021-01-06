@@ -1,7 +1,5 @@
 {
-    "criterion": {
-        "name": "criterion"
-    },
+    "criterion": "criterion",
     "grade": {
         "points": 1.0,
         "comment": ""

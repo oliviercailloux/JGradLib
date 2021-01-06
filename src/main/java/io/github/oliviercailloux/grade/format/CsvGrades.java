@@ -81,8 +81,8 @@ public class CsvGrades<K> {
 		}
 		final Stream<CriterionGradeWeight> mapped = subGrades.stream()
 				.map((cwg) -> CriterionGradeWeight.from(
-						Criterion.given(parent.getCriterion().getName() + "/" + cwg.getCriterion()), cwg.getGrade(),
-						parent.getWeight() * cwg.getWeight()));
+						Criterion.given(parent.getCriterion().getName() + "/" + cwg.getCriterion().getName()),
+						cwg.getGrade(), parent.getWeight() * cwg.getWeight()));
 		final Stream<CriterionGradeWeight> flatmappedChildren = mapped.flatMap((cwg) -> asContextualizedStream(cwg));
 		return Stream.concat(itself, flatmappedChildren);
 	}
@@ -158,7 +158,7 @@ public class CsvGrades<K> {
 		final ImmutableSet<String> identityHeaders = identityHeadersFromFunction.isEmpty() ? ImmutableSet.of("")
 				: identityHeadersFromFunction;
 		final ImmutableList<String> headers = Streams
-				.concat(identityHeaders.stream(), allCriteria.stream().map(Object::toString), Stream.of("Points"))
+				.concat(identityHeaders.stream(), allCriteria.stream().map(Criterion::getName), Stream.of("Points"))
 				.collect(ImmutableList.toImmutableList());
 		writer.writeHeaders(headers);
 

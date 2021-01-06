@@ -1,21 +1,43 @@
 package io.github.oliviercailloux.grade;
 
-public interface Criterion {
+import static com.google.common.base.Preconditions.checkNotNull;
+
+import java.util.Objects;
+
+import com.google.common.base.MoreObjects;
+
+public class Criterion {
 
 	public static Criterion given(String name) {
-		return new CriterionImpl(name);
+		return new Criterion(checkNotNull(name));
 	}
 
-	public String getName();
+	private final String name;
 
-	/**
-	 * Two criteria are equal iff they have the same name.
-	 *
-	 * TODO this is not currently implemented and creates problem when deserializing
-	 * with simple criteria.
-	 *
-	 * {@inheritDoc}
-	 */
+	Criterion(String name) {
+		this.name = checkNotNull(name);
+	}
+
+	public String getName() {
+		return name;
+	}
+
 	@Override
-	public boolean equals(Object o2);
+	public boolean equals(Object o2) {
+		if (!(o2 instanceof Criterion)) {
+			return false;
+		}
+		final Criterion c2 = (Criterion) o2;
+		return getName().equals(c2.getName());
+	}
+
+	@Override
+	public int hashCode() {
+		return Objects.hash(name);
+	}
+
+	@Override
+	public String toString() {
+		return MoreObjects.toStringHelper(this).addValue(name).toString();
+	}
 }
