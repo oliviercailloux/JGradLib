@@ -60,10 +60,6 @@ public class Utils {
 	public static final DateTimeFormatter ISO_BASIC_UTC_FORMATTER = DateTimeFormatter.ofPattern("uuuuMMdd'T'HHmmss','m")
 			.withZone(ZoneOffset.UTC);
 
-	public static boolean implies(boolean a, boolean b) {
-		return !a || b;
-	}
-
 	/**
 	 * Thanks to https://stackoverflow.com/a/13592567. Slightly modified to avoid
 	 * null values.
