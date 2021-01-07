@@ -24,9 +24,9 @@ import org.eclipse.jgit.revwalk.RevTree;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.github.oliviercailloux.git.fs.GitFileSystem.FollowLinksBehavior;
-import io.github.oliviercailloux.git.fs.GitFileSystem.GitObject;
-import io.github.oliviercailloux.git.fs.GitFileSystem.NoContextAbsoluteLinkException;
+import io.github.oliviercailloux.git.fs.GitAbstractFileSystem.FollowLinksBehavior;
+import io.github.oliviercailloux.git.fs.GitAbstractFileSystem.GitObject;
+import io.github.oliviercailloux.git.fs.GitAbstractFileSystem.NoContextAbsoluteLinkException;
 import io.github.oliviercailloux.utils.SeekableInMemoryByteChannel;
 
 /**
@@ -158,7 +158,7 @@ abstract class GitAbsolutePath extends GitPath {
 		final String first = names.isEmpty() ? "" : names.get(0);
 		final String[] more = names.isEmpty() ? new String[] {}
 				: names.subList(1, names.size()).toArray(new String[] {});
-		final Path internal = GitFileSystem.JIM_FS.getPath(first, more);
+		final Path internal = GitAbstractFileSystem.JIM_FS.getPath(first, more);
 		checkArgument(internal.isAbsolute());
 //		final String longName = names.stream().collect(Collectors.joining("/"));
 //		final Path internal = GitFileSystem.JIM_FS_SLASH.resolve(longName);

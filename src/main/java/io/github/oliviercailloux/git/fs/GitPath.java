@@ -37,9 +37,9 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.PeekingIterator;
 
-import io.github.oliviercailloux.git.fs.GitFileSystem.FollowLinksBehavior;
-import io.github.oliviercailloux.git.fs.GitFileSystem.GitObject;
-import io.github.oliviercailloux.git.fs.GitFileSystem.TreeWalkDirectoryStream;
+import io.github.oliviercailloux.git.fs.GitAbstractFileSystem.FollowLinksBehavior;
+import io.github.oliviercailloux.git.fs.GitAbstractFileSystem.GitObject;
+import io.github.oliviercailloux.git.fs.GitAbstractFileSystem.TreeWalkDirectoryStream;
 
 /**
  * A git path has an optional root component and a (possibly empty) sequence of
@@ -264,7 +264,7 @@ public abstract class GitPath implements Path {
 		}
 	}
 
-	static GitPath fromQueryString(GitFileSystem fs, Map<String, String> splitQuery) {
+	static GitPath fromQueryString(GitAbstractFileSystem fs, Map<String, String> splitQuery) {
 		final Optional<String> rootValue = Optional.ofNullable(splitQuery.get(QUERY_PARAMETER_ROOT));
 		final Optional<String> internalPathValue = Optional.ofNullable(splitQuery.get(QUERY_PARAMETER_INTERNAL_PATH));
 
@@ -272,12 +272,12 @@ public abstract class GitPath implements Path {
 			final String rootString = rootValue.get();
 			checkArgument(internalPathValue.isPresent());
 			final String internalPathString = internalPathValue.get();
-			final Path internalPath = GitFileSystem.JIM_FS_EMPTY.resolve(internalPathString);
+			final Path internalPath = GitAbstractFileSystem.JIM_FS_EMPTY.resolve(internalPathString);
 			checkArgument(internalPath.isAbsolute());
 			return GitAbsolutePath.givenRoot(new GitPathRoot(fs, GitRev.stringForm(rootString)), internalPath);
 		}
 
-		final Path internalPath = GitFileSystem.JIM_FS_EMPTY.resolve(internalPathValue.orElse(""));
+		final Path internalPath = GitAbstractFileSystem.JIM_FS_EMPTY.resolve(internalPathValue.orElse(""));
 		return GitRelativePath.relative(fs, internalPath);
 	}
 
@@ -340,7 +340,7 @@ public abstract class GitPath implements Path {
 	abstract Path getInternalPath();
 
 	@Override
-	public abstract GitFileSystem getFileSystem();
+	public abstract GitAbstractFileSystem getFileSystem();
 
 	/**
 	 * Returns <code>true</code> iff this path has a root component.

@@ -19,8 +19,8 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
 
-import io.github.oliviercailloux.git.fs.GitFileSystem.FollowLinksBehavior;
-import io.github.oliviercailloux.git.fs.GitFileSystem.GitObject;
+import io.github.oliviercailloux.git.fs.GitAbstractFileSystem.FollowLinksBehavior;
+import io.github.oliviercailloux.git.fs.GitAbstractFileSystem.GitObject;
 
 /**
  * A git path root is an absolute git path that has an empty sequence of names.
@@ -35,7 +35,7 @@ public class GitPathRoot extends GitAbsolutePath {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(GitPathRoot.class);
 
-	private final GitFileSystem fileSystem;
+	private final GitAbstractFileSystem fileSystem;
 
 	private final GitRev gitRev;
 
@@ -44,18 +44,18 @@ public class GitPathRoot extends GitAbsolutePath {
 	 * git rev. Its string form ends with //, whereas the string form of a git rev
 	 * ends with a single /; and it never equals a git rev.
 	 */
-	GitPathRoot(GitFileSystem fileSystem, GitRev gitRev) {
+	GitPathRoot(GitAbstractFileSystem fileSystem, GitRev gitRev) {
 		this.fileSystem = checkNotNull(fileSystem);
 		this.gitRev = checkNotNull(gitRev);
 	}
 
 	@Override
 	Path getInternalPath() {
-		return GitFileSystem.JIM_FS_SLASH;
+		return GitAbstractFileSystem.JIM_FS_SLASH;
 	}
 
 	@Override
-	public GitFileSystem getFileSystem() {
+	public GitAbstractFileSystem getFileSystem() {
 		return fileSystem;
 	}
 
@@ -260,6 +260,6 @@ public class GitPathRoot extends GitAbsolutePath {
 
 	@Override
 	GitObject getGitObject(FollowLinksBehavior behavior) throws NoSuchFileException, IOException {
-		return GitObject.given(GitFileSystem.JIM_FS_SLASH, getRevTree(), FileMode.TREE);
+		return GitObject.given(GitAbstractFileSystem.JIM_FS_SLASH, getRevTree(), FileMode.TREE);
 	}
 }

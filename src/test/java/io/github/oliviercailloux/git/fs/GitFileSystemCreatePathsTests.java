@@ -22,7 +22,7 @@ public class GitFileSystemCreatePathsTests {
 	private static final Logger LOGGER = LoggerFactory.getLogger(GitFileSystemCreatePathsTests.class);
 	/**
 	 * We don’t mock directly {@link GitFileFileSystem} because the tested code may
-	 * use its {@link GitFileSystem#mainSlash} field.
+	 * use its {@link GitAbstractFileSystem#mainSlash} field.
 	 */
 	static final GitFileFileSystem GIT_FILE_FILE_SYSTEM_MOCKED = GitFileFileSystem.givenOurRepository(mockProvider(),
 			mockFileRepository());
@@ -46,7 +46,7 @@ public class GitFileSystemCreatePathsTests {
 
 	@Test
 	void testCreatePaths() throws Exception {
-		try (GitFileSystem gitFs = GIT_FILE_FILE_SYSTEM_MOCKED) {
+		try (GitAbstractFileSystem gitFs = GIT_FILE_FILE_SYSTEM_MOCKED) {
 //			assertEquals("", gitFs.getRelativePath().toString());
 //			assertEquals("", gitFs.getPath("").toString());
 //			assertEquals("", gitFs.getPath("", "", "").toString());

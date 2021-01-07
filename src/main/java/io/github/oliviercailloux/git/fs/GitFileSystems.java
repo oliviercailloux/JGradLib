@@ -51,7 +51,7 @@ class GitFileSystems {
 		}
 	}
 
-	String getExistingUniqueId(GitFileSystem gitFs) {
+	String getExistingUniqueId(GitAbstractFileSystem gitFs) {
 		if (gitFs instanceof GitFileFileSystem) {
 			final GitFileFileSystem gitFileFs = (GitFileFileSystem) gitFs;
 			final Path path = cachedFileFileSystems.inverse().get(gitFileFs);
@@ -102,11 +102,11 @@ class GitFileSystems {
 	}
 
 	@SuppressWarnings("resource")
-	public GitFileSystem getFileSystem(URI gitUri) throws FileSystemNotFoundException {
+	public GitAbstractFileSystem getFileSystem(URI gitUri) throws FileSystemNotFoundException {
 		checkArgument(Objects.equals(gitUri.getScheme(), GitFileSystemProvider.SCHEME));
 		final String authority = gitUri.getAuthority();
 		checkArgument(authority != null);
-		final GitFileSystem fs;
+		final GitAbstractFileSystem fs;
 		switch (authority) {
 		case FILE_AUTHORITY:
 			final Path gitDir = getGitDir(gitUri);
@@ -137,7 +137,7 @@ class GitFileSystems {
 		return cachedDfsFileSystems.get(name);
 	}
 
-	public URI toUri(GitFileSystem gitFs) {
+	public URI toUri(GitAbstractFileSystem gitFs) {
 		if (gitFs instanceof GitFileFileSystem) {
 			final GitFileFileSystem gitFileFs = (GitFileFileSystem) gitFs;
 			final Path gitDir = gitFileFs.getGitDir();
@@ -181,7 +181,7 @@ class GitFileSystems {
 		cachedDfsFileSystems.put(getName(dfsRespository), newFs);
 	}
 
-	void hasBeenClosedEvent(GitFileSystem gitFs) {
+	void hasBeenClosedEvent(GitAbstractFileSystem gitFs) {
 		if (gitFs instanceof GitFileFileSystem) {
 			final GitFileFileSystem gitFileFs = (GitFileFileSystem) gitFs;
 			LOGGER.debug("Removing {} from {}.", gitFileFs, cachedFileFileSystems);
