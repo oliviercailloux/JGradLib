@@ -31,7 +31,7 @@ public class GitFileFileSystem extends GitFileSystem {
 	/**
 	 * See {@link GitDfsFileSystem}.
 	 */
-	private FileRepository repository;
+	private final FileRepository repository;
 
 	private GitFileFileSystem(GitFileSystemProvider gitProvider, FileRepository repository,
 			boolean shouldCloseRepository) {

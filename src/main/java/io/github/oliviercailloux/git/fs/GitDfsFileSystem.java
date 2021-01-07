@@ -17,7 +17,7 @@ public class GitDfsFileSystem extends GitFileSystem {
 	 * keep the latter private to make it clear that only {@link GitFileSystem} is
 	 * responsible for low-level read operations from the repository.
 	 */
-	private DfsRepository repository;
+	private final DfsRepository repository;
 
 	static GitDfsFileSystem givenUserRepository(GitFileSystemProvider provider, DfsRepository repository) {
 		return new GitDfsFileSystem(provider, repository);
