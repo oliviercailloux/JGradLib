@@ -31,19 +31,19 @@ abstract class GitRelativePath extends GitPath {
 		final String first = names.isEmpty() ? "" : names.get(0);
 		final String[] more = names.isEmpty() ? new String[] {}
 				: names.subList(1, names.size()).toArray(new String[] {});
-		final Path internalPath = GitAbstractFileSystem.JIM_FS.getPath(first, more);
+		final Path internalPath = GitFileSystem.JIM_FS.getPath(first, more);
 		if (internalPath.isAbsolute()) {
 			throw new InvalidPathException(first, first + " makes this internal path absolute.");
 		}
 		return internalPath;
 	}
 
-	static GitPath relative(GitAbstractFileSystem fs, List<String> names) throws InvalidPathException {
+	static GitPath relative(GitFileSystem fs, List<String> names) throws InvalidPathException {
 		final Path internalPath = toJimFsRelativePath(names);
 		return relative(fs, internalPath);
 	}
 
-	static GitRelativePath relative(GitAbstractFileSystem fs, Path internalPath) {
+	static GitRelativePath relative(GitFileSystem fs, Path internalPath) {
 		checkArgument(!internalPath.isAbsolute());
 		checkArgument(internalPath.getNameCount() >= 1);
 
@@ -61,7 +61,7 @@ abstract class GitRelativePath extends GitPath {
 	}
 
 	@Override
-	public GitAbstractFileSystem getFileSystem() {
+	public GitFileSystem getFileSystem() {
 		return toAbsolutePath().getFileSystem();
 	}
 

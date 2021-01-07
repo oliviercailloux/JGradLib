@@ -16,7 +16,7 @@ import org.slf4j.LoggerFactory;
  * @see GitFileSystemProvider#newFileSystemFromGitDir(Path)
  * @see GitFileSystemProvider#newFileSystemFromFileRepository(FileRepository)
  */
-public class GitFileFileSystem extends GitAbstractFileSystem {
+public class GitFileFileSystem extends GitFileSystem {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(GitFileFileSystem.class);
 

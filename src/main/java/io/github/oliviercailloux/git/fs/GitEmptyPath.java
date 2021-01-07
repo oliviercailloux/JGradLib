@@ -8,7 +8,7 @@ import java.nio.file.Path;
 /**
  * An empty path. Each git file system is associated to a unique empty path.
  * This class should therefore have a unique instance per git file system. Use
- * {@link GitAbstractFileSystem#emptyPath} rather than creating a new one.
+ * {@link GitFileSystem#emptyPath} rather than creating a new one.
  */
 class GitEmptyPath extends GitRelativePath {
 	private GitPathRoot absoluteEquivalent;
@@ -29,6 +29,6 @@ class GitEmptyPath extends GitRelativePath {
 
 	@Override
 	Path getInternalPath() {
-		return GitAbstractFileSystem.JIM_FS_EMPTY;
+		return GitFileSystem.JIM_FS_EMPTY;
 	}
 }
