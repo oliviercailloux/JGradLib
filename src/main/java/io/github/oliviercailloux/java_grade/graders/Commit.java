@@ -128,14 +128,12 @@ public class Commit {
 		this.filteredHistory = checkNotNull(filteredHistory);
 	}
 
-	/**
-	 * @param gitFs
-	 * @param pushHistory
-	 * @param timeCap     ignore commits strictly after that time.
-	 * @return
-	 */
-	public WeightingGrade grade() throws UncheckedIOException {
+	public WeightingGrade grade() throws UncheckedIOException, IOException {
 		final GitFileSystem gitFs = filteredHistory.getGitFilesystem();
+		/** Just to avoid warning about IOE. */
+		if (gitFs == null) {
+			throw new IOException();
+		}
 
 		final ImmutableSet.Builder<CriterionGradeWeight> gradeBuilder = ImmutableSet.builder();
 		// final Graph<GitPathRoot> filteredCommitsGraph;
