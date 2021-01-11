@@ -1,5 +1,6 @@
 package io.github.oliviercailloux.java_grade.graders;
 
+import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Verify.verify;
 import static io.github.oliviercailloux.jaris.exceptions.Unchecker.IO_UNCHECKER;
 
@@ -45,8 +46,7 @@ import io.github.oliviercailloux.utils.Utils;
 public class Commit {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(Commit.class);
-
-	public IGrade grade(RepositoryCoordinates coordinates, ZonedDateTime deadline) throws IOException {
+	public static IGrade grade(RepositoryCoordinates coordinates, ZonedDateTime deadline) throws IOException {
 		final FileRepository repository = GitCloner.create().download(coordinates.asGitUri(),
 				Utils.getTempDirectory().resolve(coordinates.getRepositoryName()));
 
@@ -71,21 +71,22 @@ public class Commit {
 		return grade(history, deadline);
 	}
 
-	public IGrade grade(GitFileSystemHistory history, ZonedDateTime deadline) {
-		final Instant tooLate = deadline.toInstant().plus(Duration.ofMinutes(5));
+	public static IGrade grade(GitFileSystemHistory history, ZonedDateTime deadline) throws IOException {
+		final ZonedDateTime tooLate = deadline.plus(Duration.ofMinutes(5));
 		final ImmutableSet<Instant> toConsider;
 		{
 			final ImmutableSortedSet<Instant> timestamps = history.asGitHistory().getCommitDates().values().stream()
 					.collect(ImmutableSortedSet.toImmutableSortedSet(Comparator.naturalOrder()));
 			final Instant lastOnTime = timestamps.headSet(deadline.toInstant(), true).last();
-			toConsider = timestamps.tailSet(lastOnTime).headSet(tooLate);
+			toConsider = timestamps.tailSet(lastOnTime).headSet(tooLate.toInstant());
 		}
 
 		final ImmutableMap.Builder<Instant, IGrade> byTimeBuilder = ImmutableMap.builder();
 		for (Instant timeCap : toConsider) {
 			final Predicate<ObjectId> onTime = o -> !history.getCommitDate(o).isAfter(timeCap);
 			final GitFileSystemHistory filteredHistory = history.filter(onTime);
-			final IGrade grade = grade(filteredHistory);
+			final Commit grader = new Commit(filteredHistory);
+			final IGrade grade = grader.grade();
 
 			final IGrade penalizedGrade;
 			final Duration lateness = Duration.between(timeCap, deadline);
@@ -119,6 +120,12 @@ public class Commit {
 		return finalGrade;
 	}
 
+	private GitFileSystemHistory filteredHistory;
+
+	public Commit(GitFileSystemHistory filteredHistory) {
+		this.filteredHistory = checkNotNull(filteredHistory);
+	}
+
 	/**
 	 * @param gitFs
 	 * @param pushHistory
@@ -126,19 +133,21 @@ public class Commit {
 	 * @return
 	 * @throws IOException
 	 */
-	private WeightingGrade grade(GitFileSystemHistory filteredHistory) throws UncheckedIOException {
+	public WeightingGrade grade() throws UncheckedIOException, IOException {
 		final GitFileSystem gitFs = filteredHistory.getGitFilesystem();
 
 		final ImmutableSet.Builder<CriterionGradeWeight> gradeBuilder = ImmutableSet.builder();
-//		final Graph<GitPathRoot> filteredCommitsGraph;
-//		{
-//			final ImmutableGraph<GitPathRoot> commitsGraph = gitFs.getCommitsGraph();
-//			final Function<GitPathRoot, ? extends ObjectId> getId = IO_UNCHECKER
-//					.wrapFunction(p -> p.getCommit().getId());
-//			filteredCommitsGraph = Graphs.inducedSubgraph(commitsGraph, commitsGraph.nodes().stream()
-//					.filter(r -> onTime.test(getId.apply(r))).collect(ImmutableSet.toImmutableSet()));
-//		}
-//		final GitHistory filteredPushHistory = pushHistory.filter(onTime);
+		// final Graph<GitPathRoot> filteredCommitsGraph;
+		// {
+		// final ImmutableGraph<GitPathRoot> commitsGraph = gitFs.getCommitsGraph();
+		// final Function<GitPathRoot, ? extends ObjectId> getId = IO_UNCHECKER
+		// .wrapFunction(p -> p.getCommit().getId());
+		// filteredCommitsGraph = Graphs.inducedSubgraph(commitsGraph,
+		// commitsGraph.nodes().stream()
+		// .filter(r ->
+		// onTime.test(getId.apply(r))).collect(ImmutableSet.toImmutableSet()));
+		// }
+		// final GitHistory filteredPushHistory = pushHistory.filter(onTime);
 
 		gradeBuilder.add(CriterionGradeWeight.from(Criterion.given("Not empty"),
 				Mark.binary(!filteredHistory.getGraph().nodes().isEmpty()), 1d));
@@ -173,19 +182,30 @@ public class Commit {
 					WeightingGrade.from(ImmutableSet.of(myIdContent, myIdAndAFileContent, masterContent)), 3d));
 		}
 		{
+			final Pattern anything = Pattern.compile(".*");
 			final WeightingGrade commit = WeightingGrade.proportional(Criterion.given("'another file.txt' exists"),
 					Mark.binary(filteredHistory.getGraph().nodes().stream()
 							.anyMatch(r -> Files.exists(r.resolve("sub/a/another file.txt")))),
 					Criterion.given("'dev' content"),
-					Mark.binary(Files.exists(gitFs.getAbsolutePath("/refs/heads/dev//sub/a/another file.txt"))));
+					Mark.binary(matches(gitFs.getAbsolutePath("/refs/heads/dev//sub/a/another file.txt"), anything)));
 			gradeBuilder.add(CriterionGradeWeight.from(Criterion.given("Commit 'dev'"), commit, 3d));
 		}
 
 		return WeightingGrade.from(gradeBuilder.build());
 	}
 
-	private boolean matches(GitPath path, Pattern regExp) throws UncheckedIOException {
-		return Files.exists(path)
-				&& regExp.matcher(IO_UNCHECKER.getUsing(() -> Files.readString(path)).strip()).matches();
+	boolean matches(GitPath path, Pattern regExp) throws UncheckedIOException {
+		try {
+			if (filteredHistory.asDirect(path.getRoot()).isEmpty()) {
+				return false;
+			}
+			if (!Files.exists(path)) {
+				return false;
+			}
+			final String content = Files.readString(path);
+			return regExp.matcher(content).matches();
+		} catch (IOException e) {
+			throw new UncheckedIOException(e);
+		}
 	}
 }

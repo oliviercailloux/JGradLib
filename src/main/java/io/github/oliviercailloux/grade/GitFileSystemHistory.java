@@ -3,9 +3,11 @@ package io.github.oliviercailloux.grade;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import java.io.IOException;
 import java.nio.file.Files;
 import java.time.Instant;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.function.Predicate;
 
 import org.eclipse.jgit.lib.ObjectId;
@@ -40,6 +42,16 @@ public class GitFileSystemHistory {
 		for (ObjectId o : history.getGraph().nodes()) {
 			checkArgument(Files.exists(gitFs.getPathRoot(o)));
 		}
+	}
+
+	public Optional<GitPathRoot> asDirect(GitPathRoot path) throws IOException {
+		checkArgument(path.getFileSystem().equals(gitFs));
+		if (!path.exists()) {
+			return Optional.empty();
+		}
+		final ObjectId objectId = path.getCommit().getId();
+		final GitPathRoot direct = gitFs.getPathRoot(objectId);
+		return Optional.of(direct).filter(r -> graph.nodes().contains(r));
 	}
 
 	public GitFileSystem getGitFilesystem() {
