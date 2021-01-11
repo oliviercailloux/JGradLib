@@ -57,6 +57,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.PeekingIterator;
+import com.google.common.collect.Streams;
 import com.google.common.graph.Graphs;
 import com.google.common.graph.ImmutableGraph;
 import com.google.common.jimfs.Configuration;
@@ -505,18 +506,17 @@ public abstract class GitFileSystem extends FileSystem {
 	 * Returns a git path referring to a commit designated by its id. No check is
 	 * performed to ensure that the commit exists.
 	 *
-	 * @param commitId     the commit to refer to
-	 * @param internalPath may start with a slash.
+	 * @param commitId      the commit to refer to
+	 * @param internalPath1 may start with a slash.
+	 * @param internalPath  may start with a slash.
 	 * @return an absolute path
 	 * @see GitPath
 	 */
-	public GitPath getAbsolutePath(ObjectId commitId, String... internalPath) {
-		final List<String> givenMore = new ArrayList<>(ImmutableList.copyOf(internalPath));
-		if (givenMore.isEmpty()) {
-			givenMore.add("/");
-		} else if (!givenMore.get(0).startsWith("/")) {
-			givenMore.set(0, "/" + givenMore.get(0));
-		}
+	public GitPath getAbsolutePath(ObjectId commitId, String internalPath1, String... internalPath) {
+		final String internalPath1StartsRight = internalPath1.startsWith("/") ? internalPath1 : "/" + internalPath1;
+		final ImmutableList<String> givenMore = Streams
+				.concat(Stream.of(internalPath1StartsRight), Stream.of(internalPath))
+				.collect(ImmutableList.toImmutableList());
 		return GitAbsolutePath.givenRoot(new GitPathRoot(this, GitRev.commitId(commitId)), givenMore);
 	}
 

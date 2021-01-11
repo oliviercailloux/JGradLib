@@ -15,6 +15,7 @@ import java.util.List;
 
 import org.eclipse.jgit.api.CommitCommand;
 import org.eclipse.jgit.api.Git;
+import org.eclipse.jgit.errors.RepositoryNotFoundException;
 import org.eclipse.jgit.internal.storage.dfs.DfsRepository;
 import org.eclipse.jgit.internal.storage.dfs.DfsRepositoryDescription;
 import org.eclipse.jgit.internal.storage.dfs.InMemoryRepository;
@@ -25,14 +26,17 @@ import org.eclipse.jgit.lib.PersonIdent;
 import org.eclipse.jgit.lib.Ref;
 import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.revwalk.RevCommit;
+import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Verify;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.MoreCollectors;
+import com.google.common.graph.GraphBuilder;
 import com.google.common.graph.Traverser;
 
 import io.github.oliviercailloux.git.fs.GitFileSystem;
@@ -60,7 +64,7 @@ class GitClonerTests {
 
 		final Path httpsPath = Utils.getTempDirectory()
 				.resolve("testrel cloned using https " + Utils.ISO_BASIC_UTC_FORMATTER.format(Instant.now()));
-		cloner.download(GitUri.fromUri(URI.create("https://github.com/oliviercailloux/testrel/")), httpsPath);
+		cloner.download(GitUri.fromUri(URI.create("https://github.com/oliviercailloux/testrel/")), httpsPath).close();
 
 		final Path sshPath = Utils.getTempDirectory()
 				.resolve("testrel cloned using ssh " + Utils.ISO_BASIC_UTC_FORMATTER.format(Instant.now()));
@@ -84,14 +88,15 @@ class GitClonerTests {
 				Traverser.forGraph(historyFromHttpsClone.getGraph()::predecessors).depthFirstPostOrder(masterId));
 		assertEquals(shas.reverse(), commitsToMaster);
 
-		cloner.download(GitUri.fromUri(URI.create("ssh://git@github.com/oliviercailloux/testrel.git")), sshPath);
+		cloner.download(GitUri.fromUri(URI.create("ssh://git@github.com/oliviercailloux/testrel.git")), sshPath)
+				.close();
 		try (Repository repo2 = new FileRepository(sshPath.resolve(".git").toFile())) {
 			assertEquals(historyFromHttpsClone, GitUtils.getHistory(repo2));
 		}
 
 		final Path filePath = Utils.getTempDirectory().resolve("testrel cloned using file transport to ssh clone "
 				+ Utils.ISO_BASIC_UTC_FORMATTER.format(Instant.now()));
-		cloner.download(GitUri.fromUri(sshPath.toUri()), filePath);
+		cloner.download(GitUri.fromUri(sshPath.toUri()), filePath).close();
 
 		/**
 		 * This clone does not clone the clone’s origin branches that are not local to
@@ -119,7 +124,7 @@ class GitClonerTests {
 		}
 
 		/** Should update and fetch the new commit. */
-		cloner.download(GitUri.fromUri(sshPath.toUri()), filePath);
+		cloner.download(GitUri.fromUri(sshPath.toUri()), filePath).close();
 		final GitHistory enlargedHistory;
 		try (Repository repo = new FileRepository(filePath.resolve(".git").toFile())) {
 			enlargedHistory = GitUtils.getHistory(repo);
@@ -134,7 +139,8 @@ class GitClonerTests {
 	void testCloneBare() throws Exception {
 		final Path gitDirPath = Utils.getTempDirectory()
 				.resolve("testrel cloned " + Utils.ISO_BASIC_UTC_FORMATTER.format(Instant.now()));
-		new GitCloner().downloadBare(GitUri.fromGitUrl("git@github.com:oliviercailloux/testrel.git"), gitDirPath);
+		new GitCloner().downloadBare(GitUri.fromGitUrl("git@github.com:oliviercailloux/testrel.git"), gitDirPath)
+				.close();
 		assertTrue(Files.exists(gitDirPath.resolve("refs")));
 		assertFalse(Files.exists(gitDirPath.resolve(".git")));
 	}
@@ -151,7 +157,7 @@ class GitClonerTests {
 			LOGGER.info("Cloning from {}.", uri);
 			final Path clonedTo = Utils.getTempDirectory()
 					.resolve("Just cloned using .git " + Utils.ISO_BASIC_UTC_FORMATTER.format(Instant.now()));
-			new GitCloner().download(GitUri.fromUri(uri), clonedTo);
+			new GitCloner().download(GitUri.fromUri(uri), clonedTo).close();
 			assertTrue(Files.exists(clonedTo.resolve(".git")));
 			assertTrue(Files.exists(clonedTo.resolve(".git").resolve("refs")));
 		}
@@ -160,7 +166,7 @@ class GitClonerTests {
 		LOGGER.info("Cloning from {}.", uri);
 		final Path clonedTo = Utils.getTempDirectory()
 				.resolve("Just cloned " + Utils.ISO_BASIC_UTC_FORMATTER.format(Instant.now()));
-		new GitCloner().download(GitUri.fromUri(uri), clonedTo);
+		new GitCloner().download(GitUri.fromUri(uri), clonedTo).close();
 		assertTrue(Files.exists(clonedTo.resolve(".git")));
 		assertTrue(Files.exists(clonedTo.resolve(".git").resolve("refs")));
 	}
@@ -227,6 +233,47 @@ class GitClonerTests {
 			assertFalse(Files.exists(gitFs.getAbsolutePath("/FFFFFFFFb0e12c98d1e424a767a91c8d9d2f3f34/", "Test.html")));
 			assertFalse(Files.exists(gitFs.getAbsolutePath("/c0170a38b0e12c98d1e424a767a91c8d9d2f3f34/", "Test.html")));
 			assertTrue(Files.exists(gitFs.getAbsolutePath("/c0170a38b0e12c98d1e424a767a91c8d9d2f3f34/", "ploum.txt")));
+		}
+	}
+
+	@Test
+	void testEmpty() throws Exception {
+		/**
+		 * After having manually git cloned a just created (empty) repository on GitHub,
+		 * the following works.
+		 */
+//		try (Repository repository = Git.open(Path.of("empty/").toFile()).getRepository()) {
+//			assertTrue(repository.getObjectDatabase().exists());
+//			assertFalse(repository.getRefDatabase().hasRefs());
+//		}
+		try (Repository repository = Git.init().setDirectory(Utils.getTempUniqueDirectory("created empty").toFile())
+				.call().getRepository()) {
+			assertTrue(repository.getObjectDatabase().exists());
+			assertFalse(repository.getRefDatabase().hasRefs());
+		}
+		final GitUri emptyUri = GitUri.fromUri(URI.create("ssh://git@github.com/oliviercailloux/empty.git"));
+		try (Repository repository = new GitCloner().download(emptyUri, Utils.getTempUniqueDirectory("cloned empty"))) {
+			assertTrue(repository.getObjectDatabase().exists());
+			assertFalse(repository.getRefDatabase().hasRefs());
+		}
+
+		assertThrows(RepositoryNotFoundException.class, () -> Git.open(Path.of("inexistent").toFile()));
+		final Path src = Path.of("src/");
+		assertTrue(Files.isDirectory(src));
+		assertThrows(RepositoryNotFoundException.class, () -> Git.open(src.toFile()));
+		try (Repository repository = new FileRepositoryBuilder().setGitDir(Path.of("inexistent").toFile()).build()) {
+			assertFalse(repository.getObjectDatabase().exists());
+			assertFalse(repository.getRefDatabase().hasRefs());
+			assertThrows(IllegalArgumentException.class, () -> new GitCloner().clone(emptyUri, repository));
+			assertThrows(IllegalArgumentException.class, () -> GitUtils.getHistory(repository));
+		}
+
+		try (DfsRepository repository = new InMemoryRepository(new DfsRepositoryDescription("myrepo"))) {
+			assertTrue(repository.getObjectDatabase().exists());
+			assertFalse(repository.getRefDatabase().hasRefs());
+			new GitCloner().setCheckCommonRefsAgree(false).clone(emptyUri, repository);
+			assertEquals(GitHistory.create(GraphBuilder.directed().build(), ImmutableMap.of()),
+					GitUtils.getHistory(repository));
 		}
 	}
 

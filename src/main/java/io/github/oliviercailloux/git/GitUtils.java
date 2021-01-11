@@ -66,7 +66,15 @@ public class GitUtils {
 		return commits.stream().map(RevCommit::getName).collect(ImmutableList.toImmutableList());
 	}
 
+	/**
+	 * @param repository
+	 * @return
+	 * @throws IOException
+	 * @throws IllegalArgumentException iff the given repository has no object
+	 *                                  database
+	 */
 	public static GitHistory getHistory(Repository repository) throws IOException {
+		checkArgument(repository.getObjectDatabase().exists());
 		/**
 		 * Log command fails (with org.eclipse.jgit.api.errors.NoHeadException) if “No
 		 * HEAD exists and no explicit starting revision was specified”.

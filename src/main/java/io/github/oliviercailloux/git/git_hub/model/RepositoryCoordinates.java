@@ -6,6 +6,8 @@ import java.net.URI;
 
 import javax.json.JsonObject;
 
+import io.github.oliviercailloux.git.GitUri;
+
 public class RepositoryCoordinates {
 	public static RepositoryCoordinates from(String owner, String repo) {
 		return new RepositoryCoordinates(owner, repo);
@@ -43,6 +45,10 @@ public class RepositoryCoordinates {
 
 	public URI asURI() {
 		return URI.create("ssh://git@github.com/" + getOwner() + "/" + getRepositoryName() + ".git");
+	}
+
+	public GitUri asGitUri() {
+		return GitUri.fromUri(asURI());
 	}
 
 	@Override

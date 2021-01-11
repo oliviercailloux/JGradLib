@@ -128,8 +128,8 @@ public class GitReadTests {
 				assertTrue(Files.exists(gitFs.getRelativePath().toAbsolutePath()));
 				assertTrue(Files.exists(gitFs.getAbsolutePath("/refs/heads/main/")));
 				assertFalse(Files.exists(gitFs.getAbsolutePath("/refs/nothing/")));
-				assertFalse(Files.exists(gitFs.getAbsolutePath(ObjectId.zeroId())));
-				assertTrue(Files.exists(gitFs.getAbsolutePath(commits.get(0))));
+				assertFalse(Files.exists(gitFs.getPathRoot(ObjectId.zeroId())));
+				assertTrue(Files.exists(gitFs.getPathRoot(commits.get(0))));
 				assertFalse(Files.exists(gitFs.getAbsolutePath(commits.get(0), "/ploum.txt")));
 				assertTrue(Files.exists(gitFs.getAbsolutePath(commits.get(0), "/file1.txt")));
 				assertFalse(Files.exists(gitFs.getRelativePath("ploum.txt")));
@@ -207,76 +207,76 @@ public class GitReadTests {
 						gitFs.getRelativePath().toRealPath(LinkOption.NOFOLLOW_LINKS));
 				assertEquals(gitFs.getRelativePath().toAbsolutePath(), gitFs.getRelativePath().toRealPath());
 
-				final GitPath c1File1 = gitFs.getAbsolutePath(commit1).resolve("file1.txt");
+				final GitPath c1File1 = gitFs.getPathRoot(commit1).resolve("file1.txt");
 				assertEquals(c1File1, c1File1.toRealPath(LinkOption.NOFOLLOW_LINKS));
 				assertEquals(c1File1, c1File1.toRealPath());
 
-				assertEquals(c1File1, gitFs.getAbsolutePath(commit1).resolve("link.txt").toRealPath());
+				assertEquals(c1File1, gitFs.getPathRoot(commit1).resolve("link.txt").toRealPath());
 				assertThrows(PathCouldNotBeFoundException.class,
-						() -> gitFs.getAbsolutePath(commit1).resolve("link.txt").toRealPath(LinkOption.NOFOLLOW_LINKS));
+						() -> gitFs.getPathRoot(commit1).resolve("link.txt").toRealPath(LinkOption.NOFOLLOW_LINKS));
 
-				final GitPath c2File1 = gitFs.getAbsolutePath(commit2).resolve("file1.txt");
-				assertEquals(c2File1, gitFs.getAbsolutePath(commit2).resolve("link.txt").toRealPath());
+				final GitPath c2File1 = gitFs.getPathRoot(commit2).resolve("file1.txt");
+				assertEquals(c2File1, gitFs.getPathRoot(commit2).resolve("link.txt").toRealPath());
 				assertThrows(PathCouldNotBeFoundException.class,
-						() -> gitFs.getAbsolutePath(commit2).resolve("link.txt").toRealPath(LinkOption.NOFOLLOW_LINKS));
+						() -> gitFs.getPathRoot(commit2).resolve("link.txt").toRealPath(LinkOption.NOFOLLOW_LINKS));
 
 				assertThrows(NoSuchFileException.class,
-						() -> gitFs.getAbsolutePath(commit2).resolve("notexists.txt").toRealPath());
-				assertThrows(NoSuchFileException.class, () -> gitFs.getAbsolutePath(commit2).resolve("notexists.txt")
+						() -> gitFs.getPathRoot(commit2).resolve("notexists.txt").toRealPath());
+				assertThrows(NoSuchFileException.class, () -> gitFs.getPathRoot(commit2).resolve("notexists.txt")
 						.toRealPath(LinkOption.NOFOLLOW_LINKS));
 
-				final GitPath c3File1 = gitFs.getAbsolutePath(commit3).resolve("file1.txt");
-				assertEquals(c3File1, gitFs.getAbsolutePath(commit3).resolve("dir/link").toRealPath());
+				final GitPath c3File1 = gitFs.getPathRoot(commit3).resolve("file1.txt");
+				assertEquals(c3File1, gitFs.getPathRoot(commit3).resolve("dir/link").toRealPath());
 				assertThrows(PathCouldNotBeFoundException.class,
-						() -> gitFs.getAbsolutePath(commit3).resolve("dir/link").toRealPath(LinkOption.NOFOLLOW_LINKS));
+						() -> gitFs.getPathRoot(commit3).resolve("dir/link").toRealPath(LinkOption.NOFOLLOW_LINKS));
 
-				assertEquals(c3File1, gitFs.getAbsolutePath(commit3).resolve("dir/linkToParent/dir/link").toRealPath());
-				assertThrows(PathCouldNotBeFoundException.class, () -> gitFs.getAbsolutePath(commit3)
+				assertEquals(c3File1, gitFs.getPathRoot(commit3).resolve("dir/linkToParent/dir/link").toRealPath());
+				assertThrows(PathCouldNotBeFoundException.class, () -> gitFs.getPathRoot(commit3)
 						.resolve("dir/linkToParent/dir/link").toRealPath(LinkOption.NOFOLLOW_LINKS));
 
 				assertThrows(NoSuchFileException.class,
-						() -> gitFs.getAbsolutePath(commit3).resolve("dir/linkToParent/dir/notexists").toRealPath());
-				assertThrows(NoSuchFileException.class, () -> gitFs.getAbsolutePath(commit3).resolve("dir/notexists")
+						() -> gitFs.getPathRoot(commit3).resolve("dir/linkToParent/dir/notexists").toRealPath());
+				assertThrows(NoSuchFileException.class, () -> gitFs.getPathRoot(commit3).resolve("dir/notexists")
 						.toRealPath(LinkOption.NOFOLLOW_LINKS));
-				assertThrows(PathCouldNotBeFoundException.class, () -> gitFs.getAbsolutePath(commit3)
+				assertThrows(PathCouldNotBeFoundException.class, () -> gitFs.getPathRoot(commit3)
 						.resolve("dir/linkToParent/dir/notexists").toRealPath(LinkOption.NOFOLLOW_LINKS));
 
 				assertThrows(NoSuchFileException.class,
-						() -> gitFs.getAbsolutePath(commit3).resolve("dir/cyclingLink").toRealPath());
-				assertThrows(PathCouldNotBeFoundException.class, () -> gitFs.getAbsolutePath(commit3)
+						() -> gitFs.getPathRoot(commit3).resolve("dir/cyclingLink").toRealPath());
+				assertThrows(PathCouldNotBeFoundException.class, () -> gitFs.getPathRoot(commit3)
 						.resolve("dir/cyclingLink").toRealPath(LinkOption.NOFOLLOW_LINKS));
 
 				assertThrows(NoSuchFileException.class,
-						() -> gitFs.getAbsolutePath(commit4).resolve("file1.txt").toRealPath());
-				assertThrows(NoSuchFileException.class, () -> gitFs.getAbsolutePath(commit4).resolve("file1.txt")
-						.toRealPath(LinkOption.NOFOLLOW_LINKS));
+						() -> gitFs.getPathRoot(commit4).resolve("file1.txt").toRealPath());
+				assertThrows(NoSuchFileException.class,
+						() -> gitFs.getPathRoot(commit4).resolve("file1.txt").toRealPath(LinkOption.NOFOLLOW_LINKS));
 
 				assertThrows(NoSuchFileException.class,
-						() -> gitFs.getAbsolutePath(commit4).resolve("link.txt").toRealPath());
+						() -> gitFs.getPathRoot(commit4).resolve("link.txt").toRealPath());
 				assertThrows(PathCouldNotBeFoundException.class,
-						() -> gitFs.getAbsolutePath(commit4).resolve("link.txt").toRealPath(LinkOption.NOFOLLOW_LINKS));
+						() -> gitFs.getPathRoot(commit4).resolve("link.txt").toRealPath(LinkOption.NOFOLLOW_LINKS));
 
 				assertThrows(NoSuchFileException.class,
-						() -> gitFs.getAbsolutePath(commit4).resolve("dir/linkToParent/dir/link").toRealPath());
-				assertThrows(PathCouldNotBeFoundException.class, () -> gitFs.getAbsolutePath(commit4)
+						() -> gitFs.getPathRoot(commit4).resolve("dir/linkToParent/dir/link").toRealPath());
+				assertThrows(PathCouldNotBeFoundException.class, () -> gitFs.getPathRoot(commit4)
 						.resolve("dir/linkToParent/dir/link").toRealPath(LinkOption.NOFOLLOW_LINKS));
 
-				assertNotEquals(c1File1, gitFs.getAbsolutePath(commit3).resolve("././dir/../link.txt").toRealPath());
-				assertEquals(c3File1, gitFs.getAbsolutePath(commit3).resolve("././dir/../link.txt").toRealPath());
-				assertEquals(c3File1, gitFs.getAbsolutePath(commit3).resolve("././dir/../file1.txt")
+				assertNotEquals(c1File1, gitFs.getPathRoot(commit3).resolve("././dir/../link.txt").toRealPath());
+				assertEquals(c3File1, gitFs.getPathRoot(commit3).resolve("././dir/../link.txt").toRealPath());
+				assertEquals(c3File1, gitFs.getPathRoot(commit3).resolve("././dir/../file1.txt")
 						.toRealPath(LinkOption.NOFOLLOW_LINKS));
-				assertEquals(c3File1, gitFs.getAbsolutePath(commit3).resolve("./link.txt").toRealPath());
+				assertEquals(c3File1, gitFs.getPathRoot(commit3).resolve("./link.txt").toRealPath());
 
-				assertThrows(NoSuchFileException.class, () -> gitFs.getAbsolutePath(commit3)
+				assertThrows(NoSuchFileException.class, () -> gitFs.getPathRoot(commit3)
 						.resolve("dir/./../dir/./linkToParent/dir/notexists").toRealPath());
-				assertThrows(NoSuchFileException.class, () -> gitFs.getAbsolutePath(commit3).resolve("dir/./notexists")
+				assertThrows(NoSuchFileException.class, () -> gitFs.getPathRoot(commit3).resolve("dir/./notexists")
 						.toRealPath(LinkOption.NOFOLLOW_LINKS));
-				assertThrows(PathCouldNotBeFoundException.class, () -> gitFs.getAbsolutePath(commit3)
+				assertThrows(PathCouldNotBeFoundException.class, () -> gitFs.getPathRoot(commit3)
 						.resolve("dir/linkToParent/./dir/../dir/notexists").toRealPath(LinkOption.NOFOLLOW_LINKS));
 
 				assertThrows(NoSuchFileException.class,
-						() -> gitFs.getAbsolutePath(commit3).resolve("dir/./../dir/cyclingLink").toRealPath());
-				assertThrows(PathCouldNotBeFoundException.class, () -> gitFs.getAbsolutePath(commit3)
+						() -> gitFs.getPathRoot(commit3).resolve("dir/./../dir/cyclingLink").toRealPath());
+				assertThrows(PathCouldNotBeFoundException.class, () -> gitFs.getPathRoot(commit3)
 						.resolve("dir/./../dir/cyclingLink").toRealPath(LinkOption.NOFOLLOW_LINKS));
 			}
 		}

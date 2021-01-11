@@ -1,5 +1,6 @@
 package io.github.oliviercailloux.git;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static io.github.oliviercailloux.jaris.exceptions.Unchecker.IO_UNCHECKER;
 
@@ -63,8 +64,9 @@ public class GitCloner {
 		return checkCommonRefsAgree;
 	}
 
-	public void setCheckCommonRefsAgree(boolean checkCommonRefsAgree) {
+	public GitCloner setCheckCommonRefsAgree(boolean checkCommonRefsAgree) {
 		this.checkCommonRefsAgree = checkCommonRefsAgree;
+		return this;
 	}
 
 	public void clone(GitUri gitUri, Repository repo) {
@@ -76,16 +78,18 @@ public class GitCloner {
 		}
 	}
 
-	public void download(GitUri uri, Path workTree) {
-		download(uri, workTree, false);
+	public FileRepository download(GitUri uri, Path workTree) {
+		return download(uri, workTree, false);
 	}
 
-	public void downloadBare(GitUri uri, Path gitDir) {
-		download(uri, gitDir, true);
+	public FileRepository downloadBare(GitUri uri, Path gitDir) {
+		return download(uri, gitDir, true);
 	}
 
 	/**
-	 * TODO return the repository.
+	 * If the given uri contains an empty repository, this returns an empty
+	 * repository: repository.getObjectDatabase().exists() is true;
+	 * repository.getRefDatabase().hasRefs() is false.
 	 *
 	 * @param repositoryDirectory GIT_DIR (replacing .git dir) if bare (see
 	 *                            {@link FileRepository}), otherwise, work tree dir,
@@ -93,10 +97,12 @@ public class GitCloner {
 	 * @param allowBare           <code>true</code> to clone bare if not exists (if
 	 *                            exists, this method will not check whether it is
 	 *                            bare)
+	 * @return
 	 */
-	private void download(GitUri uri, Path repositoryDirectory, boolean allowBare) {
+	private FileRepository download(GitUri uri, Path repositoryDirectory, boolean allowBare) {
 		localRefs = null;
 		remoteRefs = null;
+		final FileRepository repository;
 		final boolean exists = Files.exists(repositoryDirectory);
 		if (!exists) {
 			final CloneCommand cloneCmd = Git.cloneRepository();
@@ -111,13 +117,20 @@ public class GitCloner {
 //				throw new IOException(e);
 //			}
 //			try (Git git = Git.open(repositoryDirectory.toFile())) {
-			try (Git git = cloneCmd.call()) {
+			try {
+				Git git = cloneCmd.call();
 				maybeCheckCommonRefs(git);
+				repository = (FileRepository) git.getRepository();
 			} catch (GitAPIException e) {
 				throw new IllegalStateException(e);
 			}
 		} else {
-			try (Git git = Git.open(repositoryDirectory.toFile())) {
+			try {
+				repository = new FileRepository(repositoryDirectory.toFile());
+			} catch (IOException e) {
+				throw new IllegalStateException(e);
+			}
+			try (Git git = Git.wrap(repository)) {
 				final List<RemoteConfig> remoteList = git.remoteList().call();
 				final Optional<RemoteConfig> origin = remoteList.stream().filter((r) -> r.getName().equals("origin"))
 						.collect(MoreCollectors.toOptional());
@@ -160,6 +173,7 @@ public class GitCloner {
 				throw new IllegalStateException(e);
 			}
 		}
+		return repository;
 	}
 
 	private void maybeCheckCommonRefs(Git git) throws GitAPIException {
@@ -171,14 +185,14 @@ public class GitCloner {
 			parse(branches);
 
 			final Ref head = IO_UNCHECKER.getUsing(() -> git.getRepository().findRef(Constants.HEAD));
-			checkState(head != null, "Did you forget to create the repository?");
-			checkState(head.getTarget().getName().equals("refs/heads/master"));
+			checkArgument(head != null, "Did you forget to create the repository?");
+			checkArgument(head.getTarget().getName().equals("refs/heads/master"));
 
 			final ImmutableMap<String, ObjectId> originRefs = remoteRefs.row("origin");
 			final SetView<String> commonRefShortNames = Sets.intersection(originRefs.keySet(), localRefs.keySet());
 			final ImmutableSet<String> disagreeingRefShortNames = commonRefShortNames.stream()
 					.filter((s) -> !originRefs.get(s).equals(localRefs.get(s))).collect(ImmutableSet.toImmutableSet());
-			checkState(disagreeingRefShortNames.isEmpty(),
+			checkArgument(disagreeingRefShortNames.isEmpty(),
 					String.format("Disagreeing: %s. Origin refs: %s; local refs: %s.", disagreeingRefShortNames,
 							originRefs, localRefs));
 		}
@@ -192,7 +206,7 @@ public class GitCloner {
 			final Pattern refPattern = Pattern
 					.compile("refs/(?<kind>[^/]+)(/(?<remoteName>[^/]+))?/(?<shortName>[^/]+)");
 			final Matcher matcher = refPattern.matcher(fullName);
-			checkState(matcher.matches(), fullName);
+			checkArgument(matcher.matches(), fullName);
 			final String kind = matcher.group("kind");
 			final String remoteName = matcher.group("remoteName");
 			final String shortName = matcher.group("shortName");
@@ -207,7 +221,7 @@ public class GitCloner {
 				localRefsBuilder.put(shortName, objectId);
 				break;
 			default:
-				throw new IllegalStateException("Unknown ref kind: " + kind);
+				throw new IllegalArgumentException("Unknown ref kind: " + kind);
 			}
 		}
 		remoteRefs = remoteRefsBuilder.build();

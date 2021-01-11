@@ -57,7 +57,7 @@ public class FindEnds {
 	public boolean hasEnd(RepositoryCoordinates coord) {
 		final Path projectsBaseDir = WORK_DIR.resolve(prefix);
 		final Path projectDir = projectsBaseDir.resolve(coord.getRepositoryName());
-		new GitCloner().download(GitUri.fromUri(coord.asURI()), projectDir);
+		new GitCloner().download(GitUri.fromUri(coord.asURI()), projectDir).close();
 
 		try (Git git = IO_UNCHECKER.getUsing(() -> Git.open(projectDir.resolve(".git").toFile()))) {
 			final List<Ref> remoteRefs = Unchecker.wrappingWith(IllegalStateException::new)

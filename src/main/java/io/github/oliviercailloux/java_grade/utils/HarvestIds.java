@@ -101,7 +101,7 @@ public class HarvestIds {
 		LOGGER.info("Proceeding with {}.", coord);
 		final Path projectsBaseDir = Paths.get("../../Java L3/En cours").resolve(prefix);
 		final Path projectDir = projectsBaseDir.resolve(coord.getRepositoryName());
-		new GitCloner().download(GitUri.fromUri(coord.asURI()), projectDir);
+		new GitCloner().download(GitUri.fromUri(coord.asURI()), projectDir).close();
 		try (GitFileSystem fs = IO_UNCHECKER.getUsing(
 				() -> GitFileSystemProvider.getInstance().newFileSystemFromGitDir(projectDir.resolve(".git")))) {
 			return getId(fs);

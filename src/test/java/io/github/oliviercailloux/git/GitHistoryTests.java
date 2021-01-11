@@ -1,15 +1,22 @@
 package io.github.oliviercailloux.git;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.net.URI;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Instant;
 
+import org.eclipse.jgit.api.Git;
+import org.eclipse.jgit.errors.RepositoryNotFoundException;
 import org.eclipse.jgit.internal.storage.dfs.DfsRepositoryDescription;
 import org.eclipse.jgit.internal.storage.dfs.InMemoryRepository;
 import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.lib.Repository;
+import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,6 +28,8 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.graph.GraphBuilder;
 import com.google.common.graph.ImmutableGraph;
+
+import io.github.oliviercailloux.utils.Utils;
 
 class GitHistoryTests {
 	@SuppressWarnings("unused")
@@ -34,6 +43,29 @@ class GitHistoryTests {
 		assertEquals(ImmutableSet.of(), history.getLeaves());
 		assertEquals(ImmutableMap.of(), history.getCommitDates());
 		assertEquals(GraphBuilder.directed().build(), history.getGraph());
+	}
+
+	@Test
+	void testEmptyRepository() throws Exception {
+		try (Repository repository = Git.init().setDirectory(Utils.getTempUniqueDirectory("created empty").toFile())
+				.call().getRepository()) {
+			assertTrue(repository.getObjectDatabase().exists());
+			assertFalse(repository.getRefDatabase().hasRefs());
+			final GitHistory history = GitUtils.getHistory(repository);
+			assertEquals(ImmutableSet.of(), history.getRoots());
+			assertEquals(ImmutableSet.of(), history.getLeaves());
+			assertEquals(ImmutableMap.of(), history.getCommitDates());
+			assertEquals(GraphBuilder.directed().build(), history.getGraph());
+		}
+		assertThrows(RepositoryNotFoundException.class, () -> Git.open(Path.of("inexistent").toFile()));
+		final Path src = Path.of("src/");
+		assertTrue(Files.isDirectory(src));
+		assertThrows(RepositoryNotFoundException.class, () -> Git.open(src.toFile()));
+		try (Repository repository = new FileRepositoryBuilder().setGitDir(Path.of("inexistent").toFile()).build()) {
+			assertFalse(repository.getObjectDatabase().exists());
+			assertFalse(repository.getRefDatabase().hasRefs());
+			assertThrows(IllegalArgumentException.class, () -> GitUtils.getHistory(repository));
+		}
 	}
 
 	/**

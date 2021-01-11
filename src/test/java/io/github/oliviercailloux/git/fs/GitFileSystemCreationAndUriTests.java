@@ -16,16 +16,19 @@ import java.time.Instant;
 
 import javax.ws.rs.core.UriBuilder;
 
+import org.eclipse.jgit.internal.storage.dfs.DfsRepository;
 import org.eclipse.jgit.internal.storage.dfs.DfsRepositoryDescription;
 import org.eclipse.jgit.internal.storage.dfs.InMemoryRepository;
 import org.eclipse.jgit.internal.storage.file.FileRepository;
 import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.lib.Repository;
+import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.graph.GraphBuilder;
 
 import io.github.oliviercailloux.git.JGit;
 import io.github.oliviercailloux.utils.Utils;
@@ -61,12 +64,31 @@ class GitFileSystemCreationAndUriTests {
 	}
 
 	@Test
-	void testEmpty() throws Exception {
+	void testEmptyPath() throws Exception {
 		final Path emptyDir = Utils.getTempUniqueDirectory("testEmpty");
 		Files.createDirectories(emptyDir);
 		assertTrue(Files.exists(emptyDir));
 		assertThrows(ProviderNotFoundException.class,
 				() -> FileSystems.newFileSystem(emptyDir, ClassLoader.getSystemClassLoader()));
+	}
+
+	@Test
+	void testEmptyRepo() throws Exception {
+		final Path emptyDir = Utils.getTempUniqueDirectory("test empty repo");
+		try (FileRepository repository = (FileRepository) new FileRepositoryBuilder().setGitDir(emptyDir.toFile())
+				.build()) {
+			assertFalse(repository.getObjectDatabase().exists());
+			assertFalse(repository.getRefDatabase().hasRefs());
+			assertThrows(UnsupportedOperationException.class,
+					() -> GitFileSystemProvider.getInstance().newFileSystemFromFileRepository(repository));
+		}
+		try (DfsRepository repository = new InMemoryRepository(new DfsRepositoryDescription("myrepo"))) {
+			assertTrue(repository.getObjectDatabase().exists());
+			assertFalse(repository.getRefDatabase().hasRefs());
+			final GitDfsFileSystem gitFs = GitFileSystemProvider.getInstance()
+					.newFileSystemFromDfsRepository(repository);
+			assertEquals(GraphBuilder.directed().build(), gitFs.getCommitsGraph());
+		}
 	}
 
 	@Test
@@ -127,7 +149,7 @@ class GitFileSystemCreationAndUriTests {
 
 			final String zeroStr = "/0000000000000000000000000000000000000000/";
 			assertEquals(uriBasis + "?root=" + zeroStr + "&internal-path=/",
-					gitFs.getAbsolutePath(ObjectId.zeroId()).toUri().toString());
+					gitFs.getPathRoot(ObjectId.zeroId()).toUri().toString());
 			assertEquals(uriBasis + "?root=" + zeroStr + "&internal-path=/",
 					gitFs.getAbsolutePath(ObjectId.zeroId(), "/").toUri().toString());
 			assertEquals(uriBasis + "?root=" + zeroStr + "&internal-path=/dir/sub",
