@@ -41,11 +41,13 @@ import io.github.oliviercailloux.grade.GitFileSystemHistory;
 import io.github.oliviercailloux.grade.IGrade;
 import io.github.oliviercailloux.grade.Mark;
 import io.github.oliviercailloux.grade.WeightingGrade;
+import io.github.oliviercailloux.grade.markers.Marks;
 import io.github.oliviercailloux.utils.Utils;
 
 public class Commit {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(Commit.class);
+
 	public static IGrade grade(RepositoryCoordinates coordinates, ZonedDateTime deadline) throws IOException {
 		final FileRepository repository = GitCloner.create().download(coordinates.asGitUri(),
 				Utils.getTempDirectory().resolve(coordinates.getRepositoryName()));
@@ -131,9 +133,8 @@ public class Commit {
 	 * @param pushHistory
 	 * @param timeCap     ignore commits strictly after that time.
 	 * @return
-	 * @throws IOException
 	 */
-	public WeightingGrade grade() throws UncheckedIOException, IOException {
+	public WeightingGrade grade() throws UncheckedIOException {
 		final GitFileSystem gitFs = filteredHistory.getGitFilesystem();
 
 		final ImmutableSet.Builder<CriterionGradeWeight> gradeBuilder = ImmutableSet.builder();
@@ -152,7 +153,7 @@ public class Commit {
 		gradeBuilder.add(CriterionGradeWeight.from(Criterion.given("Not empty"),
 				Mark.binary(!filteredHistory.getGraph().nodes().isEmpty()), 1d));
 
-		final Pattern coucouPattern = Pattern.compile("(\\h\\v)*coucou(\\h\\v)*");
+		final Pattern coucouPattern = Marks.extend("coucou");
 		{
 			final WeightingGrade coucouCommit = WeightingGrade.proportional(Criterion.given("'afile.txt' content"),
 					Mark.binary(filteredHistory.getGraph().nodes().stream()
@@ -162,7 +163,7 @@ public class Commit {
 			gradeBuilder.add(CriterionGradeWeight.from(Criterion.given("Commit 'coucou'"), coucouCommit, 3d));
 		}
 		{
-			final Pattern digitPattern = Pattern.compile("(\\h\\v)*\\d+(\\h\\v)*");
+			final Pattern digitPattern = Marks.extend("\\d+");
 			final CriterionGradeWeight myIdContent = CriterionGradeWeight.from(Criterion.given("'myid.txt' content"),
 					Mark.binary(filteredHistory.getGraph().nodes().stream()
 							.anyMatch(r -> matches(r.resolve("myid.txt"), digitPattern))),
