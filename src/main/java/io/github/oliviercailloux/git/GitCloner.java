@@ -24,6 +24,7 @@ import org.eclipse.jgit.lib.Constants;
 import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.lib.Ref;
 import org.eclipse.jgit.lib.Repository;
+import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 import org.eclipse.jgit.transport.FetchResult;
 import org.eclipse.jgit.transport.RefSpec;
 import org.eclipse.jgit.transport.RemoteConfig;
@@ -126,7 +127,8 @@ public class GitCloner {
 			}
 		} else {
 			try {
-				repository = new FileRepository(repositoryDirectory.toFile());
+				repository = (FileRepository) new FileRepositoryBuilder().setWorkTree(repositoryDirectory.toFile())
+						.build();
 			} catch (IOException e) {
 				throw new IllegalStateException(e);
 			}
@@ -163,7 +165,7 @@ public class GitCloner {
 						}
 					}
 				} else {
-					throw new IllegalStateException("Unexpected remote.");
+					throw new IllegalStateException("Unexpected remote: " + remoteList);
 				}
 
 				maybeCheckCommonRefs(git);

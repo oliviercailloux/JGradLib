@@ -1,0 +1,136 @@
+{
+	"points": 0.5481666666666667,
+	"comment": "",
+	"subGrades": [
+		{
+			"criterion": "grade",
+			"grade": {
+				"points": 0.65,
+				"comment": "",
+				"subGrades": [
+					{
+						"criterion": "Has commits",
+						"grade": {
+							"points": 1.0,
+							"comment": "",
+							"subGrades": [
+								{
+									"criterion": "At least one",
+									"grade": {
+										"points": 1.0,
+										"comment": ""
+									},
+									"weight": 0.25
+								},
+								{
+									"criterion": "Right identity",
+									"grade": {
+										"points": 1.0,
+										"comment": ""
+									},
+									"weight": 0.75
+								}
+							]
+						},
+						"weight": 0.2
+					},
+					{
+						"criterion": "Commit 'coucou'",
+						"grade": {
+							"points": 1.0,
+							"comment": "",
+							"subGrades": [
+								{
+									"criterion": "'afile.txt' content",
+									"grade": {
+										"points": 1.0,
+										"comment": ""
+									},
+									"weight": 0.5
+								},
+								{
+									"criterion": "'coucou' content",
+									"grade": {
+										"points": 1.0,
+										"comment": ""
+									},
+									"weight": 0.5
+								}
+							]
+						},
+						"weight": 0.3
+					},
+					{
+						"criterion": "Commit 'main'",
+						"grade": {
+							"points": 0.5,
+							"comment": "",
+							"subGrades": [
+								{
+									"criterion": "'myid.txt' content",
+									"grade": {
+										"points": 1.0,
+										"comment": ""
+									},
+									"weight": 0.25
+								},
+								{
+									"criterion": "'myid.txt' and 'afile.txt' content",
+									"grade": {
+										"points": 1.0,
+										"comment": ""
+									},
+									"weight": 0.25
+								},
+								{
+									"criterion": "'main' content",
+									"grade": {
+										"points": 0.0,
+										"comment": ""
+									},
+									"weight": 0.5
+								}
+							]
+						},
+						"weight": 0.3
+					},
+					{
+						"criterion": "Commit 'dev'",
+						"grade": {
+							"points": 0.0,
+							"comment": "",
+							"subGrades": [
+								{
+									"criterion": "'another file.txt' exists",
+									"grade": {
+										"points": 0.0,
+										"comment": ""
+									},
+									"weight": 0.5
+								},
+								{
+									"criterion": "'dev' content",
+									"grade": {
+										"points": 0.0,
+										"comment": ""
+									},
+									"weight": 0.5
+								}
+							]
+						},
+						"weight": 0.2
+					}
+				]
+			},
+			"weight": 0.8433333333333333
+		},
+		{
+			"criterion": "Time penalty",
+			"grade": {
+				"points": 0.0,
+				"comment": "Lateness: PT-47S"
+			},
+			"weight": 0.15666666666666668
+		}
+	]
+}

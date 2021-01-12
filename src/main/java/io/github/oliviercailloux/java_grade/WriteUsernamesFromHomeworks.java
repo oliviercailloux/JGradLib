@@ -22,6 +22,9 @@ import io.github.oliviercailloux.grade.mycourse.other_formats.MyCourseHomeworkRe
 import io.github.oliviercailloux.json.PrintableJsonValue;
 
 public class WriteUsernamesFromHomeworks {
+	@SuppressWarnings("unused")
+	private static final Logger LOGGER = LoggerFactory.getLogger(WriteUsernamesFromHomeworks.class);
+
 	public static void main(String[] args) throws IOException {
 		final Path l3Path = Paths.get("/home/olivier/Professions/Enseignement/Java L3");
 		final ImmutableList<StudentOnMyCourse> studentsOnMyCourse = CsvStudentsOnMyCourse
@@ -47,7 +50,4 @@ public class WriteUsernamesFromHomeworks {
 		LOGGER.info("Missing: {}.",
 				Sets.symmetricDifference(asMyCourseAndKnown, ImmutableSet.copyOf(studentsOnMyCourse)));
 	}
-
-	@SuppressWarnings("unused")
-	private static final Logger LOGGER = LoggerFactory.getLogger(WriteUsernamesFromHomeworks.class);
 }

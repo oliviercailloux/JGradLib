@@ -7,6 +7,7 @@ import static io.github.oliviercailloux.jaris.exceptions.Unchecker.IO_UNCHECKER;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZonedDateTime;
@@ -21,6 +22,7 @@ import org.eclipse.jgit.lib.ObjectId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedSet;
@@ -32,25 +34,50 @@ import io.github.oliviercailloux.git.GitHubHistory;
 import io.github.oliviercailloux.git.fs.GitFileSystem;
 import io.github.oliviercailloux.git.fs.GitFileSystemProvider;
 import io.github.oliviercailloux.git.fs.GitPath;
+import io.github.oliviercailloux.git.fs.GitPathRoot;
 import io.github.oliviercailloux.git.git_hub.model.GitHubToken;
-import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
+import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinatesWithPrefix;
 import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherQL;
+import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherV3;
 import io.github.oliviercailloux.grade.Criterion;
 import io.github.oliviercailloux.grade.CriterionGradeWeight;
 import io.github.oliviercailloux.grade.GitFileSystemHistory;
 import io.github.oliviercailloux.grade.IGrade;
 import io.github.oliviercailloux.grade.Mark;
 import io.github.oliviercailloux.grade.WeightingGrade;
+import io.github.oliviercailloux.grade.format.json.JsonGrade;
 import io.github.oliviercailloux.grade.markers.Marks;
+import io.github.oliviercailloux.java_grade.testers.JavaMarkHelper;
+import io.github.oliviercailloux.json.JsonbUtils;
 import io.github.oliviercailloux.utils.Utils;
 
 public class Commit {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(Commit.class);
 
-	public static IGrade grade(RepositoryCoordinates coordinates, ZonedDateTime deadline) throws IOException {
-		final FileRepository repository = GitCloner.create().download(coordinates.asGitUri(),
-				Utils.getTempDirectory().resolve(coordinates.getRepositoryName()));
+	public static final ZonedDateTime DEADLINE = ZonedDateTime.parse("2021-01-11T14:10:00+01:00[Europe/Paris]");
+
+	public static void main(String[] args) throws Exception {
+		final ImmutableList<RepositoryCoordinatesWithPrefix> repositories;
+		try (GitHubFetcherV3 fetcher = GitHubFetcherV3.using(GitHubToken.getRealInstance())) {
+			repositories = fetcher.getRepositoriesWithPrefix("oliviercailloux-org", "commit");// .stream().limit(1).collect(ImmutableList.toImmutableList());
+		}
+
+		final ImmutableMap.Builder<String, IGrade> builder = ImmutableMap.builder();
+		for (RepositoryCoordinatesWithPrefix repository : repositories) {
+			final String username = repository.getUsername();
+			final IGrade grade = grade(repository, DEADLINE);
+			builder.put(username, grade);
+		}
+		final ImmutableMap<String, IGrade> grades = builder.build();
+		Files.writeString(Path.of("all grades commit.json"),
+				JsonbUtils.toJsonObject(grades, JsonGrade.asAdapter()).toString());
+		LOGGER.info("Grades: {}.", grades);
+	}
+
+	public static IGrade grade(RepositoryCoordinatesWithPrefix coordinates, ZonedDateTime deadline) throws IOException {
+		final FileRepository repository = GitCloner.create().setCheckCommonRefsAgree(false)
+				.download(coordinates.asGitUri(), Utils.getTempDirectory().resolve(coordinates.getRepositoryName()));
 
 		final GitFileSystem gitFs = GitFileSystemProvider.getInstance().newFileSystemFromRepository(repository);
 
@@ -70,24 +97,32 @@ public class Commit {
 
 		final GitFileSystemHistory history = GitFileSystemHistory.create(gitFs, pushHistory);
 
-		return grade(history, deadline);
+		return grade(history, deadline, coordinates.getUsername());
 	}
 
-	public static IGrade grade(GitFileSystemHistory history, ZonedDateTime deadline) throws IOException {
+	public static IGrade grade(GitFileSystemHistory history, ZonedDateTime deadline, String gitHubUsername)
+			throws IOException {
 		final ZonedDateTime tooLate = deadline.plus(Duration.ofMinutes(5));
 		final ImmutableSet<Instant> toConsider;
 		{
 			final ImmutableSortedSet<Instant> timestamps = history.asGitHistory().getCommitDates().values().stream()
 					.collect(ImmutableSortedSet.toImmutableSortedSet(Comparator.naturalOrder()));
-			final Instant lastOnTime = timestamps.headSet(deadline.toInstant(), true).last();
-			toConsider = timestamps.tailSet(lastOnTime).headSet(tooLate.toInstant());
+			final ImmutableSortedSet<Instant> toDeadline = timestamps.headSet(deadline.toInstant(), true);
+			if (toDeadline.isEmpty()) {
+				toConsider = ImmutableSet.of();
+			} else {
+				final Instant lastOnTime = toDeadline.last();
+				toConsider = timestamps.tailSet(lastOnTime).headSet(tooLate.toInstant());
+			}
 		}
+		LOGGER.debug("To consider: {}.", toConsider);
 
 		final ImmutableMap.Builder<Instant, IGrade> byTimeBuilder = ImmutableMap.builder();
 		for (Instant timeCap : toConsider) {
 			final Predicate<ObjectId> onTime = o -> !history.getCommitDate(o).isAfter(timeCap);
-			final GitFileSystemHistory filteredHistory = history.filter(onTime);
-			final Commit grader = new Commit(filteredHistory);
+			final GitFileSystemHistory filteredHistory = history.filter(onTime.and(IO_UNCHECKER
+					.wrapPredicate(o -> !JavaMarkHelper.committerIsGitHub(history.getGitFilesystem().getPathRoot(o)))));
+			final Commit grader = new Commit(filteredHistory, gitHubUsername);
 			final IGrade grade = grader.grade();
 
 			final IGrade penalizedGrade;
@@ -109,7 +144,15 @@ public class Commit {
 		final Optional<IGrade> bestGrade = byTime.values().stream().min(Comparator.comparing(IGrade::getPoints));
 		final IGrade finalGrade;
 		if (bestGrade.isEmpty()) {
-			finalGrade = Mark.zero("No commit found before " + tooLate.toString());
+			final String beforeTooLate;
+			if (history.getGraph().nodes().isEmpty()) {
+				beforeTooLate = "";
+			} else {
+				beforeTooLate = " before " + tooLate.toString();
+			}
+			finalGrade = Mark.zero("No commit found" + beforeTooLate);
+		} else if (byTime.size() == 1) {
+			finalGrade = bestGrade.get();
 		} else {
 			final IGrade main = bestGrade.get();
 			final Instant mainInstant = byTime.entrySet().stream().filter(e -> e.getValue().equals(main))
@@ -122,10 +165,13 @@ public class Commit {
 		return finalGrade;
 	}
 
-	private GitFileSystemHistory filteredHistory;
+	private final GitFileSystemHistory filteredHistory;
 
-	public Commit(GitFileSystemHistory filteredHistory) {
+	private final String gitHubUsername;
+
+	public Commit(GitFileSystemHistory filteredHistory, String gitHubUsername) {
 		this.filteredHistory = checkNotNull(filteredHistory);
+		this.gitHubUsername = checkNotNull(gitHubUsername);
 	}
 
 	public WeightingGrade grade() throws UncheckedIOException, IOException {
@@ -148,8 +194,18 @@ public class Commit {
 		// }
 		// final GitHistory filteredPushHistory = pushHistory.filter(onTime);
 
-		gradeBuilder.add(CriterionGradeWeight.from(Criterion.given("Not empty"),
-				Mark.binary(!filteredHistory.getGraph().nodes().isEmpty()), 1d));
+		{
+			final Mark hasCommit = Mark.binary(!filteredHistory.getGraph().nodes().isEmpty());
+			final Predicate<GitPathRoot> rightIdent = IO_UNCHECKER
+					.wrapPredicate(c -> JavaMarkHelper.committerAndAuthorIs(c, gitHubUsername));
+			final Mark allCommitsRightName = Mark
+					.binary(filteredHistory.getGraph().nodes().stream().allMatch(rightIdent)
+							&& !filteredHistory.getGraph().nodes().isEmpty());
+			final WeightingGrade commitsGrade = WeightingGrade
+					.from(ImmutableSet.of(CriterionGradeWeight.from(Criterion.given("At least one"), hasCommit, 1d),
+							CriterionGradeWeight.from(Criterion.given("Right identity"), allCommitsRightName, 3d)));
+			gradeBuilder.add(CriterionGradeWeight.from(Criterion.given("Has commits"), commitsGrade, 2d));
+		}
 
 		final Pattern coucouPattern = Marks.extend("coucou");
 		{
@@ -172,13 +228,13 @@ public class Commit {
 							.anyMatch(r -> matches(r.resolve("myid.txt"), digitPattern)
 									&& matches(r.resolve("afile.txt"), coucouPattern))),
 					1d);
-			final CriterionGradeWeight masterContent = CriterionGradeWeight
-					.from(Criterion.given("'master' content"),
-							Mark.binary(matches(gitFs.getAbsolutePath("/refs/heads/master//myid.txt"), digitPattern)
-									&& matches(gitFs.getAbsolutePath("/refs/heads/master//afile.txt"), coucouPattern)),
+			final CriterionGradeWeight mainContent = CriterionGradeWeight
+					.from(Criterion.given("'main' content"),
+							Mark.binary(matches(gitFs.getAbsolutePath("/refs/heads/main//myid.txt"), digitPattern)
+									&& matches(gitFs.getAbsolutePath("/refs/heads/main//afile.txt"), coucouPattern)),
 							2d);
-			gradeBuilder.add(CriterionGradeWeight.from(Criterion.given("Commit 'master'"),
-					WeightingGrade.from(ImmutableSet.of(myIdContent, myIdAndAFileContent, masterContent)), 3d));
+			gradeBuilder.add(CriterionGradeWeight.from(Criterion.given("Commit 'main'"),
+					WeightingGrade.from(ImmutableSet.of(myIdContent, myIdAndAFileContent, mainContent)), 3d));
 		}
 		{
 			final Pattern anything = Pattern.compile(".*");
@@ -187,7 +243,7 @@ public class Commit {
 							.anyMatch(r -> Files.exists(r.resolve("sub/a/another file.txt")))),
 					Criterion.given("'dev' content"),
 					Mark.binary(matches(gitFs.getAbsolutePath("/refs/heads/dev//sub/a/another file.txt"), anything)));
-			gradeBuilder.add(CriterionGradeWeight.from(Criterion.given("Commit 'dev'"), commit, 3d));
+			gradeBuilder.add(CriterionGradeWeight.from(Criterion.given("Commit 'dev'"), commit, 2d));
 		}
 
 		return WeightingGrade.from(gradeBuilder.build());

@@ -5,56 +5,62 @@ import static io.github.oliviercailloux.jaris.exceptions.Unchecker.IO_UNCHECKER;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.List;
 import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.eclipse.jgit.internal.storage.file.FileRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.MoreCollectors;
 
 import io.github.oliviercailloux.git.GitCloner;
-import io.github.oliviercailloux.git.GitUri;
 import io.github.oliviercailloux.git.fs.GitFileSystem;
 import io.github.oliviercailloux.git.fs.GitFileSystemProvider;
-import io.github.oliviercailloux.git.fs.GitPath;
 import io.github.oliviercailloux.git.git_hub.model.GitHubToken;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinatesWithPrefix;
 import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherV3;
+import io.github.oliviercailloux.grade.markers.Marks;
 import io.github.oliviercailloux.grade.mycourse.json.JsonStudentOnGitHubKnown;
 import io.github.oliviercailloux.json.JsonbUtils;
 import io.github.oliviercailloux.json.PrintableJsonObject;
+import io.github.oliviercailloux.utils.Utils;
 
 public class HarvestIds {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(HarvestIds.class);
 
-	public static Optional<Integer> getId(GitFileSystem fs) {
-		final GitPath idPath = fs.getRelativePath("id.txt");
-		if (!Files.exists(idPath)) {
-			return Optional.empty();
+	public static Optional<Integer> getId(GitFileSystem fs) throws IOException {
+		final Pattern digitPattern = Marks.extend("\\d+");
+		final ImmutableSet.Builder<Integer> builder = ImmutableSet.builder();
+		for (Path root : fs.getRootDirectories()) {
+			final Path path = root.resolve("myid.txt");
+			final String content;
+			if (Files.exists(path)) {
+				content = Files.readString(path);
+			} else {
+				content = "";
+			}
+			final Matcher matcher = digitPattern.matcher(content);
+			final boolean found = matcher.find();
+			if (found) {
+				final String digits = matcher.group("basis");
+				final int id = Integer.parseInt(digits);
+				builder.add(id);
+			}
 		}
-		final List<String> lines = IO_UNCHECKER.getUsing(() -> Files.readAllLines(idPath));
-		final ImmutableList<String> nonEmptyLines = lines.stream().filter(l -> !l.isBlank())
-				.collect(ImmutableList.toImmutableList());
-		LOGGER.info("File content: {}.", nonEmptyLines);
-		if (nonEmptyLines.size() != 1) {
-			return Optional.empty();
+		final ImmutableSet<Integer> ids = builder.build();
+		if (ids.size() >= 2) {
+			LOGGER.warn("Multiple ids: {}.", ids);
 		}
-		final String id = nonEmptyLines.get(0);
-		try {
-			return Optional.of(Integer.parseInt(id.strip()));
-		} catch (@SuppressWarnings("unused") NumberFormatException e) {
-			return Optional.empty();
-		}
+		return ids.stream().collect(MoreCollectors.toOptional());
 	}
 
 	public static void main(String[] args) throws Exception {
@@ -79,38 +85,26 @@ public class HarvestIds {
 				.filter(r -> pattern.matcher(r.getRepositoryName()).matches()).collect(ImmutableList.toImmutableList());
 
 		final ImmutableMap<RepositoryCoordinatesWithPrefix, Optional<Integer>> idsOpt = matching.stream()
-				.collect(ImmutableMap.toImmutableMap(Function.identity(), this::getId));
-
-		final ImmutableSet<RepositoryCoordinatesWithPrefix> missing = idsOpt.entrySet().stream()
-				.filter(e -> e.getValue().isEmpty()).map(Entry::getKey).collect(ImmutableSet.toImmutableSet());
-		LOGGER.warn("Missing: {}.", missing);
+				.collect(ImmutableMap.toImmutableMap(Function.identity(), IO_UNCHECKER.wrapFunction(this::getId)));
 
 		final ImmutableMap<RepositoryCoordinatesWithPrefix, Integer> ids = idsOpt.entrySet().stream()
 				.filter(e -> e.getValue().isPresent())
 				.collect(ImmutableMap.toImmutableMap(Entry::getKey, e -> e.getValue().get()));
 
 		final ImmutableMap<String, Integer> idsByGitHubUsername = ids.entrySet().stream()
-				.collect(ImmutableMap.toImmutableMap(e -> getGitHubName(e.getKey()), Entry::getValue));
+				.collect(ImmutableMap.toImmutableMap(e -> e.getKey().getUsername(), Entry::getValue));
 
 		final PrintableJsonObject asJson = JsonbUtils.toJsonObject(idsByGitHubUsername,
 				JsonStudentOnGitHubKnown.asAdapter());
 		Files.writeString(Path.of("gh-id.json"), asJson.toString());
 	}
 
-	private Optional<Integer> getId(RepositoryCoordinates coord) {
-		LOGGER.info("Proceeding with {}.", coord);
-		final Path projectsBaseDir = Paths.get("../../Java L3/En cours").resolve(prefix);
-		final Path projectDir = projectsBaseDir.resolve(coord.getRepositoryName());
-		new GitCloner().download(GitUri.fromUri(coord.asURI()), projectDir).close();
-		try (GitFileSystem fs = IO_UNCHECKER.getUsing(
-				() -> GitFileSystemProvider.getInstance().newFileSystemFromGitDir(projectDir.resolve(".git")))) {
+	private Optional<Integer> getId(RepositoryCoordinates coordinates) throws IOException {
+		LOGGER.info("Proceeding with {}.", coordinates);
+		try (FileRepository repository = GitCloner.create().setCheckCommonRefsAgree(false)
+				.download(coordinates.asGitUri(), Utils.getTempDirectory().resolve(coordinates.getRepositoryName()));
+				GitFileSystem fs = GitFileSystemProvider.getInstance().newFileSystemFromFileRepository(repository)) {
 			return getId(fs);
 		}
-	}
-
-	private String getGitHubName(RepositoryCoordinates coord) {
-		final Matcher matcher = pattern.matcher(coord.getRepositoryName());
-		matcher.matches();
-		return matcher.group(1);
 	}
 }

@@ -3,7 +3,10 @@ package io.github.oliviercailloux.grade.format.json;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 import javax.json.Json;
 import javax.json.JsonObject;
@@ -24,6 +27,7 @@ import io.github.oliviercailloux.grade.IGrade;
 import io.github.oliviercailloux.grade.Mark;
 import io.github.oliviercailloux.grade.WeightingGrade;
 import io.github.oliviercailloux.java_grade.JavaCriterion;
+import io.github.oliviercailloux.json.JsonbUtils;
 import io.github.oliviercailloux.json.PrintableJsonObject;
 import io.github.oliviercailloux.json.PrintableJsonObjectFactory;
 
@@ -60,6 +64,30 @@ public class JsonGradeTest {
 	}
 
 	@Test
+	void gradeNameAndSingletonRead() throws Exception {
+		final Criterion criterion = Criterion.given("criterion");
+		final ImmutableMap<Criterion, Mark> subMarks = ImmutableMap.of(criterion, Mark.given(1d, ""));
+		final ImmutableMap<Criterion, Double> weights = ImmutableMap.of(criterion, 1d);
+		final WeightingGrade expectedGrade = WeightingGrade.from(subMarks, weights, "A comment");
+		final ImmutableMap<String, WeightingGrade> expected = ImmutableMap.of("student name", expectedGrade);
+
+		@SuppressWarnings("serial")
+		final Type type = new LinkedHashMap<String, WeightingGrade>() {
+		}.getClass().getGenericSuperclass();
+		@SuppressWarnings("serial")
+		final Type typeVague = new LinkedHashMap<String, IGrade>() {
+		}.getClass().getGenericSuperclass();
+
+		final String json = Resources.toString(this.getClass().getResource("all grades commit.json"),
+				StandardCharsets.UTF_8);
+		final Map<String, IGrade> read = JsonbUtils.fromJson(json, type, JsonGrade.asAdapter());
+		assertEquals(expected, read);
+
+		final Map<String, IGrade> readVague = JsonbUtils.fromJson(json, typeVague, JsonGrade.asAdapter());
+		assertEquals(expected, readVague);
+	}
+
+	@Test
 	void gradeSingletonRead() throws Exception {
 		final Criterion criterion = Criterion.given("criterion");
 		final ImmutableMap<Criterion, Mark> subMarks = ImmutableMap.of(criterion, Mark.given(1d, ""));
@@ -71,6 +99,9 @@ public class JsonGradeTest {
 		final WeightingGrade read = JsonGrade
 				.asWeightingGrade(PrintableJsonObjectFactory.wrapPrettyPrintedString(json));
 		assertEquals(expected, read);
+
+		final IGrade direct = JsonbUtils.fromJson(json, WeightingGrade.class, JsonGrade.asAdapter());
+		assertEquals(expected, direct);
 	}
 
 	@Test

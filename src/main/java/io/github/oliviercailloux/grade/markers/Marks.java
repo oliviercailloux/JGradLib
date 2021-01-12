@@ -148,7 +148,7 @@ public class Marks {
 	}
 
 	public static Pattern extend(String basis) {
-		return Pattern.compile("[\\h\\v]*\"?" + basis + "\"?[\\h\\v]*", Pattern.CASE_INSENSITIVE);
+		return Pattern.compile("[\\h\\v]*\"?(?<basis>" + basis + ")\"?[\\h\\v]*", Pattern.CASE_INSENSITIVE);
 	}
 
 }

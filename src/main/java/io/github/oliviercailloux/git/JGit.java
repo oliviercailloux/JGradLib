@@ -14,6 +14,8 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.stream.Stream;
 
+import org.eclipse.jgit.api.Git;
+import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.internal.storage.dfs.DfsRepositoryDescription;
 import org.eclipse.jgit.internal.storage.dfs.InMemoryRepository;
 import org.eclipse.jgit.lib.CommitBuilder;
@@ -32,6 +34,10 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Verify;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterators;
+import com.google.common.collect.PeekingIterator;
 import com.google.common.jimfs.Configuration;
 import com.google.common.jimfs.Jimfs;
 
@@ -39,17 +45,31 @@ public class JGit {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(JGit.class);
 
-	public static InMemoryRepository createRepository(PersonIdent personIdent, Path baseDir) {
+	public static InMemoryRepository createRepository(PersonIdent personIdent, List<Path> baseDirs, Path links)
+			throws IOException, GitAPIException {
 		final InMemoryRepository repository = new InMemoryRepository(new DfsRepositoryDescription("myrepo"));
-		IO_UNCHECKER.call(() -> repository.create(true));
+//		IO_UNCHECKER.call(() -> repository.create(true));
 		final ObjectDatabase objectDatabase = repository.getObjectDatabase();
 
+		final ImmutableMap.Builder<Path, ObjectId> commitsBuilder = ImmutableMap.builder();
 		try (ObjectInserter inserter = objectDatabase.newInserter()) {
-			final ObjectId commitStart = insertCommit(inserter, personIdent, baseDir, ImmutableList.of(),
-					"First commit");
-			setMain(repository, commitStart);
-		} catch (IOException e) {
-			throw new UncheckedIOException(e);
+			final PeekingIterator<Path> iterator = Iterators.peekingIterator(baseDirs.iterator());
+			ObjectId previous = null;
+			while (iterator.hasNext()) {
+				final Path baseDir = iterator.next();
+				final ImmutableList<ObjectId> parents = previous == null ? ImmutableList.of()
+						: ImmutableList.of(previous);
+				final ObjectId oId = insertCommit(inserter, personIdent, baseDir, parents, "First commit");
+				commitsBuilder.put(baseDir, oId);
+				previous = oId;
+			}
+		}
+		final ImmutableMap<Path, ObjectId> commits = commitsBuilder.build();
+
+		for (Path link : Files.list(links).collect(ImmutableSet.toImmutableSet())) {
+			final Path target = Files.readSymbolicLink(link);
+			Git.wrap(repository).branchCreate().setName(link.getFileName().toString())
+					.setStartPoint(commits.get(target).getName()).call();
 		}
 
 		return repository;
