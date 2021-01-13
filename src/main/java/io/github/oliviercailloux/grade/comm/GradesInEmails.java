@@ -75,8 +75,8 @@ public class GradesInEmails implements AutoCloseable {
 
 	public static EmailAddressAndPersonal asAddress(StudentOnGitHubKnown student) {
 		checkNotNull(student);
-		final String emailStr = student.asStudentOnMyCourse().getEmail();
-		// final String emailStr = "olivier.cailloux@INVALIDdauphine.fr";
+//		final String emailStr = student.asStudentOnMyCourse().getEmail();
+		final String emailStr = "olivier.cailloux@invalid-dauphine.fr";
 		return EmailAddressAndPersonal.given(emailStr, student.getFirstName() + " " + student.getLastName());
 	}
 

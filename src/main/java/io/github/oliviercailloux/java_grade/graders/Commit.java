@@ -60,7 +60,9 @@ public class Commit {
 	public static void main(String[] args) throws Exception {
 		final ImmutableList<RepositoryCoordinatesWithPrefix> repositories;
 		try (GitHubFetcherV3 fetcher = GitHubFetcherV3.using(GitHubToken.getRealInstance())) {
-			repositories = fetcher.getRepositoriesWithPrefix("oliviercailloux-org", "commit");// .stream().limit(1).collect(ImmutableList.toImmutableList());
+			repositories = fetcher.getRepositoriesWithPrefix("oliviercailloux-org", "commit");
+			// .stream().filter(r ->
+			// r.getUsername().equals("")).collect(ImmutableList.toImmutableList());
 		}
 
 		final ImmutableMap.Builder<String, IGrade> builder = ImmutableMap.builder();
@@ -103,22 +105,31 @@ public class Commit {
 	public static IGrade grade(GitFileSystemHistory history, ZonedDateTime deadline, String gitHubUsername)
 			throws IOException {
 		final ZonedDateTime tooLate = deadline.plus(Duration.ofMinutes(5));
-		final ImmutableSet<Instant> toConsider;
+		final ImmutableSortedSet<Instant> toConsider;
 		{
 			final ImmutableSortedSet<Instant> timestamps = history.asGitHistory().getCommitDates().values().stream()
 					.collect(ImmutableSortedSet.toImmutableSortedSet(Comparator.naturalOrder()));
 			final ImmutableSortedSet<Instant> toDeadline = timestamps.headSet(deadline.toInstant(), true);
 			if (toDeadline.isEmpty()) {
-				toConsider = ImmutableSet.of();
+				toConsider = ImmutableSortedSet.of();
 			} else {
 				final Instant lastOnTime = toDeadline.last();
 				toConsider = timestamps.tailSet(lastOnTime).headSet(tooLate.toInstant());
 			}
 		}
-		LOGGER.debug("To consider: {}.", toConsider);
+		/** Temporary patch in wait for a better adjustment of GitHub push dates. */
+		final ImmutableSortedSet<Instant> adjustedConsider;
+		if (!toConsider.isEmpty() && toConsider.first().equals(Instant.MIN)) {
+			verify(toConsider.size() >= 2);
+			LOGGER.warn("Ignoring MIN.");
+			adjustedConsider = toConsider.tailSet(Instant.MIN, false);
+		} else {
+			adjustedConsider = toConsider;
+		}
+		LOGGER.debug("To consider: {}.", adjustedConsider);
 
 		final ImmutableMap.Builder<Instant, IGrade> byTimeBuilder = ImmutableMap.builder();
-		for (Instant timeCap : toConsider) {
+		for (Instant timeCap : adjustedConsider) {
 			final Predicate<ObjectId> onTime = o -> !history.getCommitDate(o).isAfter(timeCap);
 			final GitFileSystemHistory filteredHistory = history.filter(onTime.and(IO_UNCHECKER
 					.wrapPredicate(o -> !JavaMarkHelper.committerIsGitHub(history.getGitFilesystem().getPathRoot(o)))));
@@ -141,7 +152,7 @@ public class Commit {
 			byTimeBuilder.put(timeCap, penalizedGrade);
 		}
 		final ImmutableMap<Instant, IGrade> byTime = byTimeBuilder.build();
-		final Optional<IGrade> bestGrade = byTime.values().stream().min(Comparator.comparing(IGrade::getPoints));
+		final Optional<IGrade> bestGrade = byTime.values().stream().max(Comparator.comparing(IGrade::getPoints));
 		final IGrade finalGrade;
 		if (bestGrade.isEmpty()) {
 			final String beforeTooLate;
@@ -157,10 +168,13 @@ public class Commit {
 			final IGrade main = bestGrade.get();
 			final Instant mainInstant = byTime.entrySet().stream().filter(e -> e.getValue().equals(main))
 					.map(Map.Entry::getKey).collect(MoreCollectors.onlyElement());
-			final ImmutableSet<CriterionGradeWeight> grades = byTime.entrySet().stream().map(e -> CriterionGradeWeight
-					.from(Criterion.given("Cap at " + e.getKey()), e.getValue(), e.getValue().equals(main) ? 1d : 0d))
+			final ImmutableSet<CriterionGradeWeight> grades = byTime.entrySet().stream()
+					.map(e -> CriterionGradeWeight.from(
+							Criterion.given("Cap at " + e.getKey().atZone(deadline.getZone()).toString()), e.getValue(),
+							e.getValue().equals(main) ? 1d : 0d))
 					.collect(ImmutableSet.toImmutableSet());
-			finalGrade = WeightingGrade.from(grades, "Using best grade, from " + mainInstant.toString());
+			finalGrade = WeightingGrade.from(grades,
+					"Using best grade, from " + mainInstant.atZone(deadline.getZone()).toString());
 		}
 		return finalGrade;
 	}
@@ -209,7 +223,8 @@ public class Commit {
 
 		final Pattern coucouPattern = Marks.extend("coucou");
 		{
-			final WeightingGrade coucouCommit = WeightingGrade.proportional(Criterion.given("'afile.txt' content"),
+			final WeightingGrade coucouCommit = WeightingGrade.proportional(
+					Criterion.given("'afile.txt' content (anywhere)"),
 					Mark.binary(filteredHistory.getGraph().nodes().stream()
 							.anyMatch(r -> matches(r.resolve("afile.txt"), coucouPattern))),
 					Criterion.given("'coucou' content"),
@@ -223,7 +238,7 @@ public class Commit {
 							.anyMatch(r -> matches(r.resolve("myid.txt"), digitPattern))),
 					1d);
 			final CriterionGradeWeight myIdAndAFileContent = CriterionGradeWeight.from(
-					Criterion.given("'myid.txt' and 'afile.txt' content"),
+					Criterion.given("'myid.txt' and 'afile.txt' content (anywhere)"),
 					Mark.binary(filteredHistory.getGraph().nodes().stream()
 							.anyMatch(r -> matches(r.resolve("myid.txt"), digitPattern)
 									&& matches(r.resolve("afile.txt"), coucouPattern))),

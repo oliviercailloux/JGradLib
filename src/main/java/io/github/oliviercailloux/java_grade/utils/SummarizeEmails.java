@@ -50,7 +50,7 @@ public class SummarizeEmails {
 	private static final Logger LOGGER = LoggerFactory.getLogger(SummarizeEmails.class);
 
 	public static void main(String[] args) throws Exception {
-		final Path workDir = Paths.get("../../Java L3/");
+		final Path workDir = Paths.get("");
 
 		final ImmutableTable<EmailAddress, String, IGrade> lastGrades;
 		try (GradesInEmails gradesInEmails = GradesInEmails.newInstance()) {
@@ -68,8 +68,7 @@ public class SummarizeEmails {
 
 		final ImmutableSet<EmailAddress> addressesFound = lastGrades.rowKeySet();
 		final ImmutableSet<EmailAddress> addresses = addressesFound.stream()
-				.filter(a -> !a.getAddress().startsWith("olivier.cailloux@"))
-				.filter(a -> !a.getAddress().startsWith("farid.")).collect(ImmutableSet.toImmutableSet());
+				.filter(a -> !a.getAddress().startsWith("olivier.cailloux@")).collect(ImmutableSet.toImmutableSet());
 //		final ImmutableMap<EmailAddress, WeightingGrade> grades = addresses.stream()
 //				.collect(ImmutableMap.toImmutableMap(a -> a, a -> from(lastGrades.row(a), Criterion::given, s -> 1d)));
 

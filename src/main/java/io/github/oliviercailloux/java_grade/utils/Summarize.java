@@ -28,6 +28,7 @@ import io.github.oliviercailloux.grade.comm.StudentOnGitHub;
 import io.github.oliviercailloux.grade.format.CsvGrades;
 import io.github.oliviercailloux.grade.format.HtmlGrades;
 import io.github.oliviercailloux.grade.format.json.JsonGrade;
+import io.github.oliviercailloux.grade.mycourse.json.StudentsReaderFromJson;
 import io.github.oliviercailloux.json.JsonbUtils;
 import io.github.oliviercailloux.xml.XmlUtils;
 
@@ -47,7 +48,7 @@ public class Summarize {
 		}.getClass().getGenericSuperclass();
 
 		LOGGER.debug("Reading grades.");
-		final String sourceGrades = Files.readString(READ_DIR.resolve("all grades " + prefix + ".json"));
+		final String sourceGrades = Files.readString(READ_DIR.resolve("grades " + prefix + ".json"));
 		final Map<String, IGrade> grades = JsonbUtils.fromJson(sourceGrades, type, JsonGrade.asAdapter());
 		LOGGER.debug("Read {}, keys: {}.", sourceGrades, grades.keySet());
 
@@ -55,29 +56,26 @@ public class Summarize {
 		if (ignoreZeroWeights) {
 			transformed = grades.entrySet().stream().collect(
 					ImmutableMap.toImmutableMap(Map.Entry::getKey, e -> withTimePenalty(nonZero(e.getValue()))));
-//			Files.writeString(Path.of("out.json"),
-//					JsonGrade.asJson(Iterables.getOnlyElement(transformed.values())).toString());
 		} else {
 			transformed = ImmutableMap.copyOf(grades);
 		}
 
-//		LOGGER.debug("Reading usernames.");
-//		final StudentsReaderFromJson usernames = new StudentsReaderFromJson();
-//		usernames.read(READ_DIR.resolve("usernames.json"));
+		LOGGER.debug("Reading usernames.");
+		final StudentsReaderFromJson usernames = new StudentsReaderFromJson();
+		usernames.read(READ_DIR.resolve("usernames.json"));
 //
-//		final ImmutableMap<StudentOnGitHub, IGrade> byStudent = grades.entrySet().stream().collect(
-//				ImmutableMap.toImmutableMap(e -> usernames.getStudentOnGitHub(e.getKey()), Map.Entry::getValue));
-//		LOGGER.debug("Grades keys: {}.", byStudent.keySet());
-		final ImmutableMap<StudentOnGitHub, IGrade> byStudent = transformed.entrySet().stream()
-				.collect(ImmutableMap.toImmutableMap(e -> StudentOnGitHub.with(e.getKey()), Map.Entry::getValue));
+		final ImmutableMap<StudentOnGitHub, IGrade> byStudent = transformed.entrySet().stream().collect(
+				ImmutableMap.toImmutableMap(e -> usernames.getStudentOnGitHub(e.getKey()), Map.Entry::getValue));
+//		final ImmutableMap<StudentOnGitHub, IGrade> byStudent = transformed.entrySet().stream()
+//				.collect(ImmutableMap.toImmutableMap(e -> StudentOnGitHub.with(e.getKey()), Map.Entry::getValue));
 		LOGGER.debug("Grades keys: {}.", byStudent.keySet());
 
 		LOGGER.info("Writing grades CSV.");
-		Files.writeString(outDir.resolve("all grades " + prefix + ".csv"), CsvGrades.asCsv(byStudent, 20d));
+		Files.writeString(outDir.resolve("grades " + prefix + ".csv"), CsvGrades.asCsv(byStudent, 20d));
 
 		LOGGER.info("Writing grades Html.");
 		final Document doc = HtmlGrades.asHtml(transformed, "All grades " + prefix, 20d);
-		Files.writeString(outDir.resolve("all grades " + prefix + ".html"), XmlUtils.asString(doc));
+		Files.writeString(outDir.resolve("grades " + prefix + ".html"), XmlUtils.asString(doc));
 	}
 
 	public static IGrade nonZero(IGrade grade) {

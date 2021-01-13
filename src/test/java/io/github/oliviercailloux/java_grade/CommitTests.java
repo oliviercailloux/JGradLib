@@ -99,7 +99,7 @@ class CommitTests {
 				final ObjectId o2 = Iterables.getOnlyElement(graph.successors(o1));
 				final ObjectId o3 = Iterables.getOnlyElement(graph.successors(o2));
 				final Map<ObjectId, Instant> times = ImmutableMap.of(o1, Commit.DEADLINE.toInstant(), o2,
-						Commit.DEADLINE.toInstant(), o3, Commit.DEADLINE.toInstant().plus(Duration.ofMinutes(10)));
+						Commit.DEADLINE.toInstant(), o3, Commit.DEADLINE.toInstant().plus(Duration.ofMinutes(4)));
 				final GitFileSystemHistory withTimes = GitFileSystemHistory.create(gitFs,
 						GitHistory.create(graph, times));
 
@@ -108,7 +108,7 @@ class CommitTests {
 				assertEquals(0.85d, direct.getPoints());
 
 				final IGrade grade = Commit.grade(withTimes, Commit.DEADLINE, "Not me");
-				LOGGER.debug("Grade: {}.", JsonGrade.asJson(grade));
+				LOGGER.info("Grade: {}.", JsonGrade.asJson(grade));
 				assertEquals(0.65d, grade.getPoints(), 1e-5d);
 			}
 		}

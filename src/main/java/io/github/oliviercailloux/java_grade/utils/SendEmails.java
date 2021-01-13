@@ -44,8 +44,8 @@ public class SendEmails {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(SendEmails.class);
 
-	private static final String PREFIX = "recap";
-	private static final Path WORK_DIR = Path.of("../../Java L3/");
+	private static final String PREFIX = "commit";
+	private static final Path WORK_DIR = Path.of("");
 
 	public static void main(String[] args) throws Exception {
 		@SuppressWarnings("all")
@@ -63,10 +63,10 @@ public class SendEmails {
 		final Map<String, IGrade> gradesByString = JsonbUtils.fromJson(
 				Files.readString(WORK_DIR.resolve("grades " + PREFIX + ".json")), type, JsonGrade.asAdapter());
 		final ImmutableMap<EmailAddressAndPersonal, IGrade> gradesByEmail = gradesByString.entrySet().stream()
-				.collect(ImmutableMap.toImmutableMap(e -> GradesInEmails.asAddress(usernames.get(e.getKey())),
-						Map.Entry::getValue));
+				.filter(e -> !e.getKey().equals("Humbledon")).collect(ImmutableMap
+						.toImmutableMap(e -> GradesInEmails.asAddress(usernames.get(e.getKey())), Map.Entry::getValue));
 
-		final ImmutableList<Double> points = gradesByEmail.values().stream().map(IGrade::getPoints)
+		final ImmutableList<Double> points = gradesByString.values().stream().map(IGrade::getPoints)
 				.collect(ImmutableList.toImmutableList());
 		final Stats stats = Stats.of(points);
 		final Map<Integer, Double> quartiles = Quantiles.quartiles().indexes(1, 2, 3).compute(points);
