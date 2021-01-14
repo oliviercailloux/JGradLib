@@ -54,17 +54,6 @@ public class Commit implements GitGrader {
 		this.filteredHistory = checkNotNull(filteredHistory);
 
 		final ImmutableSet.Builder<CriterionGradeWeight> gradeBuilder = ImmutableSet.builder();
-		// final Graph<GitPathRoot> filteredCommitsGraph;
-		// {
-		// final ImmutableGraph<GitPathRoot> commitsGraph = gitFs.getCommitsGraph();
-		// final Function<GitPathRoot, ? extends ObjectId> getId = IO_UNCHECKER
-		// .wrapFunction(p -> p.getCommit().getId());
-		// filteredCommitsGraph = Graphs.inducedSubgraph(commitsGraph,
-		// commitsGraph.nodes().stream()
-		// .filter(r ->
-		// onTime.test(getId.apply(r))).collect(ImmutableSet.toImmutableSet()));
-		// }
-		// final GitHistory filteredPushHistory = pushHistory.filter(onTime);
 
 		{
 			final Mark hasCommit = Mark.binary(!filteredHistory.getGraph().nodes().isEmpty());
