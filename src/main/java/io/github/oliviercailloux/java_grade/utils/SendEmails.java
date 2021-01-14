@@ -91,7 +91,8 @@ public class SendEmails {
 					final IGrade lastGrade = lastGradeOpt.get();
 					final IGrade gradeFromJson = gradesByEmail.get(address);
 					if (!lastGrade.equals(gradeFromJson)) {
-						LOGGER.info("Diff {}: {}.", address, getDiff(lastGrade, gradeFromJson));
+						LOGGER.info("Diff {}: {} (before {}, after {}).", address, getDiff(lastGrade, gradeFromJson),
+								lastGrade, gradeFromJson);
 					}
 				} else {
 					LOGGER.info("Not found {}.", address);

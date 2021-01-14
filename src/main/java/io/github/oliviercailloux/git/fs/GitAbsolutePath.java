@@ -35,7 +35,7 @@ import io.github.oliviercailloux.utils.SeekableInMemoryByteChannel;
  */
 abstract class GitAbsolutePath extends GitPath {
 	@SuppressWarnings("unused")
-	private static final Logger LOGGER = LoggerFactory.getLogger(GitAbsolutePath.GitBasicFileAttributes.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(GitAbsolutePath.class);
 
 	private static class DirectoryChannel implements SeekableByteChannel {
 		private boolean open;
@@ -232,7 +232,7 @@ abstract class GitAbsolutePath extends GitPath {
 		final GitObject gitObject = getGitObject(
 				followLinks ? FollowLinksBehavior.FOLLOW_ALL_LINKS : FollowLinksBehavior.DO_NOT_FOLLOW_LINKS);
 
-		LOGGER.info("Reading attributes of {}.", toString());
+		LOGGER.debug("Reading attributes of {}.", toString());
 		final GitBasicFileAttributes gitBasicFileAttributes = new GitBasicFileAttributes(gitObject,
 				getFileSystem().getSize(gitObject));
 		if (followLinks) {

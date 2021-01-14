@@ -48,26 +48,24 @@ public class HtmlGrades {
 		for (String key : grades.keySet()) {
 			final IGrade grade = grades.get(key);
 			document.getBody().appendChild(document.createTitle2(key));
-			document.getBody().appendChild(getDescription(Criterion.given("Grade"), grade, document, denominator, 1d));
+			document.getBody()
+					.appendChild(getDescription(Criterion.given("Grade"), grade, document, denominator, false));
 		}
 
 		return document.getDocument();
 	}
 
 	private static DocumentFragment getDescription(Criterion criterion, IGrade grade, HtmlDocument document,
-			double previousDenominator, double weight) {
+			double denominator, boolean zeroWeight) {
 		checkNotNull(criterion);
 		checkNotNull(grade);
 		final DocumentFragment fragment = document.getDocument().createDocumentFragment();
 
-		final double denominator;
 		final String weightZeroString;
-		if (weight != 0d) {
-			denominator = previousDenominator * weight;
-			weightZeroString = "";
+		if (zeroWeight) {
+			weightZeroString = " (for information only)";
 		} else {
-			denominator = previousDenominator;
-			weightZeroString = " with weight " + FORMATTER.format(weight);
+			weightZeroString = "";
 		}
 
 		final String startGradeText = criterion.getName() + ": " + FORMATTER.format(grade.getPoints() * denominator)
@@ -94,14 +92,12 @@ public class HtmlGrades {
 					subWeight = 1d;
 				}
 				final DocumentFragment description;
-				if (subWeight >= 0d) {
-					if (weight != 0d) {
-						description = getDescription(subCriterion, grade.getSubGrades().get(subCriterion), document,
-								denominator, subWeight);
-					} else {
-						description = getDescription(subCriterion, grade.getSubGrades().get(subCriterion), document,
-								denominator * subWeight, 0d);
-					}
+				if (subWeight > 0d) {
+					description = getDescription(subCriterion, grade.getSubGrades().get(subCriterion), document,
+							denominator * subWeight, false);
+				} else if (subWeight == 0d) {
+					description = getDescription(subCriterion, grade.getSubGrades().get(subCriterion), document,
+							denominator, true);
 				} else {
 					description = getDescriptionOfPenalty(subCriterion, grade.getSubGrades().get(subCriterion),
 							document, denominator * -subWeight);
@@ -190,7 +186,7 @@ public class HtmlGrades {
 		final String introText = "Hi! This is an automated e-mail containing your grade: " + title;
 		document.getBody().appendChild(document.createParagraph(introText));
 
-		document.getBody().appendChild(getDescription(Criterion.given("Grade"), grade, document, denominator, 1d));
+		document.getBody().appendChild(getDescription(Criterion.given("Grade"), grade, document, denominator, false));
 
 		if (quantiles.containsKey(1) && quantiles.containsKey(2) && quantiles.containsKey(3) && stats != null) {
 			final Element p = document.createXhtmlElement("p");
