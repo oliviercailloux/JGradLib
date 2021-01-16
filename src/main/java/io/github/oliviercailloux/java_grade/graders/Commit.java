@@ -3,13 +3,11 @@ package io.github.oliviercailloux.java_grade.graders;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Verify.verify;
-import static io.github.oliviercailloux.jaris.exceptions.Unchecker.IO_UNCHECKER;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.time.ZonedDateTime;
-import java.util.function.Predicate;
 import java.util.regex.Pattern;
 
 import org.slf4j.Logger;
@@ -44,24 +42,20 @@ public class Commit implements GitGrader {
 
 	private GitFileSystemHistory filteredHistory;
 
-	private Commit() {
+	Commit() {
 	}
 
 	@Override
 	@SuppressWarnings("hiding")
-	public WeightingGrade grade(GitFileSystemHistory filteredHistory, String gitHubUsername)
-			throws UncheckedIOException, IOException {
+	public WeightingGrade grade(GitFileSystemHistory filteredHistory, String gitHubUsername) throws IOException {
 		this.filteredHistory = checkNotNull(filteredHistory);
 
 		final ImmutableSet.Builder<CriterionGradeWeight> gradeBuilder = ImmutableSet.builder();
 
 		{
 			final Mark hasCommit = Mark.binary(!filteredHistory.getGraph().nodes().isEmpty());
-			final Predicate<GitPathRoot> rightIdent = IO_UNCHECKER
-					.wrapPredicate(c -> JavaMarkHelper.committerAndAuthorIs(c, gitHubUsername));
-			final Mark allCommitsRightName = Mark
-					.binary(filteredHistory.getGraph().nodes().stream().allMatch(rightIdent)
-							&& !filteredHistory.getGraph().nodes().isEmpty());
+			final Mark allCommitsRightName = Mark.binary(
+					filteredHistory.allMatchAndExists(c -> JavaMarkHelper.committerAndAuthorIs(c, gitHubUsername)));
 			final WeightingGrade commitsGrade = WeightingGrade
 					.from(ImmutableSet.of(CriterionGradeWeight.from(Criterion.given("At least one"), hasCommit, 1d),
 							CriterionGradeWeight.from(Criterion.given("Right identity"), allCommitsRightName, 3d)));
@@ -72,22 +66,18 @@ public class Commit implements GitGrader {
 		{
 			final WeightingGrade coucouCommit = WeightingGrade.proportional(
 					Criterion.given("'afile.txt' content (anywhere)"),
-					Mark.binary(filteredHistory.getGraph().nodes().stream()
-							.anyMatch(r -> matches(r.resolve("afile.txt"), coucouPattern))),
+					Mark.binary(filteredHistory.anyMatch(r -> matches(r.resolve("afile.txt"), coucouPattern))),
 					Criterion.given("'coucou' content"), Mark.binary(matches("coucou", "afile.txt", coucouPattern)));
 			gradeBuilder.add(CriterionGradeWeight.from(Criterion.given("Commit 'coucou'"), coucouCommit, 3d));
 		}
 		{
 			final Pattern digitPattern = Marks.extend("\\d+");
 			final CriterionGradeWeight myIdContent = CriterionGradeWeight.from(Criterion.given("'myid.txt' content"),
-					Mark.binary(filteredHistory.getGraph().nodes().stream()
-							.anyMatch(r -> matches(r.resolve("myid.txt"), digitPattern))),
-					1d);
+					Mark.binary(filteredHistory.anyMatch(r -> matches(r.resolve("myid.txt"), digitPattern))), 1d);
 			final CriterionGradeWeight myIdAndAFileContent = CriterionGradeWeight.from(
 					Criterion.given("'myid.txt' and 'afile.txt' content (anywhere)"),
-					Mark.binary(filteredHistory.getGraph().nodes().stream()
-							.anyMatch(r -> matches(r.resolve("myid.txt"), digitPattern)
-									&& matches(r.resolve("afile.txt"), coucouPattern))),
+					Mark.binary(filteredHistory.anyMatch(r -> matches(r.resolve("myid.txt"), digitPattern)
+							&& matches(r.resolve("afile.txt"), coucouPattern))),
 					1d);
 			final CriterionGradeWeight mainContent = CriterionGradeWeight.from(
 					Criterion.given("'main' (or 'master') content"),
@@ -101,12 +91,10 @@ public class Commit implements GitGrader {
 		}
 		{
 			final Pattern anything = Pattern.compile(".*");
-			final Predicate<? super GitPathRoot> predicate = r -> Files.exists(r.resolve("sub/a/another file.txt"));
-//			final Predicate<? super GitPathRoot> predicate = IO_UNCHECKER
-//					.wrapPredicate(r -> Files.find(r, 100, (p, a) -> Optional.ofNullable(p.getFileName())
-//							.orElse(Path.of("")).toString().equals("another file.txt")).findAny().isPresent());
 			final WeightingGrade commit = WeightingGrade.proportional(Criterion.given("'another file.txt' exists"),
-					Mark.binary(filteredHistory.getGraph().nodes().stream().anyMatch(predicate)),
+					Mark.binary(
+							filteredHistory.getFilesMatching(p -> p.getFileName().toString().equals("another file.txt"))
+									.findAny().isPresent()),
 					Criterion.given("'dev' content"), Mark.binary(matches("dev", "sub/a/another file.txt", anything)));
 			gradeBuilder.add(CriterionGradeWeight.from(Criterion.given("Commit 'dev'"), commit, 2d));
 		}

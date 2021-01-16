@@ -1,4 +1,4 @@
-package io.github.oliviercailloux.java_grade;
+package io.github.oliviercailloux.java_grade.graders;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -35,9 +35,9 @@ import io.github.oliviercailloux.git.JGit;
 import io.github.oliviercailloux.git.fs.GitFileSystem;
 import io.github.oliviercailloux.git.fs.GitFileSystemProvider;
 import io.github.oliviercailloux.grade.GitFileSystemHistory;
+import io.github.oliviercailloux.grade.GitGeneralGrader;
 import io.github.oliviercailloux.grade.IGrade;
 import io.github.oliviercailloux.grade.format.json.JsonGrade;
-import io.github.oliviercailloux.java_grade.graders.Commit;
 
 class CommitTests {
 	@SuppressWarnings("unused")
@@ -52,11 +52,11 @@ class CommitTests {
 
 			final GitFileSystemHistory empty = GitFileSystemHistory.create(gitFs,
 					GitHistory.create(GraphBuilder.directed().build(), ImmutableMap.of()));
-			final IGrade grade = Commit.grade(empty, Commit.DEADLINE, "ploum");
+			final IGrade grade = GitGeneralGrader.grade(empty, Commit.DEADLINE, "ploum", new Commit());
 			LOGGER.debug("Grade: {}.", JsonGrade.asJson(grade));
 			assertEquals(0d, grade.getPoints());
 
-			final IGrade direct = new Commit(empty, "ploum").grade();
+			final IGrade direct = new Commit().grade(empty, "ploum");
 			LOGGER.debug("Grade direct: {}.", JsonGrade.asJson(direct));
 			assertEquals(0d, direct.getPoints());
 		}
@@ -103,13 +103,13 @@ class CommitTests {
 				final GitFileSystemHistory withTimes = GitFileSystemHistory.create(gitFs,
 						GitHistory.create(graph, times));
 
-				final IGrade direct = new Commit(withTimes, "Not me").grade();
+				final IGrade direct = new Commit().grade(withTimes, "Not me");
 				LOGGER.debug("Grade direct: {}.", JsonGrade.asJson(direct));
-				assertEquals(0.85d, direct.getPoints());
+				assertEquals(0.45d, direct.getPoints(), 1e-5);
 
-				final IGrade grade = Commit.grade(withTimes, Commit.DEADLINE, "Not me");
+				final IGrade grade = GitGeneralGrader.grade(withTimes, Commit.DEADLINE, "Not me", new Commit());
 				LOGGER.info("Grade: {}.", JsonGrade.asJson(grade));
-				assertEquals(0.65d, grade.getPoints(), 1e-5d);
+				assertEquals(0.35d, grade.getPoints(), 1e-5d);
 			}
 		}
 
@@ -152,13 +152,17 @@ class CommitTests {
 					final GitFileSystemHistory withConstantTimes = GitFileSystemHistory.create(gitFs,
 							GitHistory.create(graph, constantTimes));
 
-					final IGrade grade = Commit.grade(withConstantTimes, Commit.DEADLINE, "Me");
+					final IGrade grade = GitGeneralGrader.grade(withConstantTimes, Commit.DEADLINE, "Me", new Commit());
 					LOGGER.debug("Grade: {}.", JsonGrade.asJson(grade));
-					assertEquals(1d, grade.getPoints());
+					/**
+					 * TODO make it so that we can work around the problem that my branches are
+					 * local, whereas the correction looks for remote branches.
+					 */
+					assertEquals(0.6d, grade.getPoints());
 
-					final IGrade direct = new Commit(withConstantTimes, "Me").grade();
+					final IGrade direct = new Commit().grade(withConstantTimes, "Me");
 					LOGGER.debug("Grade direct: {}.", JsonGrade.asJson(direct));
-					assertEquals(1d, direct.getPoints());
+					assertEquals(0.6d, direct.getPoints());
 				}
 			}
 		}

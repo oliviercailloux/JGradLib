@@ -47,8 +47,7 @@ public class GitGeneralGrader {
 		final ImmutableList<RepositoryCoordinatesWithPrefix> repositories;
 		try (GitHubFetcherV3 fetcher = GitHubFetcherV3.using(GitHubToken.getRealInstance())) {
 			repositories = fetcher.getRepositoriesWithPrefix("oliviercailloux-org", prefix);
-			// .stream().filter(r ->
-			// r.getUsername().equals("")).collect(ImmutableList.toImmutableList());
+//			.stream().filter(r -> r.getUsername().equals("")).collect(ImmutableList.toImmutableList());
 		}
 
 		final ImmutableMap.Builder<String, IGrade> builder = ImmutableMap.builder();
@@ -82,6 +81,7 @@ public class GitGeneralGrader {
 			pushHistory = gitHubHistory.getConsistentPushHistory();
 			verify(pushHistory.getGraph().equals(Utils.asImmutableGraph(gitFs.getCommitsGraph(),
 					IO_UNCHECKER.wrapFunction(r -> r.getCommit().getId()))));
+			LOGGER.debug("Push history: {}.", pushHistory);
 		}
 
 		final GitFileSystemHistory history = GitFileSystemHistory.create(gitFs, pushHistory);
@@ -97,12 +97,15 @@ public class GitGeneralGrader {
 			final ImmutableSortedSet<Instant> timestamps = history.asGitHistory().getCommitDates().values().stream()
 					.collect(ImmutableSortedSet.toImmutableSortedSet(Comparator.naturalOrder()));
 			final ImmutableSortedSet<Instant> toDeadline = timestamps.headSet(deadline.toInstant(), true);
+			LOGGER.debug("All timestamps: {}, picking those before {} results in: {}.", timestamps,
+					deadline.toInstant(), toDeadline);
+			final Instant considerFrom;
 			if (toDeadline.isEmpty()) {
-				toConsider = ImmutableSortedSet.of();
+				considerFrom = deadline.toInstant();
 			} else {
-				final Instant lastOnTime = toDeadline.last();
-				toConsider = timestamps.tailSet(lastOnTime);
+				considerFrom = toDeadline.last();
 			}
+			toConsider = timestamps.tailSet(considerFrom);
 		}
 		/** Temporary patch in wait for a better adjustment of GitHub push dates. */
 		final ImmutableSortedSet<Instant> adjustedConsider;

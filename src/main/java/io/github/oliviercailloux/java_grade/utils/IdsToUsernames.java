@@ -45,7 +45,6 @@ public class IdsToUsernames {
 
 		final PrintableJsonObject asJson = JsonbUtils.toJsonObject(known, JsonStudentOnGitHubKnown.asAdapter());
 		Files.writeString(Path.of("usernames.json"), asJson.toString());
-
 	}
 
 	private static StudentOnMyCourse asStudentOnMyCourse(Student student) {

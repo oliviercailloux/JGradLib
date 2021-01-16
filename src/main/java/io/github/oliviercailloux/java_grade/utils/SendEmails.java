@@ -63,8 +63,8 @@ public class SendEmails {
 		final Map<String, IGrade> gradesByString = JsonbUtils.fromJson(
 				Files.readString(WORK_DIR.resolve("grades " + PREFIX + ".json")), type, JsonGrade.asAdapter());
 		final ImmutableMap<EmailAddressAndPersonal, IGrade> gradesByEmail = gradesByString.entrySet().stream()
-				.filter(e -> !e.getKey().equals("Humbledon")).collect(ImmutableMap
-						.toImmutableMap(e -> GradesInEmails.asAddress(usernames.get(e.getKey())), Map.Entry::getValue));
+				.collect(ImmutableMap.toImmutableMap(e -> GradesInEmails.asAddress(usernames.get(e.getKey())),
+						Map.Entry::getValue));
 
 		final ImmutableList<Double> points = gradesByString.values().stream().map(IGrade::getPoints)
 				.collect(ImmutableList.toImmutableList());
