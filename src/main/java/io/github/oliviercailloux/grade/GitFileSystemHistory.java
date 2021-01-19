@@ -7,10 +7,10 @@ import static io.github.oliviercailloux.jaris.exceptions.Unchecker.IO_UNCHECKER;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
@@ -58,16 +58,62 @@ import io.github.oliviercailloux.utils.Utils;
  * <li>in all oids: given file name pattern, given content pattern, exists?
  * <li>all match and exists: given branch, given file name pattern=> all and
  * some (i.e., the one) have the right pattern.
+ * <li>check whether all commits have a given author.
+ * <li>Is there any file named "some file" in any commit, anywhere? VS is there
+ * some commit containing "afile.txt" satisfying x VS is there a branch "origin"
+ * with "afile.txt" satisfying x VS is there in branch "dev" a file named "some
+ * file", anywhere?
  * <p>
  * To do this:
  * <li>anyMathAmongRefs(TP<GPR> refPredicate, TP<GP> filePredicate)
  * <li>anyMatch(TP<GP> filePredicate) // all roots are oids
  * <li><b>Most promising!
  * <li>And consider: filter(TP<ObjectId>) throws IOE.
+ * <p>
+ * Or, more general:
+ * <li>getPathsAmongRefs(TP<GPR>, TP<GP>).
+ * <li>getPathsAmongOids(TP<GP>).
+ * <p>
+ * Or, more elegant:
+ * <li>getPathsAmongRefs(TP<GP>) <= special interface, if it’s a
+ * CombinedPredicate, it can filter on roots as well as on files.
+ * <li>Decide to use exclusively parameters of GPR rather than ObjectId, for
+ * consistency: this permits to filter on commits that have zero files, for
+ * example (using Files.list); and getCommitDate() should use the same param as
+ * filter because we might want to filter by date.
+ * <li>Remains not easy: checks whether there exists some branch in which the
+ * file "somefile" satisfies some predicate. But it can be done through
+ * #getRefs() and it is an edge case.
+ * <li>FAILS because we want: paths in "origin" satisfying x. Can’t be done with
+ * predicate on all paths: we need to let "origin/" pass, otherwise it stops
+ * there; but then even if no file satisfy; we end up with a non empty set. OR
+ * we let the predicate pass origin iff it contains afile satisfying x, but then
+ * 1) it explores everything inside for nothing; 2) it sends back a set of paths
+ * whereas we really only care about filtering roots. We really need a solution
+ * with a predicate over symbolic roots.
+ * <p>
+ * <li>getRefsMatching(TP<GPR>): Set<GPR>
+ * <li>For finding in "dev" all files named "some file": use getRefsMatching()
+ * to get dev, then use a static method to find the paths.
+ *
  */
 public class GitFileSystemHistory {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(GitFileSystemHistory.class);
+
+	public static ImmutableSet<GitPath> getPathsMatching(Stream<GitPathRoot> startingPaths,
+			Throwing.Predicate<GitPath, IOException> predicate) throws IOException {
+		final Predicate<GitPath> wrappedPredicate = IO_UNCHECKER.wrapPredicate(predicate);
+		final Throwing.Function<GitPathRoot, Stream<Path>, IOException> matchingFiles = r -> Files.find(r, 100,
+				(p, a) -> wrappedPredicate.test((GitPath) p));
+		final Function<GitPathRoot, Stream<Path>> wrappedMatchingFiles = IO_UNCHECKER.wrapFunction(matchingFiles);
+		try {
+			return startingPaths.flatMap(wrappedMatchingFiles).map(p -> (GitPath) p)
+					.collect(ImmutableSet.toImmutableSet());
+		} catch (UncheckedIOException exc) {
+			throw exc.getCause();
+		}
+	}
 
 	public static GitFileSystemHistory create(GitFileSystem gitFs, GitHistory history) {
 		return new GitFileSystemHistory(gitFs, history);
@@ -86,22 +132,6 @@ public class GitFileSystemHistory {
 		}
 	}
 
-	public Optional<GitPathRoot> asDirect(GitPathRoot path) throws IOException {
-		checkArgument(path.getFileSystem().equals(gitFs));
-		if (!path.exists()) {
-			return Optional.empty();
-		}
-		final ObjectId objectId = path.getCommit().getId();
-		if (history.getGraph().nodes().contains(objectId)) {
-			return Optional.of(gitFs.getPathRoot(objectId));
-		}
-		return Optional.empty();
-	}
-
-	public GitFileSystem getGitFilesystem() {
-		return gitFs;
-	}
-
 	/**
 	 * Returns a graph representing the has-as-child relation: the successors of a
 	 * node are its children; following the successors (children) relation goes
@@ -118,11 +148,15 @@ public class GitFileSystemHistory {
 	}
 
 	public ImmutableSet<GitPathRoot> getRefs() throws IOException {
-		final Throwing.Predicate<? super GitPathRoot, IOException> predicate = p -> history.getGraph().nodes()
+		return getRefsStream().collect(ImmutableSet.toImmutableSet());
+	}
+
+	private Stream<GitPathRoot> getRefsStream() throws IOException {
+		final Throwing.Predicate<? super GitPathRoot, IOException> inThisHistory = p -> history.getGraph().nodes()
 				.contains(p.getCommit().getId());
+		final Predicate<? super GitPathRoot> wrappedInThisHistory = IO_UNCHECKER.wrapPredicate(inThisHistory);
 		try {
-			return gitFs.getRefs().stream().filter(IO_UNCHECKER.wrapPredicate(predicate))
-					.collect(ImmutableSet.toImmutableSet());
+			return gitFs.getRefs().stream().filter(wrappedInThisHistory);
 		} catch (UncheckedIOException exc) {
 			throw exc.getCause();
 		}
@@ -152,71 +186,64 @@ public class GitFileSystemHistory {
 	}
 
 	/**
-	 * @throws IllegalArgumentException iff the given commit id is not a node of the
-	 *                                  {@link #getGraph() graph}.
+	 * @throws IOException
+	 * @throws NoSuchFileException
 	 */
-	public Instant getCommitDate(ObjectId commitId) {
-		return history.getCommitDate(commitId);
+	public Instant getCommitDate(GitPathRoot commit) throws NoSuchFileException, IOException {
+		final ObjectId id;
+		if (commit.isCommitId()) {
+			id = commit.getStaticCommitId();
+		} else {
+			id = commit.getCommit().getId();
+		}
+		if (!history.getGraph().nodes().contains(id)) {
+			throw new NoSuchFileException(commit.toString());
+		}
+		return history.getCommitDate(id);
+	}
+
+	public boolean isEmpty() {
+		return history.getGraph().nodes().isEmpty();
+	}
+
+	public GitFileSystemHistory filter(Throwing.Predicate<GitPathRoot, IOException> predicate) throws IOException {
+		final Predicate<GitPathRoot> wrappedPredicate = IO_UNCHECKER.wrapPredicate(predicate);
+		try {
+			return GitFileSystemHistory.create(gitFs, history.filter(o -> wrappedPredicate.test(gitFs.getPathRoot(o))));
+		} catch (UncheckedIOException e) {
+			throw e.getCause();
+		}
+	}
+
+	public ImmutableSet<GitPathRoot> getRefsMatching(Throwing.Predicate<GitPathRoot, IOException> predicate)
+			throws IOException {
+		final Predicate<GitPathRoot> wrappedPredicate = IO_UNCHECKER.wrapPredicate(predicate);
+		try {
+			return getRefsStream().filter(wrappedPredicate).collect(ImmutableSet.toImmutableSet());
+		} catch (UncheckedIOException exc) {
+			throw exc.getCause();
+		}
+	}
+
+	/**
+	 * @param predicate
+	 * @return
+	 * @throws IOException
+	 * @deprecated I don’t think that’s really useful, and it’s quite confusing.
+	 */
+	@Deprecated
+	public ImmutableSet<GitPath> getPathsAmongRefs(Throwing.Predicate<GitPath, IOException> predicate)
+			throws IOException {
+		return getPathsMatching(getRefsStream(), predicate);
+	}
+
+	public ImmutableSet<GitPath> getPathsMatching(Throwing.Predicate<GitPath, IOException> predicate)
+			throws IOException {
+		return getPathsMatching(getGraph().nodes().stream(), predicate);
 	}
 
 	public GitHistory asGitHistory() {
 		return history;
-	}
-
-	public GitFileSystemHistory filter(Predicate<ObjectId> predicate) {
-		return GitFileSystemHistory.create(gitFs, history.filter(predicate));
-	}
-
-	/**
-	 * TODO need potentially: anyMatch on oids; anyMath on refs; allMatchAndExists
-	 * on oids and refs; getRefsMatching; getOidsMatching; getFilesFromRefsMatching;
-	 * getFilesFromOidsMatching… ? Also, predicates even on oids should use
-	 * GitPathRoots as arguments because we want to use r.resolve() and test
-	 * existence, … Thus perhaps filter (that returns an history) is enough? No
-	 * because can’t filter (and return an history) on refs, only on oids.
-	 *
-	 * So: filter and return an history the oids; using a predicate<oid> or a
-	 * predicate<path>; AND provide stuff about refs (perhaps static method?).
-	 */
-	public boolean anyMatch(Throwing.Predicate<GitPathRoot, IOException> predicate) throws IOException {
-		try {
-			return graph.nodes().stream().anyMatch(IO_UNCHECKER.wrapPredicate(predicate));
-		} catch (UncheckedIOException exc) {
-			throw exc.getCause();
-		}
-	}
-
-	public boolean allMatchAndExists(Throwing.Predicate<GitPathRoot, IOException> predicate) throws IOException {
-		try {
-			return !graph.nodes().isEmpty() && graph.nodes().stream().allMatch(IO_UNCHECKER.wrapPredicate(predicate));
-		} catch (UncheckedIOException exc) {
-			throw exc.getCause();
-		}
-	}
-
-	public Stream<GitPath> getFilesMatching(Throwing.Predicate<GitPath, IOException> predicate) throws IOException {
-		final Predicate<GitPath> wrappedPredicate = IO_UNCHECKER.wrapPredicate(predicate);
-		final Function<? super GitPathRoot, ? extends Stream<Path>> streamer = IO_UNCHECKER
-				.wrapFunction(r -> Files.find(r, 100,
-						(p, a) -> (a.isRegularFile() || a.isSymbolicLink()) && wrappedPredicate.test((GitPath) p)));
-		try {
-			return graph.nodes().stream().flatMap(streamer).map(p -> (GitPath) p);
-		} catch (UncheckedIOException exc) {
-			throw exc.getCause();
-		}
-	}
-
-	public ImmutableSet<GitPathRoot> getFilesFromRefsMatching(
-			Throwing.Predicate<GitPathRoot, IOException> predicateOnRoot,
-			Throwing.Predicate<GitPath, IOException> predicateOnFile) throws IOException {
-//		final Throwing.Predicate<? super GitPathRoot, IOException> predicate = p -> history.getGraph().nodes()
-//				.contains(p.getCommit().getId());
-//		try {
-//			return gitFs.getRefs().stream().filter(IO_UNCHECKER.wrapPredicate(predicate))
-//					.collect(ImmutableSet.toImmutableSet());
-//		} catch (UncheckedIOException exc) {
-//			throw exc.getCause();
-//		}
 	}
 
 	@Override

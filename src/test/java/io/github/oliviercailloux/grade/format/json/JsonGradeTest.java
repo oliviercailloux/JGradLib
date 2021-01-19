@@ -25,6 +25,7 @@ import io.github.oliviercailloux.grade.CriterionGradeWeight;
 import io.github.oliviercailloux.grade.GradeTestsHelper;
 import io.github.oliviercailloux.grade.IGrade;
 import io.github.oliviercailloux.grade.Mark;
+import io.github.oliviercailloux.grade.Patch;
 import io.github.oliviercailloux.grade.WeightingGrade;
 import io.github.oliviercailloux.java_grade.JavaCriterion;
 import io.github.oliviercailloux.json.JsonbUtils;
@@ -78,7 +79,7 @@ public class JsonGradeTest {
 		final Type typeVague = new LinkedHashMap<String, IGrade>() {
 		}.getClass().getGenericSuperclass();
 
-		final String json = Resources.toString(this.getClass().getResource("all grades commit.json"),
+		final String json = Resources.toString(this.getClass().getResource("NameAndSingletonGrade.json"),
 				StandardCharsets.UTF_8);
 		final Map<String, IGrade> read = JsonbUtils.fromJson(json, type, JsonGrade.asAdapter());
 		assertEquals(expected, read);
@@ -160,4 +161,16 @@ public class JsonGradeTest {
 		assertEquals(ImmutableList.of(JavaCriterion.COMMIT.asCriterion(), JavaCriterion.ID.asCriterion()),
 				read.getSubGrades().keySet().asList());
 	}
+
+	@Test
+	void patchRead() throws Exception {
+		final PrintableJsonObject json = PrintableJsonObjectFactory.wrapPrettyPrintedString(
+				Resources.toString(getClass().getResource("Patch.json"), StandardCharsets.UTF_8));
+		LOGGER.debug("Wrapped: {}.", json);
+		final Patch read = JsonGrade.asPatch(json.toString());
+		final Patch expected = Patch.create(ImmutableList.of(Criterion.given("C1"), Criterion.given("C1-1")),
+				Mark.one("A comment"));
+		assertEquals(expected, read);
+	}
+
 }

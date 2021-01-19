@@ -17,7 +17,7 @@ public class MinGrade implements IGrade {
 	/**
 	 * Not empty.
 	 */
-	private ImmutableMap<Criterion, IGrade> subGrades;
+	private final ImmutableMap<Criterion, IGrade> subGrades;
 
 	protected MinGrade(Map<Criterion, ? extends IGrade> subGrades) {
 		checkNotNull(subGrades);
@@ -48,6 +48,11 @@ public class MinGrade implements IGrade {
 		}
 		return MinGrade.given(subGrades.keySet().stream()
 				.collect(ImmutableMap.toImmutableMap(c -> c, c -> subGrades.get(c).limitedDepth(depth - 1))));
+	}
+
+	@Override
+	public MinGrade withSubGrade(Criterion criterion, IGrade newSubGrade) {
+		return new MinGrade(GradeUtils.withUpdatedEntry(subGrades, criterion, newSubGrade));
 	}
 
 	@Override

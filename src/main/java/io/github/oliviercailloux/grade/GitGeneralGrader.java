@@ -12,10 +12,8 @@ import java.time.ZonedDateTime;
 import java.util.Comparator;
 import java.util.Map;
 import java.util.Optional;
-import java.util.function.Predicate;
 
 import org.eclipse.jgit.internal.storage.file.FileRepository;
-import org.eclipse.jgit.lib.ObjectId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -120,9 +118,8 @@ public class GitGeneralGrader {
 
 		final ImmutableMap.Builder<Instant, IGrade> byTimeBuilder = ImmutableMap.builder();
 		for (Instant timeCap : adjustedConsider) {
-			final Predicate<ObjectId> onTime = o -> !history.getCommitDate(o).isAfter(timeCap);
-			final GitFileSystemHistory filteredHistory = history.filter(onTime.and(IO_UNCHECKER
-					.wrapPredicate(o -> !JavaMarkHelper.committerIsGitHub(history.getGitFilesystem().getPathRoot(o)))));
+			final GitFileSystemHistory filteredHistory = history
+					.filter(r -> !history.getCommitDate(r).isAfter(timeCap) && !JavaMarkHelper.committerIsGitHub(r));
 			final IGrade grade = grader.grade(filteredHistory, username);
 
 			final IGrade penalizedGrade;

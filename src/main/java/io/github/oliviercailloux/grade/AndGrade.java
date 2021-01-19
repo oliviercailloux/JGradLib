@@ -1,10 +1,10 @@
 package io.github.oliviercailloux.grade;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Verify.verify;
 
 import java.util.Map;
 
-import com.google.common.base.Verify;
 import com.google.common.collect.ImmutableMap;
 
 public class AndGrade extends MinGrade implements IGrade {
@@ -34,7 +34,7 @@ public class AndGrade extends MinGrade implements IGrade {
 	@Override
 	public double getPoints() {
 		final double points = super.getPoints();
-		Verify.verify(points == 0d || points == 1d);
+		verify(points == 0d || points == 1d);
 		return points;
 	}
 
@@ -46,5 +46,10 @@ public class AndGrade extends MinGrade implements IGrade {
 		}
 		return AndGrade.given(getSubGrades().keySet().stream()
 				.collect(ImmutableMap.toImmutableMap(c -> c, c -> getSubGrades().get(c).limitedDepth(depth - 1))));
+	}
+
+	@Override
+	public AndGrade withSubGrade(Criterion criterion, IGrade newSubGrade) {
+		return new AndGrade(GradeUtils.withUpdatedEntry(getSubGrades(), criterion, newSubGrade));
 	}
 }

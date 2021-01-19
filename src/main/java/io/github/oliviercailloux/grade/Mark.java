@@ -80,6 +80,11 @@ public class Mark implements IGrade {
 	}
 
 	@Override
+	public IGrade withSubGrade(Criterion criterion, IGrade newSubGrade) {
+		throw new IllegalArgumentException();
+	}
+
+	@Override
 	public boolean equals(Object o2) {
 		if (!(o2 instanceof IGrade)) {
 			return false;

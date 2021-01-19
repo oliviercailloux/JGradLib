@@ -1,5 +1,10 @@
 package io.github.oliviercailloux.grade;
 
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
 /**
@@ -52,6 +57,46 @@ public interface IGrade {
 	 * @param depth ≥0; 0 for a mark.
 	 */
 	public IGrade limitedDepth(int depth);
+
+	/**
+	 * If the given criterion exists among the sub grades contained in this grade,
+	 * returns a new grade identical to this one except that the corresponding sub
+	 * grade is replaced. If the criterion does not exist, then either returns a
+	 * grade identical to this one with a new sub grade, or throws an
+	 * {@link IllegalArgumentException}.
+	 *
+	 */
+	public IGrade withSubGrade(Criterion criterion, IGrade newSubGrade);
+
+	public default Optional<IGrade> getGrade(List<Criterion> path) {
+		if (path.isEmpty()) {
+			return Optional.of(this);
+		}
+		final Criterion criterion = path.get(0);
+		if (!getSubGrades().containsKey(criterion)) {
+			return Optional.empty();
+		}
+		return getSubGrades().get(criterion).getGrade(path.subList(1, path.size()));
+	}
+
+	public default IGrade withPatch(Patch patch) {
+		final ImmutableList<Criterion> path = patch.getPath();
+		if (path.isEmpty()) {
+			return patch.getGrade();
+		}
+		final Criterion criterion = path.get(0);
+		final IGrade subPatched = getSubGrades().get(criterion)
+				.withPatch(Patch.create(path.subList(1, path.size()), patch.getGrade()));
+		return withSubGrade(criterion, subPatched);
+	}
+
+	public default IGrade withPatches(Set<Patch> patches) {
+		IGrade current = this;
+		for (Patch patch : patches) {
+			current = current.withPatch(patch);
+		}
+		return current;
+	}
 
 	/**
 	 * Two {@link IGrade} objects are equal iff they have the same points, comment,

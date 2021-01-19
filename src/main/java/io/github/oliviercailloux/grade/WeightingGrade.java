@@ -217,9 +217,9 @@ public class WeightingGrade implements IGrade {
 				.collect(ImmutableMap.toImmutableMap(c -> c, c -> subGrades.get(c).limitedDepth(depth - 1))), weights);
 	}
 
-	public WeightingGrade limitedDepthAsWeighting(int depth) {
-		checkArgument(depth >= 1);
-		return (WeightingGrade) limitedDepth(depth);
+	@Override
+	public WeightingGrade withSubGrade(Criterion criterion, IGrade newSubGrade) {
+		return new WeightingGrade(GradeUtils.withUpdatedEntry(subGrades, criterion, newSubGrade), weights, comment);
 	}
 
 	@Override

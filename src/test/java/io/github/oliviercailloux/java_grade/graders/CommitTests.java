@@ -57,7 +57,7 @@ class CommitTests {
 			assertEquals(0d, grade.getPoints());
 
 			final IGrade direct = new Commit().grade(empty, "ploum");
-			LOGGER.debug("Grade direct: {}.", JsonGrade.asJson(direct));
+			LOGGER.info("Grade direct: {}.", JsonGrade.asJson(direct));
 			assertEquals(0d, direct.getPoints());
 		}
 
@@ -108,7 +108,7 @@ class CommitTests {
 				assertEquals(0.45d, direct.getPoints(), 1e-5);
 
 				final IGrade grade = GitGeneralGrader.grade(withTimes, Commit.DEADLINE, "Not me", new Commit());
-				LOGGER.info("Grade: {}.", JsonGrade.asJson(grade));
+				LOGGER.debug("Grade: {}.", JsonGrade.asJson(grade));
 				assertEquals(0.35d, grade.getPoints(), 1e-5d);
 			}
 		}

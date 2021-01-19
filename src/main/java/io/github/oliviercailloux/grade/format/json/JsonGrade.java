@@ -6,6 +6,7 @@ import javax.json.JsonObject;
 import javax.json.bind.Jsonb;
 import javax.json.bind.JsonbBuilder;
 import javax.json.bind.JsonbConfig;
+import javax.json.bind.JsonbException;
 import javax.json.bind.adapter.JsonbAdapter;
 
 import org.slf4j.Logger;
@@ -17,12 +18,29 @@ import io.github.oliviercailloux.grade.Criterion;
 import io.github.oliviercailloux.grade.CriterionGradeWeight;
 import io.github.oliviercailloux.grade.IGrade;
 import io.github.oliviercailloux.grade.Mark;
+import io.github.oliviercailloux.grade.Patch;
 import io.github.oliviercailloux.grade.WeightingGrade;
 import io.github.oliviercailloux.json.JsonbUtils;
 import io.github.oliviercailloux.json.PrintableJsonObject;
 import io.github.oliviercailloux.json.PrintableJsonObjectFactory;
 
-public class JsonGrade {
+public class JsonGrade implements JsonbAdapter<IGrade, JsonObject> {
+	private static final JsonGrade INSTANCE = new JsonGrade();
+
+	public static JsonbAdapter<IGrade, JsonObject> instance() {
+		return INSTANCE;
+	}
+
+	@Override
+	public JsonObject adaptToJson(IGrade grade) {
+		return INSTANCE.instanceAsJson(grade);
+	}
+
+	@Override
+	public IGrade adaptFromJson(JsonObject json) throws JsonbException {
+		return asGrade(json);
+	}
+
 	@SuppressWarnings("unused")
 	static final Logger LOGGER = LoggerFactory.getLogger(JsonGrade.class);
 
@@ -54,19 +72,27 @@ public class JsonGrade {
 		return new JsonGrade();
 	}
 
+	public static Patch asPatch(String json) {
+		return JsonbUtils.fromJson(json, Patch.class, JsonGrade.instance(), JsonCriterion.instance());
+	}
+
+	public static PrintableJsonObject patchAsJson(Patch patch) {
+		return JsonbUtils.toJsonObject(patch, JsonGrade.instance(), JsonCriterion.instance());
+	}
+
 	private final Jsonb jsonb;
 
 	private final Jsonb jsonbWithThisAdapter;
 
 	private JsonGrade() {
 		jsonb = JsonbBuilder.create(new JsonbConfig()
-				.withAdapters(JsonCriterion.asSimpleAdapter(), toCriterionGradeWeightAdapter()).withFormatting(true));
-		jsonbWithThisAdapter = JsonbBuilder.create(new JsonbConfig()
-				.withAdapters(JsonCriterion.asSimpleAdapter(), instanceAsAdapter()).withFormatting(true));
+				.withAdapters(JsonCriterion.instance(), toCriterionGradeWeightAdapter()).withFormatting(true));
+		jsonbWithThisAdapter = JsonbBuilder.create(
+				new JsonbConfig().withAdapters(JsonCriterion.instance(), instanceAsAdapter()).withFormatting(true));
 	}
 
 	public PrintableJsonObject instanceAsJson(IGrade grade) {
-		return JsonbUtils.toJsonObject(grade, JsonCriterion.asSimpleAdapter());
+		return JsonbUtils.toJsonObject(grade, JsonCriterion.instance());
 	}
 
 	public Mark instanceAsMark(JsonObject json) {
@@ -104,7 +130,7 @@ public class JsonGrade {
 	}
 
 	JsonbAdapter<CriterionGradeWeight, JsonObject> toCriterionGradeWeightAdapter() {
-		final JsonbAdapter<Criterion, ?> criteriaAdapter = JsonCriterion.asSimpleAdapter();
+		final JsonbAdapter<Criterion, ?> criteriaAdapter = JsonCriterion.instance();
 
 		return new JsonbAdapter<>() {
 

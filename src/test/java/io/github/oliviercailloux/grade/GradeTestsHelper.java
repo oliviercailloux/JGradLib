@@ -24,8 +24,7 @@ public class GradeTestsHelper {
 	}
 
 	public static WeightingGrade getSingletonWeightingGrade() {
-		final String criterionName = "criterion";
-		final Criterion criterion = Criterion.given(criterionName);
+		final Criterion criterion = Criterion.given("criterion");
 		final ImmutableMap<Criterion, IGrade> subMarks = ImmutableMap.of(criterion, Mark.given(1d, ""));
 		final ImmutableMap<Criterion, Double> weights = ImmutableMap.of(criterion, 1d);
 		final WeightingGrade grade = WeightingGrade.from(subMarks, weights, "A comment");
