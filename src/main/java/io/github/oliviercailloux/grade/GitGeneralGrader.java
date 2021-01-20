@@ -123,9 +123,9 @@ public class GitGeneralGrader {
 			final IGrade grade = grader.grade(filteredHistory, username);
 
 			final IGrade penalizedGrade;
-			final Duration lateness = Duration.between(timeCap, deadline);
-			if (lateness.isNegative()) {
-				final double fractionPenalty = Math.min(-lateness.getSeconds() / 300d, 1d);
+			final Duration lateness = Duration.between(deadline.toInstant(), timeCap);
+			if (!lateness.isNegative() && !lateness.isZero()) {
+				final double fractionPenalty = Math.min(lateness.getSeconds() / 300d, 1d);
 				verify(0d < fractionPenalty);
 				verify(fractionPenalty <= 1d);
 				penalizedGrade = WeightingGrade.from(ImmutableSet.of(

@@ -57,7 +57,14 @@ public class SendEmails {
 		final Type type = new HashMap<String, IGrade>() {
 		}.getClass().getGenericSuperclass();
 		final Map<String, IGrade> gradesByString = JsonbUtils.fromJson(
-				Files.readString(WORK_DIR.resolve("grades " + PREFIX + ".json")), type, JsonGrade.asAdapter());
+				Files.readString(WORK_DIR.resolve("grades " + PREFIX + " patched.json")), type, JsonGrade.asAdapter());
+
+		final ImmutableSet<String> missing = gradesByString.keySet().stream()
+				.filter(s -> !usernames.containsKey(GitHubUsername.given(s))).collect(ImmutableSet.toImmutableSet());
+		if (!missing.isEmpty()) {
+			LOGGER.warn("Missing: {} out of usernames: {}.", missing, usernames);
+		}
+
 		final ImmutableMap<EmailAddressAndPersonal, IGrade> gradesByEmail = gradesByString.entrySet().stream()
 				.collect(ImmutableMap.toImmutableMap(e -> usernames.get(GitHubUsername.given(e.getKey())).getEmail(),
 						Map.Entry::getValue));
@@ -110,7 +117,7 @@ public class SendEmails {
 //			LOGGER.info("Prepared {}.", effectiveEmails);
 
 			emailer.saveInto(folder);
-			emailer.send(effectiveEmails, EmailerDauphineHelper.FROM);
+//			emailer.send(effectiveEmails, EmailerDauphineHelper.FROM);
 		}
 	}
 

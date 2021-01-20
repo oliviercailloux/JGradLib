@@ -8,7 +8,6 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
-import java.nio.file.Path;
 import java.time.Instant;
 import java.util.Objects;
 import java.util.function.Function;
@@ -101,15 +100,14 @@ public class GitFileSystemHistory {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(GitFileSystemHistory.class);
 
-	public static ImmutableSet<GitPath> getPathsMatching(Stream<GitPathRoot> startingPaths,
+	private static ImmutableSet<GitPath> getPathsMatching(Stream<GitPathRoot> startingPaths,
 			Throwing.Predicate<GitPath, IOException> predicate) throws IOException {
 		final Predicate<GitPath> wrappedPredicate = IO_UNCHECKER.wrapPredicate(predicate);
-		final Throwing.Function<GitPathRoot, Stream<Path>, IOException> matchingFiles = r -> Files.find(r, 100,
-				(p, a) -> wrappedPredicate.test((GitPath) p));
-		final Function<GitPathRoot, Stream<Path>> wrappedMatchingFiles = IO_UNCHECKER.wrapFunction(matchingFiles);
+		final Throwing.Function<GitPathRoot, Stream<GitPath>, IOException> matchingFiles = r -> Files
+				.find(r, 100, (p, a) -> wrappedPredicate.test((GitPath) p)).map(p -> (GitPath) p);
+		final Function<GitPathRoot, Stream<GitPath>> wrappedMatchingFiles = IO_UNCHECKER.wrapFunction(matchingFiles);
 		try {
-			return startingPaths.flatMap(wrappedMatchingFiles).map(p -> (GitPath) p)
-					.collect(ImmutableSet.toImmutableSet());
+			return startingPaths.flatMap(wrappedMatchingFiles).collect(ImmutableSet.toImmutableSet());
 		} catch (UncheckedIOException exc) {
 			throw exc.getCause();
 		}
@@ -215,6 +213,20 @@ public class GitFileSystemHistory {
 		}
 	}
 
+	public Mark allAndSomeCommitMatch(Throwing.Predicate<GitPathRoot, IOException> p) throws IOException {
+		final int nbMatch = filter(p).getGraph().nodes().size();
+		return Mark.binary(nbMatch >= 1 && nbMatch == getGraph().nodes().size());
+	}
+
+	public Mark anyCommitMatches(Throwing.Predicate<GitPathRoot, IOException> p) throws IOException {
+		final boolean match = !filter(p).isEmpty();
+		return Mark.binary(match);
+	}
+
+	public Mark anyRefMatches(Throwing.Predicate<GitPathRoot, IOException> p) throws IOException {
+		return Mark.binary(!getRefsMatching(p).isEmpty());
+	}
+
 	public ImmutableSet<GitPathRoot> getRefsMatching(Throwing.Predicate<GitPathRoot, IOException> predicate)
 			throws IOException {
 		final Predicate<GitPathRoot> wrappedPredicate = IO_UNCHECKER.wrapPredicate(predicate);
@@ -225,18 +237,7 @@ public class GitFileSystemHistory {
 		}
 	}
 
-	/**
-	 * @param predicate
-	 * @return
-	 * @throws IOException
-	 * @deprecated I don’t think that’s really useful, and it’s quite confusing.
-	 */
 	@Deprecated
-	public ImmutableSet<GitPath> getPathsAmongRefs(Throwing.Predicate<GitPath, IOException> predicate)
-			throws IOException {
-		return getPathsMatching(getRefsStream(), predicate);
-	}
-
 	public ImmutableSet<GitPath> getPathsMatching(Throwing.Predicate<GitPath, IOException> predicate)
 			throws IOException {
 		return getPathsMatching(getGraph().nodes().stream(), predicate);
