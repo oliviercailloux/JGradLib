@@ -46,8 +46,9 @@ public class CsvGrades<K> {
 	}
 
 	public static String asCsv(Map<StudentOnGitHub, ? extends IGrade> grades, double denominator) {
-		Function<StudentOnGitHub, ImmutableMap<String, String>> f = s -> ImmutableMap.of("Name",
-				s.getLastName().orElse("unknown"), "GitHub username", s.getGitHubUsername());
+		final Function<StudentOnGitHub, ImmutableMap<String, String>> f = s -> ImmutableMap.of("Name",
+				s.hasInstitutionalPart() ? s.toInstitutionalStudent().getLastName() : "unknown", "GitHub username",
+				s.getGitHubUsername().getUsername());
 		final CsvGrades<StudentOnGitHub> csvGrades = new CsvGrades<>();
 		csvGrades.setIdentityFunction(f).setDenominator(denominator);
 		return csvGrades.toCsv(grades);

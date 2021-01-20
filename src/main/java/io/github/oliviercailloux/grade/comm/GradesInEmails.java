@@ -73,17 +73,6 @@ public class GradesInEmails implements AutoCloseable {
 		return parts;
 	}
 
-	public static EmailAddressAndPersonal asAddress(StudentOnGitHubKnown student) {
-		checkNotNull(student);
-		final String emailStr = student.asStudentOnMyCourse().getEmail();
-		/**
-		 * TODO check why sendEmails does not find the right e-mail for comparison in
-		 * that case, based only on e-mail address?
-		 */
-//		final String emailStr = "olivier.cailloux@invalid-dauphine.fr";
-		return EmailAddressAndPersonal.given(emailStr, student.getFirstName() + " " + student.getLastName());
-	}
-
 	public static Email asEmail(EmailAddressAndPersonal studentAddress, String gradeName, IGrade grade, Stats stats,
 			Map<Integer, Double> quartiles) {
 		final HtmlGrades htmler = HtmlGrades.newInstance();

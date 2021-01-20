@@ -1,32 +1,68 @@
 package io.github.oliviercailloux.grade.comm;
 
-import static com.google.common.base.Preconditions.checkState;
-import static java.util.Objects.requireNonNull;
+import static com.google.common.base.Preconditions.checkNotNull;
 
 import java.util.Objects;
 import java.util.Optional;
 
 import com.google.common.base.MoreObjects;
 
+import io.github.oliviercailloux.email.EmailAddressAndPersonal;
+import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
+
 public class StudentOnGitHub {
-	public static StudentOnGitHub with(String username) {
-		return new StudentOnGitHub(username, Optional.empty());
+	public static StudentOnGitHub with(String gitHubUsername) {
+		return new StudentOnGitHub(GitHubUsername.given(gitHubUsername), Optional.empty());
 	}
 
-	public static StudentOnGitHub with(String username, StudentOnMyCourse studentOnMyCourse) {
-		return new StudentOnGitHub(username, Optional.of(studentOnMyCourse));
+	public static StudentOnGitHub with(GitHubUsername gitHubUsername) {
+		return new StudentOnGitHub(gitHubUsername, Optional.empty());
 	}
 
-	public static StudentOnGitHub with(String username, Optional<StudentOnMyCourse> studentOnMyCourseOpt) {
-		return new StudentOnGitHub(username, studentOnMyCourseOpt);
+	public static StudentOnGitHub with(GitHubUsername gitHubUsername, InstitutionalStudent institutionalStudent) {
+		return new StudentOnGitHub(gitHubUsername, Optional.of(institutionalStudent));
 	}
 
-	private String gitHubUsername;
-	private Optional<StudentOnMyCourse> studentOnMyCourseOpt;
+	public static StudentOnGitHub with(GitHubUsername gitHubUsername,
+			Optional<InstitutionalStudent> institutionalStudentOpt) {
+		return new StudentOnGitHub(gitHubUsername, institutionalStudentOpt);
+	}
 
-	private StudentOnGitHub(String username, Optional<StudentOnMyCourse> studentOnMyCourseOpt) {
-		this.gitHubUsername = requireNonNull(username);
-		this.studentOnMyCourseOpt = requireNonNull(studentOnMyCourseOpt);
+	private final GitHubUsername gitHubUsername;
+	private final Optional<InstitutionalStudent> institutionalStudentOpt;
+
+	private StudentOnGitHub(GitHubUsername gitHubUsername, Optional<InstitutionalStudent> institutionalStudentOpt) {
+		this.gitHubUsername = checkNotNull(gitHubUsername);
+		this.institutionalStudentOpt = checkNotNull(institutionalStudentOpt);
+	}
+
+	public GitHubUsername getGitHubUsername() {
+		return gitHubUsername;
+	}
+
+	public Optional<Integer> getInstitutionalId() {
+		return institutionalStudentOpt.map(InstitutionalStudent::getId);
+	}
+
+	public Optional<String> getInstitutionalUsername() {
+		return institutionalStudentOpt.map(InstitutionalStudent::getUsername);
+	}
+
+	public Optional<EmailAddressAndPersonal> getEmail() {
+		return institutionalStudentOpt.map(InstitutionalStudent::getEmail);
+	}
+
+	public boolean hasInstitutionalPart() {
+		return institutionalStudentOpt.isPresent();
+	}
+
+	public InstitutionalStudent toInstitutionalStudent() {
+		return institutionalStudentOpt.orElseThrow(IllegalStateException::new);
+	}
+
+	public StudentOnGitHubKnown asStudentOnGitHubKnown() {
+		return StudentOnGitHubKnown.with(gitHubUsername,
+				institutionalStudentOpt.orElseThrow(IllegalStateException::new));
 	}
 
 	@Override
@@ -35,55 +71,17 @@ public class StudentOnGitHub {
 			return false;
 		}
 		final StudentOnGitHub s2 = (StudentOnGitHub) o2;
-		return gitHubUsername.equals(s2.gitHubUsername) && studentOnMyCourseOpt.equals(s2.studentOnMyCourseOpt);
+		return gitHubUsername.equals(s2.gitHubUsername) && institutionalStudentOpt.equals(s2.institutionalStudentOpt);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(gitHubUsername, studentOnMyCourseOpt);
-	}
-
-	public String getGitHubUsername() {
-		return gitHubUsername;
-	}
-
-	public boolean hasStudentOnMyCourse() {
-		return studentOnMyCourseOpt.isPresent();
-	}
-
-	public Optional<StudentOnMyCourse> getStudentOnMyCourse() {
-		return studentOnMyCourseOpt;
-	}
-
-	public StudentOnGitHubKnown asStudentOnGitHubKnown() {
-		checkState(studentOnMyCourseOpt.isPresent());
-		return StudentOnGitHubKnown.with(studentOnMyCourseOpt.get(), gitHubUsername);
-	}
-
-	public Optional<Integer> getStudentId() {
-		return studentOnMyCourseOpt.map(StudentOnMyCourse::getStudentId);
-	}
-
-	public Optional<String> getFirstName() {
-		return studentOnMyCourseOpt.map(StudentOnMyCourse::getFirstName);
-	}
-
-	public Optional<String> getLastName() {
-		return studentOnMyCourseOpt.map(StudentOnMyCourse::getLastName);
-	}
-
-	public Optional<String> getMyCourseUsername() {
-		return studentOnMyCourseOpt.map(StudentOnMyCourse::getMyCourseUsername);
+		return Objects.hash(gitHubUsername, institutionalStudentOpt);
 	}
 
 	@Override
 	public String toString() {
 		return MoreObjects.toStringHelper(this).add("GitHub username", gitHubUsername)
-				.add("onMyCourse", studentOnMyCourseOpt).toString();
-	}
-
-	public StudentOnMyCourse asStudentOnMyCourse() {
-		checkState(studentOnMyCourseOpt.isPresent());
-		return studentOnMyCourseOpt.get();
+				.add("institutional", institutionalStudentOpt).toString();
 	}
 }

@@ -14,9 +14,10 @@ import javax.xml.bind.JAXBElement;
 import com.google.common.collect.ImmutableSet;
 
 import ebx.ebx_dataservices.StandardException;
+import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
+import io.github.oliviercailloux.grade.comm.InstitutionalStudent;
 import io.github.oliviercailloux.grade.comm.StudentOnGitHubKnown;
-import io.github.oliviercailloux.grade.comm.StudentOnMyCourse;
-import io.github.oliviercailloux.grade.mycourse.json.JsonStudentOnGitHubKnown;
+import io.github.oliviercailloux.grade.comm.json.JsonStudentOnGitHubKnown;
 import io.github.oliviercailloux.jaris.exceptions.Unchecker;
 import io.github.oliviercailloux.json.JsonbUtils;
 import io.github.oliviercailloux.json.PrintableJsonObject;
@@ -39,15 +40,15 @@ public class IdsToUsernames {
 				superclass);
 
 		final ImmutableSet<StudentOnGitHubKnown> known = idsByGitHubUsername.entrySet().stream()
-				.map(SUPANN_UNCHECKER.wrapFunction(e -> StudentOnGitHubKnown
-						.with(asStudentOnMyCourse(supannQuerier.getStudent(e.getValue().toString())), e.getKey())))
+				.map(SUPANN_UNCHECKER.wrapFunction(e -> StudentOnGitHubKnown.with(GitHubUsername.given(e.getKey()),
+						toInstitutional(supannQuerier.getStudent(e.getValue().toString())))))
 				.collect(ImmutableSet.toImmutableSet());
 
 		final PrintableJsonObject asJson = JsonbUtils.toJsonObject(known, JsonStudentOnGitHubKnown.asAdapter());
 		Files.writeString(Path.of("usernames.json"), asJson.toString());
 	}
 
-	private static StudentOnMyCourse asStudentOnMyCourse(Student student) {
+	private static InstitutionalStudent toInstitutional(Student student) {
 		checkNotNull(student);
 		final String id = student.getId();
 		checkArgument(id != null);
@@ -57,7 +58,7 @@ public class IdsToUsernames {
 		checkArgument(lastname != null && !lastname.isNil());
 		final JAXBElement<String> login = student.getLogin();
 		checkArgument(login != null && !login.isNil());
-		return StudentOnMyCourse.with(Integer.parseInt(id), firstname.getValue(), lastname.getValue(), login.getValue(),
-				student.getMail().getValue());
+		return InstitutionalStudent.withU(Integer.parseInt(id), login.getValue(), firstname.getValue(),
+				lastname.getValue(), student.getMail().getValue());
 	}
 }

@@ -20,7 +20,7 @@ public class EmailAddress {
 
 	private EmailAddress(String address) {
 		this.address = checkNotNull(address);
-		checkArgument(address.contains("@"));
+		checkArgument(address.contains("@"), address);
 		try {
 			@SuppressWarnings("unused")
 			final InternetAddress internetAddress = new InternetAddress(address, true);

@@ -12,11 +12,13 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.Resources;
 
+import io.github.oliviercailloux.email.EmailAddress;
+import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
 import io.github.oliviercailloux.grade.GradeTestsHelper;
 import io.github.oliviercailloux.grade.IGrade;
 import io.github.oliviercailloux.grade.WeightingGrade;
+import io.github.oliviercailloux.grade.comm.InstitutionalStudent;
 import io.github.oliviercailloux.grade.comm.StudentOnGitHub;
-import io.github.oliviercailloux.grade.comm.StudentOnMyCourse;
 import io.github.oliviercailloux.grade.format.json.JsonGrade;
 import io.github.oliviercailloux.grade.format.json.JsonGradeTest;
 
@@ -27,7 +29,8 @@ class CsvGradesTests {
 	@Test
 	void writeTest() throws Exception {
 		final StudentOnGitHub s1 = StudentOnGitHub.with("u1");
-		final StudentOnGitHub s2 = StudentOnGitHub.with("u2", StudentOnMyCourse.with(1, "first", "last", "user"));
+		final StudentOnGitHub s2 = StudentOnGitHub.with(GitHubUsername.given("u2"),
+				InstitutionalStudent.withU(1, "user", "first", "last", EmailAddress.given("e@m.com")));
 		final WeightingGrade grade1 = GradeTestsHelper.getGrade3Plus2();
 		final WeightingGrade grade2 = GradeTestsHelper.getGrade3Plus2Alt();
 		final ImmutableMap<StudentOnGitHub, WeightingGrade> grades = ImmutableMap.of(s1, grade1, s2, grade2);

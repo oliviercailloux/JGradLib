@@ -1,4 +1,4 @@
-package io.github.oliviercailloux.grade.mycourse.json;
+package io.github.oliviercailloux.grade.comm.json;
 
 import java.util.List;
 
@@ -9,8 +9,9 @@ import javax.json.bind.adapter.JsonbAdapter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
+import io.github.oliviercailloux.grade.comm.InstitutionalStudent;
 import io.github.oliviercailloux.grade.comm.StudentOnGitHubKnown;
-import io.github.oliviercailloux.grade.comm.StudentOnMyCourse;
 import io.github.oliviercailloux.json.JsonbUtils;
 import io.github.oliviercailloux.json.PrintableJsonObject;
 import io.github.oliviercailloux.json.PrintableJsonObjectFactory;
@@ -21,9 +22,10 @@ public class JsonStudentOnGitHubKnown {
 	private static final Logger LOGGER = LoggerFactory.getLogger(JsonStudentOnGitHubKnown.class);
 
 	public static PrintableJsonObject asJson(StudentOnGitHubKnown student) {
-		final PrintableJsonObject mcJson = JsonbUtils.toJsonObject(student.asStudentOnMyCourse());
+		final PrintableJsonObject mcJson = JsonbUtils.toJsonObject(student.getInstitutionalStudent());
 		LOGGER.debug("Created {}.", mcJson);
-		final JsonObject json = Json.createObjectBuilder().add("gitHubUsername", student.getGitHubUsername())
+		final JsonObject json = Json.createObjectBuilder()
+				.add("gitHubUsername", student.getGitHubUsername().getUsername())
 				.addAll(Json.createObjectBuilder(mcJson)).build();
 		return PrintableJsonObjectFactory.wrapObject(json);
 	}
@@ -33,9 +35,9 @@ public class JsonStudentOnGitHubKnown {
 	}
 
 	public static StudentOnGitHubKnown asStudentOnGitHubKnown(JsonObject json) {
-		final String gitHubUsername = json.getString("gitHubUsername");
-		final StudentOnMyCourse mc = JsonbUtils.fromJson(json.toString(), StudentOnMyCourse.class);
-		return StudentOnGitHubKnown.with(mc, gitHubUsername);
+		final GitHubUsername gitHubUsername = GitHubUsername.given(json.getString("gitHubUsername"));
+		final InstitutionalStudent mc = JsonbUtils.fromJson(json.toString(), InstitutionalStudent.class);
+		return StudentOnGitHubKnown.with(gitHubUsername, mc);
 	}
 
 	public static JsonbAdapter<StudentOnGitHubKnown, JsonObject> asAdapter() {

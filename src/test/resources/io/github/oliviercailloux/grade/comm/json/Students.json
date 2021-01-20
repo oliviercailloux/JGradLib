@@ -1,0 +1,27 @@
+[
+    {
+        "institutionalId": 1,
+        "institutionalUsername": "u",
+        "firstName": "f",
+        "lastName": "l",
+        "email": "e@example.com"
+    },
+    {
+        "institutionalId": 2,
+        "lastName": "l2",
+        "email": "e2@example.com"
+    },
+    {
+        "gitHubUsername": "g u",
+        "institutionalId": 2190401,
+        "institutionalUsername": "unknown",
+        "lastName": "last",
+        "email": "first.last@example.eu"
+    },
+    {
+        "gitHubUsername": "only g"
+    },
+    {
+        "gitHubUsername": ""
+    }
+]

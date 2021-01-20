@@ -6,7 +6,6 @@ import java.lang.reflect.Type;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -26,6 +25,7 @@ import com.google.common.math.Stats;
 
 import io.github.oliviercailloux.email.EmailAddress;
 import io.github.oliviercailloux.email.EmailAddressAndPersonal;
+import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
 import io.github.oliviercailloux.grade.Criterion;
 import io.github.oliviercailloux.grade.IGrade;
 import io.github.oliviercailloux.grade.Mark;
@@ -35,8 +35,8 @@ import io.github.oliviercailloux.grade.comm.Emailer;
 import io.github.oliviercailloux.grade.comm.EmailerDauphineHelper;
 import io.github.oliviercailloux.grade.comm.GradesInEmails;
 import io.github.oliviercailloux.grade.comm.StudentOnGitHubKnown;
+import io.github.oliviercailloux.grade.comm.json.JsonStudentsReader;
 import io.github.oliviercailloux.grade.format.json.JsonGrade;
-import io.github.oliviercailloux.grade.mycourse.json.JsonStudentOnGitHubKnown;
 import io.github.oliviercailloux.json.JsonbUtils;
 import io.github.oliviercailloux.xml.XmlUtils;
 
@@ -48,14 +48,10 @@ public class SendEmails {
 	private static final Path WORK_DIR = Path.of("");
 
 	public static void main(String[] args) throws Exception {
-		@SuppressWarnings("all")
-		final Type typeSet = new HashSet<StudentOnGitHubKnown>() {
-		}.getClass().getGenericSuperclass();
-		final Set<StudentOnGitHubKnown> usernamesAsSet = JsonbUtils.fromJson(
-				Files.readString(WORK_DIR.resolve("usernames.json")), typeSet, JsonStudentOnGitHubKnown.asAdapter());
-
-		final ImmutableMap<String, StudentOnGitHubKnown> usernames = usernamesAsSet.stream()
-				.collect(ImmutableMap.toImmutableMap(s -> s.getGitHubUsername(), s -> s));
+		final JsonStudentsReader students = JsonStudentsReader
+				.from(Files.readString(WORK_DIR.resolve("usernames.json")));
+		final ImmutableMap<GitHubUsername, StudentOnGitHubKnown> usernames = students
+				.getStudentsKnownByGitHubUsername();
 
 		@SuppressWarnings("all")
 		final Type type = new HashMap<String, IGrade>() {
@@ -63,7 +59,7 @@ public class SendEmails {
 		final Map<String, IGrade> gradesByString = JsonbUtils.fromJson(
 				Files.readString(WORK_DIR.resolve("grades " + PREFIX + ".json")), type, JsonGrade.asAdapter());
 		final ImmutableMap<EmailAddressAndPersonal, IGrade> gradesByEmail = gradesByString.entrySet().stream()
-				.collect(ImmutableMap.toImmutableMap(e -> GradesInEmails.asAddress(usernames.get(e.getKey())),
+				.collect(ImmutableMap.toImmutableMap(e -> usernames.get(GitHubUsername.given(e.getKey())).getEmail(),
 						Map.Entry::getValue));
 
 		final ImmutableList<Double> points = gradesByString.values().stream().map(IGrade::getPoints)

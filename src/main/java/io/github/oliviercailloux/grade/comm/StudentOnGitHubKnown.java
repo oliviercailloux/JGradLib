@@ -1,6 +1,6 @@
 package io.github.oliviercailloux.grade.comm;
 
-import static java.util.Objects.requireNonNull;
+import static com.google.common.base.Preconditions.checkNotNull;
 
 import java.util.Objects;
 
@@ -9,17 +9,55 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.base.MoreObjects;
 
+import io.github.oliviercailloux.email.EmailAddressAndPersonal;
+import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
+
 public class StudentOnGitHubKnown {
-	public static StudentOnGitHubKnown with(StudentOnMyCourse studentOnMyCourse, String gitHubUsername) {
-		return new StudentOnGitHubKnown(studentOnMyCourse, gitHubUsername);
+	@SuppressWarnings("unused")
+	private static final Logger LOGGER = LoggerFactory.getLogger(StudentOnGitHubKnown.class);
+
+	public static StudentOnGitHubKnown with(GitHubUsername gitHubUsername, InstitutionalStudent institutionalStudent) {
+		return new StudentOnGitHubKnown(gitHubUsername, institutionalStudent);
 	}
 
-	private String gitHubUsername;
-	private StudentOnMyCourse studentOnMyCourse;
+	private GitHubUsername gitHubUsername;
+	private InstitutionalStudent institutionalStudent;
 
-	private StudentOnGitHubKnown(StudentOnMyCourse studentOnMyCourse, String gitHubUsername) {
-		this.studentOnMyCourse = requireNonNull(studentOnMyCourse);
-		this.gitHubUsername = requireNonNull(gitHubUsername);
+	private StudentOnGitHubKnown(GitHubUsername gitHubUsername, InstitutionalStudent studentOnMyCourse) {
+		this.institutionalStudent = checkNotNull(studentOnMyCourse);
+		this.gitHubUsername = checkNotNull(gitHubUsername);
+	}
+
+	public GitHubUsername getGitHubUsername() {
+		return gitHubUsername;
+	}
+
+	public int getInstitutionalId() {
+		return institutionalStudent.getId();
+	}
+
+	public String getInstitutionalUsername() {
+		return institutionalStudent.getUsername();
+	}
+
+	public String getFirstName() {
+		return institutionalStudent.getFirstName();
+	}
+
+	public String getLastName() {
+		return institutionalStudent.getLastName();
+	}
+
+	public EmailAddressAndPersonal getEmail() {
+		return institutionalStudent.getEmail();
+	}
+
+	public StudentOnGitHub asStudentOnGitHub() {
+		return StudentOnGitHub.with(gitHubUsername, institutionalStudent);
+	}
+
+	public InstitutionalStudent getInstitutionalStudent() {
+		return institutionalStudent;
 	}
 
 	@Override
@@ -28,44 +66,17 @@ public class StudentOnGitHubKnown {
 			return false;
 		}
 		final StudentOnGitHubKnown s2 = (StudentOnGitHubKnown) o2;
-		return gitHubUsername.equals(s2.gitHubUsername) && studentOnMyCourse.equals(s2.studentOnMyCourse);
+		return gitHubUsername.equals(s2.gitHubUsername) && institutionalStudent.equals(s2.institutionalStudent);
 	}
-
-	@SuppressWarnings("unused")
-	private static final Logger LOGGER = LoggerFactory.getLogger(StudentOnGitHubKnown.class);
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(gitHubUsername, studentOnMyCourse);
-	}
-
-	public int getStudentId() {
-		return studentOnMyCourse.getStudentId();
-	}
-
-	public String getFirstName() {
-		return studentOnMyCourse.getFirstName();
-	}
-
-	public String getLastName() {
-		return studentOnMyCourse.getLastName();
-	}
-
-	public String getGitHubUsername() {
-		return gitHubUsername;
+		return Objects.hash(gitHubUsername, institutionalStudent);
 	}
 
 	@Override
 	public String toString() {
 		return MoreObjects.toStringHelper(this).add("GitHub username", gitHubUsername)
-				.add("onMyCourse", studentOnMyCourse).toString();
-	}
-
-	public StudentOnGitHub asStudentOnGitHub() {
-		return StudentOnGitHub.with(gitHubUsername, studentOnMyCourse);
-	}
-
-	public StudentOnMyCourse asStudentOnMyCourse() {
-		return studentOnMyCourse;
+				.add("onMyCourse", institutionalStudent).toString();
 	}
 }

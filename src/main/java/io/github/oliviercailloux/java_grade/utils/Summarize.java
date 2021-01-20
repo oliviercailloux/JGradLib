@@ -18,6 +18,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 
+import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.grade.Criterion;
 import io.github.oliviercailloux.grade.CriterionGradeWeight;
@@ -25,10 +26,10 @@ import io.github.oliviercailloux.grade.IGrade;
 import io.github.oliviercailloux.grade.Mark;
 import io.github.oliviercailloux.grade.WeightingGrade;
 import io.github.oliviercailloux.grade.comm.StudentOnGitHub;
+import io.github.oliviercailloux.grade.comm.json.JsonStudentsReader;
 import io.github.oliviercailloux.grade.format.CsvGrades;
 import io.github.oliviercailloux.grade.format.HtmlGrades;
 import io.github.oliviercailloux.grade.format.json.JsonGrade;
-import io.github.oliviercailloux.grade.mycourse.json.StudentsReaderFromJson;
 import io.github.oliviercailloux.json.JsonbUtils;
 import io.github.oliviercailloux.xml.XmlUtils;
 
@@ -61,11 +62,12 @@ public class Summarize {
 		}
 
 		LOGGER.debug("Reading usernames.");
-		final StudentsReaderFromJson usernames = new StudentsReaderFromJson();
-		usernames.read(READ_DIR.resolve("usernames.json"));
+		final JsonStudentsReader students = JsonStudentsReader
+				.from(Files.readString(READ_DIR.resolve("usernames.json")));
+		final ImmutableMap<GitHubUsername, StudentOnGitHub> usernames = students.getStudentsByGitHubUsername();
 //
 		final ImmutableMap<StudentOnGitHub, IGrade> byStudent = transformed.entrySet().stream().collect(
-				ImmutableMap.toImmutableMap(e -> usernames.getStudentOnGitHub(e.getKey()), Map.Entry::getValue));
+				ImmutableMap.toImmutableMap(e -> usernames.get(GitHubUsername.given(e.getKey())), Map.Entry::getValue));
 //		final ImmutableMap<StudentOnGitHub, IGrade> byStudent = transformed.entrySet().stream()
 //				.collect(ImmutableMap.toImmutableMap(e -> StudentOnGitHub.with(e.getKey()), Map.Entry::getValue));
 		LOGGER.debug("Grades keys: {}.", byStudent.keySet());

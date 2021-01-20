@@ -2,14 +2,11 @@ package io.github.oliviercailloux.java_grade.utils;
 
 import static com.google.common.base.Verify.verify;
 
-import java.lang.reflect.Type;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Instant;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
 import java.util.function.Function;
 
 import javax.mail.Folder;
@@ -38,10 +35,10 @@ import io.github.oliviercailloux.grade.comm.Emailer;
 import io.github.oliviercailloux.grade.comm.EmailerDauphineHelper;
 import io.github.oliviercailloux.grade.comm.GradesInEmails;
 import io.github.oliviercailloux.grade.comm.StudentOnGitHubKnown;
+import io.github.oliviercailloux.grade.comm.json.JsonStudentsReader;
 import io.github.oliviercailloux.grade.format.CsvGrades;
 import io.github.oliviercailloux.grade.format.HtmlGrades;
 import io.github.oliviercailloux.grade.format.json.JsonGrade;
-import io.github.oliviercailloux.grade.mycourse.json.JsonStudentOnGitHubKnown;
 import io.github.oliviercailloux.json.JsonbUtils;
 import io.github.oliviercailloux.xml.XmlUtils;
 
@@ -75,17 +72,14 @@ public class SummarizeEmails {
 		final ImmutableMap<EmailAddress, WeightingGrade> grades = Maps.toMap(addresses,
 				a -> getWeightingGrade(lastGrades.row(a)));
 
-		@SuppressWarnings("all")
-		final Type typeSet = new HashSet<StudentOnGitHubKnown>() {
-		}.getClass().getGenericSuperclass();
-		final Set<StudentOnGitHubKnown> usernamesAsSet = JsonbUtils.fromJson(
-				Files.readString(workDir.resolve("usernames.json")), typeSet, JsonStudentOnGitHubKnown.asAdapter());
+		final JsonStudentsReader students = JsonStudentsReader
+				.from(Files.readString(workDir.resolve("usernames.json")));
 
-		final ImmutableMap<EmailAddress, StudentOnGitHubKnown> usernames = usernamesAsSet.stream().collect(
-				ImmutableMap.toImmutableMap(s -> EmailAddress.given(s.asStudentOnMyCourse().getEmail()), s -> s));
+		final ImmutableMap<EmailAddress, StudentOnGitHubKnown> usernames = students.getStudentsKnownByGitHubUsername()
+				.values().stream().collect(ImmutableBiMap.toImmutableBiMap(s -> s.getEmail().getAddress(), s -> s));
 
 		final ImmutableMap<String, WeightingGrade> gradesByUsername = transformKeys(grades,
-				a -> usernames.get(a).getGitHubUsername());
+				a -> usernames.get(a).getGitHubUsername().getUsername());
 
 		Files.writeString(workDir.resolve("grades recap.json"),
 				JsonbUtils.toJsonValue(gradesByUsername, JsonGrade.asAdapter()).toString());
