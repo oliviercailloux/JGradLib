@@ -1,7 +1,7 @@
 package io.github.oliviercailloux.java_grade.graders;
 
-import static io.github.oliviercailloux.grade.GitGrader.Functions.compose;
 import static io.github.oliviercailloux.grade.GitGrader.Functions.resolve;
+import static io.github.oliviercailloux.grade.GitGrader.Predicates.compose;
 import static io.github.oliviercailloux.grade.GitGrader.Predicates.containsFileMatching;
 import static io.github.oliviercailloux.grade.GitGrader.Predicates.contentMatches;
 import static io.github.oliviercailloux.grade.GitGrader.Predicates.isBranch;

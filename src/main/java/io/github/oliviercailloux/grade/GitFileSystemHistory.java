@@ -9,7 +9,9 @@ import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.time.Instant;
+import java.util.Comparator;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
@@ -150,11 +152,11 @@ public class GitFileSystemHistory {
 	}
 
 	private Stream<GitPathRoot> getRefsStream() throws IOException {
-		final Throwing.Predicate<? super GitPathRoot, IOException> inThisHistory = p -> history.getGraph().nodes()
-				.contains(p.getCommit().getId());
-		final Predicate<? super GitPathRoot> wrappedInThisHistory = IO_UNCHECKER.wrapPredicate(inThisHistory);
+		final Throwing.Predicate<? super GitPathRoot, IOException> inThisHistory = GitGrader.Predicates
+				.compose(GitPathRoot::getCommit, c -> history.getGraph().nodes().contains(c.getId()));
+		final Predicate<? super GitPathRoot> inThisHistoryWrapped = IO_UNCHECKER.wrapPredicate(inThisHistory);
 		try {
-			return gitFs.getRefs().stream().filter(wrappedInThisHistory);
+			return gitFs.getRefs().stream().filter(inThisHistoryWrapped);
 		} catch (UncheckedIOException exc) {
 			throw exc.getCause();
 		}
@@ -223,15 +225,43 @@ public class GitFileSystemHistory {
 		return Mark.binary(match);
 	}
 
+	public Optional<GitPathRoot> getCommitMaximizing(Throwing.Function<GitPathRoot, Integer, IOException> scorer)
+			throws IOException {
+		final Function<GitPathRoot, Integer> wrappedScorer = IO_UNCHECKER.wrapFunction(scorer);
+		try {
+			return getGraph().nodes().stream().max(Comparator.comparing(wrappedScorer));
+		} catch (UncheckedIOException exc) {
+			throw exc.getCause();
+		}
+	}
+
 	public Mark anyRefMatches(Throwing.Predicate<GitPathRoot, IOException> p) throws IOException {
 		return Mark.binary(!getRefsMatching(p).isEmpty());
 	}
 
-	public ImmutableSet<GitPathRoot> getRefsMatching(Throwing.Predicate<GitPathRoot, IOException> predicate)
+	public ImmutableSet<GitPathRoot> getRefsMatching(Throwing.Predicate<? super GitPathRoot, IOException> predicate)
 			throws IOException {
-		final Predicate<GitPathRoot> wrappedPredicate = IO_UNCHECKER.wrapPredicate(predicate);
+		final Predicate<? super GitPathRoot> wrappedPredicate = IO_UNCHECKER.wrapPredicate(predicate);
 		try {
 			return getRefsStream().filter(wrappedPredicate).collect(ImmutableSet.toImmutableSet());
+		} catch (UncheckedIOException exc) {
+			throw exc.getCause();
+		}
+	}
+
+	public ImmutableSet<GitPathRoot> getRefsTo(GitPathRoot target) throws IOException {
+		checkArgument(target.isCommitId());
+		final ObjectId targetId = target.getStaticCommitId();
+		final Throwing.Predicate<? super GitPathRoot, IOException> rightTarget = GitGrader.Predicates
+				.compose(GitPathRoot::getCommit, c -> c.getId().equals(targetId));
+		return getRefsMatching(rightTarget);
+	}
+
+	public Optional<GitPathRoot> getRefMaximizing(Throwing.Function<GitPathRoot, Integer, IOException> scorer)
+			throws IOException {
+		final Function<GitPathRoot, Integer> wrappedScorer = IO_UNCHECKER.wrapFunction(scorer);
+		try {
+			return getRefsStream().max(Comparator.comparing(wrappedScorer));
 		} catch (UncheckedIOException exc) {
 			throw exc.getCause();
 		}

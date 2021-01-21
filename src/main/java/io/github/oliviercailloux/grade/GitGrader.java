@@ -7,9 +7,12 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Set;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
+
+import com.google.common.primitives.Ints;
 
 import io.github.oliviercailloux.git.fs.GitPath;
 import io.github.oliviercailloux.git.fs.GitPathRoot;
@@ -44,6 +47,11 @@ public interface GitGrader {
 			final Pattern patternBranch = Pattern.compile("refs/remotes/[^/]+/" + remoteBranch);
 			return r -> patternBranch.matcher(r.getGitRef()).matches();
 		}
+
+		public static <FO extends PI, PI> Throwing.Predicate<GitPathRoot, IOException> compose(
+				Throwing.Function<GitPathRoot, FO, IOException> f, Throwing.Predicate<PI, IOException> p) {
+			return r -> p.test(f.apply(r));
+		}
 	}
 
 	public static class Functions {
@@ -51,9 +59,14 @@ public interface GitGrader {
 			return r -> r.resolve(file);
 		}
 
-		public static <FO extends PI, PI> Throwing.Predicate<GitPathRoot, IOException> compose(
-				Throwing.Function<GitPathRoot, FO, IOException> f, Throwing.Predicate<PI, IOException> p) {
-			return r -> p.test(f.apply(r));
+		public static Throwing.Function<GitPathRoot, Integer, IOException> countTrue(
+				Set<Throwing.Predicate<GitPathRoot, IOException>> predicates) throws IOException {
+			try {
+				return r -> Ints.checkedCast(
+						predicates.stream().map(p -> IO_UNCHECKER.wrapPredicate(p).test(r)).filter(b -> b).count());
+			} catch (UncheckedIOException e) {
+				throw e.getCause();
+			}
 		}
 	}
 
