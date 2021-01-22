@@ -1,6 +1,5 @@
 package io.github.oliviercailloux.java_grade.graders;
 
-import static com.google.common.base.Preconditions.checkNotNull;
 import static io.github.oliviercailloux.grade.GitGrader.Functions.resolve;
 import static io.github.oliviercailloux.grade.GitGrader.Predicates.compose;
 import static io.github.oliviercailloux.grade.GitGrader.Predicates.contentMatches;
@@ -30,6 +29,8 @@ import io.github.oliviercailloux.grade.GitGrader;
 import io.github.oliviercailloux.grade.IGrade;
 import io.github.oliviercailloux.grade.Mark;
 import io.github.oliviercailloux.grade.WeightingGrade;
+import io.github.oliviercailloux.grade.WeightingGrader;
+import io.github.oliviercailloux.grade.WeightingGrader.CriterionGraderWeight;
 import io.github.oliviercailloux.grade.markers.Marks;
 import io.github.oliviercailloux.jaris.exceptions.Throwing;
 import io.github.oliviercailloux.jaris.exceptions.Throwing.Predicate;
@@ -52,34 +53,6 @@ public class GitBranching implements GitGrader {
 		GitGeneralGrader.grade(PREFIX, DEADLINE, new GitBranching());
 	}
 
-	private static class CriterionGraderWeight {
-		public static CriterionGraderWeight given(Criterion criterion,
-				Throwing.Predicate<GitPathRoot, IOException> predicate, double weight) {
-			return new CriterionGraderWeight(criterion,
-					path -> Mark.binary(path.isPresent() && predicate.test(path.get())), weight);
-		}
-
-		public static CriterionGraderWeight given(Criterion criterion,
-				Throwing.Function<Optional<GitPathRoot>, IGrade, IOException> grader, double weight) {
-			return new CriterionGraderWeight(criterion, grader, weight);
-		}
-
-		private final Criterion criterion;
-		private final Throwing.Function<Optional<GitPathRoot>, IGrade, IOException> grader;
-		private final double weight;
-
-		private CriterionGraderWeight(Criterion criterion,
-				Throwing.Function<Optional<GitPathRoot>, IGrade, IOException> grader, double weight) {
-			this.criterion = checkNotNull(criterion);
-			this.grader = checkNotNull(grader);
-			this.weight = weight;
-		}
-
-		public CriterionGradeWeight grade(Optional<GitPathRoot> path) throws IOException {
-			return CriterionGradeWeight.from(criterion, grader.apply(path), weight);
-		}
-	}
-
 	GitBranching() {
 	}
 
@@ -97,33 +70,31 @@ public class GitBranching implements GitGrader {
 		final Throwing.Function<GitPathRoot, Set<GitPathRoot>, IOException> siblings = r -> graphSiblings.apply(r);
 		final Throwing.Predicate<GitPathRoot, IOException> hasAFewSiblings = compose(siblings,
 				s -> 2 <= s.size() && s.size() <= 3);
-		final CriterionGraderWeight graderTopoSiblings = CriterionGraderWeight
+		final CriterionGraderWeight<GitPathRoot> graderTopoSiblings = CriterionGraderWeight
 				.given(Criterion.given("Father has 2 or 3 children"), hasAFewSiblings, 2d);
 		final Predicate<GitPathRoot, IOException> aBranch = compose(history::getRefsTo, anyMatch(isBranch("br1")));
 		{
 			final Pattern helloPattern = Marks.extendWhite("hello\\h+world");
-			final CriterionGraderWeight graderBr1 = CriterionGraderWeight.given(Criterion.given("Branch br1"), aBranch,
-					2d);
-			final CriterionGraderWeight graderContent = CriterionGraderWeight.given(
+			final CriterionGraderWeight<GitPathRoot> graderBr1 = CriterionGraderWeight
+					.given(Criterion.given("Branch br1"), aBranch, 2d);
+			final CriterionGraderWeight<GitPathRoot> graderContent = CriterionGraderWeight.given(
 					Criterion.given("first.txt content"), compose(resolve("first.txt"), contentMatches(helloPattern)),
 					1d);
 
-			final Throwing.Function<Optional<GitPathRoot>, IGrade, IOException> grader = getGrader(
-					ImmutableList.of(graderTopoSiblings, graderBr1, graderContent));
-			final IGrade grade = getBestGrade(history, grader);
+			final IGrade grade = history.getBestGrade(WeightingGrader
+					.getGrader(ImmutableList.of(graderTopoSiblings, graderBr1, graderContent))::getGrade);
 
 			final CriterionGradeWeight aGrade = CriterionGradeWeight.from(Criterion.given("Commit A"), grade, 5d);
 			gradeBuilder.add(aGrade);
 		}
 		{
 			final Pattern coucouPattern = Marks.extendWhite("coucou\\h+monde");
-			final CriterionGraderWeight graderContent = CriterionGraderWeight.given(
+			final CriterionGraderWeight<GitPathRoot> graderContent = CriterionGraderWeight.given(
 					Criterion.given("first.txt content"), compose(resolve("first.txt"), contentMatches(coucouPattern)),
 					1d);
 
-			final Throwing.Function<Optional<GitPathRoot>, IGrade, IOException> grader = getGrader(
-					ImmutableList.of(graderTopoSiblings, graderContent));
-			final IGrade grade = getBestGrade(history, grader);
+			final IGrade grade = history.getBestGrade(
+					WeightingGrader.getGrader(ImmutableList.of(graderTopoSiblings, graderContent))::getGrade);
 
 			final CriterionGradeWeight bGrade = CriterionGradeWeight.from(Criterion.given("Commit B"), grade, 3d);
 			gradeBuilder.add(bGrade);
@@ -134,16 +105,16 @@ public class GitBranching implements GitGrader {
 				s -> 2 <= s.size() && s.size() <= 3);
 		final Predicate<GitPathRoot, IOException> cBranch = compose(history::getRefsTo, anyMatch(isBranch("br2")));
 		{
-			final CriterionGraderWeight graderTopoC = CriterionGraderWeight
+			final CriterionGraderWeight<GitPathRoot> graderTopoC = CriterionGraderWeight
 					.given(Criterion.given("Grand-father has 2 or 3 children"), hasCTopo, 2d);
-			final CriterionGraderWeight graderBr2 = CriterionGraderWeight.given(Criterion.given("Branch br2"), cBranch,
-					2d);
-			final CriterionGraderWeight graderContent = CriterionGraderWeight.given(Criterion.given("content"),
+			final CriterionGraderWeight<GitPathRoot> graderBr2 = CriterionGraderWeight
+					.given(Criterion.given("Branch br2"), cBranch, 2d);
+			final CriterionGraderWeight<GitPathRoot> graderContent = CriterionGraderWeight.given(
+					Criterion.given("content"),
 					compose(resolve("a/b/c/x/z/some file.txt"), contentMatches(Marks.extendWhite("2021"))), 1d);
 
-			final Throwing.Function<Optional<GitPathRoot>, IGrade, IOException> grader = getGrader(
-					ImmutableList.of(graderTopoC, graderBr2, graderContent));
-			final IGrade grade = getBestGrade(history, grader);
+			final IGrade grade = history.getBestGrade(
+					WeightingGrader.getGrader(ImmutableList.of(graderTopoC, graderBr2, graderContent))::getGrade);
 
 			final CriterionGradeWeight cGrade = CriterionGradeWeight.from(Criterion.given("Commit C"), grade, 5d);
 			gradeBuilder.add(cGrade);
@@ -165,31 +136,37 @@ public class GitBranching implements GitGrader {
 			final Throwing.Predicate<GitPathRoot, IOException> twoRightParents = compose(parents, aAndC.or(cAndA));
 			final Predicate<GitPathRoot, IOException> dBranch = compose(history::getRefsTo, anyMatch(isBranch("br3")));
 
-			final CriterionGraderWeight graderTopo = CriterionGraderWeight
+			final CriterionGraderWeight<GitPathRoot> graderTopo = CriterionGraderWeight
 					.given(Criterion.given("Has apparent A and C parents"), twoRightParents, 2d);
-			final CriterionGraderWeight graderBr3 = CriterionGraderWeight.given(Criterion.given("Branch br3"), dBranch,
-					2d);
-			final CriterionGraderWeight graderContentSomeFile = CriterionGraderWeight.given(
+			final CriterionGraderWeight<GitPathRoot> graderBr3 = CriterionGraderWeight
+					.given(Criterion.given("Branch br3"), dBranch, 2d);
+			final CriterionGraderWeight<GitPathRoot> graderContentSomeFile = CriterionGraderWeight.given(
 					Criterion.given("some file"),
 					compose(resolve("a/b/c/x/z/some file.txt"), contentMatches(Marks.extendWhite("2021"))), 1d);
 			final Predicate<Path, IOException> merged = contentMatches(Marks.extendAll("<<<<<<<")).negate();
 			final Predicate<Path, IOException> matchesApprox = contentMatches(Marks.extendAll("hello\\h+world"))
 					.or(contentMatches(Marks.extendAll("coucou\\h+monde")));
-			final CriterionGraderWeight graderContentFirstApprox = CriterionGraderWeight
+			final CriterionGraderWeight<GitPathRoot> graderContentFirstApprox = CriterionGraderWeight
 					.given(Criterion.given("approx"), compose(resolve("first.txt"), matchesApprox.and(merged)), 1d);
-			final CriterionGraderWeight graderContentFirstExact = CriterionGraderWeight
+			final CriterionGraderWeight<GitPathRoot> graderContentFirstExact = CriterionGraderWeight
 					.given(Criterion.given("exact"),
 							compose(resolve("first.txt"),
 									contentMatches(Pattern.compile("hello world\\v+coucou monde\\v*")).and(merged)),
 							1d);
-			final CriterionGraderWeight graderContentFirst = CriterionGraderWeight.given(Criterion.given("content"),
-					getGrader(ImmutableList.of(graderContentFirstApprox, graderContentFirstExact)), 1d);
-			final CriterionGraderWeight graderContent = CriterionGraderWeight.given(Criterion.given("content"),
-					getGrader(ImmutableList.of(graderContentSomeFile, graderContentFirst)), 2d);
+			final CriterionGraderWeight<GitPathRoot> graderContentFirst = CriterionGraderWeight.given(
+					Criterion.given("content"),
+					WeightingGrader
+							.getGrader(ImmutableList.of(graderContentFirstApprox, graderContentFirstExact))::getGrade,
+					1d);
+			final CriterionGraderWeight<GitPathRoot> graderContent = CriterionGraderWeight
+					.given(Criterion.given("content"),
+							WeightingGrader
+									.getGrader(ImmutableList.of(graderContentSomeFile, graderContentFirst))::getGrade,
+							2d);
 
-			final Throwing.Function<Optional<GitPathRoot>, IGrade, IOException> grader = getGrader(
-					ImmutableList.of(graderTopo, graderBr3, graderContent));
-			final IGrade grade = getBestGrade(history, grader);
+			final Throwing.Function<Optional<GitPathRoot>, IGrade, IOException> grader = WeightingGrader
+					.getGrader(ImmutableList.of(graderTopo, graderBr3, graderContent))::getGrade;
+			final IGrade grade = history.getBestGrade(grader);
 
 			final CriterionGradeWeight dGrade = CriterionGradeWeight.from(Criterion.given("Commit D"), grade, 6d);
 			gradeBuilder.add(dGrade);
@@ -198,7 +175,7 @@ public class GitBranching implements GitGrader {
 		return WeightingGrade.from(gradeBuilder.build());
 	}
 
-	private Predicate<Set<GitPathRoot>, IOException> anyMatch(final Predicate<GitPathRoot, IOException> predicate) {
+	private Predicate<Set<GitPathRoot>, IOException> anyMatch(Predicate<GitPathRoot, IOException> predicate) {
 		final Predicate<Set<GitPathRoot>, IOException> anyMatchPredicate = s -> {
 			for (GitPathRoot r : s) {
 				if (predicate.test(r)) {
@@ -217,37 +194,5 @@ public class GitBranching implements GitGrader {
 			return Optional.of(Iterables.getOnlyElement(parents));
 		}
 		return Optional.empty();
-	}
-
-	public IGrade getGrade(GitFileSystemHistory history, ImmutableList<CriterionGraderWeight> cs) throws IOException {
-		return getBestGrade(history, getGrader(cs));
-	}
-
-	private Throwing.Function<Optional<GitPathRoot>, IGrade, IOException> getGrader(
-			ImmutableList<CriterionGraderWeight> cs) {
-		final Set<Throwing.Function<Optional<GitPathRoot>, CriterionGradeWeight, IOException>> graders = cs.stream()
-				.map(c -> ((Throwing.Function<Optional<GitPathRoot>, CriterionGradeWeight, IOException>) c::grade))
-				.collect(ImmutableSet.toImmutableSet());
-		final Throwing.Function<Optional<GitPathRoot>, IGrade, IOException> grader = getGrader(graders);
-		return grader;
-	}
-
-	private IGrade getBestGrade(GitFileSystemHistory history,
-			final Throwing.Function<Optional<GitPathRoot>, IGrade, IOException> grader) throws IOException {
-		final Throwing.Function<Optional<GitPathRoot>, Double, IOException> scorer = r -> grader.apply(r).getPoints();
-		final Optional<GitPathRoot> best = history.getCommitMaximizing(r -> scorer.apply(Optional.of(r)));
-		return grader.apply(best);
-	}
-
-	private <FI> Throwing.Function<FI, IGrade, IOException> getGrader(
-			Set<Throwing.Function<FI, CriterionGradeWeight, IOException>> graders) {
-		return target -> {
-			final ImmutableSet.Builder<CriterionGradeWeight> builder = ImmutableSet.builder();
-			for (Throwing.Function<FI, CriterionGradeWeight, IOException> grader : graders) {
-				final CriterionGradeWeight grade = grader.apply(target);
-				builder.add(grade);
-			}
-			return WeightingGrade.from(builder.build());
-		};
 	}
 }

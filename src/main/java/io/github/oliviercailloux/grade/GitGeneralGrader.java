@@ -37,6 +37,14 @@ import io.github.oliviercailloux.java_grade.testers.JavaMarkHelper;
 import io.github.oliviercailloux.json.JsonbUtils;
 import io.github.oliviercailloux.utils.Utils;
 
+/**
+ * An instance of this should have a deadline and a grader.
+ *
+ * Then this is a grader given a GitWork: a GitOnlineUsername (renaming of
+ * GitHubUsername) and a GitFileSystemHistory.
+ *
+ * Note that out of the repository coordinates comes the GitWork.
+ */
 public class GitGeneralGrader {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(GitGeneralGrader.class);

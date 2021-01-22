@@ -45,6 +45,7 @@ public class GitFileFileSystem extends GitFileSystem {
 	/**
 	 * @deprecated Temporary workaround.
 	 */
+	@Deprecated
 	public Repository getRepository() {
 		return repository;
 	}

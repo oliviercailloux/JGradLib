@@ -274,6 +274,13 @@ public class GitFileSystemHistory {
 		}
 	}
 
+	public IGrade getBestGrade(Throwing.Function<Optional<GitPathRoot>, IGrade, IOException> grader)
+			throws IOException {
+		final Throwing.Function<Optional<GitPathRoot>, Double, IOException> scorer = r -> grader.apply(r).getPoints();
+		final Optional<GitPathRoot> best = getCommitMaximizing(r -> scorer.apply(Optional.of(r)));
+		return grader.apply(best);
+	}
+
 	@Deprecated
 	public ImmutableSet<GitPath> getPathsMatching(Throwing.Predicate<GitPath, IOException> predicate)
 			throws IOException {
@@ -303,8 +310,11 @@ public class GitFileSystemHistory {
 		return MoreObjects.toStringHelper(this).add("GitFs", gitFs).add("History", history).toString();
 	}
 
+	/**
+	 * @deprecated Temporary workaround.
+	 */
+	@Deprecated
 	public ImmutableSet<DiffEntry> getDiff(GitPathRoot oldId, GitPathRoot newId) throws IOException {
-		@SuppressWarnings("deprecation")
 		final Repository repository = ((GitFileFileSystem) gitFs).getRepository();
 
 		try (ObjectReader reader = repository.newObjectReader()) {

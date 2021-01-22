@@ -10,7 +10,6 @@ import static io.github.oliviercailloux.grade.GitGrader.Predicates.isFileNamed;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.time.ZonedDateTime;
-import java.util.Optional;
 import java.util.regex.Pattern;
 
 import org.slf4j.Logger;
@@ -24,9 +23,9 @@ import io.github.oliviercailloux.grade.CriterionGradeWeight;
 import io.github.oliviercailloux.grade.GitFileSystemHistory;
 import io.github.oliviercailloux.grade.GitGeneralGrader;
 import io.github.oliviercailloux.grade.GitGrader;
-import io.github.oliviercailloux.grade.IGrade;
 import io.github.oliviercailloux.grade.Mark;
 import io.github.oliviercailloux.grade.WeightingGrade;
+import io.github.oliviercailloux.grade.WeightingGrader.CriterionGraderWeight;
 import io.github.oliviercailloux.grade.markers.Marks;
 import io.github.oliviercailloux.jaris.exceptions.Throwing;
 import io.github.oliviercailloux.java_grade.testers.JavaMarkHelper;
@@ -51,6 +50,9 @@ public class Eclipse implements GitGrader {
 	@Override
 	public WeightingGrade grade(GitFileSystemHistory history, String gitHubUsername) throws IOException {
 		final ImmutableSet.Builder<CriterionGradeWeight> gradeBuilder = ImmutableSet.builder();
+
+		CriterionGraderWeight.given(Criterion.given("Compile"),
+				compose(resolve("file.java"), contentMatches(Marks.extendAll("withchar"))), 1d);
 
 		{
 			final Mark hasCommit = Mark.binary(!history.getGraph().nodes().isEmpty());
@@ -100,12 +102,5 @@ public class Eclipse implements GitGrader {
 		}
 
 		return WeightingGrade.from(gradeBuilder.build());
-	}
-
-	private IGrade getBestGrade(GitFileSystemHistory history,
-			final Throwing.Function<Optional<GitPathRoot>, IGrade, IOException> grader) throws IOException {
-		final Throwing.Function<Optional<GitPathRoot>, Double, IOException> scorer = r -> grader.apply(r).getPoints();
-		final Optional<GitPathRoot> best = history.getCommitMaximizing(r -> scorer.apply(Optional.of(r)));
-		return grader.apply(best);
 	}
 }
