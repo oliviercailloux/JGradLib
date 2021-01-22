@@ -44,7 +44,7 @@ public class SendEmails {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(SendEmails.class);
 
-	private static final String PREFIX = "commit";
+	private static final String PREFIX = "git-branching";
 	private static final Path WORK_DIR = Path.of("");
 
 	public static void main(String[] args) throws Exception {
@@ -57,7 +57,7 @@ public class SendEmails {
 		final Type type = new HashMap<String, IGrade>() {
 		}.getClass().getGenericSuperclass();
 		final Map<String, IGrade> gradesByString = JsonbUtils.fromJson(
-				Files.readString(WORK_DIR.resolve("grades " + PREFIX + " patched.json")), type, JsonGrade.asAdapter());
+				Files.readString(WORK_DIR.resolve("grades " + PREFIX + ".json")), type, JsonGrade.asAdapter());
 
 		final ImmutableSet<String> missing = gradesByString.keySet().stream()
 				.filter(s -> !usernames.containsKey(GitHubUsername.given(s))).collect(ImmutableSet.toImmutableSet());
@@ -117,7 +117,7 @@ public class SendEmails {
 //			LOGGER.info("Prepared {}.", effectiveEmails);
 
 			emailer.saveInto(folder);
-//			emailer.send(effectiveEmails, EmailerDauphineHelper.FROM);
+			emailer.send(effectiveEmails, EmailerDauphineHelper.FROM);
 		}
 	}
 

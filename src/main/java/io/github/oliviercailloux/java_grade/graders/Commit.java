@@ -58,7 +58,7 @@ public class Commit implements GitGrader {
 			gradeBuilder.add(CriterionGradeWeight.from(Criterion.given("Has commits"), commitsGrade, 2d));
 		}
 
-		final Pattern coucouPattern = Marks.extend("coucou");
+		final Pattern coucouPattern = Marks.extendWhite("coucou");
 		{
 			final Mark content = history.anyCommitMatches(compose(resolve("afile.txt"), contentMatches(coucouPattern)));
 			final Mark branchAndContent = history.anyRefMatches(
@@ -69,7 +69,7 @@ public class Commit implements GitGrader {
 			gradeBuilder.add(CriterionGradeWeight.from(Criterion.given("Commit 'coucou'"), coucouCommit, 3d));
 		}
 		{
-			final Pattern digitPattern = Marks.extend("\\d+");
+			final Pattern digitPattern = Marks.extendWhite("\\d+");
 			final Mark myIdContent = history
 					.anyCommitMatches(compose(resolve("myid.txt"), contentMatches(digitPattern)));
 			final Throwing.Predicate<GitPathRoot, IOException> both = compose(resolve("myid.txt"),

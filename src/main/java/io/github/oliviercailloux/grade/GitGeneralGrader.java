@@ -62,29 +62,29 @@ public class GitGeneralGrader {
 
 	public static IGrade grade(RepositoryCoordinatesWithPrefix coordinates, ZonedDateTime deadline, GitGrader grader)
 			throws IOException {
-		final FileRepository repository = GitCloner.create().setCheckCommonRefsAgree(false)
-				.download(coordinates.asGitUri(), Utils.getTempDirectory().resolve(coordinates.getRepositoryName()));
+		try (FileRepository repository = GitCloner.create().setCheckCommonRefsAgree(false)
+				.download(coordinates.asGitUri(), Utils.getTempDirectory().resolve(coordinates.getRepositoryName()))) {
+			final GitFileSystem gitFs = GitFileSystemProvider.getInstance().newFileSystemFromRepository(repository);
 
-		final GitFileSystem gitFs = GitFileSystemProvider.getInstance().newFileSystemFromRepository(repository);
+			final GitHistory pushHistory;
+			{
+				final GitHubHistory gitHubHistory;
+				try (GitHubFetcherQL fetcher = GitHubFetcherQL.using(GitHubToken.getRealInstance())) {
+					gitHubHistory = fetcher.getReversedGitHubHistory(coordinates);
+				}
+				if (!gitHubHistory.getPatchedPushCommits().nodes().isEmpty()) {
+					LOGGER.warn("Patched: {}.", gitHubHistory.getPatchedPushCommits());
+				}
+				pushHistory = gitHubHistory.getConsistentPushHistory();
+				verify(pushHistory.getGraph().equals(Utils.asImmutableGraph(gitFs.getCommitsGraph(),
+						IO_UNCHECKER.wrapFunction(r -> r.getCommit().getId()))));
+				LOGGER.debug("Push history: {}.", pushHistory);
+			}
 
-		final GitHistory pushHistory;
-		{
-			final GitHubHistory gitHubHistory;
-			try (GitHubFetcherQL fetcher = GitHubFetcherQL.using(GitHubToken.getRealInstance())) {
-				gitHubHistory = fetcher.getReversedGitHubHistory(coordinates);
-			}
-			if (!gitHubHistory.getPatchedPushCommits().nodes().isEmpty()) {
-				LOGGER.warn("Patched: {}.", gitHubHistory.getPatchedPushCommits());
-			}
-			pushHistory = gitHubHistory.getConsistentPushHistory();
-			verify(pushHistory.getGraph().equals(Utils.asImmutableGraph(gitFs.getCommitsGraph(),
-					IO_UNCHECKER.wrapFunction(r -> r.getCommit().getId()))));
-			LOGGER.debug("Push history: {}.", pushHistory);
+			final GitFileSystemHistory history = GitFileSystemHistory.create(gitFs, pushHistory);
+
+			return grade(history, deadline, coordinates.getUsername(), grader);
 		}
-
-		final GitFileSystemHistory history = GitFileSystemHistory.create(gitFs, pushHistory);
-
-		return grade(history, deadline, coordinates.getUsername(), grader);
 	}
 
 	public static IGrade grade(GitFileSystemHistory history, ZonedDateTime deadline, String username, GitGrader grader)

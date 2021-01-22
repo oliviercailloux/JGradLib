@@ -21,7 +21,7 @@ import com.google.common.collect.ImmutableMap;
  * known by the user of the grade at display time. It relates to display and not
  * to grade information per se.
  *
- * @author Olivier Cailloux
+ * TODO get rid of default methods.
  *
  */
 public interface IGrade {

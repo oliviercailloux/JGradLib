@@ -13,6 +13,7 @@ import java.util.Map;
 
 import org.eclipse.jgit.internal.storage.dfs.DfsRepositoryDescription;
 import org.eclipse.jgit.internal.storage.dfs.InMemoryRepository;
+import org.eclipse.jgit.lib.Constants;
 import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.lib.PersonIdent;
 import org.eclipse.jgit.lib.Repository;
@@ -38,6 +39,7 @@ import io.github.oliviercailloux.grade.GitFileSystemHistory;
 import io.github.oliviercailloux.grade.GitGeneralGrader;
 import io.github.oliviercailloux.grade.IGrade;
 import io.github.oliviercailloux.grade.format.json.JsonGrade;
+import io.github.oliviercailloux.utils.Utils;
 
 class CommitTests {
 	@SuppressWarnings("unused")
@@ -57,7 +59,7 @@ class CommitTests {
 			assertEquals(0d, grade.getPoints());
 
 			final IGrade direct = new Commit().grade(empty, "ploum");
-			LOGGER.info("Grade direct: {}.", JsonGrade.asJson(direct));
+			LOGGER.debug("Grade direct: {}.", JsonGrade.asJson(direct));
 			assertEquals(0d, direct.getPoints());
 		}
 
@@ -84,14 +86,16 @@ class CommitTests {
 				Files.writeString(Files.createDirectories(c3.resolve("sub/a/")).resolve("another file.txt"), "coucou");
 			}
 			{
-				Files.createSymbolicLink(links.resolve("coucou"), c1);
-				Files.createSymbolicLink(links.resolve("main"), c2);
-				Files.createSymbolicLink(links.resolve("dev"), c3);
+				final Path origin = Files.createDirectories(links.resolve(Constants.R_REMOTES + "origin/"));
+				Files.createSymbolicLink(origin.resolve("coucou"), c1);
+				Files.createSymbolicLink(origin.resolve("main"), c2);
+				Files.createSymbolicLink(origin.resolve("dev"), c3);
 			}
 
 			final PersonIdent personIdent = new PersonIdent("Me", "email");
 
-			try (Repository repository = JGit.createRepository(personIdent, ImmutableList.of(c1, c2, c3), links);
+			try (Repository repository = JGit.createRepository(personIdent, Utils.asGraph(ImmutableList.of(c1, c2, c3)),
+					links);
 					GitFileSystem gitFs = GitFileSystemProvider.getInstance().newFileSystemFromRepository(repository)) {
 				final GitHistory history = GitUtils.getHistory(gitFs);
 				final ImmutableGraph<ObjectId> graph = history.getGraph();
@@ -105,11 +109,11 @@ class CommitTests {
 
 				final IGrade direct = new Commit().grade(withTimes, "Not me");
 				LOGGER.debug("Grade direct: {}.", JsonGrade.asJson(direct));
-				assertEquals(0.45d, direct.getPoints(), 1e-5);
+				assertEquals(0.85d, direct.getPoints(), 1e-5);
 
 				final IGrade grade = GitGeneralGrader.grade(withTimes, Commit.DEADLINE, "Not me", new Commit());
 				LOGGER.debug("Grade: {}.", JsonGrade.asJson(grade));
-				assertEquals(0.35d, grade.getPoints(), 1e-5d);
+				assertEquals(0.65d, grade.getPoints(), 1e-5d);
 			}
 		}
 
@@ -136,14 +140,16 @@ class CommitTests {
 				Files.writeString(Files.createDirectories(c3.resolve("sub/a/")).resolve("another file.txt"), "coucou");
 			}
 			{
-				Files.createSymbolicLink(links.resolve("coucou"), c1);
-				Files.createSymbolicLink(links.resolve("main"), c2);
-				Files.createSymbolicLink(links.resolve("dev"), c3);
+				final Path origin = Files.createDirectories(links.resolve(Constants.R_REMOTES + "origin/"));
+				Files.createSymbolicLink(origin.resolve("coucou"), c1);
+				Files.createSymbolicLink(origin.resolve("main"), c2);
+				Files.createSymbolicLink(origin.resolve("dev"), c3);
 			}
 
 			final PersonIdent personIdent = new PersonIdent("Me", "email");
 
-			try (Repository repository = JGit.createRepository(personIdent, ImmutableList.of(c1, c2, c3), links)) {
+			try (Repository repository = JGit.createRepository(personIdent, Utils.asGraph(ImmutableList.of(c1, c2, c3)),
+					links)) {
 				try (GitFileSystem gitFs = GitFileSystemProvider.getInstance()
 						.newFileSystemFromRepository(repository)) {
 					final ImmutableGraph<ObjectId> graph = GitUtils.getHistory(gitFs).getGraph();
@@ -154,15 +160,11 @@ class CommitTests {
 
 					final IGrade grade = GitGeneralGrader.grade(withConstantTimes, Commit.DEADLINE, "Me", new Commit());
 					LOGGER.debug("Grade: {}.", JsonGrade.asJson(grade));
-					/**
-					 * TODO make it so that we can work around the problem that my branches are
-					 * local, whereas the correction looks for remote branches.
-					 */
-					assertEquals(0.6d, grade.getPoints());
+					assertEquals(1.0d, grade.getPoints());
 
 					final IGrade direct = new Commit().grade(withConstantTimes, "Me");
 					LOGGER.debug("Grade direct: {}.", JsonGrade.asJson(direct));
-					assertEquals(0.6d, direct.getPoints());
+					assertEquals(1.0d, direct.getPoints());
 				}
 			}
 		}

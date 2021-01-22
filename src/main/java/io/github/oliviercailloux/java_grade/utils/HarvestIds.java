@@ -38,7 +38,7 @@ public class HarvestIds {
 	private static final Logger LOGGER = LoggerFactory.getLogger(HarvestIds.class);
 
 	public static Optional<Integer> getId(GitFileSystem fs) throws IOException {
-		final Pattern digitPattern = Marks.extend("\\d+");
+		final Pattern digitPattern = Marks.extendWhite("\\d+");
 		final ImmutableSet.Builder<Integer> builder = ImmutableSet.builder();
 		for (Path root : fs.getRootDirectories()) {
 			final Path path = root.resolve("myid.txt");

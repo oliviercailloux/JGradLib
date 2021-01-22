@@ -16,7 +16,13 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
+import org.eclipse.jgit.api.Git;
+import org.eclipse.jgit.api.errors.GitAPIException;
+import org.eclipse.jgit.diff.DiffEntry;
 import org.eclipse.jgit.lib.ObjectId;
+import org.eclipse.jgit.lib.ObjectReader;
+import org.eclipse.jgit.lib.Repository;
+import org.eclipse.jgit.treewalk.CanonicalTreeParser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -25,6 +31,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.graph.ImmutableGraph;
 
 import io.github.oliviercailloux.git.GitHistory;
+import io.github.oliviercailloux.git.fs.GitFileFileSystem;
 import io.github.oliviercailloux.git.fs.GitFileSystem;
 import io.github.oliviercailloux.git.fs.GitPath;
 import io.github.oliviercailloux.git.fs.GitPathRoot;
@@ -225,9 +232,9 @@ public class GitFileSystemHistory {
 		return Mark.binary(match);
 	}
 
-	public Optional<GitPathRoot> getCommitMaximizing(Throwing.Function<GitPathRoot, Integer, IOException> scorer)
-			throws IOException {
-		final Function<GitPathRoot, Integer> wrappedScorer = IO_UNCHECKER.wrapFunction(scorer);
+	public <FO extends Comparable<FO>> Optional<GitPathRoot> getCommitMaximizing(
+			Throwing.Function<GitPathRoot, FO, IOException> scorer) throws IOException {
+		final Function<GitPathRoot, FO> wrappedScorer = IO_UNCHECKER.wrapFunction(scorer);
 		try {
 			return getGraph().nodes().stream().max(Comparator.comparing(wrappedScorer));
 		} catch (UncheckedIOException exc) {
@@ -294,6 +301,25 @@ public class GitFileSystemHistory {
 	@Override
 	public String toString() {
 		return MoreObjects.toStringHelper(this).add("GitFs", gitFs).add("History", history).toString();
+	}
+
+	public ImmutableSet<DiffEntry> getDiff(GitPathRoot oldId, GitPathRoot newId) throws IOException {
+		@SuppressWarnings("deprecation")
+		final Repository repository = ((GitFileFileSystem) gitFs).getRepository();
+
+		try (ObjectReader reader = repository.newObjectReader()) {
+			CanonicalTreeParser oldTreeIter = new CanonicalTreeParser();
+			oldTreeIter.reset(reader, oldId.getCommit().getId());
+			CanonicalTreeParser newTreeIter = new CanonicalTreeParser();
+			newTreeIter.reset(reader, newId.getCommit().getId());
+
+			try (Git git = new Git(repository)) {
+				return ImmutableSet.copyOf(git.diff().setNewTree(newTreeIter).setOldTree(oldTreeIter).call());
+			} catch (GitAPIException e) {
+				throw new IllegalStateException(e);
+			}
+		}
+
 	}
 
 }

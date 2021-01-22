@@ -6,6 +6,7 @@ import java.net.URI;
 import java.nio.file.Path;
 
 import org.eclipse.jgit.internal.storage.file.FileRepository;
+import org.eclipse.jgit.lib.Repository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,6 +40,13 @@ public class GitFileFileSystem extends GitFileSystem {
 		LOGGER.debug("Creating file system given {}, {}, {}.", gitProvider, repository, shouldCloseRepository);
 		checkNotNull(repository.getDirectory());
 		this.repository = repository;
+	}
+
+	/**
+	 * @deprecated Temporary workaround.
+	 */
+	public Repository getRepository() {
+		return repository;
 	}
 
 	/**

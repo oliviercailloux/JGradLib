@@ -147,8 +147,14 @@ public class Marks {
 						0.1d)));
 	}
 
-	public static Pattern extend(String basis) {
-		return Pattern.compile("[\\h\\v]*\"?(?<basis>" + basis + ")\"?[\\h\\v]*", Pattern.CASE_INSENSITIVE);
+	public static Pattern extendWhite(String basis) {
+		return Pattern.compile("[\\h\\v]*\"?(?<basis>" + basis + ")\"?[\\h\\v]*",
+				Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CHARACTER_CLASS);
+	}
+
+	public static Pattern extendAll(String basis) {
+		return Pattern.compile(".*(?<basis>" + basis + ").*",
+				Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CHARACTER_CLASS | Pattern.DOTALL);
 	}
 
 }

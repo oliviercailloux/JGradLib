@@ -1,6 +1,7 @@
 package io.github.oliviercailloux.git;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.base.Verify.verify;
 import static io.github.oliviercailloux.jaris.exceptions.Unchecker.IO_UNCHECKER;
 
@@ -12,10 +13,9 @@ import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Stream;
 
-import org.eclipse.jgit.api.Git;
-import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.internal.storage.dfs.DfsRepositoryDescription;
 import org.eclipse.jgit.internal.storage.dfs.InMemoryRepository;
 import org.eclipse.jgit.lib.CommitBuilder;
@@ -33,44 +33,62 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Verify;
+import com.google.common.collect.BiMap;
+import com.google.common.collect.HashBiMap;
+import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterators;
-import com.google.common.collect.PeekingIterator;
+import com.google.common.graph.Graph;
+import com.google.common.graph.Graphs;
 import com.google.common.jimfs.Configuration;
 import com.google.common.jimfs.Jimfs;
+
+import io.github.oliviercailloux.utils.Utils;
 
 public class JGit {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(JGit.class);
 
-	public static InMemoryRepository createRepository(PersonIdent personIdent, List<Path> baseDirs, Path links)
-			throws IOException, GitAPIException {
+	public static InMemoryRepository createRepository(PersonIdent personIdent, Graph<Path> baseDirs, Path links)
+			throws IOException {
+		checkArgument(!Graphs.hasCycle(baseDirs));
+		final ImmutableSet<Path> starters = baseDirs.nodes().stream().filter(p -> baseDirs.predecessors(p).size() == 0)
+				.collect(ImmutableSet.toImmutableSet());
+		LOGGER.debug("Visiting from {}.", starters);
+		final Iterable<Path> sources = Utils.topologicallySortedNodes(baseDirs);
+
 		final InMemoryRepository repository = new InMemoryRepository(new DfsRepositoryDescription("myrepo"));
 //		IO_UNCHECKER.call(() -> repository.create(true));
 		final ObjectDatabase objectDatabase = repository.getObjectDatabase();
 
-		final ImmutableMap.Builder<Path, ObjectId> commitsBuilder = ImmutableMap.builder();
+		final BiMap<Path, ObjectId> commitsBuilder = HashBiMap.create(baseDirs.nodes().size());
 		try (ObjectInserter inserter = objectDatabase.newInserter()) {
-			final PeekingIterator<Path> iterator = Iterators.peekingIterator(baseDirs.iterator());
-			ObjectId previous = null;
-			while (iterator.hasNext()) {
-				final Path baseDir = iterator.next();
-				final ImmutableList<ObjectId> parents = previous == null ? ImmutableList.of()
-						: ImmutableList.of(previous);
-				final ObjectId oId = insertCommit(inserter, personIdent, baseDir, parents, "First commit");
-				commitsBuilder.put(baseDir, oId);
-				previous = oId;
+			for (Path source : sources) {
+				LOGGER.debug("Visiting {}.", source);
+				final Set<Path> parentPaths = baseDirs.predecessors(source);
+				final ImmutableList<ObjectId> parents = parentPaths.stream().map(p -> commitsBuilder.get(p))
+						.collect(ImmutableSet.toImmutableSet()).asList();
+				final ObjectId oId = insertCommit(inserter, personIdent, source, parents, "First commit");
+				commitsBuilder.put(source, oId);
 			}
 		}
-		final ImmutableMap<Path, ObjectId> commits = commitsBuilder.build();
+		final ImmutableBiMap<Path, ObjectId> commits = ImmutableBiMap.copyOf(commitsBuilder);
 
-		for (Path link : Files.list(links).collect(ImmutableSet.toImmutableSet())) {
-			final Path target = Files.readSymbolicLink(link);
-			Git.wrap(repository).branchCreate().setName(link.getFileName().toString())
-					.setStartPoint(commits.get(target).getName()).call();
+		for (Path link : Files.find(links, 10, (p, a) -> true).filter(p -> !Files.isDirectory(p))
+				.collect(ImmutableSet.toImmutableSet())) {
+			final Path targetPath = Files.readSymbolicLink(link);
+			final ObjectId targetId = commits.get(targetPath);
+			final Path relativeLinkName = links.relativize(link);
+			LOGGER.debug("Linking {} to {}.", relativeLinkName, targetPath);
+			final RefUpdate update = repository.getRefDatabase().newUpdate(relativeLinkName.toString(), false);
+			update.setNewObjectId(targetId);
+			update.setExpectedOldObjectId(ObjectId.zeroId());
+			final Result result = update.update();
+			checkState(result.equals(Result.NEW));
+//			Git.wrap(repository).branchCreate().setName("origin/" + link.getFileName().toString())
+//					.setStartPoint(targetId.getName()).call();
 		}
+		objectDatabase.close();
 
 		return repository;
 	}
@@ -226,7 +244,7 @@ public class JGit {
 		}
 		final ObjectId commitId = inserter.insert(commitBuilder);
 		inserter.flush();
-		LOGGER.info("Created commit: {}.", commitId);
+		LOGGER.debug("Created commit: {}.", commitId);
 		return commitId;
 	}
 

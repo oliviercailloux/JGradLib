@@ -17,6 +17,7 @@ import org.w3c.dom.Document;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Sets;
 
 import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
@@ -40,7 +41,7 @@ public class Summarize {
 	private static final Path READ_DIR = Paths.get("");
 
 	public static void main(String[] args) throws Exception {
-		summarize("commit", Paths.get(""), true);
+		summarize("git-branching", Paths.get(""), true);
 	}
 
 	public static void summarize(String prefix, Path outDir, boolean ignoreZeroWeights) throws IOException {
@@ -60,11 +61,17 @@ public class Summarize {
 		} else {
 			transformed = ImmutableMap.copyOf(grades);
 		}
-
+		final ImmutableSet<GitHubUsername> gradesUsernames = transformed.keySet().stream().map(GitHubUsername::given)
+				.collect(ImmutableSet.toImmutableSet());
 		LOGGER.debug("Reading usernames.");
 		final JsonStudentsReader students = JsonStudentsReader
 				.from(Files.readString(READ_DIR.resolve("usernames.json")));
 		final ImmutableMap<GitHubUsername, StudentOnGitHub> usernames = students.getStudentsByGitHubUsername();
+		final ImmutableSet<GitHubUsername> missing = Sets.difference(gradesUsernames, usernames.keySet())
+				.immutableCopy();
+		if (!missing.isEmpty()) {
+			LOGGER.warn("Missing: {}.", missing);
+		}
 //
 		final ImmutableMap<StudentOnGitHub, IGrade> byStudent = transformed.entrySet().stream().collect(
 				ImmutableMap.toImmutableMap(e -> usernames.get(GitHubUsername.given(e.getKey())), Map.Entry::getValue));
