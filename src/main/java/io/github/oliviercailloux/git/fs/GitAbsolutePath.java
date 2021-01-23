@@ -229,15 +229,16 @@ abstract class GitAbsolutePath extends GitPath {
 
 	BasicFileAttributes readAttributes(Set<LinkOption> optionsSet) throws NoSuchFileException, IOException {
 		final boolean followLinks = !optionsSet.contains(LinkOption.NOFOLLOW_LINKS);
+		LOGGER.debug("Reading attributes of {}.", toString());
 		final GitObject gitObject = getGitObject(
 				followLinks ? FollowLinksBehavior.FOLLOW_ALL_LINKS : FollowLinksBehavior.DO_NOT_FOLLOW_LINKS);
 
-		LOGGER.debug("Reading attributes of {}.", toString());
 		final GitBasicFileAttributes gitBasicFileAttributes = new GitBasicFileAttributes(gitObject,
 				getFileSystem().getSize(gitObject));
 		if (followLinks) {
 			verify(!gitBasicFileAttributes.isSymbolicLink());
 		}
+		LOGGER.debug("Read attributes.");
 		return gitBasicFileAttributes;
 	}
 

@@ -8,10 +8,16 @@ import javax.json.bind.annotation.JsonbCreator;
 import javax.json.bind.annotation.JsonbProperty;
 import javax.json.bind.annotation.JsonbPropertyOrder;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.common.base.MoreObjects;
 
 @JsonbPropertyOrder({ "criterion", "grade", "weight" })
 public class CriterionGradeWeight {
+	@SuppressWarnings("unused")
+	private static final Logger LOGGER = LoggerFactory.getLogger(CriterionGradeWeight.class);
+
 	@JsonbCreator
 	public static CriterionGradeWeight from(@JsonbProperty("criterion") Criterion criterion,
 			@JsonbProperty("grade") IGrade grade, @JsonbProperty("weight") double weight) {
@@ -26,6 +32,7 @@ public class CriterionGradeWeight {
 		this.criterion = checkNotNull(criterion);
 		this.grade = checkNotNull(grade, criterion);
 		this.weight = checkNotNull(weight, criterion);
+		LOGGER.debug("Built {}, {}, {}.", criterion, grade, weight);
 	}
 
 	public Criterion getCriterion() {

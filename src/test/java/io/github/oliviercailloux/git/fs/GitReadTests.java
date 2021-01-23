@@ -15,14 +15,18 @@ import java.nio.file.NoSuchFileException;
 import java.nio.file.NotDirectoryException;
 import java.nio.file.NotLinkException;
 import java.nio.file.Path;
+import java.util.stream.Stream;
 
 import org.eclipse.jgit.internal.storage.dfs.DfsRepository;
 import org.eclipse.jgit.internal.storage.dfs.DfsRepositoryDescription;
 import org.eclipse.jgit.internal.storage.dfs.InMemoryRepository;
 import org.eclipse.jgit.internal.storage.file.FileRepository;
 import org.eclipse.jgit.lib.ObjectId;
+import org.eclipse.jgit.lib.ObjectReader;
 import org.eclipse.jgit.lib.Repository;
+import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.revwalk.RevTree;
+import org.eclipse.jgit.revwalk.RevWalk;
 import org.eclipse.jgit.treewalk.TreeWalk;
 import org.eclipse.jgit.treewalk.filter.PathFilter;
 import org.junit.jupiter.api.Test;
@@ -32,8 +36,11 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.PeekingIterator;
 
+import io.github.oliviercailloux.git.GitCloner;
 import io.github.oliviercailloux.git.JGit;
+import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.utils.Utils;
 
 /**
@@ -422,6 +429,63 @@ public class GitReadTests {
 						ImmutableSet.copyOf(gitFs.getRelativePath().toAbsolutePath().newDirectoryStream(p -> true)));
 				assertEquals(subEntriesAbsolute,
 						Files.list(gitFs.getRelativePath().toAbsolutePath()).collect(ImmutableSet.toImmutableSet()));
+			}
+		}
+	}
+
+	@Test
+	void testSlow() throws Exception {
+		final String searched = "QuestioningConstraint.java";
+
+		try (FileRepository repository = GitCloner.create().setCheckCommonRefsAgree(false).download(
+				RepositoryCoordinates.from("oliviercailloux-org", "minimax-ex").asGitUri(),
+				Utils.getTempDirectory().resolve("minimax-ex"));
+				GitFileSystem gitFs = GitFileSystemProvider.getInstance().newFileSystemFromRepository(repository)) {
+
+			final GitPathRoot master = gitFs.getPathRoot("/refs/remotes/origin/master/");
+			final ObjectId id = master.getCommit().getId();
+
+			LOGGER.info("Searching for file directly.");
+			try (ObjectReader reader = repository.newObjectReader();
+					RevWalk walker = new RevWalk(reader);
+					TreeWalk treeWalk = new TreeWalk(reader);) {
+				final RevCommit commit = walker.parseCommit(id);
+				final RevTree commitTree = commit.getTree();
+				treeWalk.addTree(commitTree);
+				treeWalk.setRecursive(true);
+				while (treeWalk.next()) {
+					if (treeWalk.getNameString().equals(searched)) {
+						LOGGER.info("Found: {}.", treeWalk.getPathString());
+					}
+				}
+//				return new TreeWalkDirectoryStream(treeWalk);
+			}
+			LOGGER.info("Searched everywhere.");
+
+			LOGGER.info("Searching for file indirectly.");
+			try (ObjectReader reader = repository.newObjectReader();
+					RevWalk walker = new RevWalk(reader);
+					TreeWalk treeWalk = new TreeWalk(reader);) {
+				final RevCommit commit = walker.parseCommit(id);
+				final RevTree commitTree = commit.getTree();
+				treeWalk.addTree(commitTree);
+				treeWalk.setRecursive(false);
+				final PeekingIterator<String> iterator = new GitFileSystem.TreeWalkDirectoryStream(treeWalk).iterator();
+				while (iterator.hasNext()) {
+					iterator.next();
+				}
+			}
+			LOGGER.info("Searched everywhere.");
+
+			{
+				final ImmutableSet<Path> paths;
+				LOGGER.info("Searching for file through gitFs.");
+				try (Stream<Path> found = Files.find(master, 100,
+						(p, a) -> p.getFileName() != null && p.getFileName().toString().equals(searched))) {
+					paths = found.collect(ImmutableSet.toImmutableSet());
+				}
+				LOGGER.info("Found: {}.", paths);
+				assertEquals(1, paths.size());
 			}
 		}
 	}

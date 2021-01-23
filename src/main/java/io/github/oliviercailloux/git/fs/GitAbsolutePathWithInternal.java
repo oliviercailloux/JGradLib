@@ -77,6 +77,7 @@ class GitAbsolutePathWithInternal extends GitAbsolutePath {
 	@Override
 	GitObject getGitObject(FollowLinksBehavior behavior)
 			throws NoSuchFileException, PathCouldNotBeFoundException, IOException {
+		LOGGER.debug("Getting git object of {} with behavior {}.", toString(), behavior);
 		final Path relative = GitFileSystem.JIM_FS_SLASH.relativize(getInternalPath());
 		final RevTree tree = getRoot().getRevTree();
 		LOGGER.debug("Searching for {} in {}.", relative, tree);
@@ -86,17 +87,21 @@ class GitAbsolutePathWithInternal extends GitAbsolutePath {
 		} catch (@SuppressWarnings("unused") NoContextNoSuchFileException e) {
 			throw new NoSuchFileException(toString(), null, e.getMessage());
 		}
+		LOGGER.debug("Found object {}.", gitObject);
 		return gitObject;
 	}
 
 	@Override
 	RevTree getRevTree(boolean followLinks) throws NoSuchFileException, NotDirectoryException, IOException {
+		LOGGER.debug("Getting tree of {} following links? {}.", toString(), followLinks);
 		final GitObject obj = getGitObject(
 				followLinks ? FollowLinksBehavior.FOLLOW_ALL_LINKS : FollowLinksBehavior.DO_NOT_FOLLOW_LINKS);
 
 		if (!obj.getFileMode().equals(FileMode.TYPE_TREE)) {
 			throw new NotDirectoryException(toString());
 		}
-		return getFileSystem().getRevTree(obj.getObjectId());
+		final RevTree tree = getFileSystem().getRevTree(obj.getObjectId());
+		LOGGER.debug("Found tree.", tree);
+		return tree;
 	}
 }

@@ -22,6 +22,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 
+import io.github.oliviercailloux.git.fs.GitPath;
 import io.github.oliviercailloux.git.fs.GitPathRoot;
 import io.github.oliviercailloux.grade.Criterion;
 import io.github.oliviercailloux.grade.CriterionGradeWeight;
@@ -32,6 +33,8 @@ import io.github.oliviercailloux.grade.IGrade;
 import io.github.oliviercailloux.grade.Mark;
 import io.github.oliviercailloux.grade.WeightingGrade;
 import io.github.oliviercailloux.grade.markers.Marks;
+import io.github.oliviercailloux.jaris.exceptions.Throwing.Function;
+import io.github.oliviercailloux.jaris.exceptions.Throwing.Predicate;
 
 // /minimax-ex/src/main/java/io/github/oliviercailloux/minimax/utils/ForwardingMutableGraph.java for unused import statement
 public class Eclipse implements GitGrader {
@@ -76,8 +79,11 @@ public class Eclipse implements GitGrader {
 	}
 
 	private IGrade compileGrade(Optional<GitPathRoot> p) throws IOException {
+		LOGGER.info("Computing compile.");
+		final boolean compiles = compiles(p.get());
+		LOGGER.info("Computed compile.");
 		final CriterionGradeWeight c1 = CriterionGradeWeight.from(Criterion.given("Compile"),
-				Mark.binary(p.isPresent() && compiles(p.get())), 7d);
+				Mark.binary(p.isPresent() && compiles), 7d);
 		final CriterionGradeWeight c2 = CriterionGradeWeight.from(Criterion.given("Single change"),
 				Mark.binary(p.isPresent() && singleChangeAbout(p.get(), "QuestioningConstraint.java")), 3d);
 		return WeightingGrade.from(ImmutableList.of(c1, c2));
@@ -85,9 +91,17 @@ public class Eclipse implements GitGrader {
 	}
 
 	private boolean compiles(GitPathRoot p) throws IOException {
-		return compose(Functions.filesMatching(isFileNamed("QuestioningConstraint.java")),
-				Predicates.singletonAndMatch(contentMatches(Marks.extendAll("[\\v\\h]+return[\\v\\h]+kind[\\v\\h]+;"))))
-						.test(p);
+		LOGGER.info("Files matching.");
+		final Function<GitPathRoot, ImmutableSet<GitPath>, IOException> filesMatching = Functions
+				.filesMatching(isFileNamed("QuestioningConstraint.java"));
+		final ImmutableSet<GitPath> matching = filesMatching.apply(p);
+		LOGGER.info("Files matching found.");
+		final Predicate<ImmutableSet<GitPath>, IOException> singletonAndMatch = Predicates
+				.singletonAndMatch(contentMatches(Marks.extendAll("[\\v\\h]+return[\\v\\h]+kind[\\v\\h]+;")));
+		final boolean tested = singletonAndMatch.test(matching);
+		LOGGER.info("Predicate known.");
+		return tested;
+//		return compose(filesMatching, singletonAndMatch).test(p);
 	}
 
 	private boolean singleChangeAbout(GitPathRoot p, String file) throws IOException {

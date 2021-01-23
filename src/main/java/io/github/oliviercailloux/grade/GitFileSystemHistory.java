@@ -10,6 +10,7 @@ import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.time.Instant;
 import java.util.Comparator;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
@@ -22,6 +23,8 @@ import org.eclipse.jgit.diff.DiffEntry;
 import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.lib.ObjectReader;
 import org.eclipse.jgit.lib.Repository;
+import org.eclipse.jgit.revwalk.RevCommit;
+import org.eclipse.jgit.revwalk.RevWalk;
 import org.eclipse.jgit.treewalk.CanonicalTreeParser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -319,17 +322,25 @@ public class GitFileSystemHistory {
 
 		try (ObjectReader reader = repository.newObjectReader()) {
 			CanonicalTreeParser oldTreeIter = new CanonicalTreeParser();
-			oldTreeIter.reset(reader, oldId.getCommit().getId());
+			oldTreeIter.reset(reader, getTreeId(oldId.getCommit().getId(), reader));
 			CanonicalTreeParser newTreeIter = new CanonicalTreeParser();
-			newTreeIter.reset(reader, newId.getCommit().getId());
+			newTreeIter.reset(reader, getTreeId(newId.getCommit().getId(), reader));
 
 			try (Git git = new Git(repository)) {
-				return ImmutableSet.copyOf(git.diff().setNewTree(newTreeIter).setOldTree(oldTreeIter).call());
+				final List<DiffEntry> diff = git.diff().setNewTree(newTreeIter).setOldTree(oldTreeIter).call();
+				return ImmutableSet.copyOf(diff);
 			} catch (GitAPIException e) {
 				throw new IllegalStateException(e);
 			}
 		}
+	}
 
+	private ObjectId getTreeId(ObjectId commitId, ObjectReader reader) throws IOException {
+		final RevCommit revCommit;
+		try (RevWalk walk = new RevWalk(reader)) {
+			revCommit = walk.parseCommit(commitId);
+		}
+		return revCommit.getTree().getId();
 	}
 
 }

@@ -97,6 +97,8 @@ public class GitGeneralGrader {
 
 	public static IGrade grade(GitFileSystemHistory history, ZonedDateTime deadline, String username, GitGrader grader)
 			throws IOException {
+		final boolean suppressMine = true;
+
 		final ZonedDateTime tooLate = deadline.plus(Duration.ofMinutes(5));
 		final ImmutableSortedSet<Instant> toConsider;
 		{
@@ -126,8 +128,11 @@ public class GitGeneralGrader {
 
 		final ImmutableMap.Builder<Instant, IGrade> byTimeBuilder = ImmutableMap.builder();
 		for (Instant timeCap : adjustedConsider) {
-			final GitFileSystemHistory filteredHistory = history
-					.filter(r -> !history.getCommitDate(r).isAfter(timeCap) && !JavaMarkHelper.committerIsGitHub(r));
+			final GitFileSystemHistory manual = history.filter(r -> !JavaMarkHelper.committerIsGitHub(r));
+			final GitFileSystemHistory onTimeAndManual = manual.filter(r -> !history.getCommitDate(r).isAfter(timeCap));
+			final GitFileSystemHistory filteredHistory = suppressMine
+					? onTimeAndManual.filter(r -> !r.getCommit().getAuthorName().equals("Olivier Cailloux"))
+					: onTimeAndManual;
 			final IGrade grade = grader.grade(filteredHistory, username);
 
 			final IGrade penalizedGrade;

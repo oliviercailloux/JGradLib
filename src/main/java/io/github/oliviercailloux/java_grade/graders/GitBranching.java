@@ -35,12 +35,6 @@ import io.github.oliviercailloux.grade.markers.Marks;
 import io.github.oliviercailloux.jaris.exceptions.Throwing;
 import io.github.oliviercailloux.jaris.exceptions.Throwing.Predicate;
 
-/**
- * 95dc71b131e08e5870c7e94d21b6adc752205c6c = Start, for Jaris. // git checkout
- * 17874593e8492177f525c57cc24f925beab7f9c9 --
- * src/main/java/io/github/oliviercailloux/java_grade/ex/GitBrGrader.java
- *
- */
 public class GitBranching implements GitGrader {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(GitBranching.class);
@@ -158,11 +152,10 @@ public class GitBranching implements GitGrader {
 					WeightingGrader
 							.getGrader(ImmutableList.of(graderContentFirstApprox, graderContentFirstExact))::getGrade,
 					1d);
-			final CriterionGraderWeight<GitPathRoot> graderContent = CriterionGraderWeight
-					.given(Criterion.given("content"),
-							WeightingGrader
-									.getGrader(ImmutableList.of(graderContentSomeFile, graderContentFirst))::getGrade,
-							2d);
+			final CriterionGraderWeight<GitPathRoot> graderContent = CriterionGraderWeight.given(
+					Criterion.given("content"),
+					WeightingGrader.getGrader(ImmutableList.of(graderContentSomeFile, graderContentFirst))::getGrade,
+					2d);
 
 			final Throwing.Function<Optional<GitPathRoot>, IGrade, IOException> grader = WeightingGrader
 					.getGrader(ImmutableList.of(graderTopo, graderBr3, graderContent))::getGrade;
