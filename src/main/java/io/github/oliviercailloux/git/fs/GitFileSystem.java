@@ -130,11 +130,11 @@ public abstract class GitFileSystem extends FileSystem {
 
 	}
 
-	static class TreeWalkIterator implements PeekingIterator<String> {
+	static class TreeWalkIterator implements PeekingIterator<GitObject> {
 		private final TreeWalk walk;
 		private Boolean hasNext = null;
 
-		private String next;
+		private GitObject next;
 
 		public TreeWalkIterator(TreeWalk walk) {
 			this.walk = checkNotNull(walk);
@@ -156,7 +156,12 @@ public abstract class GitFileSystem extends FileSystem {
 			}
 
 			if (hasNext) {
-				next = walk.getNameString();
+				final String path = walk.getPathString();
+				verify(!path.startsWith("/;"));
+				final Path jimPath = GitFileSystem.JIM_FS.getPath("/" + path);
+				final ObjectId objectId = walk.getObjectId(0);
+				final FileMode fileMode = walk.getFileMode();
+				next = GitObject.given(jimPath, objectId, fileMode);
 			} else {
 				next = null;
 			}
@@ -165,7 +170,7 @@ public abstract class GitFileSystem extends FileSystem {
 		}
 
 		@Override
-		public String peek() throws DirectoryIteratorException {
+		public GitObject peek() throws DirectoryIteratorException {
 			if (!hasNext()) {
 				throw new NoSuchElementException();
 			}
@@ -173,8 +178,8 @@ public abstract class GitFileSystem extends FileSystem {
 		}
 
 		@Override
-		public String next() throws DirectoryIteratorException {
-			final String current = peek();
+		public GitObject next() throws DirectoryIteratorException {
+			final GitObject current = peek();
 			hasNext = null;
 			next = null;
 			return current;
@@ -192,7 +197,7 @@ public abstract class GitFileSystem extends FileSystem {
 
 	}
 
-	static class TreeWalkDirectoryStream implements DirectoryStream<String> {
+	static class TreeWalkDirectoryStream implements DirectoryStream<GitObject> {
 		private final TreeWalkIterator iterator;
 		private boolean returned;
 		private boolean closed;
@@ -235,7 +240,7 @@ public abstract class GitFileSystem extends FileSystem {
 		 * DirectoryIteratorException.
 		 */
 		@Override
-		public PeekingIterator<String> iterator() {
+		public PeekingIterator<GitObject> iterator() {
 			if (returned || closed) {
 				throw new IllegalStateException();
 			}

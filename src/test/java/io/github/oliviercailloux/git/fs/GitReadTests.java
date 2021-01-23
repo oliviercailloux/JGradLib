@@ -40,6 +40,7 @@ import com.google.common.collect.PeekingIterator;
 
 import io.github.oliviercailloux.git.GitCloner;
 import io.github.oliviercailloux.git.JGit;
+import io.github.oliviercailloux.git.fs.GitFileSystem.GitObject;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.utils.Utils;
 
@@ -470,7 +471,8 @@ public class GitReadTests {
 				final RevTree commitTree = commit.getTree();
 				treeWalk.addTree(commitTree);
 				treeWalk.setRecursive(false);
-				final PeekingIterator<String> iterator = new GitFileSystem.TreeWalkDirectoryStream(treeWalk).iterator();
+				final PeekingIterator<GitObject> iterator = new GitFileSystem.TreeWalkDirectoryStream(treeWalk)
+						.iterator();
 				while (iterator.hasNext()) {
 					iterator.next();
 				}

@@ -36,6 +36,24 @@ import io.github.oliviercailloux.utils.SeekableInMemoryByteChannel;
 abstract class GitAbsolutePath extends GitPath {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(GitAbsolutePath.class);
+	/**
+	 * A cache. This is good value for money (price is just a bit of memory): about
+	 * every operation on such file requires its git object (generally its object id
+	 * and sometimes its file mode as well), and retrieving it is costly as it
+	 * requires to navigate the whole path from tree to tree.
+	 *
+	 * For example, when listing files in a directory (using Files.find), the
+	 * algorithm navigates to a folder, gets a sub-folder, at which time the git
+	 * object corresponding to the sub-folder is known, but if not cached, when the
+	 * algorithm then asks for the file attributes, and then for the listing the
+	 * sub-directory, it has to navigate to it again, twice.
+	 *
+	 * Its path is the real path this object designates, following the links but the
+	 * last component. E.g. if this path is <i>a/b</i> and <i>a</i> is a link to
+	 * <i>c</i> and <i>b</i>, a link to <i>d</i>, the git object will have
+	 * <i>c/b</i> as a real path.
+	 */
+	protected GitObject cachedGitObject;
 
 	private static class DirectoryChannel implements SeekableByteChannel {
 		private boolean open;
@@ -182,6 +200,7 @@ abstract class GitAbsolutePath extends GitPath {
 	}
 
 	protected GitAbsolutePath() {
+		cachedGitObject = null;
 	}
 
 	@Override
@@ -255,5 +274,9 @@ abstract class GitAbsolutePath extends GitPath {
 			throw new AbsoluteLinkException(this, e.getTarget());
 		}
 		return GitRelativePath.relative(getFileSystem(), target);
+	}
+
+	void setGitObject(GitObject gitObject) {
+		cachedGitObject = checkNotNull(gitObject);
 	}
 }

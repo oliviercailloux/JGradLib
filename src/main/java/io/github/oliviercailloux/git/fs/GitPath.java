@@ -180,11 +180,11 @@ public abstract class GitPath implements Path {
 
 	private static final String QUERY_PARAMETER_INTERNAL_PATH = "internal-path";
 
-	private static class TransformedPeekingIterator implements PeekingIterator<GitPath> {
-		private PeekingIterator<String> delegate;
-		private final Function<String, GitPath> transform;
+	private static class TransformedPeekingIterator<I, O> implements PeekingIterator<O> {
+		private PeekingIterator<I> delegate;
+		private final Function<I, O> transform;
 
-		public TransformedPeekingIterator(PeekingIterator<String> delegate, Function<String, GitPath> transform) {
+		public TransformedPeekingIterator(PeekingIterator<I> delegate, Function<I, O> transform) {
 			this.delegate = checkNotNull(delegate);
 			this.transform = checkNotNull(transform);
 		}
@@ -195,12 +195,12 @@ public abstract class GitPath implements Path {
 		}
 
 		@Override
-		public GitPath peek() {
+		public O peek() {
 			return transform.apply(delegate.peek());
 		}
 
 		@Override
-		public GitPath next() {
+		public O next() {
 			return transform.apply(delegate.next());
 		}
 
@@ -814,9 +814,9 @@ public abstract class GitPath implements Path {
 			 */
 			@Override
 			public Iterator<GitPath> iterator() {
-				final PeekingIterator<String> namesIterator = directoryStream.iterator();
-				final TransformedPeekingIterator unfilteredPathIterator = new TransformedPeekingIterator(namesIterator,
-						s -> resolveRelativePath(s));
+				final PeekingIterator<GitObject> namesIterator = directoryStream.iterator();
+				final TransformedPeekingIterator<GitObject, GitPath> unfilteredPathIterator = new TransformedPeekingIterator<>(
+						namesIterator, GitPath.this::toNewEntry);
 				return new PathIterator(unfilteredPathIterator, filter);
 			}
 		};
@@ -828,6 +828,21 @@ public abstract class GitPath implements Path {
 		verify(!directoryEntry.isEmpty());
 		verify(!directoryEntry.startsWith("/"));
 		return resolve(directoryEntry);
+	}
+
+	/**
+	 * @param gitObject its path represents the real path of the entry: if this
+	 *                  instance is a link, the parameter has the target of this
+	 *                  link plus a file name.
+	 * @return the same kind (relative VS absolute) as this instance, representing
+	 *         an entry in this directory.
+	 */
+	GitPath toNewEntry(GitObject gitObject) {
+		final Path realPath = gitObject.getRealPath();
+		final Path newInternal = getInternalPath().resolve(realPath.getFileName());
+		final GitPath newPath = withPath(newInternal);
+		newPath.toAbsolutePathAsAbsolutePath().setGitObject(gitObject);
+		return newPath;
 	}
 
 }
