@@ -136,8 +136,6 @@ public abstract class GitFileSystem extends FileSystem {
 
 		private String next;
 
-		private Path treePath = null;
-
 		public TreeWalkIterator(TreeWalk walk) {
 			this.walk = checkNotNull(walk);
 			hasNext = null;
@@ -159,11 +157,6 @@ public abstract class GitFileSystem extends FileSystem {
 
 			if (hasNext) {
 				next = walk.getNameString();
-				if (treePath == null) {
-					final String returnedPath = walk.getPathString();
-					verify(!returnedPath.startsWith("/"));
-					treePath = GitFileSystem.JIM_FS.getPath("/" + returnedPath);
-				}
 			} else {
 				next = null;
 			}
