@@ -183,6 +183,7 @@ public class GitPathRoot extends GitAbsolutePath {
 	 * and it does not exist.
 	 */
 	Optional<RevCommit> tryGetRevCommit() throws IOException {
+		LOGGER.debug("Trying to get rev commit of {}.", toString());
 		final ObjectId possibleCommitId;
 		if (isRef()) {
 			final Optional<ObjectId> objectId = fileSystem.getObjectId(getGitRef());
@@ -195,7 +196,9 @@ public class GitPathRoot extends GitAbsolutePath {
 		}
 
 		try {
-			return Optional.of(fileSystem.getRevCommit(possibleCommitId));
+			final RevCommit revCommit = fileSystem.getRevCommit(possibleCommitId);
+			LOGGER.debug("Returning with rev commit.");
+			return Optional.of(revCommit);
 		} catch (IncorrectObjectTypeException e) {
 			LOGGER.info("Tried to access a non-commit as a commit: " + e + ".");
 			return Optional.empty();

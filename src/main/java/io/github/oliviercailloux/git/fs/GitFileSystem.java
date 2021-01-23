@@ -36,6 +36,7 @@ import java.util.stream.Stream;
 
 import org.eclipse.jgit.errors.IncorrectObjectTypeException;
 import org.eclipse.jgit.errors.MissingObjectException;
+import org.eclipse.jgit.lib.AnyObjectId;
 import org.eclipse.jgit.lib.Constants;
 import org.eclipse.jgit.lib.FileMode;
 import org.eclipse.jgit.lib.ObjectId;
@@ -243,8 +244,8 @@ public abstract class GitFileSystem extends FileSystem {
 		private final ObjectId objectId;
 		private final List<String> remainingNames;
 
-		public TreeVisit(ObjectId objectId, List<String> remainingNames) {
-			this.objectId = checkNotNull(objectId);
+		public TreeVisit(AnyObjectId objectId, List<String> remainingNames) {
+			this.objectId = objectId.copy();
 			this.remainingNames = checkNotNull(remainingNames);
 		}
 
@@ -285,7 +286,7 @@ public abstract class GitFileSystem extends FileSystem {
 		/**
 		 * @param realPath absolute jim fs path
 		 */
-		public static GitObject given(Path realPath, ObjectId objectId, FileMode fileMode) {
+		public static GitObject given(Path realPath, AnyObjectId objectId, FileMode fileMode) {
 			return new GitObject(realPath, objectId, fileMode);
 		}
 
@@ -293,9 +294,9 @@ public abstract class GitFileSystem extends FileSystem {
 		private final ObjectId objectId;
 		private final FileMode fileMode;
 
-		private GitObject(Path realPath, ObjectId objectId, FileMode fileMode) {
+		private GitObject(Path realPath, AnyObjectId objectId, FileMode fileMode) {
 			this.realPath = checkNotNull(realPath);
-			this.objectId = checkNotNull(objectId);
+			this.objectId = objectId.copy();
 			this.fileMode = checkNotNull(fileMode);
 		}
 
@@ -695,7 +696,7 @@ public abstract class GitFileSystem extends FileSystem {
 		return true;
 	}
 
-	byte[] getBytes(ObjectId objectId) throws IOException {
+	byte[] getBytes(AnyObjectId objectId) throws IOException {
 		if (!isOpen) {
 			throw new ClosedFileSystemException();
 		}
@@ -716,10 +717,14 @@ public abstract class GitFileSystem extends FileSystem {
 			throw new ClosedFileSystemException();
 		}
 
+		LOGGER.debug("Iterating over {}.", tree);
+
 		final TreeWalk treeWalk = new TreeWalk(reader);
 		treeWalk.addTree(tree);
 		treeWalk.setRecursive(false);
-		return new TreeWalkDirectoryStream(treeWalk);
+		final TreeWalkDirectoryStream dirStream = new TreeWalkDirectoryStream(treeWalk);
+		LOGGER.debug("Created stream.");
+		return dirStream;
 	}
 
 	@Override
@@ -737,11 +742,14 @@ public abstract class GitFileSystem extends FileSystem {
 			throw new ClosedFileSystemException();
 		}
 
+		LOGGER.debug("Retrieving size of {}.", gitObject);
 		final ObjectLoader fileLoader = reader.open(gitObject.getObjectId());
 		verify(fileLoader.getType() == gitObject.getFileMode().getObjectType(),
 				String.format("Expected file mode %s and object type %s but loaded object type %s",
 						gitObject.getFileMode(), gitObject.getFileMode().getObjectType(), fileLoader.getType()));
-		return fileLoader.getSize();
+		final long size = fileLoader.getSize();
+		LOGGER.debug("Got size: {}.", size);
+		return size;
 	}
 
 	@Override
@@ -826,7 +834,7 @@ public abstract class GitFileSystem extends FileSystem {
 					if (trees.isEmpty()) {
 						throw new NoContextNoSuchFileException("Attempt to move to parent of root.");
 					}
-					final ObjectId currentTree = trees.peek();
+					final AnyObjectId currentTree = trees.peek();
 					treeWalk.reset(currentTree);
 					LOGGER.debug("Moving current to the parent of {}.", currentPath);
 //					currentPath = currentPath.getNameCount() == 1 ? Path.of("") : currentPath.getParent();
@@ -916,7 +924,7 @@ public abstract class GitFileSystem extends FileSystem {
 	/**
 	 * @return a relative jim fs path
 	 */
-	Path getLinkTarget(ObjectId objectId) throws IOException, NoContextAbsoluteLinkException {
+	Path getLinkTarget(AnyObjectId objectId) throws IOException, NoContextAbsoluteLinkException {
 		final String linkContent = new String(getBytes(objectId), StandardCharsets.UTF_8);
 		final Path target = JIM_FS.getPath(linkContent);
 		if (target.isAbsolute()) {
