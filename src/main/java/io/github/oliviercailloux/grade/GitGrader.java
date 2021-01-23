@@ -12,6 +12,8 @@ import java.util.function.Predicate;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
 import com.google.common.primitives.Ints;
 
 import io.github.oliviercailloux.git.fs.GitPath;
@@ -52,6 +54,33 @@ public interface GitGrader {
 				Throwing.Function<GitPathRoot, FO, IOException> f, Throwing.Predicate<PI, IOException> p) {
 			return r -> p.test(f.apply(r));
 		}
+
+		public static <PI> Throwing.Predicate<ImmutableSet<PI>, IOException> anyMatch(
+				Throwing.Predicate<? super PI, IOException> p) {
+			return r -> {
+				try {
+					return r.stream().anyMatch(IO_UNCHECKER.wrapPredicate(p));
+				} catch (UncheckedIOException e) {
+					throw e.getCause();
+				}
+			};
+		}
+
+		public static <PI> Throwing.Predicate<ImmutableSet<PI>, IOException> allAndSomeMatch(
+				Throwing.Predicate<? super PI, IOException> p) {
+			return r -> {
+				try {
+					return !r.isEmpty() && r.stream().allMatch(IO_UNCHECKER.wrapPredicate(p));
+				} catch (UncheckedIOException e) {
+					throw e.getCause();
+				}
+			};
+		}
+
+		public static <PI> Throwing.Predicate<ImmutableSet<PI>, IOException> singletonAndMatch(
+				Throwing.Predicate<? super PI, IOException> p) {
+			return r -> r.size() == 1 && p.test(Iterables.getOnlyElement(r));
+		}
 	}
 
 	public static class Functions {
@@ -67,6 +96,18 @@ public interface GitGrader {
 			} catch (UncheckedIOException e) {
 				throw e.getCause();
 			}
+		}
+
+		public static Throwing.Function<GitPathRoot, ImmutableSet<GitPath>, IOException> filesMatching(
+				Throwing.Predicate<? super GitPath, IOException> predicate) {
+			final Predicate<? super GitPath> wrappedPredicate = IO_UNCHECKER.wrapPredicate(predicate);
+			return r -> {
+				try (Stream<Path> found = Files.find(r, 100, (p, a) -> wrappedPredicate.test((GitPath) p))) {
+					return found.map(p -> (GitPath) p).collect(ImmutableSet.toImmutableSet());
+				} catch (UncheckedIOException e) {
+					throw e.getCause();
+				}
+			};
 		}
 	}
 

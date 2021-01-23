@@ -1,21 +1,22 @@
 package io.github.oliviercailloux.java_grade.graders;
 
-import static io.github.oliviercailloux.grade.GitGrader.Functions.resolve;
 import static io.github.oliviercailloux.grade.GitGrader.Predicates.compose;
-import static io.github.oliviercailloux.grade.GitGrader.Predicates.containsFileMatching;
 import static io.github.oliviercailloux.grade.GitGrader.Predicates.contentMatches;
-import static io.github.oliviercailloux.grade.GitGrader.Predicates.isBranch;
 import static io.github.oliviercailloux.grade.GitGrader.Predicates.isFileNamed;
 
 import java.io.IOException;
-import java.nio.file.Files;
 import java.time.ZonedDateTime;
+import java.util.Optional;
+import java.util.Set;
 import java.util.regex.Pattern;
 
+import org.eclipse.jgit.diff.DiffEntry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
 
 import io.github.oliviercailloux.git.fs.GitPathRoot;
 import io.github.oliviercailloux.grade.Criterion;
@@ -23,14 +24,11 @@ import io.github.oliviercailloux.grade.CriterionGradeWeight;
 import io.github.oliviercailloux.grade.GitFileSystemHistory;
 import io.github.oliviercailloux.grade.GitGeneralGrader;
 import io.github.oliviercailloux.grade.GitGrader;
+import io.github.oliviercailloux.grade.IGrade;
 import io.github.oliviercailloux.grade.Mark;
 import io.github.oliviercailloux.grade.WeightingGrade;
-import io.github.oliviercailloux.grade.WeightingGrader.CriterionGraderWeight;
 import io.github.oliviercailloux.grade.markers.Marks;
-import io.github.oliviercailloux.jaris.exceptions.Throwing;
-import io.github.oliviercailloux.java_grade.testers.JavaMarkHelper;
 
-// PreferenceInformation#asVoterInformation() for indentation
 // /minimax-ex/src/main/java/io/github/oliviercailloux/minimax/utils/ForwardingMutableGraph.java for unused import statement
 public class Eclipse implements GitGrader {
 	@SuppressWarnings("unused")
@@ -39,6 +37,8 @@ public class Eclipse implements GitGrader {
 	public static final String PREFIX = "eclipse";
 
 	public static final ZonedDateTime DEADLINE = ZonedDateTime.parse("2021-01-14T23:00:00+01:00[Europe/Paris]");
+
+	private GitFileSystemHistory h;
 
 	public static void main(String[] args) throws Exception {
 		GitGeneralGrader.grade(PREFIX, DEADLINE, new Eclipse());
@@ -49,58 +49,117 @@ public class Eclipse implements GitGrader {
 
 	@Override
 	public WeightingGrade grade(GitFileSystemHistory history, String gitHubUsername) throws IOException {
+		h = history;
 		final ImmutableSet.Builder<CriterionGradeWeight> gradeBuilder = ImmutableSet.builder();
-
-		CriterionGraderWeight.given(Criterion.given("Compile"),
-				compose(resolve("file.java"), contentMatches(Marks.extendAll("withchar"))), 1d);
 
 		{
 			final Mark hasCommit = Mark.binary(!history.getGraph().nodes().isEmpty());
-			final Mark allCommitsRightName = history
-					.allAndSomeCommitMatch(c -> JavaMarkHelper.committerAndAuthorIs(c, gitHubUsername));
-			final WeightingGrade commitsGrade = WeightingGrade
-					.from(ImmutableSet.of(CriterionGradeWeight.from(Criterion.given("At least one"), hasCommit, 1d),
-							CriterionGradeWeight.from(Criterion.given("Right identity"), allCommitsRightName, 3d)));
-			gradeBuilder.add(CriterionGradeWeight.from(Criterion.given("Has commits"), commitsGrade, 2d));
+			gradeBuilder.add(CriterionGradeWeight.from(Criterion.given("At least one"), hasCommit, 1d));
 		}
-
-		final Pattern coucouPattern = Marks.extendWhite("coucou");
-		{
-			final Mark content = history.anyCommitMatches(compose(resolve("afile.txt"), contentMatches(coucouPattern)));
-			final Mark branchAndContent = history.anyRefMatches(
-					isBranch("coucou").and(compose(resolve("afile.txt"), contentMatches(coucouPattern))));
-			final WeightingGrade coucouCommit = WeightingGrade.proportional(
-					Criterion.given("'afile.txt' content (anywhere)"), content, Criterion.given("'coucou' content"),
-					branchAndContent);
-			gradeBuilder.add(CriterionGradeWeight.from(Criterion.given("Commit 'coucou'"), coucouCommit, 3d));
-		}
-		{
-			final Pattern digitPattern = Marks.extendWhite("\\d+");
-			final Mark myIdContent = history
-					.anyCommitMatches(compose(resolve("myid.txt"), contentMatches(digitPattern)));
-			final Throwing.Predicate<GitPathRoot, IOException> both = compose(resolve("myid.txt"),
-					contentMatches(digitPattern)).and(compose(resolve("afile.txt"), contentMatches(coucouPattern)));
-			final Mark myIdAndAFileContent = history.anyCommitMatches(both);
-			final Throwing.Predicate<GitPathRoot, IOException> branch = isBranch("main").or(isBranch("master"));
-			final Mark mainContent = history.anyRefMatches(branch.and(both));
-			final CriterionGradeWeight myIdGrade = CriterionGradeWeight.from(Criterion.given("'myid.txt' content"),
-					myIdContent, 1d);
-			final CriterionGradeWeight myIdAndAFileGrade = CriterionGradeWeight
-					.from(Criterion.given("'myid.txt' and 'afile.txt' content (anywhere)"), myIdAndAFileContent, 1d);
-			final CriterionGradeWeight mainGrade = CriterionGradeWeight
-					.from(Criterion.given("'main' (or 'master') content"), mainContent, 2d);
-			gradeBuilder.add(CriterionGradeWeight.from(Criterion.given("Commit 'main'"),
-					WeightingGrade.from(ImmutableSet.of(myIdGrade, myIdAndAFileGrade, mainGrade)), 3d));
-		}
-		{
-			final Mark anotherFile = history.anyCommitMatches(containsFileMatching(isFileNamed("another file.txt")));
-			final Mark devRightFile = history
-					.anyRefMatches(isBranch("dev").and(compose(resolve("sub/a/another file.txt"), Files::exists)));
-			final WeightingGrade commit = WeightingGrade.proportional(Criterion.given("'another file.txt' exists"),
-					anotherFile, Criterion.given("'dev' content"), devRightFile);
-			gradeBuilder.add(CriterionGradeWeight.from(Criterion.given("Commit 'dev'"), commit, 2d));
-		}
+		gradeBuilder
+				.add(CriterionGradeWeight.from(Criterion.given("Compile"), h.getBestGrade(this::compileGrade), 2.5d));
+		gradeBuilder
+				.add(CriterionGradeWeight.from(Criterion.given("Warning"), h.getBestGrade(this::warningGrade), 2.5d));
+		gradeBuilder.add(CriterionGradeWeight.from(Criterion.given("StrategyHelper → Helper"),
+				h.getBestGrade(this::helperGrade), 3.5d));
+		gradeBuilder.add(
+				CriterionGradeWeight.from(Criterion.given("courses.soc"), h.getBestGrade(this::coursesGrade), 3.5d));
+		gradeBuilder.add(CriterionGradeWeight.from(Criterion.given("Number"), h.getBestGrade(this::numberGrade), 3.5d));
+		gradeBuilder.add(
+				CriterionGradeWeight.from(Criterion.given("Formatting"), h.getBestGrade(this::formattingGrade), 3.5d));
 
 		return WeightingGrade.from(gradeBuilder.build());
+	}
+
+	private IGrade compileGrade(Optional<GitPathRoot> p) throws IOException {
+		final CriterionGradeWeight c1 = CriterionGradeWeight.from(Criterion.given("Compile"),
+				Mark.binary(p.isPresent() && compiles(p.get())), 7d);
+		final CriterionGradeWeight c2 = CriterionGradeWeight.from(Criterion.given("Single change"),
+				Mark.binary(p.isPresent() && singleChangeAbout(p.get(), "QuestioningConstraint.java")), 3d);
+		return WeightingGrade.from(ImmutableList.of(c1, c2));
+
+	}
+
+	private boolean compiles(GitPathRoot p) throws IOException {
+		return compose(Functions.filesMatching(isFileNamed("QuestioningConstraint.java")),
+				Predicates.singletonAndMatch(contentMatches(Marks.extendAll("[\\v\\h]+return[\\v\\h]+kind[\\v\\h]+;"))))
+						.test(p);
+	}
+
+	private boolean singleChangeAbout(GitPathRoot p, String file) throws IOException {
+		final Set<GitPathRoot> predecessors = h.getGraph().predecessors(p);
+		return (predecessors.size() == 1) && singleDiffAbout(Iterables.getOnlyElement(predecessors), p, file);
+	}
+
+	private boolean singleDiffAbout(GitPathRoot predecessor, GitPathRoot p, String file) throws IOException {
+		final ImmutableSet<DiffEntry> diff = h.getDiff(predecessor, p);
+		return diff.size() == 1 && diffIsAboutFile(Iterables.getOnlyElement(diff), file);
+	}
+
+	private boolean diffIsAboutFile(DiffEntry singleDiff, String file) {
+		return singleDiff.getOldPath().contains(file) && singleDiff.getNewPath().contains(file);
+	}
+
+	private IGrade warningGrade(Optional<GitPathRoot> p) throws IOException {
+		final CriterionGradeWeight c1 = CriterionGradeWeight.from(Criterion.given("Warning"),
+				Mark.binary(p.isPresent() && warning(p.get())), 7d);
+		final CriterionGradeWeight c2 = CriterionGradeWeight.from(Criterion.given("Single change"),
+				Mark.binary(p.isPresent() && singleChangeAbout(p.get(), "ConstraintsOnWeights.java")), 3d);
+		return WeightingGrade.from(ImmutableList.of(c1, c2));
+
+	}
+
+	private boolean warning(GitPathRoot p) throws IOException {
+		return compose(Functions.filesMatching(isFileNamed("ConstraintsOnWeights.java")), Predicates
+				.singletonAndMatch(contentMatches(Marks.extendAll("[\\v\\h]+builder[\\v\\h]+=[\\v\\h]+mp[\\v\\h]+;"))))
+						.test(p);
+	}
+
+	private IGrade helperGrade(Optional<GitPathRoot> p) throws IOException {
+		return Mark.binary(p.isPresent() && helper(p.get()));
+
+	}
+
+	private boolean helper(GitPathRoot p) throws IOException {
+		return compose(Functions.filesMatching(isFileNamed("StrategyHelperTests.java")),
+				Predicates.singletonAndMatch(contentMatches(Marks.extendAll("StrategyHelper")).negate())).test(p);
+	}
+
+	private IGrade coursesGrade(Optional<GitPathRoot> p) throws IOException {
+		final CriterionGradeWeight c1 = CriterionGradeWeight.from(Criterion.given("courses.soc"),
+				Mark.binary(p.isPresent() && coursesChange(p.get())), 7d);
+		final CriterionGradeWeight c2 = CriterionGradeWeight.from(Criterion.given("Single change"),
+				Mark.binary(p.isPresent() && singleChangeAbout(p.get(), "courses.soc")), 3d);
+		return WeightingGrade.from(ImmutableList.of(c1, c2));
+
+	}
+
+	private boolean coursesChange(GitPathRoot p) throws IOException {
+		return compose(Functions.filesMatching(isFileNamed("courses.soc")),
+				Predicates.singletonAndMatch(contentMatches(Pattern.compile("^8[\\r\\n]1.+", Pattern.DOTALL)))).test(p);
+	}
+
+	private IGrade numberGrade(Optional<GitPathRoot> p) throws IOException {
+		final CriterionGradeWeight c1 = CriterionGradeWeight.from(Criterion.given("Number"),
+				Mark.binary(p.isPresent() && numberChange(p.get())), 7d);
+		final CriterionGradeWeight c2 = CriterionGradeWeight.from(Criterion.given("Single change"),
+				Mark.binary(p.isPresent() && singleChangeAbout(p.get(), "Oracles m = 10, n = 6, 100.json")), 3d);
+		return WeightingGrade.from(ImmutableList.of(c1, c2));
+
+	}
+
+	private boolean numberChange(GitPathRoot p) throws IOException {
+		return compose(Functions.filesMatching(isFileNamed("Oracles m = 10, n = 6, 100.json")),
+				Predicates.singletonAndMatch(contentMatches(Marks.extendAll("0.8388174124160426")))).test(p);
+	}
+
+	private IGrade formattingGrade(Optional<GitPathRoot> p) throws IOException {
+		return Mark.binary(p.isPresent() && formatted(p.get()));
+
+	}
+
+	private boolean formatted(GitPathRoot p) throws IOException {
+		return compose(Functions.filesMatching(isFileNamed("Oracles m = 10, n = 6, 100.json")),
+				Predicates.singletonAndMatch(contentMatches(Marks.extendAll("0.8388174124160426")))).test(p);
 	}
 }
