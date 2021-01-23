@@ -1,13 +1,17 @@
 package io.github.oliviercailloux.java_grade.graders;
 
+import static com.google.common.base.Verify.verify;
 import static io.github.oliviercailloux.grade.GitGrader.Predicates.compose;
 import static io.github.oliviercailloux.grade.GitGrader.Predicates.contentMatches;
 import static io.github.oliviercailloux.grade.GitGrader.Predicates.isFileNamed;
 
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.ZonedDateTime;
 import java.util.Optional;
 import java.util.Set;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.eclipse.jgit.diff.DiffEntry;
@@ -159,7 +163,30 @@ public class Eclipse implements GitGrader {
 	}
 
 	private boolean formatted(GitPathRoot p) throws IOException {
-		return compose(Functions.filesMatching(isFileNamed("Oracles m = 10, n = 6, 100.json")),
-				Predicates.singletonAndMatch(contentMatches(Marks.extendAll("0.8388174124160426")))).test(p);
+		return compose(Functions.filesMatching(isFileNamed("PreferenceInformation")),
+				Predicates.singletonAndMatch(this::isFormatted)).test(p);
+	}
+
+	private boolean isFormatted(Path p) throws IOException {
+		// checkState(c == null);
+//		  verify(v != null);
+		if (!Files.exists(p)) {
+			return false;
+		}
+		final String content = Files.readString(p);
+		final Pattern patternOne = Pattern.compile(".*^(<?indent>\\h+)checkState\\h+\\(c\\h*==\\h*null);.*",
+				Pattern.DOTALL | Pattern.MULTILINE);
+		final Pattern patternTwo = Pattern.compile(".*^(<?indent>\\h+)verify\\h+\\(v\\h*!=\\h*null);.*",
+				Pattern.DOTALL | Pattern.MULTILINE);
+		final Matcher matcherOne = patternOne.matcher(content);
+		final Matcher matcherTwo = patternTwo.matcher(content);
+		if (!matcherOne.matches() || !matcherTwo.matches()) {
+			return false;
+		}
+		final String indentOne = matcherOne.group("indent");
+		final String indentTwo = matcherOne.group("indent");
+		verify(!indentOne.isEmpty());
+		verify(!indentTwo.isEmpty());
+		return indentOne.equals(indentTwo);
 	}
 }
