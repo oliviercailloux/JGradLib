@@ -482,7 +482,7 @@ public class GitReadTests {
 			{
 				final ImmutableSet<Path> paths;
 				LOGGER.info("Searching for file through gitFs.");
-				try (Stream<Path> found = Files.find(master, 100,
+				try (Stream<Path> found = Files.find(gitFs.getPathRoot(id), 100,
 						(p, a) -> p.getFileName() != null && p.getFileName().toString().equals(searched))) {
 					paths = found.collect(ImmutableSet.toImmutableSet());
 				}

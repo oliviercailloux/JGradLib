@@ -39,6 +39,8 @@ public class GitPathRoot extends GitAbsolutePath {
 
 	private final GitRev gitRev;
 
+	private GitObject cachedGitObject;
+
 	/**
 	 * This is not a git rev, although it shares some similar characteristics with a
 	 * git rev. Its string form ends with //, whereas the string form of a git rev
@@ -47,6 +49,7 @@ public class GitPathRoot extends GitAbsolutePath {
 	GitPathRoot(GitFileSystem fileSystem, GitRev gitRev) {
 		this.fileSystem = checkNotNull(fileSystem);
 		this.gitRev = checkNotNull(gitRev);
+		cachedGitObject = null;
 	}
 
 	@Override
@@ -222,7 +225,15 @@ public class GitPathRoot extends GitAbsolutePath {
 	}
 
 	RevTree getRevTree() throws IOException, NoSuchFileException {
-		return getRevCommit().getTree();
+		final RevTree tree = getRevCommit().getTree();
+		/**
+		 * Note that if I am a git rev, there is no point in storing the git object as
+		 * we need to check that it has not changed, each time.
+		 */
+		if (isCommitId()) {
+			cachedGitObject = GitObject.given(GitFileSystem.JIM_FS_SLASH, tree, FileMode.TREE);
+		}
+		return tree;
 	}
 
 	/**
@@ -263,6 +274,16 @@ public class GitPathRoot extends GitAbsolutePath {
 
 	@Override
 	GitObject getGitObject(FollowLinksBehavior behavior) throws NoSuchFileException, IOException {
-		return GitObject.given(GitFileSystem.JIM_FS_SLASH, getRevTree(), FileMode.TREE);
+		return getGitObject();
+	}
+
+	GitObject getGitObject() throws NoSuchFileException, IOException {
+		if (cachedGitObject != null) {
+			verify(isCommitId());
+			/** Never changes! */
+			return cachedGitObject;
+		}
+		final GitObject gitObject = GitObject.given(GitFileSystem.JIM_FS_SLASH, getRevTree(), FileMode.TREE);
+		return gitObject;
 	}
 }
