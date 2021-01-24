@@ -518,7 +518,7 @@ public class GitFileSystemProvider extends FileSystemProvider {
 
 			@Override
 			public Iterator<Path> iterator() {
-				return Iterators.transform(newDirectoryStream.iterator(), p -> p);
+				return Iterators.transform(newDirectoryStream.iterator(), (p) -> p);
 			}
 		};
 	}
