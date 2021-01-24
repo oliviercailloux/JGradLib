@@ -77,6 +77,17 @@ class GitAbsolutePathWithInternal extends GitAbsolutePath {
 	@Override
 	GitObject getGitObject(FollowLinksBehavior behavior)
 			throws NoSuchFileException, PathCouldNotBeFoundException, IOException {
+		if (cachedGitObject != null && behavior.equals(FollowLinksBehavior.FOLLOW_LINKS_BUT_END)) {
+			switch (behavior) {
+			case FOLLOW_LINKS_BUT_END:
+				return cachedGitObject;
+				break;
+
+			default:
+				break;
+			}
+		}
+
 		LOGGER.debug("Getting git object of {} with behavior {}.", toString(), behavior);
 		final Path relative = GitFileSystem.JIM_FS_SLASH.relativize(getInternalPath());
 		final RevTree tree = getRoot().getRevTree();
