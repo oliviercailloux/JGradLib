@@ -773,11 +773,9 @@ public abstract class GitPath implements Path {
 
 	@SuppressWarnings("resource")
 	DirectoryStream<GitPath> newDirectoryStream(Filter<? super GitPath> filter) throws IOException {
-		final GitObject rootObject = toAbsolutePath().getRoot().getGitObject();
 		/**
-		 * Note: this could not be moved to GitAbsolutePath (by maybe can now): a
-		 * directory stream on a relative path differs by resolving against a relative
-		 * path.
+		 * Note: this can’t be moved to GitAbsolutePath: a directory stream on a
+		 * relative path differs by resolving against a relative path.
 		 */
 		// TODO test directory stream.
 		final RevTree tree = toAbsolutePathAsAbsolutePath().getRevTree(true);
@@ -818,7 +816,7 @@ public abstract class GitPath implements Path {
 			public Iterator<GitPath> iterator() {
 				final PeekingIterator<GitObject> namesIterator = directoryStream.iterator();
 				final TransformedPeekingIterator<GitObject, GitPath> unfilteredPathIterator = new TransformedPeekingIterator<>(
-						namesIterator, o -> toNewEntry(rootObject, o));
+						namesIterator, GitPath.this::toNewEntry);
 				return new PathIterator(unfilteredPathIterator, filter);
 			}
 		};
@@ -839,11 +837,11 @@ public abstract class GitPath implements Path {
 	 * @return the same kind (relative VS absolute) as this instance, representing
 	 *         an entry in this directory.
 	 */
-	GitPath toNewEntry(GitObject rootObject, GitObject gitObject) {
+	GitPath toNewEntry(GitObject gitObject) {
 		final Path realPath = gitObject.getRealPath();
 		final Path newInternal = getInternalPath().resolve(realPath.getFileName());
 		final GitPath newPath = withPath(newInternal);
-		((GitAbsolutePathWithInternal) newPath.toAbsolutePathAsAbsolutePath()).setRealGitObject(rootObject, gitObject);
+		newPath.toAbsolutePathAsAbsolutePath().setGitObject(gitObject);
 		return newPath;
 	}
 
