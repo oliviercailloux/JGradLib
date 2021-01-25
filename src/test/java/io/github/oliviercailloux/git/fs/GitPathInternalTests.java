@@ -132,7 +132,7 @@ public class GitPathInternalTests {
 	private GitPath getGitPath(GitRev root, String dirAndFile) {
 		if (root != null) {
 			return GitAbsolutePath.givenRoot(
-					new GitPathRoot(GitFileSystemCreatePathsTests.GIT_FILE_FILE_SYSTEM_MOCKED, root),
+					GitPathRoot.given(GitFileSystemCreatePathsTests.GIT_FILE_FILE_SYSTEM_MOCKED, root),
 					GitFileSystem.JIM_FS.getPath(dirAndFile));
 		}
 		return GitRelativePath.relative(GitFileSystemCreatePathsTests.GIT_FILE_FILE_SYSTEM_MOCKED,

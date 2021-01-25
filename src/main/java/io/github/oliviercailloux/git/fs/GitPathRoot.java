@@ -30,27 +30,31 @@ import io.github.oliviercailloux.git.fs.GitFileSystem.GitObject;
  *
  * @see GitPath
  */
-public class GitPathRoot extends GitAbsolutePath {
+public abstract class GitPathRoot extends GitAbsolutePath {
 	public static final GitRev DEFAULT_GIT_REF = GitRev.shortRef("refs/heads/main");
 
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(GitPathRoot.class);
 
+	static GitPathRoot given(GitFileSystem gitFs, GitRev gitRev) {
+		if (gitRev.isCommitId()) {
+			return new GitPathRootSha(gitFs, gitRev);
+		}
+		return new GitPathRootRef(gitFs, gitRev);
+	}
+
 	private final GitFileSystem fileSystem;
 
 	private final GitRev gitRev;
-
-	private GitPathRoot commitPath;
 
 	/**
 	 * This is not a git rev, although it shares some similar characteristics with a
 	 * git rev. Its string form ends with //, whereas the string form of a git rev
 	 * ends with a single /; and it never equals a git rev.
 	 */
-	GitPathRoot(GitFileSystem fileSystem, GitRev gitRev) {
+	protected GitPathRoot(GitFileSystem fileSystem, GitRev gitRev) {
 		this.fileSystem = checkNotNull(fileSystem);
 		this.gitRev = checkNotNull(gitRev);
-		commitPath = null;
 	}
 
 	@Override
@@ -263,17 +267,6 @@ public class GitPathRoot extends GitAbsolutePath {
 		return Commit.create(getRevCommit());
 	}
 
-	public GitPathRoot getCommitPathRoot() throws IOException, NoSuchFileException {
-		if (commitPath == null) {
-			if (isCommitId()) {
-				commitPath = this;
-			} else {
-				commitPath = fileSystem.getPathRoot(fetchObjectId());
-			}
-		}
-		return commitPath;
-	}
-
 	public ImmutableList<GitPathRoot> getParentCommits() throws IOException, NoSuchFileException {
 		final RevCommit revCommit = getRevCommit();
 		final ImmutableList<RevCommit> parents = ImmutableList.copyOf(revCommit.getParents());
@@ -284,6 +277,8 @@ public class GitPathRoot extends GitAbsolutePath {
 		}
 		return builder.build();
 	}
+
+	public abstract GitPathRootSha toSha() throws IOException, NoSuchFileException;
 
 	@Override
 	GitObject getGitObject(FollowLinksBehavior behavior) throws NoSuchFileException, IOException {

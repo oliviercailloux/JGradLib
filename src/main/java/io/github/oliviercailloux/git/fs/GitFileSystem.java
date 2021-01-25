@@ -348,7 +348,7 @@ public abstract class GitFileSystem extends FileSystem {
 
 	private final Set<DirectoryStream<GitPath>> toClose;
 
-	final GitPathRoot mainSlash = new GitPathRoot(this, GitPathRoot.DEFAULT_GIT_REF);
+	final GitPathRootRef mainSlash = new GitPathRootRef(this, GitPathRoot.DEFAULT_GIT_REF);
 	final GitEmptyPath emptyPath = new GitEmptyPath(mainSlash);
 
 	/**
@@ -504,7 +504,9 @@ public abstract class GitFileSystem extends FileSystem {
 		}
 		verify(internalPath.isEmpty() || internalPath.get(0).startsWith("/"));
 
-		return GitAbsolutePath.givenRoot(new GitPathRoot(this, GitRev.stringForm(rootStringForm)), internalPath);
+		final GitRev rev = GitRev.stringForm(rootStringForm);
+		final GitPathRoot root = GitPathRoot.given(this, rev);
+		return GitAbsolutePath.givenRoot(root, internalPath);
 	}
 
 	/**
@@ -522,12 +524,12 @@ public abstract class GitFileSystem extends FileSystem {
 		final ImmutableList<String> givenMore = Streams
 				.concat(Stream.of(internalPath1StartsRight), Stream.of(internalPath))
 				.collect(ImmutableList.toImmutableList());
-		return GitAbsolutePath.givenRoot(new GitPathRoot(this, GitRev.commitId(commitId)), givenMore);
+		return GitAbsolutePath.givenRoot(new GitPathRootSha(this, GitRev.commitId(commitId)), givenMore);
 	}
 
 	/**
-	 * Returns a git path referring to a commit designated by its id. No check is
-	 * performed to ensure that the commit exists.
+	 * Returns an absolute git path. No check is performed to ensure that the ref
+	 * exists, or that the commit this refers to exists.
 	 *
 	 * @param rootStringForm the string form of the root component. Must start with
 	 *                       <tt>/refs/</tt> or <tt>/heads/</tt> or <tt>/tags/</tt>
@@ -540,7 +542,11 @@ public abstract class GitFileSystem extends FileSystem {
 	 * @see GitPathRoot
 	 */
 	public GitPathRoot getPathRoot(String rootStringForm) throws InvalidPathException {
-		return new GitPathRoot(this, GitRev.stringForm(rootStringForm));
+		return GitPathRoot.given(this, GitRev.stringForm(rootStringForm));
+	}
+
+	public GitPathRootRef getPathRootRef(String rootStringForm) throws InvalidPathException {
+		return new GitPathRootRef(this, GitRev.stringForm(rootStringForm));
 	}
 
 	/**
@@ -551,8 +557,8 @@ public abstract class GitFileSystem extends FileSystem {
 	 * @return an git path root
 	 * @see GitPathRoot
 	 */
-	public GitPathRoot getPathRoot(ObjectId commitId) {
-		return new GitPathRoot(this, GitRev.commitId(commitId));
+	public GitPathRootSha getPathRoot(ObjectId commitId) {
+		return new GitPathRootSha(this, GitRev.commitId(commitId));
 	}
 
 	/**

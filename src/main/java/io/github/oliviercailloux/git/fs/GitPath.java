@@ -274,7 +274,7 @@ public abstract class GitPath implements Path {
 			final String internalPathString = internalPathValue.get();
 			final Path internalPath = GitFileSystem.JIM_FS_EMPTY.resolve(internalPathString);
 			checkArgument(internalPath.isAbsolute());
-			return GitAbsolutePath.givenRoot(new GitPathRoot(fs, GitRev.stringForm(rootString)), internalPath);
+			return GitAbsolutePath.givenRoot(GitPathRoot.given(fs, GitRev.stringForm(rootString)), internalPath);
 		}
 
 		final Path internalPath = GitFileSystem.JIM_FS_EMPTY.resolve(internalPathValue.orElse(""));
