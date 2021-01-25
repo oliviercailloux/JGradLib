@@ -1,6 +1,7 @@
 package io.github.oliviercailloux.git.fs;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.base.Verify.verify;
 
 import java.io.IOException;
@@ -39,6 +40,8 @@ public class GitPathRoot extends GitAbsolutePath {
 
 	private final GitRev gitRev;
 
+	private GitPathRoot commitPath;
+
 	/**
 	 * This is not a git rev, although it shares some similar characteristics with a
 	 * git rev. Its string form ends with //, whereas the string form of a git rev
@@ -47,6 +50,7 @@ public class GitPathRoot extends GitAbsolutePath {
 	GitPathRoot(GitFileSystem fileSystem, GitRev gitRev) {
 		this.fileSystem = checkNotNull(fileSystem);
 		this.gitRev = checkNotNull(gitRev);
+		commitPath = null;
 	}
 
 	@Override
@@ -182,7 +186,7 @@ public class GitPathRoot extends GitAbsolutePath {
 	 * object that is not a commit; 3) this is not a ref but a commit id directly
 	 * and it does not exist.
 	 */
-	Optional<RevCommit> tryGetRevCommit() throws IOException {
+	private Optional<RevCommit> tryGetRevCommit() throws IOException {
 		LOGGER.debug("Trying to get rev commit of {}.", toString());
 		final ObjectId possibleCommitId;
 		if (isRef()) {
@@ -206,6 +210,15 @@ public class GitPathRoot extends GitAbsolutePath {
 			verify(isCommitId());
 			return Optional.empty();
 		}
+	}
+
+	ObjectId fetchObjectId() throws IOException, NoSuchFileException {
+		checkState(isRef());
+		final Optional<ObjectId> objectId = fileSystem.getObjectId(getGitRef());
+		if (objectId.isEmpty()) {
+			throw new NoSuchFileException(toString());
+		}
+		return objectId.get();
 	}
 
 	RevCommit getRevCommit() throws IOException, NoSuchFileException {
@@ -248,6 +261,17 @@ public class GitPathRoot extends GitAbsolutePath {
 		 * which requires parsing the commit.
 		 */
 		return Commit.create(getRevCommit());
+	}
+
+	public GitPathRoot getCommitPathRoot() throws IOException, NoSuchFileException {
+		if (commitPath == null) {
+			if (isCommitId()) {
+				commitPath = this;
+			} else {
+				commitPath = fileSystem.getPathRoot(fetchObjectId());
+			}
+		}
+		return commitPath;
 	}
 
 	public ImmutableList<GitPathRoot> getParentCommits() throws IOException, NoSuchFileException {

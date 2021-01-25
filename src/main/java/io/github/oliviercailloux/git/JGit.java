@@ -305,7 +305,7 @@ public class JGit {
 
 	public static void setMain(Repository repository, ObjectId newId) {
 		try {
-			final RefUpdate updateRef = repository.updateRef("refs/heads/main");
+			final RefUpdate updateRef = repository.updateRef("refs/heads/master");
 			updateRef.setNewObjectId(newId);
 			final Result updateResult = updateRef.update();
 			Verify.verify(updateResult == Result.NEW, updateResult.toString());

@@ -52,7 +52,8 @@ public class GitGeneralGrader {
 	public static void grade(String prefix, ZonedDateTime deadline, GitGrader grader) throws IOException {
 		final ImmutableList<RepositoryCoordinatesWithPrefix> repositories;
 		try (GitHubFetcherV3 fetcher = GitHubFetcherV3.using(GitHubToken.getRealInstance())) {
-			repositories = fetcher.getRepositoriesWithPrefix("oliviercailloux-org", prefix);
+			repositories = fetcher.getRepositoriesWithPrefix("oliviercailloux-org", prefix);// .stream().limit(1)
+//					.collect(ImmutableList.toImmutableList());
 //			.stream().filter(r -> r.getUsername().equals("")).collect(ImmutableList.toImmutableList());
 		}
 
@@ -124,15 +125,21 @@ public class GitGeneralGrader {
 		} else {
 			adjustedConsider = toConsider;
 		}
-		LOGGER.debug("To consider: {}, adjusted: {}.", toConsider, adjustedConsider);
+		LOGGER.info("To consider: {}, adjusted: {}.", toConsider, adjustedConsider);
 
 		final ImmutableMap.Builder<Instant, IGrade> byTimeBuilder = ImmutableMap.builder();
 		for (Instant timeCap : adjustedConsider) {
 			final GitFileSystemHistory manual = history.filter(r -> !JavaMarkHelper.committerIsGitHub(r));
 			final GitFileSystemHistory onTimeAndManual = manual.filter(r -> !history.getCommitDate(r).isAfter(timeCap));
 			final GitFileSystemHistory filteredHistory = suppressMine
-					? onTimeAndManual.filter(r -> !r.getCommit().getAuthorName().equals("Olivier Cailloux"))
+					? onTimeAndManual.filter(r -> !r.getCommit().getAuthorName().equals("Olivier Cailloux")
+							&& !r.getCommit().getAuthorName().equals("xoxor")
+							&& !r.getCommit().getAuthorName().equals("Beatrice Napolitano"))
 					: onTimeAndManual;
+			final ImmutableSet<String> authors = filteredHistory.getGraph().nodes().stream()
+					.map(c -> IO_UNCHECKER.getUsing(c::getCommit).getAuthorName()).distinct()
+					.collect(ImmutableSet.toImmutableSet());
+			verify(authors.size() <= 1, authors.toString());
 			final IGrade grade = grader.grade(filteredHistory, username);
 
 			final IGrade penalizedGrade;

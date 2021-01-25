@@ -12,6 +12,9 @@ import java.util.function.Predicate;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.primitives.Ints;
@@ -84,6 +87,9 @@ public interface GitGrader {
 	}
 
 	public static class Functions {
+		@SuppressWarnings("unused")
+		private static final Logger LOGGER = LoggerFactory.getLogger(GitGrader.class);
+
 		public static Throwing.Function<GitPathRoot, GitPath, IOException> resolve(String file) {
 			return r -> r.resolve(file);
 		}
@@ -103,7 +109,10 @@ public interface GitGrader {
 			final Predicate<? super GitPath> wrappedPredicate = IO_UNCHECKER.wrapPredicate(predicate);
 			return r -> {
 				try (Stream<Path> found = Files.find(r, 100, (p, a) -> wrappedPredicate.test((GitPath) p))) {
-					return found.map(p -> (GitPath) p).collect(ImmutableSet.toImmutableSet());
+					final ImmutableSet<GitPath> foundSet = found.map(p -> (GitPath) p)
+							.collect(ImmutableSet.toImmutableSet());
+					LOGGER.info("Found: {}.", foundSet);
+					return foundSet;
 				} catch (UncheckedIOException e) {
 					throw e.getCause();
 				}

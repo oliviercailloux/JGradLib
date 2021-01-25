@@ -235,6 +235,31 @@ public class GitFileSystemHistory {
 		return Mark.binary(match);
 	}
 
+	private <FO extends Comparable<FO>> Optional<GitPathRoot> getCommitMaximizing(
+			Throwing.Function<GitPathRoot, FO, IOException> scorer, FO bestPossible) throws IOException {
+		/**
+		 * As grading sometimes takes a lot of time (e.g. 3 seconds to grade
+		 * "eclipse-compile" because it requires a find all, currently very slow), it is
+		 * important to stop early if possible. In the "Eclipse" case, the full search
+		 * would require typically checking 6 commits, 3 seconds each.
+		 */
+		GitPathRoot bestInput = null;
+		FO bestScore = null;
+		for (GitPathRoot r : (Iterable<GitPathRoot>) getGraph().nodes().stream()::iterator) {
+			final FO score = scorer.apply(r);
+			checkArgument(score != null);
+			if (bestScore == null || bestScore.compareTo(score) < 0) {
+				bestScore = score;
+				bestInput = r;
+			}
+			LOGGER.info("Considering {}, obtained score {}, current best {}.", r, score, bestScore);
+			if (bestScore.equals(bestPossible)) {
+				break;
+			}
+		}
+		return Optional.ofNullable(bestInput);
+	}
+
 	public <FO extends Comparable<FO>> Optional<GitPathRoot> getCommitMaximizing(
 			Throwing.Function<GitPathRoot, FO, IOException> scorer) throws IOException {
 		final Function<GitPathRoot, FO> wrappedScorer = IO_UNCHECKER.wrapFunction(scorer);
@@ -277,10 +302,10 @@ public class GitFileSystemHistory {
 		}
 	}
 
-	public IGrade getBestGrade(Throwing.Function<Optional<GitPathRoot>, IGrade, IOException> grader)
-			throws IOException {
+	public IGrade getBestGrade(Throwing.Function<Optional<GitPathRoot>, IGrade, IOException> grader,
+			double bestPossible) throws IOException {
 		final Throwing.Function<Optional<GitPathRoot>, Double, IOException> scorer = r -> grader.apply(r).getPoints();
-		final Optional<GitPathRoot> best = getCommitMaximizing(r -> scorer.apply(Optional.of(r)));
+		final Optional<GitPathRoot> best = getCommitMaximizing(r -> scorer.apply(Optional.of(r)), bestPossible);
 		return grader.apply(best);
 	}
 

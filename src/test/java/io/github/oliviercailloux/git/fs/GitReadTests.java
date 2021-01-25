@@ -17,6 +17,9 @@ import java.nio.file.NotLinkException;
 import java.nio.file.Path;
 import java.util.stream.Stream;
 
+import org.eclipse.jgit.errors.CorruptObjectException;
+import org.eclipse.jgit.errors.IncorrectObjectTypeException;
+import org.eclipse.jgit.errors.MissingObjectException;
 import org.eclipse.jgit.internal.storage.dfs.DfsRepository;
 import org.eclipse.jgit.internal.storage.dfs.DfsRepositoryDescription;
 import org.eclipse.jgit.internal.storage.dfs.InMemoryRepository;
@@ -27,6 +30,7 @@ import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.revwalk.RevTree;
 import org.eclipse.jgit.revwalk.RevWalk;
+import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 import org.eclipse.jgit.treewalk.TreeWalk;
 import org.eclipse.jgit.treewalk.filter.PathFilter;
 import org.junit.jupiter.api.Test;
@@ -434,59 +438,87 @@ public class GitReadTests {
 	}
 
 	@Test
-	void testSlow() throws Exception {
-		final String searched = "QuestioningConstraint.java";
+	void testFindSmall() throws Exception {
 
+		final Path repoWorkDir = Utils.getTempUniqueDirectory("my-small-repo");
+		try (Repository repository = new FileRepositoryBuilder().setWorkTree(repoWorkDir.toFile()).build()) {
+			JGit.createBasicRepo(repository);
+		}
+
+		try (Repository repository = new FileRepositoryBuilder().setWorkTree(repoWorkDir.toFile()).build();
+				GitFileSystem gitFs = GitFileSystemProvider.getInstance().newFileSystemFromRepository(repository)) {
+			search(repository, gitFs);
+			search(repository, gitFs);
+			search(repository, gitFs);
+		}
+	}
+
+	private void search(Repository repository, GitFileSystem gitFs) throws IOException, NoSuchFileException,
+			MissingObjectException, IncorrectObjectTypeException, CorruptObjectException {
+		final String searched = "non-existing.png";
+
+		final GitPathRoot master = gitFs.getPathRoot("/refs/heads/master/");
+		final ObjectId id = master.getCommit().getId();
+		final GitPathRoot pathId = gitFs.getPathRoot(id);
+
+		LOGGER.info("Searching for file directly.");
+		try (ObjectReader reader = repository.newObjectReader();
+				RevWalk walker = new RevWalk(reader);
+				TreeWalk treeWalk = new TreeWalk(reader);) {
+			final RevCommit commit = walker.parseCommit(id);
+			final RevTree commitTree = commit.getTree();
+			treeWalk.addTree(commitTree);
+			treeWalk.setRecursive(true);
+			while (treeWalk.next()) {
+				if (treeWalk.getNameString().equals(searched)) {
+					LOGGER.info("Found: {}.", treeWalk.getPathString());
+				}
+			}
+		}
+		LOGGER.info("Searched everywhere.");
+
+		LOGGER.info("Searching for file indirectly.");
+		try (ObjectReader reader = repository.newObjectReader();
+				RevWalk walker = new RevWalk(reader);
+				TreeWalk treeWalk = new TreeWalk(reader);) {
+			final RevCommit commit = walker.parseCommit(id);
+			final RevTree commitTree = commit.getTree();
+			treeWalk.addTree(commitTree);
+			treeWalk.setRecursive(false);
+			try (GitFileSystem.TreeWalkDirectoryStream dirWalker = new GitFileSystem.TreeWalkDirectoryStream(
+					treeWalk)) {
+				final PeekingIterator<String> iterator = dirWalker.iterator();
+				while (iterator.hasNext()) {
+					final String name = iterator.next();
+					if (name.equals(searched)) {
+						LOGGER.info("Found: indirectly.");
+					}
+				}
+			}
+		}
+		LOGGER.info("Searched everywhere.");
+
+		{
+			final ImmutableSet<Path> paths;
+			LOGGER.info("Searching for file through gitFs.");
+			try (Stream<Path> found = Files.find(pathId, 100, (p, a) -> false)) {
+//					(p, a) -> p.getFileName() != null && p.getFileName().toString().equals(searched))) {
+				paths = found.collect(ImmutableSet.toImmutableSet());
+			}
+			LOGGER.info("Found: {}.", paths);
+			assertEquals(0, paths.size());
+		}
+	}
+
+	@Test
+	void testFindBig() throws Exception {
 		try (FileRepository repository = GitCloner.create().setCheckCommonRefsAgree(false).download(
 				RepositoryCoordinates.from("oliviercailloux-org", "minimax-ex").asGitUri(),
 				Utils.getTempDirectory().resolve("minimax-ex"));
 				GitFileSystem gitFs = GitFileSystemProvider.getInstance().newFileSystemFromRepository(repository)) {
-
-			final GitPathRoot master = gitFs.getPathRoot("/refs/remotes/origin/master/");
-			final ObjectId id = master.getCommit().getId();
-
-			LOGGER.info("Searching for file directly.");
-			try (ObjectReader reader = repository.newObjectReader();
-					RevWalk walker = new RevWalk(reader);
-					TreeWalk treeWalk = new TreeWalk(reader);) {
-				final RevCommit commit = walker.parseCommit(id);
-				final RevTree commitTree = commit.getTree();
-				treeWalk.addTree(commitTree);
-				treeWalk.setRecursive(true);
-				while (treeWalk.next()) {
-					if (treeWalk.getNameString().equals(searched)) {
-						LOGGER.info("Found: {}.", treeWalk.getPathString());
-					}
-				}
-//				return new TreeWalkDirectoryStream(treeWalk);
-			}
-			LOGGER.info("Searched everywhere.");
-
-			LOGGER.info("Searching for file indirectly.");
-			try (ObjectReader reader = repository.newObjectReader();
-					RevWalk walker = new RevWalk(reader);
-					TreeWalk treeWalk = new TreeWalk(reader);) {
-				final RevCommit commit = walker.parseCommit(id);
-				final RevTree commitTree = commit.getTree();
-				treeWalk.addTree(commitTree);
-				treeWalk.setRecursive(false);
-				final PeekingIterator<String> iterator = new GitFileSystem.TreeWalkDirectoryStream(treeWalk).iterator();
-				while (iterator.hasNext()) {
-					iterator.next();
-				}
-			}
-			LOGGER.info("Searched everywhere.");
-
-			{
-				final ImmutableSet<Path> paths;
-				LOGGER.info("Searching for file through gitFs.");
-				try (Stream<Path> found = Files.find(master, 100,
-						(p, a) -> p.getFileName() != null && p.getFileName().toString().equals(searched))) {
-					paths = found.collect(ImmutableSet.toImmutableSet());
-				}
-				LOGGER.info("Found: {}.", paths);
-				assertEquals(1, paths.size());
-			}
+			search(repository, gitFs);
+			search(repository, gitFs);
+			search(repository, gitFs);
 		}
 	}
 

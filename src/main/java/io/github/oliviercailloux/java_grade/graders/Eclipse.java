@@ -63,48 +63,58 @@ public class Eclipse implements GitGrader {
 			final Mark hasCommit = Mark.binary(!history.getGraph().nodes().isEmpty());
 			gradeBuilder.add(CriterionGradeWeight.from(Criterion.given("At least one"), hasCommit, 1d));
 		}
-		gradeBuilder
-				.add(CriterionGradeWeight.from(Criterion.given("Compile"), h.getBestGrade(this::compileGrade), 2.5d));
-		gradeBuilder
-				.add(CriterionGradeWeight.from(Criterion.given("Warning"), h.getBestGrade(this::warningGrade), 2.5d));
+		LOGGER.info("Grading compile.");
+		gradeBuilder.add(
+				CriterionGradeWeight.from(Criterion.given("Compile"), h.getBestGrade(this::compileGrade, 1d), 2.5d));
+		LOGGER.info("Grading warning.");
+		gradeBuilder.add(
+				CriterionGradeWeight.from(Criterion.given("Warning"), h.getBestGrade(this::warningGrade, 1d), 2.5d));
+		LOGGER.info("Grading helper.");
 		gradeBuilder.add(CriterionGradeWeight.from(Criterion.given("StrategyHelper → Helper"),
-				h.getBestGrade(this::helperGrade), 3.5d));
-		gradeBuilder.add(
-				CriterionGradeWeight.from(Criterion.given("courses.soc"), h.getBestGrade(this::coursesGrade), 3.5d));
-		gradeBuilder.add(CriterionGradeWeight.from(Criterion.given("Number"), h.getBestGrade(this::numberGrade), 3.5d));
-		gradeBuilder.add(
-				CriterionGradeWeight.from(Criterion.given("Formatting"), h.getBestGrade(this::formattingGrade), 3.5d));
+				h.getBestGrade(this::helperGrade, 1d), 3.5d));
+		LOGGER.info("Grading courses.");
+		gradeBuilder.add(CriterionGradeWeight.from(Criterion.given("courses.soc"),
+				h.getBestGrade(this::coursesGrade, 1d), 3.5d));
+		LOGGER.info("Grading number.");
+		gradeBuilder
+				.add(CriterionGradeWeight.from(Criterion.given("Number"), h.getBestGrade(this::numberGrade, 1d), 3.5d));
+		LOGGER.info("Grading formatting.");
+		gradeBuilder.add(CriterionGradeWeight.from(Criterion.given("Formatting"),
+				h.getBestGrade(this::formattingGrade, 1d), 3.5d));
 
 		return WeightingGrade.from(gradeBuilder.build());
 	}
 
+	void setHistory(GitFileSystemHistory history) {
+		this.h = history;
+	}
+
 	private IGrade compileGrade(Optional<GitPathRoot> p) throws IOException {
-		LOGGER.info("Computing compile.");
-		final boolean compiles = compiles(p.get());
-		LOGGER.info("Computed compile.");
 		final CriterionGradeWeight c1 = CriterionGradeWeight.from(Criterion.given("Compile"),
-				Mark.binary(p.isPresent() && compiles), 7d);
+				Mark.binary(p.isPresent() && compiles(p.get())), 7d);
 		final CriterionGradeWeight c2 = CriterionGradeWeight.from(Criterion.given("Single change"),
 				Mark.binary(p.isPresent() && singleChangeAbout(p.get(), "QuestioningConstraint.java")), 3d);
 		return WeightingGrade.from(ImmutableList.of(c1, c2));
 
 	}
 
-	private boolean compiles(GitPathRoot p) throws IOException {
+	boolean compiles(GitPathRoot p) throws IOException {
 		LOGGER.info("Files matching.");
 		final Function<GitPathRoot, ImmutableSet<GitPath>, IOException> filesMatching = Functions
 				.filesMatching(isFileNamed("QuestioningConstraint.java"));
 		final ImmutableSet<GitPath> matching = filesMatching.apply(p);
-		LOGGER.info("Files matching found.");
+		LOGGER.info("Files matching found: {}.", matching);
+		final Pattern patternCompiles = Pattern.compile(".*^(?<indent>\\h+)return[\\v\\h]+kind[\\v\\h]*;.*",
+				Pattern.DOTALL | Pattern.MULTILINE);
 		final Predicate<ImmutableSet<GitPath>, IOException> singletonAndMatch = Predicates
-				.singletonAndMatch(contentMatches(Marks.extendAll("[\\v\\h]+return[\\v\\h]+kind[\\v\\h]+;")));
+				.singletonAndMatch(contentMatches(patternCompiles));
 		final boolean tested = singletonAndMatch.test(matching);
-		LOGGER.info("Predicate known.");
+		LOGGER.info("Predicate known: {}.", tested);
 		return tested;
 //		return compose(filesMatching, singletonAndMatch).test(p);
 	}
 
-	private boolean singleChangeAbout(GitPathRoot p, String file) throws IOException {
+	boolean singleChangeAbout(GitPathRoot p, String file) throws IOException {
 		final Set<GitPathRoot> predecessors = h.getGraph().predecessors(p);
 		return (predecessors.size() == 1) && singleDiffAbout(Iterables.getOnlyElement(predecessors), p, file);
 	}
@@ -127,10 +137,11 @@ public class Eclipse implements GitGrader {
 
 	}
 
-	private boolean warning(GitPathRoot p) throws IOException {
-		return compose(Functions.filesMatching(isFileNamed("ConstraintsOnWeights.java")), Predicates
-				.singletonAndMatch(contentMatches(Marks.extendAll("[\\v\\h]+builder[\\v\\h]+=[\\v\\h]+mp[\\v\\h]+;"))))
-						.test(p);
+	boolean warning(GitPathRoot p) throws IOException {
+		final Pattern pattern = Pattern.compile(".*^(?<indent>\\h+)builder[\\v\\h]*=[\\v\\h]*mp[\\v\\h]*;.*",
+				Pattern.DOTALL | Pattern.MULTILINE);
+		return compose(Functions.filesMatching(isFileNamed("ConstraintsOnWeights.java")),
+				Predicates.singletonAndMatch(contentMatches(pattern))).test(p);
 	}
 
 	private IGrade helperGrade(Optional<GitPathRoot> p) throws IOException {
@@ -140,7 +151,7 @@ public class Eclipse implements GitGrader {
 
 	private boolean helper(GitPathRoot p) throws IOException {
 		return compose(Functions.filesMatching(isFileNamed("StrategyHelperTests.java")),
-				Predicates.singletonAndMatch(contentMatches(Marks.extendAll("StrategyHelper")).negate())).test(p);
+				Predicates.singletonAndMatch(contentMatches(Marks.extendAll("StrategyHelper[^T]")).negate())).test(p);
 	}
 
 	private IGrade coursesGrade(Optional<GitPathRoot> p) throws IOException {
@@ -176,21 +187,19 @@ public class Eclipse implements GitGrader {
 
 	}
 
-	private boolean formatted(GitPathRoot p) throws IOException {
-		return compose(Functions.filesMatching(isFileNamed("PreferenceInformation")),
+	boolean formatted(GitPathRoot p) throws IOException {
+		return compose(Functions.filesMatching(isFileNamed("PreferenceInformation.java")),
 				Predicates.singletonAndMatch(this::isFormatted)).test(p);
 	}
 
 	private boolean isFormatted(Path p) throws IOException {
-		// checkState(c == null);
-//		  verify(v != null);
 		if (!Files.exists(p)) {
 			return false;
 		}
 		final String content = Files.readString(p);
-		final Pattern patternOne = Pattern.compile(".*^(<?indent>\\h+)checkState\\h+\\(c\\h*==\\h*null);.*",
+		final Pattern patternOne = Pattern.compile("(?<start>.*)^(?<indent>\\h+)checkState\\h*\\(c\\h*==\\h*null\\);.*",
 				Pattern.DOTALL | Pattern.MULTILINE);
-		final Pattern patternTwo = Pattern.compile(".*^(<?indent>\\h+)verify\\h+\\(v\\h*!=\\h*null);.*",
+		final Pattern patternTwo = Pattern.compile("(?<start>.*)^(?<indent>\\h+)verify\\h*\\(v\\h*!=\\h*null\\);.*",
 				Pattern.DOTALL | Pattern.MULTILINE);
 		final Matcher matcherOne = patternOne.matcher(content);
 		final Matcher matcherTwo = patternTwo.matcher(content);
@@ -198,7 +207,7 @@ public class Eclipse implements GitGrader {
 			return false;
 		}
 		final String indentOne = matcherOne.group("indent");
-		final String indentTwo = matcherOne.group("indent");
+		final String indentTwo = matcherTwo.group("indent");
 		verify(!indentOne.isEmpty());
 		verify(!indentTwo.isEmpty());
 		return indentOne.equals(indentTwo);

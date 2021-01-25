@@ -75,8 +75,9 @@ public class GitBranching implements GitGrader {
 					Criterion.given("first.txt content"), compose(resolve("first.txt"), contentMatches(helloPattern)),
 					1d);
 
-			final IGrade grade = history.getBestGrade(WeightingGrader
-					.getGrader(ImmutableList.of(graderTopoSiblings, graderBr1, graderContent))::getGrade);
+			final IGrade grade = history.getBestGrade(
+					WeightingGrader.getGrader(ImmutableList.of(graderTopoSiblings, graderBr1, graderContent))::getGrade,
+					1d);
 
 			final CriterionGradeWeight aGrade = CriterionGradeWeight.from(Criterion.given("Commit A"), grade, 5d);
 			gradeBuilder.add(aGrade);
@@ -88,7 +89,7 @@ public class GitBranching implements GitGrader {
 					1d);
 
 			final IGrade grade = history.getBestGrade(
-					WeightingGrader.getGrader(ImmutableList.of(graderTopoSiblings, graderContent))::getGrade);
+					WeightingGrader.getGrader(ImmutableList.of(graderTopoSiblings, graderContent))::getGrade, 1d);
 
 			final CriterionGradeWeight bGrade = CriterionGradeWeight.from(Criterion.given("Commit B"), grade, 3d);
 			gradeBuilder.add(bGrade);
@@ -108,7 +109,7 @@ public class GitBranching implements GitGrader {
 					compose(resolve("a/b/c/x/z/some file.txt"), contentMatches(Marks.extendWhite("2021"))), 1d);
 
 			final IGrade grade = history.getBestGrade(
-					WeightingGrader.getGrader(ImmutableList.of(graderTopoC, graderBr2, graderContent))::getGrade);
+					WeightingGrader.getGrader(ImmutableList.of(graderTopoC, graderBr2, graderContent))::getGrade, 1d);
 
 			final CriterionGradeWeight cGrade = CriterionGradeWeight.from(Criterion.given("Commit C"), grade, 5d);
 			gradeBuilder.add(cGrade);
@@ -159,7 +160,7 @@ public class GitBranching implements GitGrader {
 
 			final Throwing.Function<Optional<GitPathRoot>, IGrade, IOException> grader = WeightingGrader
 					.getGrader(ImmutableList.of(graderTopo, graderBr3, graderContent))::getGrade;
-			final IGrade grade = history.getBestGrade(grader);
+			final IGrade grade = history.getBestGrade(grader, 1d);
 
 			final CriterionGradeWeight dGrade = CriterionGradeWeight.from(Criterion.given("Commit D"), grade, 6d);
 			gradeBuilder.add(dGrade);

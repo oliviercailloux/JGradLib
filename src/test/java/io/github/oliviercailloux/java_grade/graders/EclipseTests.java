@@ -1,6 +1,7 @@
 package io.github.oliviercailloux.java_grade.graders;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import java.time.Instant;
 import java.util.Map;
@@ -18,6 +19,7 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.common.graph.GraphBuilder;
+import com.google.common.graph.Graphs;
 import com.google.common.graph.ImmutableGraph;
 
 import io.github.oliviercailloux.git.GitCloner;
@@ -46,14 +48,14 @@ public class EclipseTests {
 					GitHistory.create(GraphBuilder.directed().build(), ImmutableMap.of()));
 
 			final IGrade grade = new Eclipse().grade(empty, "ploum");
-			LOGGER.info("Grade direct: {}.", JsonGrade.asJson(grade));
+			LOGGER.debug("Grade direct: {}.", JsonGrade.asJson(grade));
 			assertEquals(0d, grade.getPoints());
 		}
 	}
 
 	@Test
-	void testPerfect() throws Exception {
-		try (FileRepository repository = GitCloner.create().download(
+	void testNothing() throws Exception {
+		try (FileRepository repository = GitCloner.create().setCheckCommonRefsAgree(false).download(
 				RepositoryCoordinates.from("oliviercailloux-org", "minimax-ex").asGitUri(),
 				Utils.getTempDirectory().resolve("minimax-ex"));
 				GitFileSystem gitFs = GitFileSystemProvider.getInstance().newFileSystemFromRepository(repository)) {
@@ -62,19 +64,44 @@ public class EclipseTests {
 			final Map<ObjectId, Instant> constantTimes = Maps.asMap(graph.nodes(), o -> Commit.DEADLINE.toInstant());
 			final GitFileSystemHistory withConstantTimes = GitFileSystemHistory.create(gitFs,
 					GitHistory.create(graph, constantTimes));
-			LOGGER.info("Cst: {}.", withConstantTimes.getGraph().nodes().size());
+			LOGGER.debug("Cst: {}.", withConstantTimes.getGraph().nodes().size());
 
 			final GitPathRoot master = gitFs.getPathRoot("/refs/remotes/origin/master/");
 			final GitPathRoot masterId = gitFs.getPathRoot(master.getCommit().getId());
-			final Set<GitPathRoot> afterMaster = withConstantTimes.getGraph().successors(masterId);
+			final GitFileSystemHistory justMaster = withConstantTimes.filter(r -> r.equals(masterId));
+			LOGGER.debug("From master: {}.", justMaster);
+
+			final IGrade grade = new Eclipse().grade(justMaster, "Olivier Cailloux");
+			LOGGER.debug("Grade: {}.", JsonGrade.asJson(grade));
+			assertEquals(0.05d, grade.getPoints());
+		}
+	}
+
+	@Test
+	void testPerfect() throws Exception {
+		try (FileRepository repository = GitCloner.create().setCheckCommonRefsAgree(false).download(
+				RepositoryCoordinates.from("oliviercailloux-org", "minimax-ex").asGitUri(),
+				Utils.getTempDirectory().resolve("minimax-ex"));
+				GitFileSystem gitFs = GitFileSystemProvider.getInstance().newFileSystemFromRepository(repository)) {
+			final GitHistory rawHistory = GitUtils.getHistory(gitFs);
+			final ImmutableGraph<ObjectId> graph = rawHistory.getGraph();
+			final Map<ObjectId, Instant> constantTimes = Maps.asMap(graph.nodes(), o -> Commit.DEADLINE.toInstant());
+			final GitFileSystemHistory withConstantTimes = GitFileSystemHistory.create(gitFs,
+					GitHistory.create(graph, constantTimes));
+			LOGGER.debug("Cst: {}.", withConstantTimes.getGraph().nodes().size());
+
+			final GitPathRoot master = gitFs.getPathRoot("/refs/remotes/origin/master/");
+			final GitPathRoot masterId = gitFs.getPathRoot(master.getCommit().getId());
+			final Set<GitPathRoot> afterMaster = Graphs.reachableNodes(withConstantTimes.getGraph(), masterId);
 			final GitFileSystemHistory fromMaster = withConstantTimes
 					.filter(r -> afterMaster.contains(r) || r.equals(masterId));
+			LOGGER.debug("From master: {}.", fromMaster);
 
+			assertFalse(new Eclipse().formatted(masterId));
 			final IGrade grade = new Eclipse().grade(fromMaster, "Olivier Cailloux");
 			LOGGER.debug("Grade: {}.", JsonGrade.asJson(grade));
 			assertEquals(1.0d, grade.getPoints());
 		}
-
 	}
 
 }

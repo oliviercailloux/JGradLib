@@ -180,6 +180,7 @@ public class GitCloner {
 
 	private void maybeCheckCommonRefs(Git git) throws GitAPIException {
 		if (checkCommonRefsAgree) {
+			/** Seems like this also includes HEAD when detached. */
 			final List<Ref> branches = git.branchList().setListMode(ListMode.ALL).call();
 			final List<Ref> allRefs = IO_UNCHECKER.getUsing(() -> git.getRepository().getRefDatabase().getRefs());
 			LOGGER.debug("All refs: {}, branches: {}.", allRefs, branches);
