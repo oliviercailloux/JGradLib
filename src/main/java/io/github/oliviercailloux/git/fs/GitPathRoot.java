@@ -1,16 +1,11 @@
 package io.github.oliviercailloux.git.fs;
 
 import static com.google.common.base.Preconditions.checkNotNull;
-import static com.google.common.base.Preconditions.checkState;
-import static com.google.common.base.Verify.verify;
 
 import java.io.IOException;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
-import java.util.Optional;
 
-import org.eclipse.jgit.errors.IncorrectObjectTypeException;
-import org.eclipse.jgit.errors.MissingObjectException;
 import org.eclipse.jgit.lib.FileMode;
 import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.revwalk.RevCommit;
@@ -163,75 +158,19 @@ public abstract class GitPathRoot extends GitAbsolutePath {
 	 * <ul>
 	 * <li>this path root contains a git ref which does not exist in this
 	 * repository;</li>
-	 * <li>this path root contains a git ref which refers to a git object that is
-	 * not a commit;</li>
-	 * <li>this path root contains a commit id that does not exist.</li>
+	 * <li>this path root contains a git ref which refers to a sha that is not a
+	 * commit;</li>
+	 * <li>this path root contains a sha that is not a commit or does not
+	 * exist.</li>
 	 *
 	 * @throws IOException if an error occurs while accessing the underlying
 	 *                     repository
 	 *
 	 * @see #getCommit()
 	 */
-	public boolean exists() throws IOException {
-		/**
-		 * NB this exists-based approach (rather than Optional on getCommit) seems
-		 * adequate because most of the time, the user will use commit ids, coming from
-		 * the history or the set of roots of this fs, and thus it is known that the
-		 * related commit exists. Similarly, if the user uses some ref, she must have
-		 * learned from somewhere that this ref exists in this repo. Only if the user
-		 * accesses the main branch should she test its existence, and even there,
-		 * perhaps she knows that this branch exists (e.g. her own repositories).
-		 */
-		return tryGetRevCommit().isPresent();
-	}
+	public abstract boolean exists() throws IOException;
 
-	/**
-	 * Returns empty when either 1) the ref points nowhere; 2) the ref points to an
-	 * object that is not a commit; 3) this is not a ref but a commit id directly
-	 * and it does not exist.
-	 */
-	private Optional<RevCommit> tryGetRevCommit() throws IOException {
-		LOGGER.debug("Trying to get rev commit of {}.", toString());
-		final ObjectId possibleCommitId;
-		if (isRef()) {
-			final Optional<ObjectId> objectId = fileSystem.getObjectId(getGitRef());
-			if (objectId.isEmpty()) {
-				return Optional.empty();
-			}
-			possibleCommitId = objectId.get();
-		} else {
-			possibleCommitId = getStaticCommitId();
-		}
-
-		try {
-			final RevCommit revCommit = fileSystem.getRevCommit(possibleCommitId);
-			LOGGER.debug("Returning with rev commit.");
-			return Optional.of(revCommit);
-		} catch (IncorrectObjectTypeException e) {
-			LOGGER.info("Tried to access a non-commit as a commit: " + e + ".");
-			return Optional.empty();
-		} catch (@SuppressWarnings("unused") MissingObjectException e) {
-			verify(isCommitId());
-			return Optional.empty();
-		}
-	}
-
-	ObjectId fetchObjectId() throws IOException, NoSuchFileException {
-		checkState(isRef());
-		final Optional<ObjectId> objectId = fileSystem.getObjectId(getGitRef());
-		if (objectId.isEmpty()) {
-			throw new NoSuchFileException(toString());
-		}
-		return objectId.get();
-	}
-
-	RevCommit getRevCommit() throws IOException, NoSuchFileException {
-		final Optional<RevCommit> commit = tryGetRevCommit();
-		if (commit.isEmpty()) {
-			throw new NoSuchFileException(toString());
-		}
-		return commit.get();
-	}
+	abstract RevCommit getRevCommit() throws IOException, NoSuchFileException;
 
 	@Override
 	RevTree getRevTree(boolean followLinks) throws IOException, NoSuchFileException {
