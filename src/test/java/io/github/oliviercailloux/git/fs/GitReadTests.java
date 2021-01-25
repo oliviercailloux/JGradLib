@@ -44,6 +44,7 @@ import com.google.common.collect.PeekingIterator;
 
 import io.github.oliviercailloux.git.GitCloner;
 import io.github.oliviercailloux.git.JGit;
+import io.github.oliviercailloux.git.fs.GitFileSystem.GitObject;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.utils.Utils;
 
@@ -487,10 +488,10 @@ public class GitReadTests {
 			treeWalk.setRecursive(false);
 			try (GitFileSystem.TreeWalkDirectoryStream dirWalker = new GitFileSystem.TreeWalkDirectoryStream(
 					treeWalk)) {
-				final PeekingIterator<String> iterator = dirWalker.iterator();
+				final PeekingIterator<GitObject> iterator = dirWalker.iterator();
 				while (iterator.hasNext()) {
-					final String name = iterator.next();
-					if (name.equals(searched)) {
+					final GitObject obj = iterator.next();
+					if (obj.getRealPath().getFileName().toString().equals(searched)) {
 						LOGGER.info("Found: indirectly.");
 					}
 				}
