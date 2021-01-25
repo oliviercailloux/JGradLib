@@ -727,15 +727,15 @@ public abstract class GitFileSystem extends FileSystem {
 	 * like the default FS on Linux.
 	 */
 	@SuppressWarnings("resource")
-	TreeWalkDirectoryStream iterate(RevTree tree) throws IOException {
+	TreeWalkDirectoryStream iterate(ObjectId treeId) throws IOException {
 		if (!isOpen) {
 			throw new ClosedFileSystemException();
 		}
 
-		LOGGER.debug("Iterating over {}.", tree);
+		LOGGER.debug("Iterating over {}.", treeId);
 
 		final TreeWalk treeWalk = new TreeWalk(reader);
-		treeWalk.addTree(tree);
+		treeWalk.addTree(treeId);
 		treeWalk.setRecursive(false);
 		final TreeWalkDirectoryStream dirStream = new TreeWalkDirectoryStream(treeWalk);
 		LOGGER.debug("Created stream.");
