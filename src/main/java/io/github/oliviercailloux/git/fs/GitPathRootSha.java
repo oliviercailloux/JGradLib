@@ -2,9 +2,6 @@ package io.github.oliviercailloux.git.fs;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
-import java.io.IOException;
-import java.nio.file.NoSuchFileException;
-
 public class GitPathRootSha extends GitPathRoot {
 
 	protected GitPathRootSha(GitFileSystem fileSystem, GitRev gitRev) {
@@ -13,7 +10,7 @@ public class GitPathRootSha extends GitPathRoot {
 	}
 
 	@Override
-	public GitPathRootSha toSha() throws IOException, NoSuchFileException {
+	public GitPathRootSha toSha() {
 		return this;
 	}
 }
