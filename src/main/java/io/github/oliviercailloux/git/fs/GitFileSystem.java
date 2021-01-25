@@ -295,7 +295,7 @@ public abstract class GitFileSystem extends FileSystem {
 		/**
 		 * @param realPath absolute jim fs path
 		 */
-		public static GitObject given(Path realPath, AnyObjectId objectId, FileMode fileMode) {
+		public static GitObject given(Path realPath, ObjectId objectId, FileMode fileMode) {
 			return new GitObject(realPath, objectId, fileMode);
 		}
 
@@ -303,9 +303,9 @@ public abstract class GitFileSystem extends FileSystem {
 		private final ObjectId objectId;
 		private final FileMode fileMode;
 
-		private GitObject(Path realPath, AnyObjectId objectId, FileMode fileMode) {
+		private GitObject(Path realPath, ObjectId objectId, FileMode fileMode) {
 			this.realPath = checkNotNull(realPath);
-			this.objectId = objectId.copy();
+			this.objectId = objectId;
 			this.fileMode = checkNotNull(fileMode);
 		}
 
@@ -849,7 +849,7 @@ public abstract class GitFileSystem extends FileSystem {
 					if (trees.isEmpty()) {
 						throw new NoContextNoSuchFileException("Attempt to move to parent of root.");
 					}
-					final AnyObjectId currentTree = trees.peek();
+					final ObjectId currentTree = trees.peek();
 					treeWalk.reset(currentTree);
 					LOGGER.debug("Moving current to the parent of {}.", currentPath);
 //					currentPath = currentPath.getNameCount() == 1 ? Path.of("") : currentPath.getParent();
