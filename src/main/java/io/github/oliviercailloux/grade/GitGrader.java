@@ -111,7 +111,7 @@ public interface GitGrader {
 				try (Stream<Path> found = Files.find(r, 100, (p, a) -> wrappedPredicate.test((GitPath) p))) {
 					final ImmutableSet<GitPath> foundSet = found.map(p -> (GitPath) p)
 							.collect(ImmutableSet.toImmutableSet());
-					LOGGER.info("Found: {}.", foundSet);
+					LOGGER.debug("Found: {}.", foundSet);
 					return foundSet;
 				} catch (UncheckedIOException e) {
 					throw e.getCause();
