@@ -252,7 +252,7 @@ public class GitFileSystemHistory {
 				bestScore = score;
 				bestInput = r;
 			}
-			LOGGER.info("Considering {}, obtained score {}, current best {}.", r, score, bestScore);
+			LOGGER.debug("Considering {}, obtained score {}, current best {}.", r, score, bestScore);
 			if (bestScore.equals(bestPossible)) {
 				break;
 			}
