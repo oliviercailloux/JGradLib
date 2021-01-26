@@ -4,6 +4,7 @@ import static com.google.common.base.Verify.verify;
 import static io.github.oliviercailloux.grade.GitGrader.Predicates.compose;
 import static io.github.oliviercailloux.grade.GitGrader.Predicates.contentMatches;
 import static io.github.oliviercailloux.grade.GitGrader.Predicates.isFileNamed;
+import static io.github.oliviercailloux.jaris.exceptions.Unchecker.IO_UNCHECKER;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -45,7 +46,9 @@ public class Eclipse implements GitGrader {
 
 	public static final ZonedDateTime DEADLINE = ZonedDateTime.parse("2021-01-14T23:00:00+01:00[Europe/Paris]");
 
-	private GitFileSystemHistory h;
+	private GitFileSystemHistory history;
+
+	private GitFileSystemHistory ownHistory;
 
 	public static void main(String[] args) throws Exception {
 		GitGeneralGrader.grade(PREFIX, DEADLINE, new Eclipse());
@@ -55,38 +58,49 @@ public class Eclipse implements GitGrader {
 	}
 
 	@Override
-	public WeightingGrade grade(GitFileSystemHistory history, String gitHubUsername) throws IOException {
-		h = history;
+	public WeightingGrade grade(GitFileSystemHistory hist, String gitHubUsername) throws IOException {
+		this.history = hist;
+		ownHistory = history.filter(r -> !r.getCommit().getAuthorName().equals("Olivier Cailloux")
+				&& !r.getCommit().getAuthorName().equals("xoxor")
+				&& !r.getCommit().getAuthorName().equals("Beatrice Napolitano"));
+		final ImmutableSet<String> authors = ownHistory.getGraph().nodes().stream()
+				.map(c -> IO_UNCHECKER.getUsing(c::getCommit).getAuthorName()).distinct()
+				.collect(ImmutableSet.toImmutableSet());
+		verify(authors.size() <= 1, authors.toString());
+		LOGGER.debug("Considering whole history {} and own history {}.", history.getGraph().nodes(),
+				ownHistory.getGraph().nodes());
+
 		final ImmutableSet.Builder<CriterionGradeWeight> gradeBuilder = ImmutableSet.builder();
 
 		{
-			final Mark hasCommit = Mark.binary(!history.getGraph().nodes().isEmpty());
+			final Mark hasCommit = Mark.binary(!ownHistory.getGraph().nodes().isEmpty());
 			gradeBuilder.add(CriterionGradeWeight.from(Criterion.given("At least one"), hasCommit, 1d));
 		}
 		LOGGER.info("Grading compile.");
-		gradeBuilder.add(
-				CriterionGradeWeight.from(Criterion.given("Compile"), h.getBestGrade(this::compileGrade, 1d), 2.5d));
+		gradeBuilder.add(CriterionGradeWeight.from(Criterion.given("Compile"),
+				ownHistory.getBestGrade(this::compileGrade, 1d), 2.5d));
 		LOGGER.info("Grading warning.");
-		gradeBuilder.add(
-				CriterionGradeWeight.from(Criterion.given("Warning"), h.getBestGrade(this::warningGrade, 1d), 2.5d));
+		gradeBuilder.add(CriterionGradeWeight.from(Criterion.given("Warning"),
+				ownHistory.getBestGrade(this::warningGrade, 1d), 2.5d));
 		LOGGER.info("Grading helper.");
 		gradeBuilder.add(CriterionGradeWeight.from(Criterion.given("StrategyHelper → Helper"),
-				h.getBestGrade(this::helperGrade, 1d), 3.5d));
+				ownHistory.getBestGrade(this::helperGrade, 1d), 3.5d));
 		LOGGER.info("Grading courses.");
 		gradeBuilder.add(CriterionGradeWeight.from(Criterion.given("courses.soc"),
-				h.getBestGrade(this::coursesGrade, 1d), 3.5d));
+				ownHistory.getBestGrade(this::coursesGrade, 1d), 3.5d));
 		LOGGER.info("Grading number.");
-		gradeBuilder
-				.add(CriterionGradeWeight.from(Criterion.given("Number"), h.getBestGrade(this::numberGrade, 1d), 3.5d));
+		gradeBuilder.add(CriterionGradeWeight.from(Criterion.given("Number"),
+				ownHistory.getBestGrade(this::numberGrade, 1d), 3.5d));
 		LOGGER.info("Grading formatting.");
 		gradeBuilder.add(CriterionGradeWeight.from(Criterion.given("Formatting"),
-				h.getBestGrade(this::formattingGrade, 1d), 3.5d));
+				ownHistory.getBestGrade(this::formattingGrade, 1d), 3.5d));
 
 		return WeightingGrade.from(gradeBuilder.build());
 	}
 
 	void setHistory(GitFileSystemHistory history) {
-		this.h = history;
+		this.history = history;
+		this.ownHistory = history;
 	}
 
 	private IGrade compileGrade(Optional<GitPathRoot> p) throws IOException {
@@ -99,28 +113,28 @@ public class Eclipse implements GitGrader {
 	}
 
 	boolean compiles(GitPathRoot p) throws IOException {
-		LOGGER.info("Files matching.");
+		LOGGER.debug("Files matching.");
 		final Function<GitPathRoot, ImmutableSet<GitPath>, IOException> filesMatching = Functions
 				.filesMatching(isFileNamed("QuestioningConstraint.java"));
 		final ImmutableSet<GitPath> matching = filesMatching.apply(p);
-		LOGGER.info("Files matching found: {}.", matching);
+		LOGGER.debug("Files matching found: {}.", matching);
 		final Pattern patternCompiles = Pattern.compile(".*^(?<indent>\\h+)return[\\v\\h]+kind[\\v\\h]*;.*",
 				Pattern.DOTALL | Pattern.MULTILINE);
 		final Predicate<ImmutableSet<GitPath>, IOException> singletonAndMatch = Predicates
 				.singletonAndMatch(contentMatches(patternCompiles));
 		final boolean tested = singletonAndMatch.test(matching);
-		LOGGER.info("Predicate known: {}.", tested);
+		LOGGER.debug("Predicate known: {}.", tested);
 		return tested;
 //		return compose(filesMatching, singletonAndMatch).test(p);
 	}
 
 	boolean singleChangeAbout(GitPathRoot p, String file) throws IOException {
-		final Set<GitPathRoot> predecessors = h.getGraph().predecessors(p);
+		final Set<GitPathRoot> predecessors = history.getGraph().predecessors(p);
 		return (predecessors.size() == 1) && singleDiffAbout(Iterables.getOnlyElement(predecessors), p, file);
 	}
 
 	private boolean singleDiffAbout(GitPathRoot predecessor, GitPathRoot p, String file) throws IOException {
-		final ImmutableSet<DiffEntry> diff = h.getDiff(predecessor, p);
+		final ImmutableSet<DiffEntry> diff = history.getDiff(predecessor, p);
 		return diff.size() == 1 && diffIsAboutFile(Iterables.getOnlyElement(diff), file);
 	}
 
