@@ -143,7 +143,8 @@ class GitAbsolutePathWithInternal extends GitAbsolutePath {
 			if (cachedRealGitObject.getRealPath().equals(internalPath)) {
 				toReturn = cachedRealGitObject;
 			} else {
-				throw new PathCouldNotBeFoundException(toString());
+				throw new PathCouldNotBeFoundException(
+						toString() + "; Real path is " + cachedRealGitObject.getRealPath());
 			}
 			break;
 		default:
