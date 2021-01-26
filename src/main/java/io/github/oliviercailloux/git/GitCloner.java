@@ -18,6 +18,7 @@ import org.eclipse.jgit.api.CloneCommand;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.ListBranchCommand.ListMode;
 import org.eclipse.jgit.api.PullResult;
+import org.eclipse.jgit.api.Status;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.internal.storage.file.FileRepository;
 import org.eclipse.jgit.lib.Constants;
@@ -31,6 +32,7 @@ import org.eclipse.jgit.transport.RemoteConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableTable;
@@ -136,9 +138,14 @@ public class GitCloner {
 				final List<RemoteConfig> remoteList = git.remoteList().call();
 				final Optional<RemoteConfig> origin = remoteList.stream().filter((r) -> r.getName().equals("origin"))
 						.collect(MoreCollectors.toOptional());
-				if (!git.getRepository().isBare() && !git.status().call().isClean()) {
-					throw new IllegalStateException("Can’t update: not clean.");
-				}
+				final Status status = git.status().call();
+				/**
+				 * Creates a problem probably related to https://stackoverflow.com/a/4162672
+				 * (oliviercailloux-org/eclipse-LucasLePort)
+				 */
+//				if (!git.getRepository().isBare() && !status.isClean()) {
+//					throw new IllegalStateException("Can’t update " + uri + ": not clean (" + toString(status) + ").");
+//				}
 				final String fullBranch = git.getRepository().getFullBranch();
 				LOGGER.debug("HEAD: {}.", fullBranch);
 				if (origin.isPresent() && origin.get().getURIs().size() == 1
@@ -229,6 +236,14 @@ public class GitCloner {
 		}
 		remoteRefs = remoteRefsBuilder.build();
 		localRefs = localRefsBuilder.build();
+	}
+
+	private String toString(Status status) {
+		return MoreObjects.toStringHelper(status).add("Added", status.getAdded()).add("Changed", status.getChanged())
+				.add("Conflicting", status.getConflicting()).add("Ignored not in index", status.getIgnoredNotInIndex())
+				.add("Missing", status.getMissing()).add("Modified", status.getModified())
+				.add("Removed", status.getRemoved()).add("Uncommitted changes", status.getUncommittedChanges())
+				.add("Untracked", status.getUntracked()).toString();
 	}
 
 }
