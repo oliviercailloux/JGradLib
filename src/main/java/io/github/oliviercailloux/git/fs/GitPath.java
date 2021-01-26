@@ -39,6 +39,7 @@ import com.google.common.collect.PeekingIterator;
 
 import io.github.oliviercailloux.git.fs.GitFileSystem.FollowLinksBehavior;
 import io.github.oliviercailloux.git.fs.GitFileSystem.GitObject;
+import io.github.oliviercailloux.git.fs.GitFileSystem.GitStringObject;
 import io.github.oliviercailloux.git.fs.GitFileSystem.TreeWalkDirectoryStream;
 
 /**
@@ -778,7 +779,8 @@ public abstract class GitPath implements Path {
 		 * Note: this can’t be moved to GitAbsolutePath: a directory stream on a
 		 * relative path differs by resolving against a relative path.
 		 */
-		// TODO test directory stream.
+		final Path absoluteRealInternalPath = toAbsolutePathAsAbsolutePath()
+				.getGitObject(FollowLinksBehavior.FOLLOW_ALL_LINKS).getRealPath();
 		final RevTree tree = toAbsolutePathAsAbsolutePath().getRevTree(true);
 		final TreeWalkDirectoryStream directoryStream = getFileSystem().iterate(tree);
 
@@ -815,9 +817,9 @@ public abstract class GitPath implements Path {
 			 */
 			@Override
 			public Iterator<GitPath> iterator() {
-				final PeekingIterator<GitObject> namesIterator = directoryStream.iterator();
-				final TransformedPeekingIterator<GitObject> unfilteredPathIterator = new TransformedPeekingIterator<>(
-						namesIterator, g -> toNewEntry(sha, g));
+				final PeekingIterator<GitStringObject> namesIterator = directoryStream.iterator();
+				final TransformedPeekingIterator<GitStringObject> unfilteredPathIterator = new TransformedPeekingIterator<>(
+						namesIterator, g -> toNewEntry(sha, absoluteRealInternalPath, g));
 				return new PathIterator(unfilteredPathIterator, filter);
 			}
 		};
@@ -829,11 +831,13 @@ public abstract class GitPath implements Path {
 	 * @return the same kind (relative VS absolute) as this instance, representing
 	 *         an entry in this directory.
 	 */
-	GitPath toNewEntry(GitPathRootSha sha, GitObject gitObject) {
-		final Path realPath = gitObject.getRealPath();
-		final Path newInternal = getInternalPath().resolve(realPath.getFileName());
+	GitPath toNewEntry(GitPathRootSha sha, Path absoluteRealInternalPath, GitStringObject localGitObject) {
+		final String name = localGitObject.getFileName();
+		final Path newInternal = getInternalPath().resolve(name);
 		final GitPath newPath = withPath(newInternal);
-		((GitAbsolutePathWithInternal) newPath.toAbsolutePathAsAbsolutePath()).setRealGitObject(sha, gitObject);
+		final GitObject resolved = GitObject.given(absoluteRealInternalPath.resolve(name), localGitObject.getObjectId(),
+				localGitObject.getFileMode());
+		((GitAbsolutePathWithInternal) newPath.toAbsolutePathAsAbsolutePath()).setRealGitObject(sha, resolved);
 		return newPath;
 	}
 

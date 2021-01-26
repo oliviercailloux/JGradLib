@@ -130,11 +130,11 @@ public abstract class GitFileSystem extends FileSystem {
 
 	}
 
-	static class TreeWalkIterator implements PeekingIterator<GitObject> {
+	static class TreeWalkIterator implements PeekingIterator<GitStringObject> {
 		private final TreeWalk walk;
 		private Boolean hasNext = null;
 
-		private GitObject next;
+		private GitStringObject next;
 
 		public TreeWalkIterator(TreeWalk walk) {
 			this.walk = checkNotNull(walk);
@@ -156,12 +156,14 @@ public abstract class GitFileSystem extends FileSystem {
 			}
 
 			if (hasNext) {
-				final String path = walk.getPathString();
-				verify(!path.startsWith("/"));
-				final Path jimPath = GitFileSystem.JIM_FS.getPath("/" + path);
+				/**
+				 * Do not use walk.getPathString(): this seems to return not the complete path
+				 * but the path within this tree (i.e., the name).
+				 */
+				final String name = walk.getNameString();
 				final ObjectId objectId = walk.getObjectId(0);
 				final FileMode fileMode = walk.getFileMode();
-				next = GitObject.given(jimPath, objectId, fileMode);
+				next = GitStringObject.given(name, objectId, fileMode);
 			} else {
 				next = null;
 			}
@@ -170,7 +172,7 @@ public abstract class GitFileSystem extends FileSystem {
 		}
 
 		@Override
-		public GitObject peek() throws DirectoryIteratorException {
+		public GitStringObject peek() throws DirectoryIteratorException {
 			if (!hasNext()) {
 				throw new NoSuchElementException();
 			}
@@ -178,8 +180,8 @@ public abstract class GitFileSystem extends FileSystem {
 		}
 
 		@Override
-		public GitObject next() throws DirectoryIteratorException {
-			final GitObject current = peek();
+		public GitStringObject next() throws DirectoryIteratorException {
+			final GitStringObject current = peek();
 			hasNext = null;
 			next = null;
 			return current;
@@ -197,7 +199,7 @@ public abstract class GitFileSystem extends FileSystem {
 
 	}
 
-	static class TreeWalkDirectoryStream implements DirectoryStream<GitObject> {
+	static class TreeWalkDirectoryStream implements DirectoryStream<GitStringObject> {
 		private final TreeWalkIterator iterator;
 		private boolean returned;
 		private boolean closed;
@@ -240,7 +242,7 @@ public abstract class GitFileSystem extends FileSystem {
 		 * DirectoryIteratorException.
 		 */
 		@Override
-		public PeekingIterator<GitObject> iterator() {
+		public PeekingIterator<GitStringObject> iterator() {
 			if (returned || closed) {
 				throw new IllegalStateException();
 			}
@@ -284,6 +286,34 @@ public abstract class GitFileSystem extends FileSystem {
 		public String toString() {
 			return MoreObjects.toStringHelper(this).add("objectId", objectId).add("remainingNames", remainingNames)
 					.toString();
+		}
+	}
+
+	static class GitStringObject {
+		public static GitStringObject given(String fileName, ObjectId objectId, FileMode fileMode) {
+			return new GitStringObject(fileName, objectId, fileMode);
+		}
+
+		private final String fileName;
+		private final ObjectId objectId;
+		private final FileMode fileMode;
+
+		private GitStringObject(String fileName, ObjectId objectId, FileMode fileMode) {
+			this.fileName = checkNotNull(fileName);
+			this.objectId = objectId;
+			this.fileMode = checkNotNull(fileMode);
+		}
+
+		String getFileName() {
+			return fileName;
+		}
+
+		ObjectId getObjectId() {
+			return objectId;
+		}
+
+		FileMode getFileMode() {
+			return fileMode;
 		}
 	}
 
@@ -757,13 +787,21 @@ public abstract class GitFileSystem extends FileSystem {
 			throw new ClosedFileSystemException();
 		}
 
+		final int previousThreshold = reader.getStreamFileThreshold();
 		LOGGER.debug("Retrieving size of {}.", gitObject);
+		/**
+		 * 8 bytes. I think the default is there:
+		 * org.eclipse.jgit.storage.pack.PackConfig.DEFAULT_BIG_FILE_THRESHOLD.
+		 */
+		reader.setStreamFileThreshold(8);
 		final ObjectLoader fileLoader = reader.open(gitObject.getObjectId());
+		LOGGER.debug("Obtained loader {}.", fileLoader);
 		verify(fileLoader.getType() == gitObject.getFileMode().getObjectType(),
 				String.format("Expected file mode %s and object type %s but loaded object type %s",
 						gitObject.getFileMode(), gitObject.getFileMode().getObjectType(), fileLoader.getType()));
 		final long size = fileLoader.getSize();
 		LOGGER.debug("Got size: {}.", size);
+		reader.setStreamFileThreshold(previousThreshold);
 		return size;
 	}
 
