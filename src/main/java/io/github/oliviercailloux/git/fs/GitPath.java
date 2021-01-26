@@ -773,6 +773,7 @@ public abstract class GitPath implements Path {
 
 	@SuppressWarnings("resource")
 	DirectoryStream<GitPath> newDirectoryStream(Filter<? super GitPath> filter) throws IOException {
+		final GitPathRootSha sha = getRoot().toSha();
 		/**
 		 * Note: this can’t be moved to GitAbsolutePath: a directory stream on a
 		 * relative path differs by resolving against a relative path.
@@ -816,7 +817,7 @@ public abstract class GitPath implements Path {
 			public Iterator<GitPath> iterator() {
 				final PeekingIterator<GitObject> namesIterator = directoryStream.iterator();
 				final TransformedPeekingIterator<GitObject> unfilteredPathIterator = new TransformedPeekingIterator<>(
-						namesIterator, GitPath.this::toNewEntry);
+						namesIterator, g -> toNewEntry(sha, g));
 				return new PathIterator(unfilteredPathIterator, filter);
 			}
 		};
@@ -825,17 +826,14 @@ public abstract class GitPath implements Path {
 	}
 
 	/**
-	 * @param gitObject its path represents the real path of the entry: if this
-	 *                  instance is a link, the parameter has the target of this
-	 *                  link plus a file name.
 	 * @return the same kind (relative VS absolute) as this instance, representing
 	 *         an entry in this directory.
 	 */
-	GitPath toNewEntry(GitObject gitObject) {
+	GitPath toNewEntry(GitPathRootSha sha, GitObject gitObject) {
 		final Path realPath = gitObject.getRealPath();
 		final Path newInternal = getInternalPath().resolve(realPath.getFileName());
 		final GitPath newPath = withPath(newInternal);
-//		newPath.toAbsolutePathAsAbsolutePath().setGitObject(gitObject);
+		((GitAbsolutePathWithInternal) newPath.toAbsolutePathAsAbsolutePath()).setRealGitObject(sha, gitObject);
 		return newPath;
 	}
 
