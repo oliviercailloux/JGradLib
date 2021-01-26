@@ -94,9 +94,8 @@ abstract class GitAbsolutePath extends GitPath {
 		public GitBasicFileAttributes(GitObject gitObject, long size) {
 			this.objectId = checkNotNull(gitObject.getObjectId());
 			this.fileMode = gitObject.getFileMode();
-			checkArgument(!fileMode.equals(FileMode.TYPE_GITLINK));
-			checkArgument(!fileMode.equals(FileMode.TYPE_MASK));
-			checkArgument(!fileMode.equals(FileMode.TYPE_MISSING));
+			checkArgument(!fileMode.equals(FileMode.GITLINK));
+			checkArgument(!fileMode.equals(FileMode.MISSING));
 			this.size = size;
 		}
 
