@@ -9,23 +9,21 @@ import com.google.common.collect.ImmutableMap;
 
 public class AndGrade extends MinGrade implements IGrade {
 
+	private static final String DEFAULT_COMMENT = "AND: Success iff all the sub-grades are successes";
+
 	public static AndGrade given(Criterion c1, boolean cond1, Criterion c2, boolean cond2, Criterion c3,
 			boolean cond3) {
-		return new AndGrade(ImmutableMap.of(c1, Mark.binary(cond1), c2, Mark.binary(cond2), c3, Mark.binary(cond3)));
+		return new AndGrade(ImmutableMap.of(c1, Mark.binary(cond1), c2, Mark.binary(cond2), c3, Mark.binary(cond3)),
+				DEFAULT_COMMENT);
 	}
 
 	public static AndGrade given(Map<Criterion, ? extends IGrade> subGrades) {
-		return new AndGrade(subGrades);
+		return new AndGrade(subGrades, DEFAULT_COMMENT);
 	}
 
-	protected AndGrade(Map<Criterion, ? extends IGrade> subGrades) {
-		super(subGrades);
+	protected AndGrade(Map<Criterion, ? extends IGrade> subGrades, String comment) {
+		super(subGrades, comment);
 		checkArgument(subGrades.values().stream().map(IGrade::getPoints).allMatch((p) -> p == 0d || p == 1d));
-	}
-
-	@Override
-	public String getComment() {
-		return "AND: Success iff all the sub-grades are successes";
 	}
 
 	/**
@@ -49,7 +47,12 @@ public class AndGrade extends MinGrade implements IGrade {
 	}
 
 	@Override
+	public IGrade withComment(String newComment) {
+		return new AndGrade(getSubGrades(), newComment);
+	}
+
+	@Override
 	public AndGrade withSubGrade(Criterion criterion, IGrade newSubGrade) {
-		return new AndGrade(GradeUtils.withUpdatedEntry(getSubGrades(), criterion, newSubGrade));
+		return new AndGrade(GradeUtils.withUpdatedEntry(getSubGrades(), criterion, newSubGrade), getComment());
 	}
 }

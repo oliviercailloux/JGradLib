@@ -120,5 +120,5 @@ public interface GitGrader {
 		}
 	}
 
-	public IGrade grade(GitFileSystemHistory history, String username) throws IOException;
+	public IGrade grade(GitWork work) throws IOException;
 }

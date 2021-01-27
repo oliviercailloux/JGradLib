@@ -1,17 +1,15 @@
 package io.github.oliviercailloux.grade;
 
+import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Verify.verify;
 import static io.github.oliviercailloux.jaris.exceptions.Unchecker.IO_UNCHECKER;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.time.Duration;
-import java.time.Instant;
-import java.time.ZonedDateTime;
-import java.util.Comparator;
-import java.util.Map;
-import java.util.Optional;
+import java.util.Set;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 import org.eclipse.jgit.internal.storage.file.FileRepository;
 import org.slf4j.Logger;
@@ -20,15 +18,15 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.ImmutableSortedSet;
-import com.google.common.collect.MoreCollectors;
 
 import io.github.oliviercailloux.git.GitCloner;
 import io.github.oliviercailloux.git.GitHistory;
 import io.github.oliviercailloux.git.GitHubHistory;
 import io.github.oliviercailloux.git.fs.GitFileSystem;
 import io.github.oliviercailloux.git.fs.GitFileSystemProvider;
+import io.github.oliviercailloux.git.fs.GitPathRoot;
 import io.github.oliviercailloux.git.git_hub.model.GitHubToken;
+import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinatesWithPrefix;
 import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherQL;
 import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherV3;
@@ -36,6 +34,7 @@ import io.github.oliviercailloux.grade.format.json.JsonGrade;
 import io.github.oliviercailloux.java_grade.testers.JavaMarkHelper;
 import io.github.oliviercailloux.json.JsonbUtils;
 import io.github.oliviercailloux.utils.Utils;
+import name.falgout.jeffrey.throwing.stream.ThrowingStream;
 
 /**
  * An instance of this should have a deadline and a grader.
@@ -49,19 +48,53 @@ public class GitGeneralGrader {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(GitGeneralGrader.class);
 
-	public static void grade(String prefix, ZonedDateTime deadline, GitGrader grader) throws IOException {
+	public static GitGeneralGrader using(String prefix, DeadlineGrader deadlineGrader) {
+		return new GitGeneralGrader(prefix, deadlineGrader);
+	}
+
+	private final String prefix;
+	private Predicate<RepositoryCoordinatesWithPrefix> repositoriesFilter;
+	private boolean excludeCommitsByGitHub;
+	private ImmutableSet<String> excludedAuthors;
+	private final DeadlineGrader deadlineGrader;
+
+	private GitGeneralGrader(String prefix, DeadlineGrader deadlineGrader) {
+		this.prefix = checkNotNull(prefix);
+		this.repositoriesFilter = r -> true;
+		this.excludeCommitsByGitHub = false;
+		this.excludedAuthors = ImmutableSet.of();
+		this.deadlineGrader = checkNotNull(deadlineGrader);
+		/**
+		 * TODO "Olivier Cailloux" "xoxor" "Beatrice Napolitano"
+		 */
+	}
+
+	public GitGeneralGrader setRepositoriesFilter(Predicate<RepositoryCoordinatesWithPrefix> accepted) {
+		repositoriesFilter = accepted;
+		return this;
+	}
+
+	public GitGeneralGrader setExcludeCommitsByGitHub(boolean excludeCommitsByGitHub) {
+		this.excludeCommitsByGitHub = excludeCommitsByGitHub;
+		return this;
+	}
+
+	public GitGeneralGrader setExcludeCommitsByAuthors(Set<String> excludedAuthors) {
+		this.excludedAuthors = ImmutableSet.copyOf(excludedAuthors);
+		return this;
+	}
+
+	public void grade() throws IOException {
 		final ImmutableList<RepositoryCoordinatesWithPrefix> repositories;
 		try (GitHubFetcherV3 fetcher = GitHubFetcherV3.using(GitHubToken.getRealInstance())) {
-			repositories = fetcher.getRepositoriesWithPrefix("oliviercailloux-org", prefix);
-//			.stream().limit(1)
-//					.stream().filter(r -> r.getUsername().equals(""))
-//					.collect(ImmutableList.toImmutableList());
+			repositories = fetcher.getRepositoriesWithPrefix("oliviercailloux-org", prefix).stream()
+					.filter(repositoriesFilter).collect(ImmutableList.toImmutableList());
 		}
 
 		final ImmutableMap.Builder<String, IGrade> builder = ImmutableMap.builder();
 		for (RepositoryCoordinatesWithPrefix repository : repositories) {
 			final String username = repository.getUsername();
-			final IGrade grade = grade(repository, deadline, grader);
+			final IGrade grade = grade(repository);
 			builder.put(username, grade);
 		}
 		final ImmutableMap<String, IGrade> grades = builder.build();
@@ -70,8 +103,7 @@ public class GitGeneralGrader {
 		LOGGER.info("Grades: {}.", grades);
 	}
 
-	public static IGrade grade(RepositoryCoordinatesWithPrefix coordinates, ZonedDateTime deadline, GitGrader grader)
-			throws IOException {
+	IGrade grade(RepositoryCoordinatesWithPrefix coordinates) throws IOException {
 		final Path dir = Utils.getTempDirectory().resolve(coordinates.getRepositoryName());
 		try (FileRepository repository = GitCloner.create().setCheckCommonRefsAgree(false)
 				.download(coordinates.asGitUri(), dir)) {
@@ -93,102 +125,35 @@ public class GitGeneralGrader {
 			}
 
 			final GitFileSystemHistory history = GitFileSystemHistory.create(gitFs, pushHistory);
-
-			return grade(history, deadline, coordinates.getUsername(), grader);
+			final GitWork work = GitWork.given(GitHubUsername.given(coordinates.getUsername()), history);
+			return grade(work);
 		}
 	}
 
-	public static IGrade grade(GitFileSystemHistory history, ZonedDateTime deadline, String username, GitGrader grader)
-			throws IOException {
-		final boolean suppressMine = false;
-
-		final ZonedDateTime tooLate = deadline.plus(Duration.ofMinutes(5));
-		final ImmutableSortedSet<Instant> toConsider;
-		{
-			final ImmutableSortedSet<Instant> timestamps = history.asGitHistory().getCommitDates().values().stream()
-					.collect(ImmutableSortedSet.toImmutableSortedSet(Comparator.naturalOrder()));
-			final ImmutableSortedSet<Instant> toDeadline = timestamps.headSet(deadline.toInstant(), true);
-			LOGGER.debug("All timestamps: {}, picking those before {} results in: {}.", timestamps,
-					deadline.toInstant(), toDeadline);
-			final Instant considerFrom;
-			if (toDeadline.isEmpty()) {
-				considerFrom = deadline.toInstant();
-			} else {
-				considerFrom = toDeadline.last();
-			}
-			toConsider = timestamps.tailSet(considerFrom);
-		}
-		/** Temporary patch in wait for a better adjustment of GitHub push dates. */
-		final ImmutableSortedSet<Instant> adjustedConsider;
-		if (!toConsider.isEmpty() && toConsider.first().equals(Instant.MIN)) {
-			verify(toConsider.size() >= 2);
-			LOGGER.warn("Ignoring MIN.");
-			adjustedConsider = toConsider.tailSet(Instant.MIN, false);
+	IGrade grade(GitWork work) throws IOException {
+		final GitFileSystemHistory manual;
+		final ImmutableSet<GitPathRoot> excludedByGitHub;
+		if (excludeCommitsByGitHub) {
+			final ThrowingStream<GitPathRoot, IOException> stream = ThrowingStream
+					.of(work.getHistory().getGraph().nodes().stream(), IOException.class);
+			manual = work.getHistory().filter(r -> !JavaMarkHelper.committerIsGitHub(r));
+			excludedByGitHub = stream.filter(JavaMarkHelper::committerIsGitHub).collect(ImmutableSet.toImmutableSet());
 		} else {
-			adjustedConsider = toConsider;
+			manual = work.getHistory();
+			excludedByGitHub = ImmutableSet.of();
 		}
-		LOGGER.debug("Given {}, to consider: {}, adjusted: {}.", history, toConsider, adjustedConsider);
 
-		final ImmutableMap.Builder<Instant, IGrade> byTimeBuilder = ImmutableMap.builder();
-		for (Instant timeCap : adjustedConsider) {
-			/** Should show the filtered out commits in a comment. */
-			final GitFileSystemHistory manual = history.filter(r -> !JavaMarkHelper.committerIsGitHub(r));
-			final GitFileSystemHistory onTimeAndManual = manual.filter(r -> !history.getCommitDate(r).isAfter(timeCap));
-			final GitFileSystemHistory filteredHistory;
-			if (suppressMine) {
-				filteredHistory = onTimeAndManual.filter(r -> !r.getCommit().getAuthorName().equals("Olivier Cailloux")
-						&& !r.getCommit().getAuthorName().equals("xoxor")
-						&& !r.getCommit().getAuthorName().equals("Beatrice Napolitano"));
-				final ImmutableSet<String> authors = filteredHistory.getGraph().nodes().stream()
-						.map(c -> IO_UNCHECKER.getUsing(c::getCommit).getAuthorName()).distinct()
-						.collect(ImmutableSet.toImmutableSet());
-				verify(authors.size() <= 1, authors.toString());
-			} else {
-				filteredHistory = onTimeAndManual;
-			}
-			final IGrade grade = grader.grade(filteredHistory, username);
-
-			final IGrade penalizedGrade;
-			final Duration lateness = Duration.between(deadline.toInstant(), timeCap);
-			if (!lateness.isNegative() && !lateness.isZero()) {
-				final double fractionPenalty = Math.min(lateness.getSeconds() / 300d, 1d);
-				verify(0d < fractionPenalty);
-				verify(fractionPenalty <= 1d);
-				penalizedGrade = WeightingGrade.from(ImmutableSet.of(
-						CriterionGradeWeight.from(Criterion.given("grade"), grade, 1d - fractionPenalty),
-						CriterionGradeWeight.from(Criterion.given("Time penalty"), Mark.zero("Lateness: " + lateness),
-								fractionPenalty)));
-			} else {
-				penalizedGrade = grade;
-			}
-			byTimeBuilder.put(timeCap, penalizedGrade);
-		}
-		final ImmutableMap<Instant, IGrade> byTime = byTimeBuilder.build();
-		final Optional<IGrade> bestGrade = byTime.values().stream().max(Comparator.comparing(IGrade::getPoints));
-		final IGrade finalGrade;
-		if (bestGrade.isEmpty()) {
-			final String beforeTooLate;
-			if (history.getGraph().nodes().isEmpty()) {
-				beforeTooLate = "";
-			} else {
-				beforeTooLate = " before " + tooLate.toString();
-			}
-			finalGrade = Mark.zero("No commit found" + beforeTooLate);
-		} else if (byTime.size() == 1) {
-			finalGrade = bestGrade.get();
-		} else {
-			final IGrade main = bestGrade.get();
-			final Instant mainInstant = byTime.entrySet().stream().filter(e -> e.getValue().equals(main))
-					.map(Map.Entry::getKey).collect(MoreCollectors.onlyElement());
-			final ImmutableSet<CriterionGradeWeight> grades = byTime.entrySet().stream()
-					.map(e -> CriterionGradeWeight.from(
-							Criterion.given("Cap at " + e.getKey().atZone(deadline.getZone()).toString()), e.getValue(),
-							e.getValue().equals(main) ? 1d : 0d))
-					.collect(ImmutableSet.toImmutableSet());
-			finalGrade = WeightingGrade.from(grades,
-					"Using best grade, from " + mainInstant.atZone(deadline.getZone()).toString());
-		}
-		return finalGrade;
+		final GitFileSystemHistory filteredHistory = manual
+				.filter(r -> !excludedAuthors.contains(r.getCommit().getAuthorName()));
+		final ImmutableSet<String> authors = filteredHistory.getGraph().nodes().stream()
+				.map(c -> IO_UNCHECKER.getUsing(c::getCommit).getAuthorName()).distinct()
+				.collect(ImmutableSet.toImmutableSet());
+		verify(authors.size() <= 1, authors.toString());
+		final IGrade grade = deadlineGrader.grade(GitWork.given(work.getAuthor(), filteredHistory));
+		final String added = excludedByGitHub.isEmpty() ? ""
+				: " (Ignored commits by GitHub: " + excludedByGitHub.stream()
+						.map(r -> r.getStaticCommitId().getName().toString()).collect(Collectors.joining(", "));
+		return grade.withComment(grade.getComment() + added);
 	}
 
 }

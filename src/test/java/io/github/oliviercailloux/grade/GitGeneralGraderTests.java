@@ -1,6 +1,5 @@
-package io.github.oliviercailloux.java_grade.graders;
+package io.github.oliviercailloux.grade;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -17,6 +16,7 @@ import org.eclipse.jgit.lib.Constants;
 import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.lib.PersonIdent;
 import org.eclipse.jgit.lib.Repository;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,7 +24,6 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Maps;
 import com.google.common.graph.GraphBuilder;
 import com.google.common.graph.ImmutableGraph;
 import com.google.common.jimfs.Configuration;
@@ -35,18 +34,16 @@ import io.github.oliviercailloux.git.GitUtils;
 import io.github.oliviercailloux.git.JGit;
 import io.github.oliviercailloux.git.fs.GitFileSystem;
 import io.github.oliviercailloux.git.fs.GitFileSystemProvider;
-import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
-import io.github.oliviercailloux.grade.GitFileSystemHistory;
-import io.github.oliviercailloux.grade.GitWork;
-import io.github.oliviercailloux.grade.IGrade;
-import io.github.oliviercailloux.grade.format.json.JsonGrade;
+import io.github.oliviercailloux.java_grade.graders.Commit;
 import io.github.oliviercailloux.utils.Utils;
 
-class CommitTests {
+public class GitGeneralGraderTests {
 	@SuppressWarnings("unused")
-	private static final Logger LOGGER = LoggerFactory.getLogger(CommitTests.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(GitGeneralGraderTests.class);
 
+	@SuppressWarnings("unused")
 	@Test
+	@Disabled("To be implemented")
 	void testEmpty() throws Exception {
 		try (Repository repository = new InMemoryRepository(new DfsRepositoryDescription("myrepo"));
 				GitFileSystem gitFs = GitFileSystemProvider.getInstance().newFileSystemFromRepository(repository)) {
@@ -55,15 +52,18 @@ class CommitTests {
 
 			final GitFileSystemHistory empty = GitFileSystemHistory.create(gitFs,
 					GitHistory.create(GraphBuilder.directed().build(), ImmutableMap.of()));
-
-			final IGrade direct = new Commit().grade(GitWork.given(GitHubUsername.given("ploum"), empty));
-			LOGGER.debug("Grade direct: {}.", JsonGrade.asJson(direct));
-			assertEquals(0d, direct.getPoints());
+//			final GitGeneralGrader general = GitGeneralGrader.using("dummy", DeadlineGrader.given(new Commit(), Commit.DEADLINE));
+//			general.
+//			final IGrade grade = general;
+//			LOGGER.debug("Grade: {}.", JsonGrade.asJson(grade));
+//			assertEquals(0d, grade.getPoints());
 		}
 
 	}
 
+	@SuppressWarnings("unused")
 	@Test
+	@Disabled("To be implemented")
 	void testAlmost() throws Exception {
 		try (FileSystem jimFs = Jimfs.newFileSystem(Configuration.unix())) {
 			final Path c1 = Files.createDirectories(jimFs.getPath("c1/"));
@@ -105,61 +105,11 @@ class CommitTests {
 				final GitFileSystemHistory withTimes = GitFileSystemHistory.create(gitFs,
 						GitHistory.create(graph, times));
 
-				final IGrade direct = new Commit().grade(GitWork.given(GitHubUsername.given("Not me"), withTimes));
-				LOGGER.debug("Grade direct: {}.", JsonGrade.asJson(direct));
-				assertEquals(0.85d, direct.getPoints(), 1e-5);
+//				final IGrade grade = GitGeneralGrader.grade(withTimes, Commit.DEADLINE, "Not me", new Commit());
+//				LOGGER.debug("Grade: {}.", JsonGrade.asJson(grade));
+//				assertEquals(0.65d, grade.getPoints(), 1e-5d);
 			}
 		}
 
 	}
-
-	@Test
-	void testPerfect() throws Exception {
-		try (FileSystem jimFs = Jimfs.newFileSystem(Configuration.unix())) {
-			final Path c1 = Files.createDirectories(jimFs.getPath("c1/"));
-			final Path c2 = Files.createDirectories(jimFs.getPath("c2/"));
-			final Path c3 = Files.createDirectories(jimFs.getPath("c3/"));
-			final Path links = Files.createDirectories(jimFs.getPath("links/"));
-
-			{
-				Files.writeString(c1.resolve("afile.txt"), "coucou");
-			}
-			{
-				Files.writeString(c2.resolve("afile.txt"), "coucou");
-				Files.writeString(c2.resolve("myid.txt"), "222");
-			}
-			{
-				Files.writeString(c3.resolve("afile.txt"), "coucou");
-				Files.writeString(c3.resolve("myid.txt"), "222");
-				Files.writeString(Files.createDirectories(c3.resolve("sub/a/")).resolve("another file.txt"), "coucou");
-			}
-			{
-				final Path origin = Files.createDirectories(links.resolve(Constants.R_REMOTES + "origin/"));
-				Files.createSymbolicLink(origin.resolve("coucou"), c1);
-				Files.createSymbolicLink(origin.resolve("main"), c2);
-				Files.createSymbolicLink(origin.resolve("dev"), c3);
-			}
-
-			final PersonIdent personIdent = new PersonIdent("Me", "email");
-
-			try (Repository repository = JGit.createRepository(personIdent, Utils.asGraph(ImmutableList.of(c1, c2, c3)),
-					links)) {
-				try (GitFileSystem gitFs = GitFileSystemProvider.getInstance()
-						.newFileSystemFromRepository(repository)) {
-					final ImmutableGraph<ObjectId> graph = GitUtils.getHistory(gitFs).getGraph();
-					final Map<ObjectId, Instant> constantTimes = Maps.asMap(graph.nodes(),
-							o -> Commit.DEADLINE.toInstant());
-					final GitFileSystemHistory withConstantTimes = GitFileSystemHistory.create(gitFs,
-							GitHistory.create(graph, constantTimes));
-
-					final IGrade direct = new Commit()
-							.grade(GitWork.given(GitHubUsername.given("Me"), withConstantTimes));
-					LOGGER.debug("Grade direct: {}.", JsonGrade.asJson(direct));
-					assertEquals(1.0d, direct.getPoints());
-				}
-			}
-		}
-
-	}
-
 }

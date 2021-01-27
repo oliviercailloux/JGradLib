@@ -218,6 +218,11 @@ public class WeightingGrade implements IGrade {
 	}
 
 	@Override
+	public IGrade withComment(String newComment) {
+		return new WeightingGrade(subGrades, weights, newComment);
+	}
+
+	@Override
 	public WeightingGrade withSubGrade(Criterion criterion, IGrade newSubGrade) {
 		return new WeightingGrade(GradeUtils.withUpdatedEntry(subGrades, criterion, newSubGrade), weights, comment);
 	}

@@ -58,6 +58,8 @@ public interface IGrade {
 	 */
 	public IGrade limitedDepth(int depth);
 
+	public IGrade withComment(String newComment);
+
 	/**
 	 * If the given criterion exists among the sub grades contained in this grade,
 	 * returns a new grade identical to this one except that the corresponding sub

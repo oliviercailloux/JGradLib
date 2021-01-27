@@ -80,6 +80,11 @@ public class Mark implements IGrade {
 	}
 
 	@Override
+	public IGrade withComment(String newComment) {
+		return new Mark(points, newComment);
+	}
+
+	@Override
 	public IGrade withSubGrade(Criterion criterion, IGrade newSubGrade) {
 		throw new IllegalArgumentException();
 	}

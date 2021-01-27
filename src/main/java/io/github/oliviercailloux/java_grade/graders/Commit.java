@@ -18,11 +18,14 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.ImmutableSet;
 
 import io.github.oliviercailloux.git.fs.GitPathRoot;
+import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
 import io.github.oliviercailloux.grade.Criterion;
 import io.github.oliviercailloux.grade.CriterionGradeWeight;
+import io.github.oliviercailloux.grade.DeadlineGrader;
 import io.github.oliviercailloux.grade.GitFileSystemHistory;
 import io.github.oliviercailloux.grade.GitGeneralGrader;
 import io.github.oliviercailloux.grade.GitGrader;
+import io.github.oliviercailloux.grade.GitWork;
 import io.github.oliviercailloux.grade.Mark;
 import io.github.oliviercailloux.grade.WeightingGrade;
 import io.github.oliviercailloux.grade.markers.Marks;
@@ -38,20 +41,23 @@ public class Commit implements GitGrader {
 	public static final ZonedDateTime DEADLINE = ZonedDateTime.parse("2021-01-11T14:10:00+01:00[Europe/Paris]");
 
 	public static void main(String[] args) throws Exception {
-		GitGeneralGrader.grade(PREFIX, DEADLINE, new Commit());
+		GitGeneralGrader.using(PREFIX, DeadlineGrader.given(new Commit(), DEADLINE)).grade();
 	}
 
 	Commit() {
 	}
 
 	@Override
-	public WeightingGrade grade(GitFileSystemHistory history, String gitHubUsername) throws IOException {
+	public WeightingGrade grade(GitWork work) throws IOException {
+		final GitHubUsername author = work.getAuthor();
+		final GitFileSystemHistory history = work.getHistory();
+
 		final ImmutableSet.Builder<CriterionGradeWeight> gradeBuilder = ImmutableSet.builder();
 
 		{
 			final Mark hasCommit = Mark.binary(!history.getGraph().nodes().isEmpty());
 			final Mark allCommitsRightName = history
-					.allAndSomeCommitMatch(c -> JavaMarkHelper.committerAndAuthorIs(c, gitHubUsername));
+					.allAndSomeCommitMatch(c -> JavaMarkHelper.committerAndAuthorIs(c, author.getUsername()));
 			final WeightingGrade commitsGrade = WeightingGrade
 					.from(ImmutableSet.of(CriterionGradeWeight.from(Criterion.given("At least one"), hasCommit, 1d),
 							CriterionGradeWeight.from(Criterion.given("Right identity"), allCommitsRightName, 3d)));

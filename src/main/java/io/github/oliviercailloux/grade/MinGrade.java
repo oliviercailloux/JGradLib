@@ -10,19 +10,23 @@ import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableMap;
 
 public class MinGrade implements IGrade {
+	private static final String DEFAULT_COMMENT = "Using the minimal value among the sub-grades";
+
 	public static MinGrade given(Map<Criterion, ? extends IGrade> subGrades) {
-		return new MinGrade(subGrades);
+		return new MinGrade(subGrades, DEFAULT_COMMENT);
 	}
 
 	/**
 	 * Not empty.
 	 */
 	private final ImmutableMap<Criterion, IGrade> subGrades;
+	private final String comment;
 
-	protected MinGrade(Map<Criterion, ? extends IGrade> subGrades) {
+	protected MinGrade(Map<Criterion, ? extends IGrade> subGrades, String comment) {
 		checkNotNull(subGrades);
 		checkArgument(!subGrades.isEmpty());
 		this.subGrades = ImmutableMap.copyOf(subGrades);
+		this.comment = checkNotNull(comment);
 	}
 
 	@Override
@@ -32,7 +36,7 @@ public class MinGrade implements IGrade {
 
 	@Override
 	public String getComment() {
-		return "Using the minimal value among the sub-grades";
+		return comment;
 	}
 
 	@Override
@@ -51,8 +55,13 @@ public class MinGrade implements IGrade {
 	}
 
 	@Override
+	public IGrade withComment(String newComment) {
+		return new MinGrade(subGrades, newComment);
+	}
+
+	@Override
 	public MinGrade withSubGrade(Criterion criterion, IGrade newSubGrade) {
-		return new MinGrade(GradeUtils.withUpdatedEntry(subGrades, criterion, newSubGrade));
+		return new MinGrade(GradeUtils.withUpdatedEntry(subGrades, criterion, newSubGrade), comment);
 	}
 
 	@Override
