@@ -15,7 +15,6 @@ import org.eclipse.jgit.internal.storage.file.FileRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
@@ -48,30 +47,57 @@ public class GitGeneralGrader {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(GitGeneralGrader.class);
 
-	public static GitGeneralGrader using(String prefix, DeadlineGrader deadlineGrader) {
-		return new GitGeneralGrader(prefix, deadlineGrader);
+	public static class RepositoryFetcher {
+		public static RepositoryFetcher withPrefix(String prefix) {
+			return new RepositoryFetcher(prefix);
+		}
+
+		private final String prefix;
+		private Predicate<RepositoryCoordinatesWithPrefix> repositoriesFilter;
+
+		private RepositoryFetcher(String prefix) {
+			this.prefix = checkNotNull(prefix);
+			this.repositoriesFilter = r -> true;
+		}
+
+		public String getPrefix() {
+			return prefix;
+		}
+
+		public RepositoryFetcher setRepositoriesFilter(Predicate<RepositoryCoordinatesWithPrefix> accepted) {
+			repositoriesFilter = accepted;
+			return this;
+		}
+
+		public ImmutableSet<RepositoryCoordinatesWithPrefix> fetch() {
+			final ImmutableSet<RepositoryCoordinatesWithPrefix> repositories;
+			try (GitHubFetcherV3 fetcher = GitHubFetcherV3.using(GitHubToken.getRealInstance())) {
+				repositories = fetcher.getRepositoriesWithPrefix("oliviercailloux-org", prefix).stream()
+						.filter(repositoriesFilter).collect(ImmutableSet.toImmutableSet());
+			}
+			return repositories;
+		}
+
 	}
 
-	private final String prefix;
-	private Predicate<RepositoryCoordinatesWithPrefix> repositoriesFilter;
+	public static GitGeneralGrader using(RepositoryFetcher repositoryFetcher, DeadlineGrader deadlineGrader) {
+		return new GitGeneralGrader(repositoryFetcher.fetch(), deadlineGrader,
+				Path.of("grades " + repositoryFetcher.getPrefix() + ".json"));
+	}
+
+	private final Set<RepositoryCoordinatesWithPrefix> repositories;
 	private boolean excludeCommitsByGitHub;
 	private ImmutableSet<String> excludedAuthors;
 	private final DeadlineGrader deadlineGrader;
+	private final Path out;
 
-	private GitGeneralGrader(String prefix, DeadlineGrader deadlineGrader) {
-		this.prefix = checkNotNull(prefix);
-		this.repositoriesFilter = r -> true;
+	private GitGeneralGrader(Set<RepositoryCoordinatesWithPrefix> repositories, DeadlineGrader deadlineGrader,
+			Path out) {
+		this.repositories = checkNotNull(repositories);
 		this.excludeCommitsByGitHub = false;
 		this.excludedAuthors = ImmutableSet.of();
 		this.deadlineGrader = checkNotNull(deadlineGrader);
-		/**
-		 * TODO "Olivier Cailloux" "xoxor" "Beatrice Napolitano"
-		 */
-	}
-
-	public GitGeneralGrader setRepositoriesFilter(Predicate<RepositoryCoordinatesWithPrefix> accepted) {
-		repositoriesFilter = accepted;
-		return this;
+		this.out = checkNotNull(out);
 	}
 
 	public GitGeneralGrader setExcludeCommitsByGitHub(boolean excludeCommitsByGitHub) {
@@ -85,12 +111,6 @@ public class GitGeneralGrader {
 	}
 
 	public void grade() throws IOException {
-		final ImmutableList<RepositoryCoordinatesWithPrefix> repositories;
-		try (GitHubFetcherV3 fetcher = GitHubFetcherV3.using(GitHubToken.getRealInstance())) {
-			repositories = fetcher.getRepositoriesWithPrefix("oliviercailloux-org", prefix).stream()
-					.filter(repositoriesFilter).collect(ImmutableList.toImmutableList());
-		}
-
 		final ImmutableMap.Builder<String, IGrade> builder = ImmutableMap.builder();
 		for (RepositoryCoordinatesWithPrefix repository : repositories) {
 			final String username = repository.getUsername();
@@ -98,8 +118,7 @@ public class GitGeneralGrader {
 			builder.put(username, grade);
 		}
 		final ImmutableMap<String, IGrade> grades = builder.build();
-		Files.writeString(Path.of("grades " + prefix + ".json"),
-				JsonbUtils.toJsonObject(grades, JsonGrade.asAdapter()).toString());
+		Files.writeString(out, JsonbUtils.toJsonObject(grades, JsonGrade.asAdapter()).toString());
 		LOGGER.info("Grades: {}.", grades);
 	}
 
