@@ -39,6 +39,7 @@ import io.github.oliviercailloux.git.fs.GitFileSystem;
 import io.github.oliviercailloux.git.fs.GitPath;
 import io.github.oliviercailloux.git.fs.GitPathRoot;
 import io.github.oliviercailloux.git.fs.GitPathRootRef;
+import io.github.oliviercailloux.git.fs.GitPathRootSha;
 import io.github.oliviercailloux.jaris.exceptions.Throwing;
 import io.github.oliviercailloux.utils.Utils;
 
@@ -156,6 +157,18 @@ public class GitFileSystemHistory {
 			graph = Utils.asImmutableGraph(history.getGraph(), gitFs::getPathRoot);
 		}
 		return graph;
+	}
+
+	/**
+	 * Returns a graph representing the has-as-child relation: the successors of a
+	 * node are its children; following the successors (children) relation goes
+	 * forward in time; following the predecessors (parents) relation goes back in
+	 * time; a pair (a, b) in the graph represents a parent a and its child b.
+	 *
+	 * @return a DAG (thus, irreflexive)
+	 */
+	public ImmutableGraph<GitPathRootSha> getGraphSha() {
+		return Utils.asImmutableGraph(history.getGraph(), gitFs::getPathRoot);
 	}
 
 	public ImmutableSet<GitPathRoot> getRefs() throws IOException {
@@ -285,22 +298,11 @@ public class GitFileSystemHistory {
 		}
 	}
 
-	public ImmutableSet<GitPathRoot> getRefsTo(GitPathRoot target) throws IOException {
-		checkArgument(target.isCommitId());
+	public ImmutableSet<GitPathRoot> getRefsTo(GitPathRootSha target) throws IOException {
 		final ObjectId targetId = target.getStaticCommitId();
 		final Throwing.Predicate<? super GitPathRoot, IOException> rightTarget = GitGrader.Predicates
 				.compose(GitPathRoot::getCommit, c -> c.getId().equals(targetId));
 		return getRefsMatching(rightTarget);
-	}
-
-	public Optional<GitPathRootRef> getRefMaximizing(
-			Throwing.Function<? super GitPathRootRef, Integer, IOException> scorer) throws IOException {
-		final Function<? super GitPathRootRef, Integer> wrappedScorer = IO_UNCHECKER.wrapFunction(scorer);
-		try {
-			return getRefsStream().max(Comparator.comparing(wrappedScorer));
-		} catch (UncheckedIOException exc) {
-			throw exc.getCause();
-		}
 	}
 
 	public IGrade getBestGrade(Throwing.Function<Optional<GitPathRoot>, IGrade, IOException> grader,

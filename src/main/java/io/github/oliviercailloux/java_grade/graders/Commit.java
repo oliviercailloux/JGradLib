@@ -31,6 +31,7 @@ import io.github.oliviercailloux.grade.RepositoryFetcher;
 import io.github.oliviercailloux.grade.WeightingGrade;
 import io.github.oliviercailloux.grade.markers.Marks;
 import io.github.oliviercailloux.jaris.exceptions.Throwing;
+import io.github.oliviercailloux.jaris.exceptions.Throwing.Predicate;
 import io.github.oliviercailloux.java_grade.testers.JavaMarkHelper;
 
 public class Commit implements GitGrader {
@@ -80,8 +81,9 @@ public class Commit implements GitGrader {
 			final Pattern digitPattern = Marks.extendWhite("\\d+");
 			final Mark myIdContent = history
 					.anyCommitMatches(compose(resolve("myid.txt"), contentMatches(digitPattern)));
-			final Throwing.Predicate<GitPathRoot, IOException> both = compose(resolve("myid.txt"),
-					contentMatches(digitPattern)).and(compose(resolve("afile.txt"), contentMatches(coucouPattern)));
+			final Predicate<GitPathRoot, IOException> p1 = compose(resolve("myid.txt"), contentMatches(digitPattern));
+			final Predicate<GitPathRoot, IOException> p2 = compose(resolve("afile.txt"), contentMatches(coucouPattern));
+			final Throwing.Predicate<GitPathRoot, IOException> both = p1.and(p2);
 			final Mark myIdAndAFileContent = history.anyCommitMatches(both);
 			final Throwing.Predicate<GitPathRoot, IOException> branch = isBranch("main").or(isBranch("master"));
 			final Mark mainContent = history.anyRefMatches(branch.and(both));

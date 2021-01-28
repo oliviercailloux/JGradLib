@@ -53,8 +53,8 @@ public interface GitGrader {
 			return r -> patternBranch.matcher(r.getGitRef()).matches();
 		}
 
-		public static <FO extends PI, PI> Throwing.Predicate<GitPathRoot, IOException> compose(
-				Throwing.Function<GitPathRoot, FO, IOException> f, Throwing.Predicate<PI, IOException> p) {
+		public static <PI, QI, FO extends QI> Throwing.Predicate<PI, IOException> compose(
+				Throwing.Function<PI, FO, IOException> f, Throwing.Predicate<QI, IOException> p) {
 			return r -> p.test(f.apply(r));
 		}
 
@@ -90,7 +90,7 @@ public interface GitGrader {
 		@SuppressWarnings("unused")
 		private static final Logger LOGGER = LoggerFactory.getLogger(GitGrader.class);
 
-		public static Throwing.Function<GitPathRoot, GitPath, IOException> resolve(String file) {
+		public static <FI extends GitPath> Throwing.Function<FI, GitPath, IOException> resolve(String file) {
 			return r -> r.resolve(file);
 		}
 
