@@ -8,7 +8,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Set;
-import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import org.eclipse.jgit.internal.storage.file.FileRepository;
@@ -28,7 +27,6 @@ import io.github.oliviercailloux.git.git_hub.model.GitHubToken;
 import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinatesWithPrefix;
 import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherQL;
-import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherV3;
 import io.github.oliviercailloux.grade.format.json.JsonGrade;
 import io.github.oliviercailloux.java_grade.testers.JavaMarkHelper;
 import io.github.oliviercailloux.json.JsonbUtils;
@@ -46,39 +44,6 @@ import name.falgout.jeffrey.throwing.stream.ThrowingStream;
 public class GitGeneralGrader {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(GitGeneralGrader.class);
-
-	public static class RepositoryFetcher {
-		public static RepositoryFetcher withPrefix(String prefix) {
-			return new RepositoryFetcher(prefix);
-		}
-
-		private final String prefix;
-		private Predicate<RepositoryCoordinatesWithPrefix> repositoriesFilter;
-
-		private RepositoryFetcher(String prefix) {
-			this.prefix = checkNotNull(prefix);
-			this.repositoriesFilter = r -> true;
-		}
-
-		public String getPrefix() {
-			return prefix;
-		}
-
-		public RepositoryFetcher setRepositoriesFilter(Predicate<RepositoryCoordinatesWithPrefix> accepted) {
-			repositoriesFilter = accepted;
-			return this;
-		}
-
-		public ImmutableSet<RepositoryCoordinatesWithPrefix> fetch() {
-			final ImmutableSet<RepositoryCoordinatesWithPrefix> repositories;
-			try (GitHubFetcherV3 fetcher = GitHubFetcherV3.using(GitHubToken.getRealInstance())) {
-				repositories = fetcher.getRepositoriesWithPrefix("oliviercailloux-org", prefix).stream()
-						.filter(repositoriesFilter).collect(ImmutableSet.toImmutableSet());
-			}
-			return repositories;
-		}
-
-	}
 
 	public static GitGeneralGrader using(RepositoryFetcher repositoryFetcher, DeadlineGrader deadlineGrader) {
 		return new GitGeneralGrader(repositoryFetcher.fetch(), deadlineGrader,

@@ -7,8 +7,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
 
 import org.eclipse.jgit.internal.storage.dfs.DfsRepositoryDescription;
 import org.eclipse.jgit.internal.storage.dfs.InMemoryRepository;
@@ -21,8 +19,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.graph.GraphBuilder;
 import com.google.common.graph.ImmutableGraph;
@@ -35,9 +31,9 @@ import io.github.oliviercailloux.git.GitUtils;
 import io.github.oliviercailloux.git.JGit;
 import io.github.oliviercailloux.git.fs.GitFileSystem;
 import io.github.oliviercailloux.git.fs.GitFileSystemProvider;
-import io.github.oliviercailloux.git.fs.GitPathRoot;
+import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
 import io.github.oliviercailloux.grade.GitFileSystemHistory;
-import io.github.oliviercailloux.grade.GitGeneralGrader;
+import io.github.oliviercailloux.grade.GitWork;
 import io.github.oliviercailloux.grade.IGrade;
 import io.github.oliviercailloux.grade.format.json.JsonGrade;
 
@@ -53,13 +49,10 @@ public class GitBranchingTests {
 
 			final GitFileSystemHistory empty = GitFileSystemHistory.create(gitFs,
 					GitHistory.create(GraphBuilder.directed().build(), ImmutableMap.of()));
-			final IGrade grade = GitGeneralGrader.grade(empty, GitBranching.DEADLINE, "ploum", new GitBranching());
+
+			final IGrade grade = new GitBranching().grade(GitWork.given(GitHubUsername.given("ploum"), empty));
 			LOGGER.debug("Grade: {}.", JsonGrade.asJson(grade));
 			assertEquals(0d, grade.getPoints());
-
-			final IGrade direct = new GitBranching().grade(empty, "ploum");
-			LOGGER.debug("Grade direct: {}.", JsonGrade.asJson(direct));
-			assertEquals(0d, direct.getPoints());
 		}
 
 	}
@@ -114,9 +107,10 @@ public class GitBranchingTests {
 					final GitFileSystemHistory withConstantTimes = GitFileSystemHistory.create(gitFs,
 							GitHistory.create(graph, constantTimes));
 
-					final IGrade direct = new GitBranching().grade(withConstantTimes, "Not me");
-					LOGGER.debug("Grade direct: {}.", JsonGrade.asJson(direct));
-					assertEquals(0.458333d, direct.getPoints(), 1e-5d);
+					final IGrade grade = new GitBranching()
+							.grade(GitWork.given(GitHubUsername.given("Not me"), withConstantTimes));
+					LOGGER.info("Grade: {}.", JsonGrade.asJson(grade));
+					assertEquals(0.5d, grade.getPoints(), 1e-5d);
 				}
 			}
 		}
@@ -171,14 +165,10 @@ public class GitBranchingTests {
 					final GitFileSystemHistory withConstantTimes = GitFileSystemHistory.create(gitFs,
 							GitHistory.create(graph, constantTimes));
 
-					final IGrade grade = GitGeneralGrader.grade(withConstantTimes, GitBranching.DEADLINE, "Me",
-							new GitBranching());
-					LOGGER.debug("Grade: {}.", JsonGrade.asJson(grade));
+					final IGrade grade = new GitBranching()
+							.grade(GitWork.given(GitHubUsername.given("Me"), withConstantTimes));
+					LOGGER.debug("Grade direct: {}.", JsonGrade.asJson(grade));
 					assertEquals(1.0d, grade.getPoints());
-
-					final IGrade direct = new GitBranching().grade(withConstantTimes, "Me");
-					LOGGER.debug("Grade direct: {}.", JsonGrade.asJson(direct));
-					assertEquals(1.0d, direct.getPoints());
 				}
 			}
 		}

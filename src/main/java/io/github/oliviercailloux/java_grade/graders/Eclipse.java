@@ -27,11 +27,14 @@ import io.github.oliviercailloux.git.fs.GitPath;
 import io.github.oliviercailloux.git.fs.GitPathRoot;
 import io.github.oliviercailloux.grade.Criterion;
 import io.github.oliviercailloux.grade.CriterionGradeWeight;
+import io.github.oliviercailloux.grade.DeadlineGrader;
 import io.github.oliviercailloux.grade.GitFileSystemHistory;
 import io.github.oliviercailloux.grade.GitGeneralGrader;
 import io.github.oliviercailloux.grade.GitGrader;
+import io.github.oliviercailloux.grade.GitWork;
 import io.github.oliviercailloux.grade.IGrade;
 import io.github.oliviercailloux.grade.Mark;
+import io.github.oliviercailloux.grade.RepositoryFetcher;
 import io.github.oliviercailloux.grade.WeightingGrade;
 import io.github.oliviercailloux.grade.markers.Marks;
 import io.github.oliviercailloux.jaris.exceptions.Throwing.Function;
@@ -48,59 +51,71 @@ public class Eclipse implements GitGrader {
 
 	private GitFileSystemHistory history;
 
-	private GitFileSystemHistory ownHistory;
+	private GitFileSystemHistory authoredHistory;
+
+	private boolean excludeMine = true;
 
 	public static void main(String[] args) throws Exception {
-		GitGeneralGrader.grade(PREFIX, DEADLINE, new Eclipse());
+		final RepositoryFetcher fetcher = RepositoryFetcher.withPrefix(PREFIX);
+		GitGeneralGrader.using(fetcher, DeadlineGrader.given(new Eclipse(), DEADLINE)).grade();
 	}
 
 	Eclipse() {
 	}
 
+	Eclipse setIncludeMine() {
+		excludeMine = false;
+		return this;
+	}
+
 	@Override
-	public WeightingGrade grade(GitFileSystemHistory hist, String gitHubUsername) throws IOException {
-		this.history = hist;
-		ownHistory = history.filter(r -> !r.getCommit().getAuthorName().equals("Olivier Cailloux")
-				&& !r.getCommit().getAuthorName().equals("xoxor")
-				&& !r.getCommit().getAuthorName().equals("Beatrice Napolitano"));
-		final ImmutableSet<String> authors = ownHistory.getGraph().nodes().stream()
+	public WeightingGrade grade(GitWork work) throws IOException {
+		this.history = work.getHistory();
+		if (excludeMine) {
+			authoredHistory = history.filter(r -> !r.getCommit().getAuthorName().equals("Olivier Cailloux")
+					&& !r.getCommit().getAuthorName().equals("xoxor")
+					&& !r.getCommit().getAuthorName().equals("Beatrice Napolitano"));
+		} else {
+			authoredHistory = history;
+		}
+		final ImmutableSet<String> authors = authoredHistory.getGraph().nodes().stream()
 				.map(c -> IO_UNCHECKER.getUsing(c::getCommit).getAuthorName()).distinct()
 				.collect(ImmutableSet.toImmutableSet());
 		verify(authors.size() <= 1, authors.toString());
 		LOGGER.debug("Considering whole history {} and own history {}.", history.getGraph().nodes(),
-				ownHistory.getGraph().nodes());
+				authoredHistory.getGraph().nodes());
 
 		final ImmutableSet.Builder<CriterionGradeWeight> gradeBuilder = ImmutableSet.builder();
 
 		{
-			final Mark hasCommit = Mark.binary(!ownHistory.getGraph().nodes().isEmpty());
+			final Mark hasCommit = Mark.binary(!authoredHistory.getGraph().nodes().isEmpty());
 			gradeBuilder.add(CriterionGradeWeight.from(Criterion.given("At least one"), hasCommit, 1d));
 		}
 		LOGGER.info("Grading compile.");
 		gradeBuilder.add(CriterionGradeWeight.from(Criterion.given("Compile"),
-				ownHistory.getBestGrade(this::compileGrade, 1d), 2.5d));
+				authoredHistory.getBestGrade(this::compileGrade, 1d), 2.5d));
 		LOGGER.info("Grading warning.");
 		gradeBuilder.add(CriterionGradeWeight.from(Criterion.given("Warning"),
-				ownHistory.getBestGrade(this::warningGrade, 1d), 2.5d));
+				authoredHistory.getBestGrade(this::warningGrade, 1d), 2.5d));
 		LOGGER.info("Grading helper.");
 		gradeBuilder.add(CriterionGradeWeight.from(Criterion.given("StrategyHelper → Helper"),
-				ownHistory.getBestGrade(this::helperGrade, 1d), 3.5d));
+				authoredHistory.getBestGrade(this::helperGrade, 1d), 3.5d));
 		LOGGER.info("Grading courses.");
 		gradeBuilder.add(CriterionGradeWeight.from(Criterion.given("courses.soc"),
-				ownHistory.getBestGrade(this::coursesGrade, 1d), 3.5d));
+				authoredHistory.getBestGrade(this::coursesGrade, 1d), 3.5d));
 		LOGGER.info("Grading number.");
 		gradeBuilder.add(CriterionGradeWeight.from(Criterion.given("Number"),
-				ownHistory.getBestGrade(this::numberGrade, 1d), 3.5d));
+				authoredHistory.getBestGrade(this::numberGrade, 1d), 3.5d));
 		LOGGER.info("Grading formatting.");
 		gradeBuilder.add(CriterionGradeWeight.from(Criterion.given("Formatting"),
-				ownHistory.getBestGrade(this::formattingGrade, 1d), 3.5d));
+				authoredHistory.getBestGrade(this::formattingGrade, 1d), 3.5d));
 
 		return WeightingGrade.from(gradeBuilder.build());
 	}
 
 	void setHistory(GitFileSystemHistory history) {
 		this.history = history;
-		this.ownHistory = history;
+		this.authoredHistory = history;
 	}
 
 	private IGrade compileGrade(Optional<GitPathRoot> p) throws IOException {

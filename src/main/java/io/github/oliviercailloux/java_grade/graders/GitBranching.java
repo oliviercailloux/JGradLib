@@ -23,11 +23,14 @@ import com.google.common.collect.Iterables;
 import io.github.oliviercailloux.git.fs.GitPathRoot;
 import io.github.oliviercailloux.grade.Criterion;
 import io.github.oliviercailloux.grade.CriterionGradeWeight;
+import io.github.oliviercailloux.grade.DeadlineGrader;
 import io.github.oliviercailloux.grade.GitFileSystemHistory;
 import io.github.oliviercailloux.grade.GitGeneralGrader;
 import io.github.oliviercailloux.grade.GitGrader;
+import io.github.oliviercailloux.grade.GitWork;
 import io.github.oliviercailloux.grade.IGrade;
 import io.github.oliviercailloux.grade.Mark;
+import io.github.oliviercailloux.grade.RepositoryFetcher;
 import io.github.oliviercailloux.grade.WeightingGrade;
 import io.github.oliviercailloux.grade.WeightingGrader;
 import io.github.oliviercailloux.grade.WeightingGrader.CriterionGraderWeight;
@@ -44,14 +47,17 @@ public class GitBranching implements GitGrader {
 	public static final ZonedDateTime DEADLINE = ZonedDateTime.parse("2021-01-13T14:17:00+01:00[Europe/Paris]");
 
 	public static void main(String[] args) throws Exception {
-		GitGeneralGrader.grade(PREFIX, DEADLINE, new GitBranching());
+		final RepositoryFetcher fetcher = RepositoryFetcher.withPrefix(PREFIX);
+		GitGeneralGrader.using(fetcher, DeadlineGrader.given(new GitBranching(), DEADLINE)).grade();
 	}
 
 	GitBranching() {
 	}
 
 	@Override
-	public WeightingGrade grade(GitFileSystemHistory history, String gitHubUsername) throws IOException {
+	public WeightingGrade grade(GitWork work) throws IOException {
+		final GitFileSystemHistory history = work.getHistory();
+
 		final ImmutableSet.Builder<CriterionGradeWeight> gradeBuilder = ImmutableSet.builder();
 
 		{
