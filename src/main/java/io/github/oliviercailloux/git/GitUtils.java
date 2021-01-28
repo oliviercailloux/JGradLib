@@ -33,6 +33,7 @@ import com.google.common.graph.ImmutableGraph;
 
 import io.github.oliviercailloux.git.fs.GitFileSystem;
 import io.github.oliviercailloux.git.fs.GitPathRoot;
+import io.github.oliviercailloux.git.fs.GitPathRootSha;
 import io.github.oliviercailloux.utils.Utils;
 
 public class GitUtils {
@@ -104,17 +105,17 @@ public class GitUtils {
 	}
 
 	public static GitHistory getHistory(GitFileSystem gitFs) throws IOException {
-		final ImmutableGraph<GitPathRoot> graphOfPaths = gitFs.getCommitsGraph();
+		final ImmutableGraph<GitPathRootSha> graphOfPaths = gitFs.getCommitsGraph();
 
-		final Function<GitPathRoot, ObjectId> getId = IO_UNCHECKER.wrapFunction(p -> p.getCommit().getId());
 		final Function<GitPathRoot, Instant> getDate = IO_UNCHECKER
 				.wrapFunction(p -> p.getCommit().getCommitterDate().toInstant());
 
 		try {
-			final ImmutableGraph<ObjectId> graphOfIds = Utils.asImmutableGraph(graphOfPaths, getId);
+			final ImmutableGraph<ObjectId> graphOfIds = Utils.asImmutableGraph(graphOfPaths,
+					GitPathRootSha::getStaticCommitId);
 
 			final ImmutableMap<ObjectId, Instant> dates = graphOfPaths.nodes().stream()
-					.collect(ImmutableMap.toImmutableMap(getId, getDate));
+					.collect(ImmutableMap.toImmutableMap(GitPathRootSha::getStaticCommitId, getDate));
 
 			return GitHistory.create(graphOfIds, dates);
 		} catch (UncheckedIOException e) {

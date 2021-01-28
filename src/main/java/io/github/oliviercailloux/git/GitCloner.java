@@ -143,9 +143,9 @@ public class GitCloner {
 				 * Creates a problem probably related to https://stackoverflow.com/a/4162672
 				 * (oliviercailloux-org/eclipse-LucasLePort)
 				 */
-//				if (!git.getRepository().isBare() && !status.isClean()) {
-//					throw new IllegalStateException("Can’t update " + uri + ": not clean (" + toString(status) + ").");
-//				}
+				if (!git.getRepository().isBare() && !status.isClean()) {
+					throw new IllegalStateException("Can’t update " + uri + ": not clean (" + toString(status) + ").");
+				}
 				final String fullBranch = git.getRepository().getFullBranch();
 				LOGGER.debug("HEAD: {}.", fullBranch);
 				if (origin.isPresent() && origin.get().getURIs().size() == 1

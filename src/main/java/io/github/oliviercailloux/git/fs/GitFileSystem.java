@@ -662,12 +662,12 @@ public abstract class GitFileSystem extends FileSystem {
 	 *                              variant to mimic the behavior of
 	 *                              {@link #getRootDirectories()})
 	 */
-	public ImmutableGraph<GitPathRoot> getCommitsGraph() throws UncheckedIOException {
+	public ImmutableGraph<GitPathRootSha> getCommitsGraph() throws UncheckedIOException {
 		final ImmutableSet<ObjectId> commits = getCommits();
-		final ImmutableSet<GitPathRoot> paths = commits.stream().map(this::getPathRoot)
+		final ImmutableSet<GitPathRootSha> paths = commits.stream().map(this::getPathRoot)
 				.collect(ImmutableSet.toImmutableSet());
 
-		final Function<GitPathRoot, List<GitPathRoot>> getParents = IO_UNCHECKER
+		final Function<GitPathRootSha, List<GitPathRootSha>> getParents = IO_UNCHECKER
 				.wrapFunction(p -> p.getParentCommits());
 
 		return ImmutableGraph.copyOf(Graphs.transpose(Utils.asGraph(getParents::apply, paths)));
@@ -682,13 +682,13 @@ public abstract class GitFileSystem extends FileSystem {
 	 *
 	 * @throws IOException if an I/O error occurs
 	 */
-	public ImmutableSet<GitPathRoot> getRefs() throws IOException {
+	public ImmutableSet<GitPathRootRef> getRefs() throws IOException {
 		if (!isOpen) {
 			throw new ClosedFileSystemException();
 		}
 
 		final List<Ref> refs = repository.getRefDatabase().getRefsByPrefix(Constants.R_REFS);
-		return refs.stream().map(r -> getPathRoot("/" + r.getName() + "/")).collect(ImmutableSet.toImmutableSet());
+		return refs.stream().map(r -> getPathRootRef("/" + r.getName() + "/")).collect(ImmutableSet.toImmutableSet());
 	}
 
 	private ImmutableSet<ObjectId> getCommits() throws UncheckedIOException {

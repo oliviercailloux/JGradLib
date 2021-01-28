@@ -369,7 +369,7 @@ public class GitReadTests {
 		try (DfsRepository repo = new InMemoryRepository(new DfsRepositoryDescription("myrepo"))) {
 			JGit.createBasicRepo(repo);
 			try (GitFileSystem gitFs = GitFileSystemProvider.getInstance().newFileSystemFromDfsRepository(repo)) {
-				final ImmutableSet<GitPathRoot> refPaths = gitFs.getRefs();
+				final ImmutableSet<GitPathRootRef> refPaths = gitFs.getRefs();
 				assertEquals(1, refPaths.size());
 				assertEquals("refs/heads/main", Iterables.getOnlyElement(refPaths).getGitRef());
 			}

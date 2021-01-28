@@ -38,6 +38,7 @@ import io.github.oliviercailloux.git.fs.GitFileFileSystem;
 import io.github.oliviercailloux.git.fs.GitFileSystem;
 import io.github.oliviercailloux.git.fs.GitPath;
 import io.github.oliviercailloux.git.fs.GitPathRoot;
+import io.github.oliviercailloux.git.fs.GitPathRootRef;
 import io.github.oliviercailloux.jaris.exceptions.Throwing;
 import io.github.oliviercailloux.utils.Utils;
 
@@ -161,7 +162,7 @@ public class GitFileSystemHistory {
 		return getRefsStream().collect(ImmutableSet.toImmutableSet());
 	}
 
-	private Stream<GitPathRoot> getRefsStream() throws IOException {
+	private Stream<GitPathRootRef> getRefsStream() throws IOException {
 		final Throwing.Predicate<? super GitPathRoot, IOException> inThisHistory = GitGrader.Predicates
 				.compose(GitPathRoot::getCommit, c -> history.getGraph().nodes().contains(c.getId()));
 		final Predicate<? super GitPathRoot> inThisHistoryWrapped = IO_UNCHECKER.wrapPredicate(inThisHistory);
@@ -292,9 +293,9 @@ public class GitFileSystemHistory {
 		return getRefsMatching(rightTarget);
 	}
 
-	public Optional<GitPathRoot> getRefMaximizing(Throwing.Function<GitPathRoot, Integer, IOException> scorer)
-			throws IOException {
-		final Function<GitPathRoot, Integer> wrappedScorer = IO_UNCHECKER.wrapFunction(scorer);
+	public Optional<GitPathRootRef> getRefMaximizing(
+			Throwing.Function<? super GitPathRootRef, Integer, IOException> scorer) throws IOException {
+		final Function<? super GitPathRootRef, Integer> wrappedScorer = IO_UNCHECKER.wrapFunction(scorer);
 		try {
 			return getRefsStream().max(Comparator.comparing(wrappedScorer));
 		} catch (UncheckedIOException exc) {

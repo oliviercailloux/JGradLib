@@ -206,11 +206,11 @@ public abstract class GitPathRoot extends GitAbsolutePath {
 		return Commit.create(getRevCommit());
 	}
 
-	public ImmutableList<GitPathRoot> getParentCommits() throws IOException, NoSuchFileException {
+	public ImmutableList<GitPathRootSha> getParentCommits() throws IOException, NoSuchFileException {
 		final RevCommit revCommit = getRevCommit();
 		final ImmutableList<RevCommit> parents = ImmutableList.copyOf(revCommit.getParents());
 
-		final ImmutableList.Builder<GitPathRoot> builder = ImmutableList.builder();
+		final ImmutableList.Builder<GitPathRootSha> builder = ImmutableList.builder();
 		for (ObjectId parentId : parents) {
 			builder.add(getFileSystem().getPathRoot(parentId));
 		}
