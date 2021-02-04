@@ -42,16 +42,12 @@ import io.github.oliviercailloux.jaris.xml.XmlUtils;
 import io.github.oliviercailloux.utils.Utils;
 
 public class AdminManagesUsers {
-	private static class UmlDocument {
-		Document uml;
-	}
-
-	@SuppressWarnings("unused")
-	private static final Logger LOGGER = LoggerFactory.getLogger(AdminManagesUsers.class);
-
 	private static final String XMI_NS = "http://www.omg.org/spec/XMI/20131001";
 
 	private static final String UML_NS = "http://www.eclipse.org/uml2/5.0.0/UML";
+
+	@SuppressWarnings("unused")
+	private static final Logger LOGGER = LoggerFactory.getLogger(AdminManagesUsers.class);
 
 	public static final String PREFIX = "admin-manages-users";
 
@@ -93,12 +89,10 @@ public class AdminManagesUsers {
 		return WeightingGrade.from(gradeBuilder.build());
 	}
 
-	private static IGrade grade(Path work, Document uml) throws IOException {
+	private IGrade grade(Path work, Document uml) throws IOException {
 		final ImmutableSet.Builder<CriterionGradeWeight> gradeBuilder = ImmutableSet.builder();
 
-		final UmlDocument doc = new UmlDocument();
-		doc.uml = uml;
-		gradeBuilder.add(CriterionGradeWeight.from(Criterion.given("Required elements"), getRequired(doc), 2.5d));
+		gradeBuilder.add(CriterionGradeWeight.from(Criterion.given("Required elements"), getRequired(uml), 2.5d));
 
 		/** Get leaves. All should be useful. */
 		// if ≤3 A and expect 3 A, remove them. If too many, leave them from both sides.
@@ -114,14 +108,14 @@ public class AdminManagesUsers {
 		return graph.nodes().stream().filter(e -> graph.successors(e).isEmpty()).collect(ImmutableSet.toImmutableSet());
 	}
 
-	private static IGrade getRequired(UmlDocument doc) {
+	private static IGrade getRequired(Document uml) {
 		final ImmutableSet.Builder<CriterionGradeWeight> gradeBuilder = ImmutableSet.builder();
 
-		final ImmutableList<Element> modelEls = XmlUtils.toElements(doc.uml.getElementsByTagNameNS(UML_NS, "Model"));
+		final ImmutableList<Element> modelEls = XmlUtils.toElements(uml.getElementsByTagNameNS(UML_NS, "Model"));
 		gradeBuilder.add(CriterionGradeWeight.from(Criterion.given("Model"), Mark.binary(modelEls.size() == 1), 2.5d));
 
-		final ImmutableList<Element> pckgEls = XmlUtils.toElements(doc.uml.getElementsByTagName("packagedElement"));
-		final ImmutableList<Element> ownedEls = XmlUtils.toElements(doc.uml.getElementsByTagName("ownedUseCase"));
+		final ImmutableList<Element> pckgEls = XmlUtils.toElements(uml.getElementsByTagName("packagedElement"));
+		final ImmutableList<Element> ownedEls = XmlUtils.toElements(uml.getElementsByTagName("ownedUseCase"));
 
 		final Optional<Element> subject = pckgEls.stream()
 				.filter(e -> Marks.extendAll("System").matcher(e.getAttribute("name")).matches())
@@ -175,8 +169,7 @@ public class AdminManagesUsers {
 					WeightingGrade.from(ImmutableSet.of(number, ids)), 1d));
 		}
 		{
-			final ImmutableList<Element> nestedEls = XmlUtils
-					.toElements(doc.uml.getElementsByTagName("nestedClassifier"));
+			final ImmutableList<Element> nestedEls = XmlUtils.toElements(uml.getElementsByTagName("nestedClassifier"));
 			final Optional<Element> actor = Stream.concat(pckgEls.stream(), nestedEls.stream())
 					.filter(e -> e.getAttributeNS(XMI_NS, "type").equals("uml:Actor")).collect(Utils.singleOrEmpty());
 			gradeBuilder.add(CriterionGradeWeight.from(Criterion.given("Actor"), gradeActor(actor), 2.5d));
