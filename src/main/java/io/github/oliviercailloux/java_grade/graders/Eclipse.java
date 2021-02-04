@@ -53,7 +53,7 @@ public class Eclipse implements GitGrader {
 
 	private GitFileSystemHistory authoredHistory;
 
-	private boolean excludeMine = true;
+	private boolean excludeMine;
 
 	public static void main(String[] args) throws Exception {
 		final RepositoryFetcher fetcher = RepositoryFetcher.withPrefix(PREFIX);
@@ -61,6 +61,7 @@ public class Eclipse implements GitGrader {
 	}
 
 	Eclipse() {
+		excludeMine = true;
 	}
 
 	Eclipse setIncludeMine() {

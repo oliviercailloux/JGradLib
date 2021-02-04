@@ -1,9 +1,12 @@
 package io.github.oliviercailloux.grade;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Verify.verify;
+import static io.github.oliviercailloux.jaris.exceptions.Unchecker.IO_UNCHECKER;
 
 import java.io.IOException;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZonedDateTime;
@@ -21,7 +24,11 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.MoreCollectors;
 
+import io.github.oliviercailloux.git.fs.GitPathRootSha;
 import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
+import io.github.oliviercailloux.jaris.exceptions.CheckedStream;
+import io.github.oliviercailloux.jaris.exceptions.Throwing;
+import io.github.oliviercailloux.utils.Utils;
 
 /**
  * Is given a deadline. And a penalizer. Function that grades a git work. Cap at
@@ -53,15 +60,20 @@ public class DeadlineGrader {
 	}
 
 	public static DeadlineGrader given(GitGrader grader, ZonedDateTime deadline) {
-		return new DeadlineGrader(grader, deadline, DeadlineGrader::defaultPenalize);
+		return new DeadlineGrader(null, grader::grade, deadline, DeadlineGrader::defaultPenalize);
 	}
 
-	private final GitGrader grader;
+	private final Throwing.Function<Path, IGrade, IOException> simpleWorkGrader;
+	private final Throwing.Function<GitWork, IGrade, IOException> gitWorkGrader;
 	private final ZonedDateTime deadline;
 	private final Penalizer penalizer;
 
-	public DeadlineGrader(GitGrader grader, ZonedDateTime deadline, Penalizer penalizer) {
-		this.grader = checkNotNull(grader);
+	public DeadlineGrader(Throwing.Function<Path, IGrade, IOException> simpleWorkGrader,
+			Throwing.Function<GitWork, IGrade, IOException> gitWorkGrader, ZonedDateTime deadline,
+			Penalizer penalizer) {
+		checkArgument((simpleWorkGrader == null) != (gitWorkGrader == null));
+		this.simpleWorkGrader = simpleWorkGrader;
+		this.gitWorkGrader = gitWorkGrader;
 		this.deadline = checkNotNull(deadline);
 		this.penalizer = checkNotNull(penalizer);
 	}
@@ -117,26 +129,70 @@ public class DeadlineGrader {
 	private IGrade getPenalized(GitWork work, Instant timeCap) throws IOException {
 		final GitHubUsername author = work.getAuthor();
 		final GitFileSystemHistory history = work.getHistory();
-		final GitFileSystemHistory onTimeAndManual = history.filter(r -> !history.getCommitDate(r).isAfter(timeCap));
-		final IGrade grade = grader.grade(GitWork.given(author, onTimeAndManual));
+		checkArgument(!history.isEmpty());
+		final IGrade grade;
+		if (simpleWorkGrader == null) {
+			verify(gitWorkGrader != null);
+			final GitFileSystemHistory onTime = history.filter(r -> !history.getCommitDate(r).isAfter(timeCap));
+			checkArgument(!onTime.isEmpty());
+			grade = gitWorkGrader.apply(GitWork.given(author, onTime));
+		} else {
+			final ImmutableSet<GitPathRootSha> latestTiedPathsOnTime = getLatest(history, timeCap);
+			checkArgument(!latestTiedPathsOnTime.isEmpty());
+			grade = CheckedStream.<GitPathRootSha, IOException>wrapping(latestTiedPathsOnTime.stream())
+					.map(simpleWorkGrader).min(Comparator.comparing(IGrade::getPoints)).get();
+		}
 		final Duration lateness = Duration.between(deadline.toInstant(), timeCap);
 		final IGrade penalizedGrade = penalizer.penalize(lateness, grade);
 		return penalizedGrade;
 	}
 
 	/**
-	 * @return the latest instant weakly before the deadline, or the deadline if
-	 *         there are none such instants.
+	 * Returns all latest commits that are weakly before the time cap, have no
+	 * children weakly before the time cap, have been authored the latest among the
+	 * remaining ones, and have been committed the latest among the remaining ones.
 	 */
-	private Instant getLatestBeforeDeadline(ImmutableSortedSet<Instant> timestamps) {
-		final ImmutableSortedSet<Instant> toDeadline = timestamps.headSet(deadline.toInstant(), true);
-		LOGGER.debug("All timestamps: {}, picking those before {} results in: {}.", timestamps, deadline.toInstant(),
-				toDeadline);
+	private ImmutableSet<GitPathRootSha> getLatest(GitFileSystemHistory history, Instant timeCap) throws IOException {
+		final ImmutableSortedSet<Instant> timestamps = history.asGitHistory().getCommitDates().values().stream()
+				.collect(ImmutableSortedSet.toImmutableSortedSet(Comparator.naturalOrder()));
+		final Instant latestBeforeCap = getLatestBefore(timestamps, timeCap);
+		final GitFileSystemHistory beforeCap = history.filter(c -> !history.getCommitDate(c).isAfter(latestBeforeCap));
+		final ImmutableSet<GitPathRootSha> leaves = beforeCap.getLeaves();
+//		final GitFileSystemHistory leavesHistory = history.filter(c -> leaves.contains(c));
+
+//		final Instant latestAuthorDate = CheckedStream.<GitPathRoot, IOException>wrapping(leaves.stream())
+//				.map(GitPathRoot::getCommit).map(Commit::getAuthorDate).map(ZonedDateTime::toInstant)
+//				.max(Comparator.naturalOrder()).orElse(timeCap);
+//		final GitFileSystemHistory latestAuthoredHistory = leavesHistory
+//				.filter(c -> c.getCommit().getAuthorDate().toInstant().equals(latestAuthorDate));
+//
+//		final Instant latestCommittedDate = CheckedStream.<GitPathRoot, IOException>wrapping(leaves.stream())
+//				.map(GitPathRoot::getCommit).map(Commit::getCommitterDate).map(ZonedDateTime::toInstant)
+//				.max(Comparator.naturalOrder()).orElse(timeCap);
+//		final GitFileSystemHistory latestAuthoredThenCommittedHistory = latestAuthoredHistory
+//				.filter(c -> c.getCommit().getCommitterDate().toInstant().equals(latestCommittedDate));
+
+		final Comparator<GitPathRootSha> byAuthorDate = Comparator
+				.comparing(c -> IO_UNCHECKER.getUsing(() -> c.getCommit()).getAuthorDate());
+		final Comparator<GitPathRootSha> byCommitDate = Comparator
+				.comparing(c -> IO_UNCHECKER.getUsing(() -> c.getCommit()).getCommitterDate());
+		final Throwing.Comparator<GitPathRootSha, IOException> byDate = (t1, t2) -> byAuthorDate
+				.thenComparing(byCommitDate).compare(t1, t2);
+		return Utils.<GitPathRootSha, IOException>getMaximalElements(leaves, byDate);
+	}
+
+	/**
+	 * @return the latest instant weakly before the cap, or the cap itself if there
+	 *         are none such instants.
+	 */
+	private Instant getLatestBefore(ImmutableSortedSet<Instant> timestamps, Instant cap) {
+		final ImmutableSortedSet<Instant> toCap = timestamps.headSet(cap, true);
+		LOGGER.debug("All timestamps: {}, picking those before {} results in: {}.", timestamps, cap, toCap);
 		final Instant considerFrom;
-		if (toDeadline.isEmpty()) {
-			considerFrom = deadline.toInstant();
+		if (toCap.isEmpty()) {
+			considerFrom = cap;
 		} else {
-			considerFrom = toDeadline.last();
+			considerFrom = toCap.last();
 		}
 		return considerFrom;
 	}
@@ -146,7 +202,7 @@ public class DeadlineGrader {
 		{
 			final ImmutableSortedSet<Instant> timestamps = history.asGitHistory().getCommitDates().values().stream()
 					.collect(ImmutableSortedSet.toImmutableSortedSet(Comparator.naturalOrder()));
-			final Instant considerFrom = getLatestBeforeDeadline(timestamps);
+			final Instant considerFrom = getLatestBefore(timestamps, deadline.toInstant());
 			toConsider = timestamps.tailSet(considerFrom);
 		}
 		/** Temporary patch in wait for a better adjustment of GitHub push dates. */
@@ -169,18 +225,19 @@ public class DeadlineGrader {
 			return false;
 		}
 		final DeadlineGrader t2 = (DeadlineGrader) o2;
-		return grader.equals(t2.grader) && deadline.equals(t2.deadline) && penalizer.equals(t2.penalizer);
+		return Objects.equals(simpleWorkGrader, t2.simpleWorkGrader) && Objects.equals(gitWorkGrader, t2.gitWorkGrader)
+				&& deadline.equals(t2.deadline) && penalizer.equals(t2.penalizer);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(grader, deadline, penalizer);
+		return Objects.hash(simpleWorkGrader, gitWorkGrader, deadline, penalizer);
 	}
 
 	@Override
 	public String toString() {
-		return MoreObjects.toStringHelper(this).add("Grader", grader).add("Deadline", deadline)
-				.add("Penalizer", penalizer).toString();
+		return MoreObjects.toStringHelper(this).add("Simple grader", simpleWorkGrader).add("Git grader", gitWorkGrader)
+				.add("Deadline", deadline).add("Penalizer", penalizer).toString();
 	}
 
 }

@@ -205,7 +205,7 @@ public class GitFileSystemHistory {
 	 *
 	 * @return empty iff the graph is empty.
 	 */
-	public ImmutableSet<GitPathRoot> getLeaves() {
+	public ImmutableSet<GitPathRootSha> getLeaves() {
 		return history.getLeaves().stream().map(gitFs::getPathRoot).collect(ImmutableSet.toImmutableSet());
 	}
 

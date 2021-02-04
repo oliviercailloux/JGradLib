@@ -23,10 +23,14 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Streams;
 
 import io.github.oliviercailloux.grade.GradingException;
 import io.github.oliviercailloux.grade.IGrade;
 import io.github.oliviercailloux.grade.Mark;
+import io.github.oliviercailloux.jaris.exceptions.CheckedStream;
+import io.github.oliviercailloux.jaris.exceptions.Throwing;
 import io.github.oliviercailloux.java_grade.bytecode.Instanciator;
 import io.github.oliviercailloux.java_grade.bytecode.RestrictingClassLoader;
 

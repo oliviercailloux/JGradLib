@@ -3,9 +3,11 @@ package io.github.oliviercailloux.utils;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
+import static io.github.oliviercailloux.jaris.exceptions.Unchecker.IO_UNCHECKER;
 
 import java.io.FilePermission;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.net.URI;
 import java.nio.file.CopyOption;
 import java.nio.file.FileVisitResult;
@@ -29,10 +31,14 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Queue;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.function.Predicate;
+import java.util.stream.Collector;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,8 +47,10 @@ import com.google.common.base.Strings;
 import com.google.common.base.Verify;
 import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.PeekingIterator;
+import com.google.common.collect.Streams;
 import com.google.common.collect.UnmodifiableIterator;
 import com.google.common.graph.EndpointPair;
 import com.google.common.graph.Graph;
@@ -50,6 +58,9 @@ import com.google.common.graph.GraphBuilder;
 import com.google.common.graph.ImmutableGraph;
 import com.google.common.graph.MutableGraph;
 import com.google.common.graph.SuccessorsFunction;
+
+import io.github.oliviercailloux.jaris.exceptions.CheckedStream;
+import io.github.oliviercailloux.jaris.exceptions.Throwing;
 
 public class Utils {
 	@SuppressWarnings("unused")
@@ -257,5 +268,32 @@ public class Utils {
 			checkState(nonRootsToInDegree.isEmpty(), "graph has at least one cycle");
 			return endOfData();
 		}
+	}
+
+	public static <T, X extends Exception> ImmutableSet<T> getMaximalElements(Iterable<T> iterable,
+			Throwing.Comparator<T, ? extends X> comparator) throws X {
+		final Optional<T> maxOpt = CheckedStream.<T, X>wrapping(Streams.stream(iterable)).max(comparator);
+		if (maxOpt.isEmpty()) {
+			return ImmutableSet.of();
+		}
+		final T max = maxOpt.get();
+		return CheckedStream.<T, X>wrapping(Streams.stream(iterable)).filter(t -> comparator.compare(t, max) == 0)
+				.collect(ImmutableSet.toImmutableSet());
+	}
+
+	public static ImmutableSet<Path> getPathsMatching(Path root,
+			Throwing.Predicate<? super Path, IOException> predicate) throws IOException {
+		final Predicate<? super Path> wrapped = IO_UNCHECKER.wrapPredicate(predicate);
+		try (Stream<Path> foundStream = Files.find(root, Integer.MAX_VALUE, (p, a) -> wrapped.test(p))) {
+			return foundStream.collect(ImmutableSet.toImmutableSet());
+		} catch (UncheckedIOException e) {
+			throw e.getCause();
+		}
+	}
+
+	public static <T> Collector<T, ?, Optional<T>> singleOrEmpty() {
+		return Collectors.collectingAndThen(
+				Collectors.mapping(Optional::of, Collectors.reducing((a, b) -> Optional.empty())),
+				o -> o.orElseGet(Optional::empty));
 	}
 }
