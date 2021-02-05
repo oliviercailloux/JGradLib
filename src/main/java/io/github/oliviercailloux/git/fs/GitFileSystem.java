@@ -789,17 +789,7 @@ public abstract class GitFileSystem extends FileSystem {
 
 		final int previousThreshold = reader.getStreamFileThreshold();
 		LOGGER.debug("Retrieving size of {}.", gitObject);
-		/**
-		 * 8 bytes. I think the default is there:
-		 * org.eclipse.jgit.storage.pack.PackConfig.DEFAULT_BIG_FILE_THRESHOLD.
-		 */
-		reader.setStreamFileThreshold(8);
-		final ObjectLoader fileLoader = reader.open(gitObject.getObjectId());
-		LOGGER.debug("Obtained loader {}.", fileLoader);
-		verify(fileLoader.getType() == gitObject.getFileMode().getObjectType(),
-				String.format("Expected file mode %s and object type %s but loaded object type %s",
-						gitObject.getFileMode(), gitObject.getFileMode().getObjectType(), fileLoader.getType()));
-		final long size = fileLoader.getSize();
+		final long size = reader.getObjectSize(gitObject.getObjectId(), ObjectReader.OBJ_ANY);
 		LOGGER.debug("Got size: {}.", size);
 		reader.setStreamFileThreshold(previousThreshold);
 		return size;
