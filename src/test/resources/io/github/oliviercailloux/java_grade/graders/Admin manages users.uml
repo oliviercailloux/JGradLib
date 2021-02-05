@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<uml:Model xmi:version="20131001" xmlns:xmi="http://www.omg.org/spec/XMI/20131001" xmlns:uml="http://www.eclipse.org/uml2/5.0.0/UML" xmi:id="_I_FTUGY1EeupxZkCHVo-aw" name="Admin manages users">
+  <packagedElement xmi:type="uml:Interaction" xmi:id="_VT3esGY1EeupxZkCHVo-aw" name="Wrong subject">
+    <ownedUseCase xmi:type="uml:UseCase" xmi:id="_1rJkYGe8Eeu7DKwsYi0Edg" name="Manage users blah"/>
+    <ownedUseCase xmi:type="uml:UseCase" xmi:id="_Nm2vkGe9Eeu7DKwsYi0Edg" name="UseCase2"/>
+  </packagedElement>
+</uml:Model>

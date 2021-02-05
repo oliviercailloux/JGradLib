@@ -11,6 +11,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.eclipse.jgit.internal.storage.file.FileRepository;
+import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -27,10 +28,12 @@ import io.github.oliviercailloux.git.git_hub.model.GitHubToken;
 import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinatesWithPrefix;
 import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherQL;
+import io.github.oliviercailloux.grade.format.HtmlGrades;
 import io.github.oliviercailloux.grade.format.json.JsonGrade;
 import io.github.oliviercailloux.java_grade.testers.JavaMarkHelper;
 import io.github.oliviercailloux.json.JsonbUtils;
 import io.github.oliviercailloux.utils.Utils;
+import io.github.oliviercailloux.xml.XmlUtils;
 import name.falgout.jeffrey.throwing.stream.ThrowingStream;
 
 /**
@@ -53,16 +56,26 @@ public class GitGeneralGrader {
 	private final Set<RepositoryCoordinatesWithPrefix> repositories;
 	private boolean excludeCommitsByGitHub;
 	private ImmutableSet<String> excludedAuthors;
+	private boolean fromDir;
 	private final DeadlineGrader deadlineGrader;
-	private final Path out;
+	private Path out;
 
 	private GitGeneralGrader(Set<RepositoryCoordinatesWithPrefix> repositories, DeadlineGrader deadlineGrader,
 			Path out) {
 		this.repositories = checkNotNull(repositories);
 		this.excludeCommitsByGitHub = false;
 		this.excludedAuthors = ImmutableSet.of();
+		this.fromDir = false;
 		this.deadlineGrader = checkNotNull(deadlineGrader);
 		this.out = checkNotNull(out);
+	}
+
+	public Path getOut() {
+		return out;
+	}
+
+	public void setOut(Path out) {
+		this.out = out;
 	}
 
 	public GitGeneralGrader setExcludeCommitsByGitHub(boolean excludeCommitsByGitHub) {
@@ -75,6 +88,11 @@ public class GitGeneralGrader {
 		return this;
 	}
 
+	public GitGeneralGrader setFromDir(boolean fromDir) {
+		this.fromDir = fromDir;
+		return this;
+	}
+
 	public void grade() throws IOException {
 		final ImmutableMap.Builder<String, IGrade> builder = ImmutableMap.builder();
 		for (RepositoryCoordinatesWithPrefix repository : repositories) {
@@ -84,13 +102,13 @@ public class GitGeneralGrader {
 		}
 		final ImmutableMap<String, IGrade> grades = builder.build();
 		Files.writeString(out, JsonbUtils.toJsonObject(grades, JsonGrade.asAdapter()).toString());
+		Files.writeString(Path.of("grades.html"), XmlUtils.asString(HtmlGrades.asHtml(grades, "Grades", 20d)));
 		LOGGER.info("Grades: {}.", grades);
 	}
 
 	IGrade grade(RepositoryCoordinatesWithPrefix coordinates) throws IOException {
 		final Path dir = Utils.getTempDirectory().resolve(coordinates.getRepositoryName());
-		try (FileRepository repository = GitCloner.create().setCheckCommonRefsAgree(false)
-				.download(coordinates.asGitUri(), dir)) {
+		try (FileRepository repository = getFileRepo(coordinates, dir)) {
 			final GitFileSystem gitFs = GitFileSystemProvider.getInstance().newFileSystemFromRepository(repository);
 
 			final GitHistory pushHistory;
@@ -114,6 +132,13 @@ public class GitGeneralGrader {
 		}
 	}
 
+	private FileRepository getFileRepo(RepositoryCoordinatesWithPrefix coordinates, Path dir) throws IOException {
+		if (fromDir) {
+			return (FileRepository) new FileRepositoryBuilder().setWorkTree(dir.toFile()).build();
+		}
+		return GitCloner.create().setCheckCommonRefsAgree(false).download(coordinates.asGitUri(), dir);
+	}
+
 	IGrade grade(GitWork work) throws IOException {
 		final GitFileSystemHistory manual;
 		final ImmutableSet<GitPathRoot> excludedByGitHub;
@@ -129,10 +154,6 @@ public class GitGeneralGrader {
 
 		final GitFileSystemHistory filteredHistory = manual
 				.filter(r -> !excludedAuthors.contains(r.getCommit().getAuthorName()));
-		final ImmutableSet<String> authors = filteredHistory.getGraph().nodes().stream()
-				.map(c -> IO_UNCHECKER.getUsing(c::getCommit).getAuthorName()).distinct()
-				.collect(ImmutableSet.toImmutableSet());
-		verify(authors.size() <= 1, authors.toString());
 		final IGrade grade = deadlineGrader.grade(GitWork.given(work.getAuthor(), filteredHistory));
 		final String added = excludedByGitHub.isEmpty() ? ""
 				: " (Ignored commits by GitHub: " + excludedByGitHub.stream()

@@ -24,6 +24,8 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.MoreCollectors;
 
+import io.github.oliviercailloux.git.fs.Commit;
+import io.github.oliviercailloux.git.fs.GitPathRoot;
 import io.github.oliviercailloux.git.fs.GitPathRootSha;
 import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
 import io.github.oliviercailloux.jaris.exceptions.CheckedStream;
@@ -38,6 +40,69 @@ import io.github.oliviercailloux.utils.Utils;
 public class DeadlineGrader {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(DeadlineGrader.Penalizer.class);
+
+	private static class SimpleToGitGrader {
+
+		private final Throwing.Function<Path, IGrade, IOException> simpleWorkGrader;
+
+		private SimpleToGitGrader(Throwing.Function<Path, IGrade, IOException> simpleWorkGrader) {
+			this.simpleWorkGrader = checkNotNull(simpleWorkGrader);
+		}
+
+		public IGrade grade(GitWork work) throws IOException {
+			final GitFileSystemHistory history = work.getHistory();
+			final CheckedStream<GitPathRoot, IOException> checkedCommits = CheckedStream
+					.wrapping(history.getGraph().nodes().stream());
+			final Optional<String> author = checkedCommits.map(GitPathRoot::getCommit).map(Commit::getAuthorName)
+					.collect(Utils.singleOrEmpty());
+			final Mark userGrade = Mark
+					.binary(author.isPresent() && author.get().equals(work.getAuthor().getUsername()));
+			final ImmutableSet<GitPathRootSha> latestTiedPathsOnTime = SimpleToGitGrader.getLatest(history);
+			checkArgument(!latestTiedPathsOnTime.isEmpty());
+			final IGrade mainGrade = CheckedStream.<GitPathRootSha, IOException>wrapping(latestTiedPathsOnTime.stream())
+					.map(simpleWorkGrader).min(Comparator.comparing(IGrade::getPoints)).get();
+			return WeightingGrade
+					.from(ImmutableSet.of(CriterionGradeWeight.from(Criterion.given("user.name"), userGrade, 1d),
+							CriterionGradeWeight.from(Criterion.given("main"), mainGrade, 19d)));
+		}
+
+		/**
+		 * Returns all latest commits that have no children, have been authored the
+		 * latest among the remaining ones, and have been committed the latest among the
+		 * remaining ones.
+		 */
+		private static ImmutableSet<GitPathRootSha> getLatest(GitFileSystemHistory history) throws IOException {
+			final ImmutableSet<GitPathRootSha> leaves = history.getLeaves();
+			// final GitFileSystemHistory leavesHistory = history.filter(c ->
+			// leaves.contains(c));
+
+			// final Instant latestAuthorDate = CheckedStream.<GitPathRoot,
+			// IOException>wrapping(leaves.stream())
+			// .map(GitPathRoot::getCommit).map(Commit::getAuthorDate).map(ZonedDateTime::toInstant)
+			// .max(Comparator.naturalOrder()).orElse(timeCap);
+			// final GitFileSystemHistory latestAuthoredHistory = leavesHistory
+			// .filter(c ->
+			// c.getCommit().getAuthorDate().toInstant().equals(latestAuthorDate));
+			//
+			// final Instant latestCommittedDate = CheckedStream.<GitPathRoot,
+			// IOException>wrapping(leaves.stream())
+			// .map(GitPathRoot::getCommit).map(Commit::getCommitterDate).map(ZonedDateTime::toInstant)
+			// .max(Comparator.naturalOrder()).orElse(timeCap);
+			// final GitFileSystemHistory latestAuthoredThenCommittedHistory =
+			// latestAuthoredHistory
+			// .filter(c ->
+			// c.getCommit().getCommitterDate().toInstant().equals(latestCommittedDate));
+
+			final Comparator<GitPathRootSha> byAuthorDate = Comparator
+					.comparing(c -> IO_UNCHECKER.getUsing(() -> c.getCommit()).getAuthorDate());
+			final Comparator<GitPathRootSha> byCommitDate = Comparator
+					.comparing(c -> IO_UNCHECKER.getUsing(() -> c.getCommit()).getCommitterDate());
+			final Throwing.Comparator<GitPathRootSha, IOException> byDate = (t1, t2) -> byAuthorDate
+					.thenComparing(byCommitDate).compare(t1, t2);
+			return Utils.<GitPathRootSha, IOException>getMaximalElements(leaves, byDate);
+		}
+
+	}
 
 	private static interface Penalizer {
 		public IGrade penalize(Duration lateness, IGrade grade);
@@ -60,25 +125,21 @@ public class DeadlineGrader {
 	}
 
 	public static DeadlineGrader usingGitGrader(GitGrader grader, ZonedDateTime deadline) {
-		return new DeadlineGrader(null, grader::grade, deadline, DeadlineGrader::defaultPenalize);
+		return new DeadlineGrader(grader::grade, deadline, DeadlineGrader::defaultPenalize);
 	}
 
 	public static DeadlineGrader usingPathGrader(Throwing.Function<Path, IGrade, IOException> grader,
 			ZonedDateTime deadline) {
-		return new DeadlineGrader(grader, null, deadline, DeadlineGrader::defaultPenalize);
+		return new DeadlineGrader(new SimpleToGitGrader(grader)::grade, deadline, DeadlineGrader::defaultPenalize);
 	}
 
-	private final Throwing.Function<Path, IGrade, IOException> simpleWorkGrader;
-	private final Throwing.Function<GitWork, IGrade, IOException> gitWorkGrader;
+	private final Throwing.Function<GitWork, IGrade, IOException> grader;
 	private final ZonedDateTime deadline;
 	private final Penalizer penalizer;
 
-	public DeadlineGrader(Throwing.Function<Path, IGrade, IOException> simpleWorkGrader,
-			Throwing.Function<GitWork, IGrade, IOException> gitWorkGrader, ZonedDateTime deadline,
+	private DeadlineGrader(Throwing.Function<GitWork, IGrade, IOException> gitWorkGrader, ZonedDateTime deadline,
 			Penalizer penalizer) {
-		checkArgument((simpleWorkGrader == null) != (gitWorkGrader == null));
-		this.simpleWorkGrader = simpleWorkGrader;
-		this.gitWorkGrader = gitWorkGrader;
+		this.grader = checkNotNull(gitWorkGrader);
 		this.deadline = checkNotNull(deadline);
 		this.penalizer = checkNotNull(penalizer);
 	}
@@ -137,49 +198,10 @@ public class DeadlineGrader {
 		checkArgument(!history.isEmpty());
 		final GitFileSystemHistory onTime = history.filter(r -> !history.getCommitDate(r).isAfter(timeCap));
 		checkArgument(!onTime.isEmpty());
-		final IGrade grade;
-		if (simpleWorkGrader == null) {
-			verify(gitWorkGrader != null);
-			grade = gitWorkGrader.apply(GitWork.given(author, onTime));
-		} else {
-			final ImmutableSet<GitPathRootSha> latestTiedPathsOnTime = DeadlineGrader.getLatest(onTime);
-			checkArgument(!latestTiedPathsOnTime.isEmpty());
-			grade = CheckedStream.<GitPathRootSha, IOException>wrapping(latestTiedPathsOnTime.stream())
-					.map(simpleWorkGrader).min(Comparator.comparing(IGrade::getPoints)).get();
-		}
+		final IGrade grade = grader.apply(GitWork.given(author, onTime));
 		final Duration lateness = Duration.between(deadline.toInstant(), timeCap);
 		final IGrade penalizedGrade = penalizer.penalize(lateness, grade);
 		return penalizedGrade;
-	}
-
-	/**
-	 * Returns all latest commits that have no children, have been authored the
-	 * latest among the remaining ones, and have been committed the latest among the
-	 * remaining ones.
-	 */
-	private static ImmutableSet<GitPathRootSha> getLatest(GitFileSystemHistory history) throws IOException {
-		final ImmutableSet<GitPathRootSha> leaves = history.getLeaves();
-//		final GitFileSystemHistory leavesHistory = history.filter(c -> leaves.contains(c));
-
-//		final Instant latestAuthorDate = CheckedStream.<GitPathRoot, IOException>wrapping(leaves.stream())
-//				.map(GitPathRoot::getCommit).map(Commit::getAuthorDate).map(ZonedDateTime::toInstant)
-//				.max(Comparator.naturalOrder()).orElse(timeCap);
-//		final GitFileSystemHistory latestAuthoredHistory = leavesHistory
-//				.filter(c -> c.getCommit().getAuthorDate().toInstant().equals(latestAuthorDate));
-//
-//		final Instant latestCommittedDate = CheckedStream.<GitPathRoot, IOException>wrapping(leaves.stream())
-//				.map(GitPathRoot::getCommit).map(Commit::getCommitterDate).map(ZonedDateTime::toInstant)
-//				.max(Comparator.naturalOrder()).orElse(timeCap);
-//		final GitFileSystemHistory latestAuthoredThenCommittedHistory = latestAuthoredHistory
-//				.filter(c -> c.getCommit().getCommitterDate().toInstant().equals(latestCommittedDate));
-
-		final Comparator<GitPathRootSha> byAuthorDate = Comparator
-				.comparing(c -> IO_UNCHECKER.getUsing(() -> c.getCommit()).getAuthorDate());
-		final Comparator<GitPathRootSha> byCommitDate = Comparator
-				.comparing(c -> IO_UNCHECKER.getUsing(() -> c.getCommit()).getCommitterDate());
-		final Throwing.Comparator<GitPathRootSha, IOException> byDate = (t1, t2) -> byAuthorDate
-				.thenComparing(byCommitDate).compare(t1, t2);
-		return Utils.<GitPathRootSha, IOException>getMaximalElements(leaves, byDate);
 	}
 
 	/**
@@ -226,19 +248,18 @@ public class DeadlineGrader {
 			return false;
 		}
 		final DeadlineGrader t2 = (DeadlineGrader) o2;
-		return Objects.equals(simpleWorkGrader, t2.simpleWorkGrader) && Objects.equals(gitWorkGrader, t2.gitWorkGrader)
-				&& deadline.equals(t2.deadline) && penalizer.equals(t2.penalizer);
+		return grader.equals(t2.grader) && deadline.equals(t2.deadline) && penalizer.equals(t2.penalizer);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(simpleWorkGrader, gitWorkGrader, deadline, penalizer);
+		return Objects.hash(grader, deadline, penalizer);
 	}
 
 	@Override
 	public String toString() {
-		return MoreObjects.toStringHelper(this).add("Simple grader", simpleWorkGrader).add("Git grader", gitWorkGrader)
-				.add("Deadline", deadline).add("Penalizer", penalizer).toString();
+		return MoreObjects.toStringHelper(this).add("Git grader", grader).add("Deadline", deadline)
+				.add("Penalizer", penalizer).toString();
 	}
 
 }

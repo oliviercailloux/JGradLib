@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<uml:Model xmi:version="20131001" xmlns:xmi="http://www.omg.org/spec/XMI/20131001" xmlns:ecore="http://www.eclipse.org/emf/2002/Ecore" xmlns:uml="http://www.eclipse.org/uml2/5.0.0/UML" xmi:id="_I_FTUGY1EeupxZkCHVo-aw" name="Admin manages users">
+  <packagedElement xmi:type="uml:Interaction" xmi:id="_VT3esGY1EeupxZkCHVo-aw" name="System" useCase="_XLzQsGY1EeupxZkCHVo-aw _FU7gUGY2EeupxZkCHVo-aw _z2RHcGbtEeupxZkCHVo-aw">
+    <ownedUseCase xmi:type="uml:UseCase" xmi:id="_XLzQsGY1EeupxZkCHVo-aw" name="Manage users" subject="_VT3esGY1EeupxZkCHVo-aw"/>
+    <ownedUseCase xmi:type="uml:UseCase" xmi:id="_FU7gUGY2EeupxZkCHVo-aw" name="Create user" subject="_VT3esGY1EeupxZkCHVo-aw">
+      <generalization xmi:type="uml:Generalization" xmi:id="_53ld0GY2EeupxZkCHVo-aw" general="_XLzQsGY1EeupxZkCHVo-aw"/>
+    </ownedUseCase>
+    <nestedClassifier xmi:type="uml:UseCase" xmi:id="_z2RHcGbtEeupxZkCHVo-aw" name="Delete user" subject="_VT3esGY1EeupxZkCHVo-aw">
+      <generalization xmi:type="uml:Generalization" xmi:id="_6kO1MGemEeu7DKwsYi0Edg" general="_XLzQsGY1EeupxZkCHVo-aw"/>
+    </nestedClassifier>
+    <nestedClassifier xmi:type="uml:Actor" xmi:id="_-AozUGY1EeupxZkCHVo-aw" name="Admin"/>
+    <nestedClassifier xmi:type="uml:Association" xmi:id="_i4wdcGbtEeupxZkCHVo-aw" name="ass" memberEnd="_i41V8GbtEeupxZkCHVo-aw _i43yMGbtEeupxZkCHVo-aw">
+      <eAnnotations xmi:type="ecore:EAnnotation" xmi:id="_i40H0GbtEeupxZkCHVo-aw" source="org.eclipse.papyrus">
+        <details xmi:type="ecore:EStringToStringMapEntry" xmi:id="_i40H0WbtEeupxZkCHVo-aw" key="nature" value="UML_Nature"/>
+      </eAnnotations>
+      <ownedEnd xmi:type="uml:Property" xmi:id="_i43yMGbtEeupxZkCHVo-aw" name="uc" type="_XLzQsGY1EeupxZkCHVo-aw" association="_i4wdcGbtEeupxZkCHVo-aw"/>
+      <ownedEnd xmi:type="uml:Property" xmi:id="_i41V8GbtEeupxZkCHVo-aw" name="a" visibility="public" type="_-AozUGY1EeupxZkCHVo-aw" association="_i4wdcGbtEeupxZkCHVo-aw"/>
+    </nestedClassifier>
+  </packagedElement>
+</uml:Model>

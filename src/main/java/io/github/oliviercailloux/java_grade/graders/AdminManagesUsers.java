@@ -29,7 +29,6 @@ import org.xml.sax.SAXException;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.google.common.collect.Streams;
 import com.google.common.graph.Graph;
@@ -62,22 +61,23 @@ public class AdminManagesUsers {
 
 	public static void main(String[] args) throws Exception {
 		final RepositoryFetcher fetcher = RepositoryFetcher.withPrefix(PREFIX);
-		GitGeneralGrader.using(fetcher, DeadlineGrader.usingPathGrader(AdminManagesUsers::grade, DEADLINE)).grade();
+		final GitGeneralGrader grader = GitGeneralGrader
+				.using(fetcher, DeadlineGrader.usingPathGrader(AdminManagesUsers::grade, DEADLINE)).setFromDir(true);
+		grader.grade();
 	}
 
 	AdminManagesUsers() {
 	}
 
-	public static WeightingGrade grade(Path work) throws IOException {
+	public static IGrade grade(Path work) throws IOException {
 		final ImmutableSet.Builder<CriterionGradeWeight> gradeBuilder = ImmutableSet.builder();
 
-//		{
-//			final Mark hasCommit = Mark.binary(!history.getGraph().nodes().isEmpty());
-//			gradeBuilder.add(CriterionGradeWeight.from(Criterion.given("At least one"), hasCommit, 1d));
-//		}
-
 		final ImmutableSet<Path> umlPaths = Utils.getPathsMatching(work,
-				(Path p) -> p.getFileName().toString().endsWith(".uml"));
+				(Path p) -> String.valueOf(p.getFileName()).endsWith(".uml"));
+		if (umlPaths.isEmpty()) {
+			return Mark.zero("No model file found.");
+		}
+
 		for (Path umlPath : umlPaths) {
 			Document uml;
 			IGrade grade;
@@ -90,8 +90,6 @@ public class AdminManagesUsers {
 			gradeBuilder
 					.add(CriterionGradeWeight.from(Criterion.given("Considering " + umlPath.toString()), grade, 1d));
 		}
-
-		LOGGER.info("Grading compile.");
 
 		return WeightingGrade.from(gradeBuilder.build());
 	}
@@ -107,21 +105,26 @@ public class AdminManagesUsers {
 	}
 
 	private static IGrade gradeModelOnly(Path work) throws IOException {
-		final ImmutableSet<Path> umlPaths = Utils.getPathsMatching(work,
-				p -> p.getFileName().toString().endsWith(".uml"));
-		final ImmutableSet<Path> nonUmlPaths = Utils.getPathsMatching(work,
-				p -> !p.getFileName().toString().endsWith(".uml"));
-		return Mark.binary(umlPaths.size() == 1 && nonUmlPaths.isEmpty());
+		final ImmutableSet<Path> umlFiles = Utils.getPathsMatching(work,
+				p -> String.valueOf(p.getFileName()).endsWith(".uml"));
+		final ImmutableSet<Path> filesNotUml = Utils.getPathsMatching(work,
+				p -> Files.isRegularFile(p) && !p.getFileName().toString().endsWith(".uml"));
+		return Mark.binary(umlFiles.size() == 1 && filesNotUml.isEmpty());
 	}
 
 	private static IGrade gradeSortedOut(Document uml) {
-		final boolean justOneSubject = XmlUtils.toList(uml.getDocumentElement().getChildNodes()).size() == 1;
+		final ImmutableList<Node> children = XmlUtils.toList(uml.getDocumentElement().getChildNodes());
+		final ImmutableList<Node> nonTextChildren = children.stream().filter(n -> n.getNodeType() != Node.TEXT_NODE)
+				.collect(ImmutableList.toImmutableList());
+		final boolean justOneSubject = nonTextChildren.size() == 1;
 
 		final ImmutableList<Element> pckgEls = XmlUtils.toElements(uml.getElementsByTagName("packagedElement"));
 		final ImmutableList<Element> ownedEls = XmlUtils.toElements(uml.getElementsByTagName("ownedUseCase"));
-		final ImmutableList<Element> pckgPlusOwnedElements = Stream.concat(pckgEls.stream(), ownedEls.stream())
+		final ImmutableList<Element> nestedEls = XmlUtils.toElements(uml.getElementsByTagName("nestedClassifier"));
+		final ImmutableList<Element> mainElements = Streams
+				.concat(pckgEls.stream(), ownedEls.stream(), nestedEls.stream())
 				.collect(ImmutableList.toImmutableList());
-		final ImmutableList<Element> useCases = getType(pckgPlusOwnedElements, "UseCase");
+		final ImmutableList<Element> useCases = getType(mainElements, "uml:UseCase");
 		final boolean someUseCases = useCases.size() >= 1;
 		return Mark.binary(justOneSubject && someUseCases);
 	}
@@ -131,7 +134,7 @@ public class AdminManagesUsers {
 		final ImmutableSet<Element> leaves = getLeaves(uml);
 		final Set<Element> remainingLeaves = new LinkedHashSet<>(leaves);
 		{
-			final ImmutableList<Element> elements = getType(remainingLeaves, "Actor");
+			final ImmutableList<Element> elements = getType(remainingLeaves, "uml:Actor");
 			final long nbFound = elements.size();
 			if (nbFound >= 1) {
 				remainingLeaves.removeAll(elements);
@@ -140,8 +143,9 @@ public class AdminManagesUsers {
 			}
 		}
 		{
-			final ImmutableList<Element> elements = getType(remainingLeaves, "UseCase");
+			final ImmutableList<Element> elements = getType(remainingLeaves, "uml:UseCase");
 			final long nbFound = elements.size();
+			LOGGER.debug("Found UseCases: {}.", toString(elements));
 			if (nbFound >= 3) {
 				remainingLeaves.removeAll(elements);
 			} else {
@@ -149,7 +153,7 @@ public class AdminManagesUsers {
 			}
 		}
 		{
-			final ImmutableList<Element> elements = getType(remainingLeaves, "Property");
+			final ImmutableList<Element> elements = getType(remainingLeaves, "uml:Generalization");
 			final long nbFound = elements.size();
 			if (nbFound >= 2) {
 				remainingLeaves.removeAll(elements);
@@ -157,18 +161,31 @@ public class AdminManagesUsers {
 				expectedFoundNotRemoved += nbFound;
 			}
 		}
-		final ImmutableList<String> remainingIds = remainingLeaves.stream().map(e -> e.getAttributeNS(XMI_NS, "id"))
-				.collect(ImmutableList.toImmutableList());
+		{
+			final ImmutableList<Element> elements = getType(remainingLeaves, "ecore:EStringToStringMapEntry");
+			remainingLeaves.removeAll(elements);
+		}
+		{
+			final ImmutableList<Element> elements = getType(remainingLeaves, "uml:Property");
+			final long nbFound = elements.size();
+			if (nbFound >= 2) {
+				remainingLeaves.removeAll(elements);
+			} else {
+				expectedFoundNotRemoved += nbFound;
+			}
+		}
 		final int nbSuperfluous = remainingLeaves.size() - expectedFoundNotRemoved;
 		verify(nbSuperfluous >= 0);
 
 		final int quartersLost = Math.min(nbSuperfluous, 4);
 		final IGrade superfluous;
-		if (quartersLost == 0) {
+		if (leaves.size() <= 4) {
+			superfluous = Mark.zero("Not enough elements");
+		} else if (quartersLost == 0) {
 			superfluous = Mark.one();
 		} else {
 			superfluous = Mark.given((4 - quartersLost) / 4d,
-					"Nb superfluous: " + nbSuperfluous + " among " + remainingIds + ".");
+					"Nb superfluous: " + nbSuperfluous + " among " + toNameAndId(remainingLeaves) + ".");
 		}
 		return superfluous;
 	}
@@ -183,35 +200,36 @@ public class AdminManagesUsers {
 	private static IGrade getRequired(Document uml) {
 		final ImmutableSet.Builder<CriterionGradeWeight> gradeBuilder = ImmutableSet.builder();
 
-		final ImmutableList<Element> modelEls = XmlUtils.toElements(uml.getElementsByTagNameNS(UML_NS, "Model"));
-		gradeBuilder.add(CriterionGradeWeight.from(Criterion.given("Model"), Mark.binary(modelEls.size() == 1), 1d));
+		gradeBuilder.add(CriterionGradeWeight.from(Criterion.given("Model"),
+				Mark.binary(uml.getDocumentElement().getNamespaceURI().equals(UML_NS)), 1d));
 
 		final ImmutableList<Element> pckgEls = XmlUtils.toElements(uml.getElementsByTagName("packagedElement"));
 		final ImmutableList<Element> ownedEls = XmlUtils.toElements(uml.getElementsByTagName("ownedUseCase"));
+		final ImmutableList<Element> nestedEls = XmlUtils.toElements(uml.getElementsByTagName("nestedClassifier"));
 
 		final Optional<Element> subject = pckgEls.stream()
 				.filter(e -> Marks.extendAll("System").matcher(e.getAttribute("name")).matches())
 				.collect(Utils.singleOrEmpty());
-		gradeBuilder.add(CriterionGradeWeight.from(Criterion.given("Subject"), Mark.binary(subject.isPresent()), 1.5d));
+		gradeBuilder.add(
+				CriterionGradeWeight.from(Criterion.given("Subject name"), Mark.binary(subject.isPresent()), 1.5d));
 
-		final ImmutableList<Element> pckgPlusOwnedElements = Stream.concat(pckgEls.stream(), ownedEls.stream())
+		final ImmutableList<Element> mainElements = Streams
+				.concat(pckgEls.stream(), ownedEls.stream(), nestedEls.stream())
 				.collect(ImmutableList.toImmutableList());
-		final ImmutableList<Element> useCaseEls = getType(pckgPlusOwnedElements, "UseCase");
+		final ImmutableList<Element> useCaseEls = getType(mainElements, "uml:UseCase");
 
-		final Optional<Element> manageUseCase = getUseCase(pckgPlusOwnedElements, "Manage\\h+users");
+		final Optional<Element> manageUseCase = getUseCase(mainElements, "Manage\\h+users");
 		final Optional<String> manageUseCaseId = manageUseCase.flatMap(AdminManagesUsers::getId);
 		gradeBuilder.add(CriterionGradeWeight.from(Criterion.given("Use case Manage"),
-				gradeUseCase(manageUseCaseId, useCaseEls), 2d));
+				gradeUseCase(manageUseCase, useCaseEls), 2d));
 
-		final Optional<Element> createUseCase = getUseCase(pckgPlusOwnedElements, "Create\\h+user");
-		final Optional<String> createUseCaseId = createUseCase.flatMap(AdminManagesUsers::getId);
+		final Optional<Element> createUseCase = getUseCase(mainElements, "Create\\h+user");
 		gradeBuilder.add(CriterionGradeWeight.from(Criterion.given("Use case Create"),
-				gradeUseCase(createUseCaseId, useCaseEls), 2d));
+				gradeUseCase(createUseCase, useCaseEls), 2d));
 
-		final Optional<Element> deleteUseCase = getUseCase(pckgPlusOwnedElements, "Delete\\h+user");
-		final Optional<String> deleteUseCaseId = deleteUseCase.flatMap(AdminManagesUsers::getId);
+		final Optional<Element> deleteUseCase = getUseCase(mainElements, "Delete\\h+user");
 		gradeBuilder.add(CriterionGradeWeight.from(Criterion.given("Use case Delete"),
-				gradeUseCase(deleteUseCaseId, useCaseEls), 2d));
+				gradeUseCase(deleteUseCase, useCaseEls), 2d));
 
 		{
 			final ImmutableSet<Element> childrenUseCases = ImmutableSet.of(createUseCase, deleteUseCase).stream()
@@ -227,10 +245,11 @@ public class AdminManagesUsers {
 			final CriterionGradeWeight number = CriterionGradeWeight.from(Criterion.given("Number"),
 					WeightingGrade.from(ImmutableSet.of(nbOneOrTwo, nbTwo)), 1d);
 
-			final ImmutableSet<Optional<Element>> targets = useCaseEls.stream()
-					.map(u -> getTargetOfUniqueGeneralization(u, useCaseEls)).collect(ImmutableSet.toImmutableSet());
-			final boolean allTargetsManage = targets.size() == 1 && Iterables.getOnlyElement(targets).isPresent()
-					&& Iterables.getOnlyElement(targets).equals(manageUseCase);
+			final ImmutableSet<Element> targets = useCasesWithGeneralization.stream()
+					.map(u -> getTargetOfUniqueGeneralization(u, useCaseEls)).map(Optional::get)
+					.collect(ImmutableSet.toImmutableSet());
+			final Optional<Element> targetIfSingle = targets.stream().collect(Utils.singleOrEmpty());
+			final boolean allTargetsManage = targetIfSingle.isPresent() && targetIfSingle.equals(manageUseCase);
 			final CriterionGradeWeight idsOneOrTwo = CriterionGradeWeight.from(Criterion.given("One or two"),
 					Mark.binary(allTargetsManage && childrenUseCases.containsAll(useCasesWithGeneralization)), 2d);
 			final CriterionGradeWeight idsTwo = CriterionGradeWeight.from(Criterion.given("Exactly two"),
@@ -240,7 +259,6 @@ public class AdminManagesUsers {
 			gradeBuilder.add(CriterionGradeWeight.from(Criterion.given("Generalization"),
 					WeightingGrade.from(ImmutableSet.of(number, ids)), 3d));
 		}
-		final ImmutableList<Element> nestedEls = XmlUtils.toElements(uml.getElementsByTagName("nestedClassifier"));
 		final Optional<Element> actor = Stream.concat(pckgEls.stream(), nestedEls.stream())
 				.filter(e -> e.getAttributeNS(XMI_NS, "type").equals("uml:Actor")).collect(Utils.singleOrEmpty());
 		final Optional<String> actorId = actor.flatMap(AdminManagesUsers::getId);
@@ -256,6 +274,15 @@ public class AdminManagesUsers {
 
 		}
 		return WeightingGrade.from(gradeBuilder.build());
+	}
+
+	static ImmutableSet<String> toString(Collection<? extends Node> elements) {
+		return elements.stream().map(XmlUtils::toString).collect(ImmutableSet.toImmutableSet());
+	}
+
+	static ImmutableSet<String> toNameAndId(Set<Element> elements) {
+		return elements.stream().map(e -> e.getAttribute("name") + " " + e.getAttributeNS(XMI_NS, "id"))
+				.collect(ImmutableSet.toImmutableSet());
 	}
 
 	private static IGrade gradeActor(Optional<Element> actor) {
@@ -274,7 +301,11 @@ public class AdminManagesUsers {
 				Mark.binary(association.isPresent()), 1d);
 		final ImmutableList<Element> ownedAttributes = association
 				.map(a -> XmlUtils.toElements(a.getElementsByTagName("ownedAttribute"))).orElse(ImmutableList.of());
-		final ImmutableList<Element> properties = ownedAttributes.stream()
+		final ImmutableList<Element> ownedEnds = association
+				.map(a -> XmlUtils.toElements(a.getElementsByTagName("ownedEnd"))).orElse(ImmutableList.of());
+		final ImmutableList<Element> owned = ImmutableList.<Element>builder().addAll(ownedAttributes).addAll(ownedEnds)
+				.build();
+		final ImmutableList<Element> properties = owned.stream()
 				.filter(a -> a.getAttributeNS(XMI_NS, "type").equals("uml:Property"))
 				.collect(ImmutableList.toImmutableList());
 		final ImmutableList<String> targetIds = properties.stream().map(p -> p.getAttribute("type"))
@@ -283,6 +314,7 @@ public class AdminManagesUsers {
 				.filter(Optional::isPresent).map(Optional::get).collect(ImmutableSet.toImmutableSet());
 		final ImmutableSet<String> targettedValidIds = Sets
 				.intersection(ImmutableSet.copyOf(targetIds), possibleTargets).immutableCopy();
+		LOGGER.debug("Targets: {}, possible: {}.", targetIds, possibleTargets);
 		final CriterionGradeWeight propertiesGrade = CriterionGradeWeight.from(Criterion.given("Properties"),
 				Mark.binary(targettedValidIds.size() == 2), 1d);
 
@@ -301,33 +333,37 @@ public class AdminManagesUsers {
 		return elements.stream().filter(e -> e.getAttributeNS(XMI_NS, "id").equals(id)).collect(Utils.singleOrEmpty());
 	}
 
-	private static WeightingGrade gradeUseCase(Optional<String> useCaseId, Collection<Element> useCaseEls) {
+	private static WeightingGrade gradeUseCase(Optional<Element> useCase, Collection<Element> useCaseEls) {
+		final Optional<String> useCaseId = useCase.flatMap(AdminManagesUsers::getId);
 		final boolean typeAndName = useCaseId.isPresent();
-		final CriterionGradeWeight nameGrade = CriterionGradeWeight.from(Criterion.given("Name"),
-				Mark.binary(typeAndName), 2.5d);
 		final CriterionGradeWeight ucGrade = CriterionGradeWeight.from(Criterion.given("Use case"),
-				Mark.binary(typeAndName || useCaseEls.size() == 3), 2.5d);
-		return WeightingGrade.from(ImmutableSet.of(nameGrade, ucGrade));
+				Mark.binary(typeAndName || useCaseEls.size() == 3), 3d);
+		final CriterionGradeWeight nameGrade = CriterionGradeWeight.from(Criterion.given("Name"),
+				Mark.binary(typeAndName), 3d);
+		final CriterionGradeWeight subjectGrade = CriterionGradeWeight.from(Criterion.given("Subject"),
+				Mark.binary(typeAndName && useCase.get().hasAttribute("subject")), 2d);
+		return WeightingGrade.from(ImmutableSet.of(ucGrade, nameGrade, subjectGrade));
 	}
 
 	private static Optional<String> getId(Element element) {
 		return Optional.ofNullable(Strings.emptyToNull(element.getAttributeNS(XMI_NS, "id")));
 	}
 
-	private static Optional<Element> getUseCase(Iterable<Element> elements, final String namePattern) {
-		final ImmutableList<Element> useCases = getType(elements, "UseCase");
+	private static Optional<Element> getUseCase(Iterable<Element> elements, String namePattern) {
+		final ImmutableList<Element> useCases = getType(elements, "uml:UseCase");
 		return useCases.stream().filter(e -> Marks.extendAll(namePattern).matcher(e.getAttribute("name")).matches())
 				.collect(Utils.singleOrEmpty());
 	}
 
 	private static ImmutableList<Element> getType(Iterable<Element> elements, String type) {
-		return Streams.stream(elements).filter(e -> e.getAttributeNS(XMI_NS, "type").equals("uml:" + type))
+		return Streams.stream(elements).filter(e -> e.getAttributeNS(XMI_NS, "type").equals(type))
 				.collect(ImmutableList.toImmutableList());
 	}
 
 	private static void prepareBuilder() {
 		if (builder == null) {
 			final DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+			factory.setNamespaceAware(true);
 			try {
 				builder = factory.newDocumentBuilder();
 			} catch (ParserConfigurationException e) {
