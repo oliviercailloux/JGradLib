@@ -56,7 +56,7 @@ class CommitTests {
 			final GitFileSystemHistory empty = GitFileSystemHistory.create(gitFs,
 					GitHistory.create(GraphBuilder.directed().build(), ImmutableMap.of()));
 
-			final IGrade direct = new Commit().grade(GitWork.given(GitHubUsername.given("ploum"), empty));
+			final IGrade direct = Commit.grade(GitWork.given(GitHubUsername.given("ploum"), empty));
 			LOGGER.debug("Grade direct: {}.", JsonGrade.asJson(direct));
 			assertEquals(0d, direct.getPoints());
 		}
@@ -105,7 +105,7 @@ class CommitTests {
 				final GitFileSystemHistory withTimes = GitFileSystemHistory.create(gitFs,
 						GitHistory.create(graph, times));
 
-				final IGrade direct = new Commit().grade(GitWork.given(GitHubUsername.given("Not me"), withTimes));
+				final IGrade direct = Commit.grade(GitWork.given(GitHubUsername.given("Not me"), withTimes));
 				LOGGER.debug("Grade direct: {}.", JsonGrade.asJson(direct));
 				assertEquals(0.85d, direct.getPoints(), 1e-5);
 			}
@@ -152,8 +152,7 @@ class CommitTests {
 					final GitFileSystemHistory withConstantTimes = GitFileSystemHistory.create(gitFs,
 							GitHistory.create(graph, constantTimes));
 
-					final IGrade direct = new Commit()
-							.grade(GitWork.given(GitHubUsername.given("Me"), withConstantTimes));
+					final IGrade direct = Commit.grade(GitWork.given(GitHubUsername.given("Me"), withConstantTimes));
 					LOGGER.debug("Grade direct: {}.", JsonGrade.asJson(direct));
 					assertEquals(1.0d, direct.getPoints());
 				}

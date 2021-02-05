@@ -57,7 +57,7 @@ public class Eclipse implements GitGrader {
 
 	public static void main(String[] args) throws Exception {
 		final RepositoryFetcher fetcher = RepositoryFetcher.withPrefix(PREFIX);
-		GitGeneralGrader.using(fetcher, DeadlineGrader.given(new Eclipse(), DEADLINE)).grade();
+		GitGeneralGrader.using(fetcher, DeadlineGrader.usingGitGrader(new Eclipse(), DEADLINE)).grade();
 	}
 
 	Eclipse() {

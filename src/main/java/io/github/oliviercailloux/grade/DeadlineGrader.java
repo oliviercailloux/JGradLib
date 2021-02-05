@@ -59,8 +59,13 @@ public class DeadlineGrader {
 		return penalizedGrade;
 	}
 
-	public static DeadlineGrader given(GitGrader grader, ZonedDateTime deadline) {
+	public static DeadlineGrader usingGitGrader(GitGrader grader, ZonedDateTime deadline) {
 		return new DeadlineGrader(null, grader::grade, deadline, DeadlineGrader::defaultPenalize);
+	}
+
+	public static DeadlineGrader usingPathGrader(Throwing.Function<Path, IGrade, IOException> grader,
+			ZonedDateTime deadline) {
+		return new DeadlineGrader(grader, null, deadline, DeadlineGrader::defaultPenalize);
 	}
 
 	private final Throwing.Function<Path, IGrade, IOException> simpleWorkGrader;
@@ -130,14 +135,14 @@ public class DeadlineGrader {
 		final GitHubUsername author = work.getAuthor();
 		final GitFileSystemHistory history = work.getHistory();
 		checkArgument(!history.isEmpty());
+		final GitFileSystemHistory onTime = history.filter(r -> !history.getCommitDate(r).isAfter(timeCap));
+		checkArgument(!onTime.isEmpty());
 		final IGrade grade;
 		if (simpleWorkGrader == null) {
 			verify(gitWorkGrader != null);
-			final GitFileSystemHistory onTime = history.filter(r -> !history.getCommitDate(r).isAfter(timeCap));
-			checkArgument(!onTime.isEmpty());
 			grade = gitWorkGrader.apply(GitWork.given(author, onTime));
 		} else {
-			final ImmutableSet<GitPathRootSha> latestTiedPathsOnTime = getLatest(history, timeCap);
+			final ImmutableSet<GitPathRootSha> latestTiedPathsOnTime = DeadlineGrader.getLatest(onTime);
 			checkArgument(!latestTiedPathsOnTime.isEmpty());
 			grade = CheckedStream.<GitPathRootSha, IOException>wrapping(latestTiedPathsOnTime.stream())
 					.map(simpleWorkGrader).min(Comparator.comparing(IGrade::getPoints)).get();
@@ -148,16 +153,12 @@ public class DeadlineGrader {
 	}
 
 	/**
-	 * Returns all latest commits that are weakly before the time cap, have no
-	 * children weakly before the time cap, have been authored the latest among the
-	 * remaining ones, and have been committed the latest among the remaining ones.
+	 * Returns all latest commits that have no children, have been authored the
+	 * latest among the remaining ones, and have been committed the latest among the
+	 * remaining ones.
 	 */
-	private ImmutableSet<GitPathRootSha> getLatest(GitFileSystemHistory history, Instant timeCap) throws IOException {
-		final ImmutableSortedSet<Instant> timestamps = history.asGitHistory().getCommitDates().values().stream()
-				.collect(ImmutableSortedSet.toImmutableSortedSet(Comparator.naturalOrder()));
-		final Instant latestBeforeCap = getLatestBefore(timestamps, timeCap);
-		final GitFileSystemHistory beforeCap = history.filter(c -> !history.getCommitDate(c).isAfter(latestBeforeCap));
-		final ImmutableSet<GitPathRootSha> leaves = beforeCap.getLeaves();
+	private static ImmutableSet<GitPathRootSha> getLatest(GitFileSystemHistory history) throws IOException {
+		final ImmutableSet<GitPathRootSha> leaves = history.getLeaves();
 //		final GitFileSystemHistory leavesHistory = history.filter(c -> leaves.contains(c));
 
 //		final Instant latestAuthorDate = CheckedStream.<GitPathRoot, IOException>wrapping(leaves.stream())

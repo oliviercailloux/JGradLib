@@ -24,7 +24,6 @@ import io.github.oliviercailloux.grade.CriterionGradeWeight;
 import io.github.oliviercailloux.grade.DeadlineGrader;
 import io.github.oliviercailloux.grade.GitFileSystemHistory;
 import io.github.oliviercailloux.grade.GitGeneralGrader;
-import io.github.oliviercailloux.grade.GitGrader;
 import io.github.oliviercailloux.grade.GitWork;
 import io.github.oliviercailloux.grade.Mark;
 import io.github.oliviercailloux.grade.RepositoryFetcher;
@@ -34,7 +33,7 @@ import io.github.oliviercailloux.jaris.exceptions.Throwing;
 import io.github.oliviercailloux.jaris.exceptions.Throwing.Predicate;
 import io.github.oliviercailloux.java_grade.testers.JavaMarkHelper;
 
-public class Commit implements GitGrader {
+public class Commit {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(Commit.class);
 
@@ -44,14 +43,13 @@ public class Commit implements GitGrader {
 
 	public static void main(String[] args) throws Exception {
 		final RepositoryFetcher fetcher = RepositoryFetcher.withPrefix(PREFIX);
-		GitGeneralGrader.using(fetcher, DeadlineGrader.given(new Commit(), DEADLINE)).grade();
+		GitGeneralGrader.using(fetcher, DeadlineGrader.usingGitGrader(Commit::grade, DEADLINE)).grade();
 	}
 
-	Commit() {
+	private Commit() {
 	}
 
-	@Override
-	public WeightingGrade grade(GitWork work) throws IOException {
+	public static WeightingGrade grade(GitWork work) throws IOException {
 		final GitHubUsername author = work.getAuthor();
 		final GitFileSystemHistory history = work.getHistory();
 

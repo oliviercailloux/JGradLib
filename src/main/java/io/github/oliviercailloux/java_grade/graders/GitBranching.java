@@ -50,7 +50,7 @@ public class GitBranching implements GitGrader {
 
 	public static void main(String[] args) throws Exception {
 		final RepositoryFetcher fetcher = RepositoryFetcher.withPrefix(PREFIX);
-		GitGeneralGrader.using(fetcher, DeadlineGrader.given(new GitBranching(), DEADLINE)).grade();
+		GitGeneralGrader.using(fetcher, DeadlineGrader.usingGitGrader(new GitBranching(), DEADLINE)).grade();
 	}
 
 	GitBranching() {
