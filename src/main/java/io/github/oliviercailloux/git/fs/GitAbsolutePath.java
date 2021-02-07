@@ -233,10 +233,7 @@ abstract class GitAbsolutePath extends GitPath {
 				followLinks ? FollowLinksBehavior.FOLLOW_ALL_LINKS : FollowLinksBehavior.DO_NOT_FOLLOW_LINKS);
 
 		// TODO what’s the nio size supposed to represent for a directory?
-//		final long size = gitObject.getFileMode().equals(FileMode.TREE) ? 1 : getFileSystem().getSize(gitObject);
-		// TODO temporary optimization, see
-		// https://www.eclipse.org/forums/index.php/m/1837259
-		final long size = -1;
+		final long size = gitObject.getFileMode().equals(FileMode.TREE) ? 1 : getFileSystem().getSize(gitObject);
 		final GitBasicFileAttributes gitBasicFileAttributes = new GitBasicFileAttributes(gitObject, size);
 		if (followLinks) {
 			verify(!gitBasicFileAttributes.isSymbolicLink());
