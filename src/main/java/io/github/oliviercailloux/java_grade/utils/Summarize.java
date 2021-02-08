@@ -41,7 +41,7 @@ public class Summarize {
 	private static final Path READ_DIR = Paths.get("");
 
 	public static void main(String[] args) throws Exception {
-		summarize("eclipse", Paths.get(""), true);
+		summarize("admin-manages-users", Paths.get(""), true);
 	}
 
 	public static void summarize(String prefix, Path outDir, boolean ignoreZeroWeights) throws IOException {
@@ -50,7 +50,7 @@ public class Summarize {
 		}.getClass().getGenericSuperclass();
 
 		LOGGER.debug("Reading grades.");
-		final String sourceGrades = Files.readString(READ_DIR.resolve("grades " + prefix + " patched.json"));
+		final String sourceGrades = Files.readString(READ_DIR.resolve("grades " + prefix + ".json"));
 		final Map<String, IGrade> grades = JsonbUtils.fromJson(sourceGrades, type, JsonGrade.asAdapter());
 		LOGGER.debug("Read {}, keys: {}.", sourceGrades, grades.keySet());
 
