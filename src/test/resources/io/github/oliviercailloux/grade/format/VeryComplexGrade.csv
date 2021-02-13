@@ -1,0 +1,8 @@
+Name,GitHub username,grade,grade/Has commits,grade/Has commits/At least one,grade/Has commits/Right identity,grade/Commit 'coucou',grade/Commit 'coucou'/'afile.txt' content,grade/Commit 'coucou'/'coucou' content,grade/Commit 'main',grade/Commit 'main'/'myid.txt' content,grade/Commit 'main'/'myid.txt' and 'afile.txt' content,grade/Commit 'main'/'main' content,grade/Commit 'dev',grade/Commit 'dev'/'another file.txt' exists,grade/Commit 'dev'/'dev' content,Time penalty,Points
+unknown,u,10.963,3.373,0.843,2.53,5.06,2.53,2.53,2.53,1.265,1.265,0,0,0,0,0,10.963
+
+Range,,"[0, 16.867]","[0, 3.373]","[0, 0.843]","[0, 2.53]","[0, 5.06]","[0, 2.53]","[0, 2.53]","[0, 5.06]","[0, 1.265]","[0, 1.265]","[0, 2.53]","[0, 3.373]","[0, 1.687]","[0, 1.687]","[0, 3.133]","[0, 20]"
+Upper bound,,16.867,3.373,0.843,2.53,5.06,2.53,2.53,5.06,1.265,1.265,2.53,3.373,1.687,1.687,3.133,20
+Average,,10.963,3.373,0.843,2.53,5.06,2.53,2.53,2.53,1.265,1.265,0,0,0,0,0,10.963
+Nb > 0,,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,1
+Nb MAX,,0,1,1,1,1,1,1,0,1,1,0,0,0,0,0,0

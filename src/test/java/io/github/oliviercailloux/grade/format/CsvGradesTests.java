@@ -3,8 +3,9 @@ package io.github.oliviercailloux.grade.format;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,6 +22,7 @@ import io.github.oliviercailloux.grade.comm.InstitutionalStudent;
 import io.github.oliviercailloux.grade.comm.StudentOnGitHub;
 import io.github.oliviercailloux.grade.format.json.JsonGrade;
 import io.github.oliviercailloux.grade.format.json.JsonGradeTest;
+import io.github.oliviercailloux.java_grade.utils.Summarize;
 
 class CsvGradesTests {
 	@SuppressWarnings("unused")
@@ -41,14 +43,13 @@ class CsvGradesTests {
 	}
 
 	@Test
-	@Disabled("Just for some experimentation")
 	void writeVeryComplexGradeTest() throws Exception {
 		final String jsonGrade = Resources.toString(JsonGradeTest.class.getResource("VeryComplexGrade.json"),
 				StandardCharsets.UTF_8);
 		final IGrade grade = JsonGrade.asGrade(jsonGrade);
 		final String written = CsvGrades.asCsv(ImmutableMap.of(StudentOnGitHub.with("u"), grade));
 
-		final String expected = Resources.toString(getClass().getResource("TwoStudentsGrades.csv"),
+		final String expected = Resources.toString(getClass().getResource("VeryComplexGrade.csv"),
 				StandardCharsets.UTF_8);
 		assertEquals(expected, written);
 	}

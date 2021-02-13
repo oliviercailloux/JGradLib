@@ -108,40 +108,73 @@ public class DeadlineGrader {
 		public IGrade penalize(Duration lateness, IGrade grade);
 	}
 
-	private static IGrade defaultPenalize(Duration lateness, IGrade grade) {
-		final IGrade penalizedGrade;
-		if (!lateness.isNegative() && !lateness.isZero()) {
-			final double fractionPenalty = Math.min(lateness.getSeconds() / 300d, 1d);
-			verify(0d < fractionPenalty);
-			verify(fractionPenalty <= 1d);
-			penalizedGrade = WeightingGrade.from(
-					ImmutableSet.of(CriterionGradeWeight.from(Criterion.given("grade"), grade, 1d - fractionPenalty),
-							CriterionGradeWeight.from(Criterion.given("Time penalty"),
-									Mark.zero("Lateness: " + lateness), fractionPenalty)));
-		} else {
-			penalizedGrade = grade;
+	public static class LinearPenalizer implements Penalizer {
+		public static LinearPenalizer DEFAULT_PENALIZER = new LinearPenalizer(300);
+
+		public static LinearPenalizer proportionalToLateness(Duration durationForZero) {
+			return new LinearPenalizer(Math.toIntExact(durationForZero.getSeconds()));
 		}
-		return penalizedGrade;
+
+		private int nbSecondsZero;
+
+		private LinearPenalizer(int nbSecondsZero) {
+			this.nbSecondsZero = nbSecondsZero;
+			checkArgument(nbSecondsZero > 0);
+		}
+
+		public int getNbSecondsZero() {
+			return nbSecondsZero;
+		}
+
+		public void setNbSecondsZero(int nbSecondsZero) {
+			this.nbSecondsZero = nbSecondsZero;
+		}
+
+		@Override
+		public IGrade penalize(Duration lateness, IGrade grade) {
+			final IGrade penalizedGrade;
+			if (!lateness.isNegative() && !lateness.isZero()) {
+				final double fractionPenalty = Math.min(lateness.getSeconds() / (double) nbSecondsZero, 1d);
+				verify(0d < fractionPenalty);
+				verify(fractionPenalty <= 1d);
+				penalizedGrade = WeightingGrade.from(ImmutableSet.of(
+						CriterionGradeWeight.from(Criterion.given("grade"), grade, 1d - fractionPenalty),
+						CriterionGradeWeight.from(Criterion.given("Time penalty"), Mark.zero("Lateness: " + lateness),
+								fractionPenalty)));
+			} else {
+				penalizedGrade = grade;
+			}
+			return penalizedGrade;
+		}
 	}
 
 	public static DeadlineGrader usingGitGrader(GitGrader grader, ZonedDateTime deadline) {
-		return new DeadlineGrader(grader::grade, deadline, DeadlineGrader::defaultPenalize);
+		return new DeadlineGrader(grader::grade, deadline, LinearPenalizer.DEFAULT_PENALIZER);
 	}
 
 	public static DeadlineGrader usingPathGrader(Throwing.Function<Path, IGrade, IOException> grader,
 			ZonedDateTime deadline) {
-		return new DeadlineGrader(new SimpleToGitGrader(grader)::grade, deadline, DeadlineGrader::defaultPenalize);
+		return new DeadlineGrader(new SimpleToGitGrader(grader)::grade, deadline, LinearPenalizer.DEFAULT_PENALIZER);
 	}
 
 	private final Throwing.Function<GitWork, IGrade, IOException> grader;
 	private final ZonedDateTime deadline;
-	private final Penalizer penalizer;
+	private Penalizer penalizer;
 
 	private DeadlineGrader(Throwing.Function<GitWork, IGrade, IOException> gitWorkGrader, ZonedDateTime deadline,
 			Penalizer penalizer) {
 		this.grader = checkNotNull(gitWorkGrader);
 		this.deadline = checkNotNull(deadline);
 		this.penalizer = checkNotNull(penalizer);
+	}
+
+	public Penalizer getPenalizer() {
+		return penalizer;
+	}
+
+	public DeadlineGrader setPenalizer(Penalizer penalizer) {
+		this.penalizer = checkNotNull(penalizer);
+		return this;
 	}
 
 	public IGrade grade(GitWork work) throws IOException {
@@ -165,14 +198,14 @@ public class DeadlineGrader {
 	 *         other grades with weight 0, and indicates for each of them where they
 	 *         have been capped.
 	 */
-	private IGrade getBestAndSub(final IGrade best, final ImmutableMap<Instant, IGrade> byTime) {
+	private IGrade getBestAndSub(IGrade best, ImmutableMap<Instant, IGrade> byTime) {
 		final IGrade finalGrade;
 		final Instant mainInstant = byTime.entrySet().stream().filter(e -> e.getValue().equals(best))
 				.map(Map.Entry::getKey).collect(MoreCollectors.onlyElement());
 		final ImmutableSet<CriterionGradeWeight> grades = byTime.entrySet().stream()
 				.map(e -> CriterionGradeWeight.from(
 						Criterion.given("Cap at " + e.getKey().atZone(deadline.getZone()).toString()), e.getValue(),
-						e.getValue().equals(best) ? 1d : 0d))
+						e.getValue().getPoints() == best.getPoints() ? 1d : 0d))
 				.collect(ImmutableSet.toImmutableSet());
 		finalGrade = WeightingGrade.from(grades,
 				"Using best grade, from " + mainInstant.atZone(deadline.getZone()).toString());

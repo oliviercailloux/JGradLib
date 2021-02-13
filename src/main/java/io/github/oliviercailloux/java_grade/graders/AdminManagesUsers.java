@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.time.ZonedDateTime;
 import java.util.Collection;
 import java.util.LinkedHashSet;
@@ -55,14 +56,15 @@ public class AdminManagesUsers {
 
 	public static final String PREFIX = "admin-manages-users";
 
-	public static final ZonedDateTime DEADLINE = ZonedDateTime.parse("2021-01-14T23:00:00+01:00[Europe/Paris]");
+	public static final ZonedDateTime DEADLINE = ZonedDateTime.parse("2021-01-25T14:11:00+01:00[Europe/Paris]");
 
 	private static DocumentBuilder builder;
 
 	public static void main(String[] args) throws Exception {
 		final RepositoryFetcher fetcher = RepositoryFetcher.withPrefix(PREFIX);
-		final GitGeneralGrader grader = GitGeneralGrader
-				.using(fetcher, DeadlineGrader.usingPathGrader(AdminManagesUsers::grade, DEADLINE)).setFromDir(true);
+		final GitGeneralGrader grader = GitGeneralGrader.using(fetcher,
+				DeadlineGrader.usingPathGrader(AdminManagesUsers::grade, DEADLINE)
+						.setPenalizer(DeadlineGrader.LinearPenalizer.proportionalToLateness(Duration.ofSeconds(600))));
 		grader.grade();
 	}
 
@@ -97,8 +99,8 @@ public class AdminManagesUsers {
 	private static IGrade grade(Path work, Document uml) throws IOException {
 		final ImmutableSet.Builder<CriterionGradeWeight> gradeBuilder = ImmutableSet.builder();
 		gradeBuilder.add(CriterionGradeWeight.from(Criterion.given("Required elements"), getRequired(uml), 15d));
-		gradeBuilder
-				.add(CriterionGradeWeight.from(Criterion.given("Superfluous elements"), gradeSuperfluous(uml), 1.5d));
+		gradeBuilder.add(
+				CriterionGradeWeight.from(Criterion.given("No superfluous elements"), gradeSuperfluous(uml), 1.5d));
 		gradeBuilder.add(CriterionGradeWeight.from(Criterion.given("Sorted out"), gradeSortedOut(uml), 1d));
 		gradeBuilder.add(CriterionGradeWeight.from(Criterion.given("Model only"), gradeModelOnly(work), 1.5d));
 		return WeightingGrade.from(gradeBuilder.build());

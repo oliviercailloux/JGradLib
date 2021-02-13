@@ -166,12 +166,12 @@ public class CsvGrades<K> {
 		final String firstHeader = identityHeaders.iterator().next();
 
 		for (K key : keys) {
-			LOGGER.debug("Writing {}.", key);
 			final Map<String, String> identity = identityFunction.apply(key);
 			identity.entrySet().forEach(e -> writer.addValue(e.getKey(), e.getValue()));
 
 			final IGrade grade = grades.get(key);
 			final ImmutableCollection<CriterionGradeWeight> marks = asTable.row(key).values();
+			LOGGER.debug("Writing {} and {}.", key, marks);
 			for (CriterionGradeWeight cgw : marks) {
 				final Criterion criterion = cgw.getCriterion();
 				Verify.verify(allCriteria.contains(criterion));

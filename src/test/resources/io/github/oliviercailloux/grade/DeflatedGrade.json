@@ -1,0 +1,58 @@
+{
+    "points": 0.5145,
+    "comment": "",
+    "subGrades": [
+        {
+            "criterion": "c1",
+            "grade": {
+                "points": 0.175,
+                "comment": "",
+                "subGrades": [
+                    {
+                        "criterion": "g1",
+                        "grade": {
+                            "points": 0.1,
+                            "comment": "c1-g1"
+                        },
+                        "weight": 0.25
+                    },
+                    {
+                        "criterion": "g2",
+                        "grade": {
+                            "points": 0.2,
+                            "comment": "c1-g2"
+                        },
+                        "weight": 0.75
+                    }
+                ]
+            },
+            "weight": 0.3
+        },
+        {
+            "criterion": "c2",
+            "grade": {
+                "points": 0.66,
+                "comment": "",
+                "subGrades": [
+                    {
+                        "criterion": "g1",
+                        "grade": {
+                            "points": 0.3,
+                            "comment": "c2-g1"
+                        },
+                        "weight": 0.4
+                    },
+                    {
+                        "criterion": "g2",
+                        "grade": {
+                            "points": 0.9,
+                            "comment": "c2-g2"
+                        },
+                        "weight": 0.6
+                    }
+                ]
+            },
+            "weight": 0.7
+        }
+    ]
+}

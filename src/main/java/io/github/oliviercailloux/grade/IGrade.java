@@ -23,6 +23,17 @@ import com.google.common.collect.ImmutableMap;
  *
  * TODO get rid of default methods.
  *
+ * This should be: either a mark, or a weighting grade. A min, an And, a Time
+ * penalty, all of this can be transformed (with loss of information) to a
+ * weighting grade. The various subclasses would serve to remember more
+ * information. Still unclear whether a weighting grade with weight on the min
+ * points should equal a MinGrade, however. I’d say no: a weighting grade should
+ * equal a weighting grade (thus equality after transforming the Mingrade to a
+ * Wgrade).
+ *
+ * BUT this is not necessarily a tree of criteria with weights: the weights
+ * might be known only at grade time (in case of MIN, e.g.).
+ *
  */
 public interface IGrade {
 	/**
@@ -103,6 +114,9 @@ public interface IGrade {
 	/**
 	 * Two {@link IGrade} objects are equal iff they have the same points, comment,
 	 * and sub grades (irrespective of the order of the sub grades).
+	 *
+	 * TODO this is wrong: two weighting grades with the same criteria and different
+	 * weights may be equal, according to this definition, but should not be.
 	 */
 	@Override
 	public boolean equals(Object o2);

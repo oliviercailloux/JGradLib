@@ -1,0 +1,22 @@
+{
+    "points": 0.5145,
+    "comment": "",
+    "subGrades": [
+        {
+            "criterion": "g1",
+            "grade": {
+                "points": 0.2577464788732394,
+                "comment": "c1 – c1-g1\nc2 – c2-g1"
+            },
+            "weight": 0.355
+        },
+        {
+            "criterion": "g2",
+            "grade": {
+                "points": 0.655813953488372,
+                "comment": "c1 – c1-g2\nc2 – c2-g2"
+            },
+            "weight": 0.645
+        }
+    ]
+}

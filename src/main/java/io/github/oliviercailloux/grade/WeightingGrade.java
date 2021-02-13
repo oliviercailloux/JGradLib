@@ -22,9 +22,12 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Verify;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
+import com.google.common.graph.ImmutableValueGraph;
+import com.google.common.graph.ValueGraphBuilder;
 
 /**
  * containing positive points only and at one weights per sub-grade, at least
@@ -137,16 +140,16 @@ public class WeightingGrade implements IGrade {
 	private final ImmutableMap<Criterion, IGrade> subGrades;
 
 	/**
-	 * The positive ones sum to one. No zero values.
+	 * The positive ones sum to one. No zero values (TODO not sure!).
 	 */
 	private final ImmutableMap<Criterion, Double> weights;
 
 	private final String comment;
 
 	private WeightingGrade(Map<Criterion, ? extends IGrade> subGrades, Map<Criterion, Double> weights, String comment) {
-		checkArgument(weights.values().stream().allMatch((d) -> Double.isFinite(d)));
-		checkArgument(weights.values().stream().anyMatch((d) -> d > 0d));
-		checkArgument(subGrades.values().stream().allMatch((g) -> 0d <= g.getPoints() && g.getPoints() <= 1d));
+		checkArgument(weights.values().stream().allMatch(d -> Double.isFinite(d)));
+		checkArgument(weights.values().stream().anyMatch(d -> d > 0d));
+		checkArgument(subGrades.values().stream().allMatch(g -> 0d <= g.getPoints() && g.getPoints() <= 1d));
 		checkArgument(subGrades.keySet().equals(weights.keySet()),
 				String.format("Sub grades have keys: %s, weights have keys: %s, diff: %s", subGrades.keySet(),
 						weights.keySet(), Sets.symmetricDifference(subGrades.keySet(), weights.keySet())));
@@ -225,6 +228,33 @@ public class WeightingGrade implements IGrade {
 	@Override
 	public WeightingGrade withSubGrade(Criterion criterion, IGrade newSubGrade) {
 		return new WeightingGrade(GradeUtils.withUpdatedEntry(subGrades, criterion, newSubGrade), weights, comment);
+	}
+
+	public ImmutableValueGraph<ImmutableList<Criterion>, Double> toValueTree() {
+		final ImmutableValueGraph.Builder<ImmutableList<Criterion>, Double> builder = ValueGraphBuilder.directed()
+				.allowsSelfLoops(false).immutable();
+		final ImmutableList<Criterion> rootPath = ImmutableList.of();
+		builder.addNode(rootPath);
+		putValuedChildren(builder, rootPath);
+		return builder.build();
+	}
+
+	private void putValuedChildren(ImmutableValueGraph.Builder<ImmutableList<Criterion>, Double> builder,
+			ImmutableList<Criterion> root) {
+		final ImmutableSet<CriterionGradeWeight> subGradesW = getSubGradesAsSet();
+		for (CriterionGradeWeight subDecoratedGrade : subGradesW) {
+			final Criterion newChild = subDecoratedGrade.getCriterion();
+			final ImmutableList<Criterion> childPath = ImmutableList.<Criterion>builderWithExpectedSize(root.size() + 1)
+					.addAll(root).add(newChild).build();
+			builder.putEdgeValue(root, childPath, subDecoratedGrade.getWeight());
+			final IGrade subGrade = subDecoratedGrade.getGrade();
+			if (subGrade instanceof WeightingGrade) {
+				final WeightingGrade wSub = (WeightingGrade) subGrade;
+				wSub.putValuedChildren(builder, childPath);
+			} else {
+				checkArgument(subGrade instanceof Mark);
+			}
+		}
 	}
 
 	@Override
