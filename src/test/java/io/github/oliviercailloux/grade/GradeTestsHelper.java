@@ -60,13 +60,13 @@ public class GradeTestsHelper {
 		return composite;
 	}
 
-	public static MinGrade getMinGrade() {
+	public static WeightingGrade getMinGrade() {
 		final Criterion cSubMin1 = Criterion.given("SubMin1");
 		final Criterion cSubMin2 = Criterion.given("SubMin2");
 		final Mark subMin1 = Mark.given(0.3d, "sub min 1");
 		final Mark subMin2 = Mark.given(0.4d, "sub min 2");
-		final MinGrade minGrade = MinGrade.given(ImmutableMap.of(cSubMin1, subMin1, cSubMin2, subMin2));
-		return minGrade;
+		return WeightingGrade.from(ImmutableMap.of(cSubMin1, subMin1, cSubMin2, subMin2),
+				ImmutableMap.of(cSubMin1, 1d, cSubMin2, 0d));
 	}
 
 	public static WeightingGrade getEclecticWeightedGrade() {
