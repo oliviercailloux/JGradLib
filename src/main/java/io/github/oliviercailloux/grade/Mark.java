@@ -12,6 +12,7 @@ import javax.json.bind.annotation.JsonbTransient;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 
 @JsonbPropertyOrder({ "points", "comments" })
 public class Mark implements IGrade {
@@ -107,6 +108,16 @@ public class Mark implements IGrade {
 	@Override
 	public String toString() {
 		return MoreObjects.toStringHelper(this).add("points", points).add("comment", comment).toString();
+	}
+
+	@Override
+	public ImmutableSet<CriterionGradeWeight> getSubGradesAsSet() {
+		return ImmutableSet.of();
+	}
+
+	@Override
+	public ImmutableMap<Criterion, Double> getWeights() {
+		return ImmutableMap.of();
 	}
 
 }

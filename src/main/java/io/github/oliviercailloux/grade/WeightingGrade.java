@@ -192,6 +192,7 @@ public class WeightingGrade implements IGrade {
 	/**
 	 * @return iterates in the order of the sub-grades.
 	 */
+	@Override
 	@JsonbProperty("subGrades")
 	public ImmutableSet<CriterionGradeWeight> getSubGradesAsSet() {
 		return subGrades.keySet().stream().map((c) -> CriterionGradeWeight.from(c, subGrades.get(c), weights.get(c)))
@@ -202,6 +203,7 @@ public class WeightingGrade implements IGrade {
 	 * @return the weights, such that the positive weights sum to one, and not
 	 *         empty. Iterates in the order of the sub-grades.
 	 */
+	@Override
 	@JsonbTransient
 	public ImmutableMap<Criterion, Double> getWeights() {
 		return weights;

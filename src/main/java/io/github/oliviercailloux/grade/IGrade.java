@@ -6,6 +6,7 @@ import java.util.Set;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 
 /**
  *
@@ -36,6 +37,7 @@ import com.google.common.collect.ImmutableMap;
  *
  */
 public interface IGrade {
+
 	/**
 	 * Returns the points. It is not mandatory that the points on a composite grade
 	 * be a deterministic function of the points on the sub-grades: manual
@@ -63,6 +65,17 @@ public interface IGrade {
 	 * @return the sub grades.
 	 */
 	public ImmutableMap<Criterion, IGrade> getSubGrades();
+
+	/**
+	 * @return iterates in the order of the sub-grades.
+	 */
+	ImmutableSet<CriterionGradeWeight> getSubGradesAsSet();
+
+	/**
+	 * @return the weights, such that the positive weights sum to one, and not
+	 *         empty. Iterates in the order of the sub-grades.
+	 */
+	ImmutableMap<Criterion, Double> getWeights();
 
 	/**
 	 * @param depth ≥0; 0 for a mark.
