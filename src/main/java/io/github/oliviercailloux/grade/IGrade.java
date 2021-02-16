@@ -2,11 +2,15 @@ package io.github.oliviercailloux.grade;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.RandomAccess;
 import java.util.Set;
 
+import com.google.common.collect.ForwardingList;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.graph.ImmutableValueGraph;
+import com.google.common.graph.ValueGraphBuilder;
 
 /**
  *
@@ -37,6 +41,76 @@ import com.google.common.collect.ImmutableSet;
  *
  */
 public interface IGrade {
+
+	public static class GradePath extends ForwardingList<Criterion> implements List<Criterion>, RandomAccess {
+		public static final GradePath ROOT = new GradePath(ImmutableList.of());
+
+		public static GradePath from(List<Criterion> list) {
+			if (list instanceof GradePath) {
+				final GradePath path = (GradePath) list;
+				return path;
+			}
+			return new GradePath(list);
+		}
+
+		private final ImmutableList<Criterion> list;
+
+		private GradePath(List<Criterion> list) {
+			this.list = ImmutableList.copyOf(list);
+		}
+
+		@Override
+		protected ImmutableList<Criterion> delegate() {
+			return list;
+		}
+
+		public boolean isRoot() {
+			return isEmpty();
+		}
+
+		public Criterion getHead() {
+			return list.get(0);
+		}
+
+		public Criterion getTail() {
+			return list.get(list.size() - 1);
+		}
+
+		public GradePath withPrefix(Criterion root) {
+			return new GradePath(
+					ImmutableList.<Criterion>builderWithExpectedSize(size() + 1).add(root).addAll(list).build());
+		}
+
+		public GradePath withSuffix(Criterion terminal) {
+			return new GradePath(
+					ImmutableList.<Criterion>builderWithExpectedSize(size() + 1).addAll(list).add(terminal).build());
+		}
+
+		/**
+		 * @throws IndexOutOfBoundsException
+		 */
+		public GradePath withoutHead() {
+			return new GradePath(ImmutableList.<Criterion>builderWithExpectedSize(size() - 1)
+					.addAll(list.subList(1, list.size())).build());
+		}
+
+		/**
+		 * @throws IndexOutOfBoundsException
+		 */
+		public GradePath withoutTail() {
+			return new GradePath(ImmutableList.<Criterion>builderWithExpectedSize(size() - 1)
+					.addAll(list.subList(0, list.size() - 1)).build());
+		}
+
+		public boolean startsWith(GradePath starting) {
+			final List<Criterion> startingList = starting;
+			return list.subList(0, starting.size()).equals(startingList);
+		}
+
+		public ImmutableList<Criterion> asImmutableList() {
+			return list;
+		}
+	}
 
 	/**
 	 * Returns the points. It is not mandatory that the points on a composite grade
@@ -77,6 +151,30 @@ public interface IGrade {
 	 */
 	ImmutableMap<Criterion, Double> getWeights();
 
+	public default GradeStructure toTree() {
+		return GradeStructure.given(toValueTree().asGraph());
+	}
+
+	/**
+	 * @return from any node p, the sum of weights to direct children is one.
+	 */
+	public default ImmutableValueGraph<GradePath, Double> toValueTree() {
+		final ImmutableValueGraph.Builder<GradePath, Double> builder = ValueGraphBuilder.directed()
+				.allowsSelfLoops(false).immutable();
+		builder.addNode(GradePath.ROOT);
+		putValuedChildren(builder, GradePath.ROOT);
+		return builder.build();
+	}
+
+	private void putValuedChildren(ImmutableValueGraph.Builder<GradePath, Double> builder, GradePath root) {
+		for (Criterion newChild : getSubGrades().keySet()) {
+			final GradePath childPath = root.withSuffix(newChild);
+			builder.putEdgeValue(root, childPath, getWeights().get(newChild));
+			final IGrade subGrade = getSubGrades().get(newChild);
+			subGrade.putValuedChildren(builder, childPath);
+		}
+	}
+
 	/**
 	 * @param depth ≥0; 0 for a mark.
 	 */
@@ -94,15 +192,26 @@ public interface IGrade {
 	 */
 	public IGrade withSubGrade(Criterion criterion, IGrade newSubGrade);
 
-	public default Optional<IGrade> getGrade(List<Criterion> path) {
-		if (path.isEmpty()) {
+	public default Optional<IGrade> getGrade(GradePath path) {
+		if (path.isRoot()) {
 			return Optional.of(this);
 		}
-		final Criterion criterion = path.get(0);
+		final Criterion criterion = path.getHead();
 		if (!getSubGrades().containsKey(criterion)) {
 			return Optional.empty();
 		}
-		return getSubGrades().get(criterion).getGrade(path.subList(1, path.size()));
+		return getSubGrades().get(criterion).getGrade(path.withoutHead());
+	}
+
+	public default double getWeight(GradePath path) {
+		if (path.isRoot()) {
+			return 1d;
+		}
+		final ImmutableMap<Criterion, IGrade> subGrades = getSubGrades();
+		final Criterion head = path.getHead();
+		final IGrade first = Optional.ofNullable(subGrades.get(head)).orElseThrow(IllegalArgumentException::new);
+		final double local = getWeights().get(head);
+		return local == 0d ? local : local * first.getWeight(path.withoutHead());
 	}
 
 	public default IGrade withPatch(Patch patch) {

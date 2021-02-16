@@ -22,12 +22,9 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Verify;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
-import com.google.common.graph.ImmutableValueGraph;
-import com.google.common.graph.ValueGraphBuilder;
 
 /**
  * containing positive points only and at one weights per sub-grade, at least
@@ -232,30 +229,14 @@ public class WeightingGrade implements IGrade {
 		return new WeightingGrade(GradeUtils.withUpdatedEntry(subGrades, criterion, newSubGrade), weights, comment);
 	}
 
-	public ImmutableValueGraph<ImmutableList<Criterion>, Double> toValueTree() {
-		final ImmutableValueGraph.Builder<ImmutableList<Criterion>, Double> builder = ValueGraphBuilder.directed()
-				.allowsSelfLoops(false).immutable();
-		final ImmutableList<Criterion> rootPath = ImmutableList.of();
-		builder.addNode(rootPath);
-		putValuedChildren(builder, rootPath);
-		return builder.build();
-	}
-
-	private void putValuedChildren(ImmutableValueGraph.Builder<ImmutableList<Criterion>, Double> builder,
-			ImmutableList<Criterion> root) {
-		final ImmutableSet<CriterionGradeWeight> subGradesW = getSubGradesAsSet();
-		for (CriterionGradeWeight subDecoratedGrade : subGradesW) {
-			final Criterion newChild = subDecoratedGrade.getCriterion();
-			final ImmutableList<Criterion> childPath = ImmutableList.<Criterion>builderWithExpectedSize(root.size() + 1)
-					.addAll(root).add(newChild).build();
-			builder.putEdgeValue(root, childPath, subDecoratedGrade.getWeight());
-			final IGrade subGrade = subDecoratedGrade.getGrade();
-			if (subGrade instanceof WeightingGrade) {
-				final WeightingGrade wSub = (WeightingGrade) subGrade;
-				wSub.putValuedChildren(builder, childPath);
-			} else {
-				checkArgument(subGrade instanceof Mark);
+	private static IGrade merge(double w1, IGrade g1, double w2, IGrade g2) {
+		final ImmutableSet<Criterion> children1 = g1.getSubGrades().keySet();
+		final ImmutableSet<Criterion> children2 = g2.getSubGrades().keySet();
+		if (children1.equals(children2)) {
+			if (children1.isEmpty()) {
+				return Mark.given(w1 * g1.getPoints() + w2 * g2.getPoints(), g1.getComment() + "; " + g2.getComment());
 			}
+
 		}
 	}
 

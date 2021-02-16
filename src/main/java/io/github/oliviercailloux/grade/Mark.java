@@ -75,6 +75,16 @@ public class Mark implements IGrade {
 	}
 
 	@Override
+	public ImmutableSet<CriterionGradeWeight> getSubGradesAsSet() {
+		return ImmutableSet.of();
+	}
+
+	@Override
+	public ImmutableMap<Criterion, Double> getWeights() {
+		return ImmutableMap.of();
+	}
+
+	@Override
 	public IGrade limitedDepth(int depth) {
 		checkArgument(depth >= 0);
 		return this;
@@ -108,16 +118,6 @@ public class Mark implements IGrade {
 	@Override
 	public String toString() {
 		return MoreObjects.toStringHelper(this).add("points", points).add("comment", comment).toString();
-	}
-
-	@Override
-	public ImmutableSet<CriterionGradeWeight> getSubGradesAsSet() {
-		return ImmutableSet.of();
-	}
-
-	@Override
-	public ImmutableMap<Criterion, Double> getWeights() {
-		return ImmutableMap.of();
 	}
 
 }
