@@ -11,7 +11,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayDeque;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Queue;
@@ -28,15 +27,11 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
-import com.google.common.collect.MoreCollectors;
 import com.google.common.collect.Sets;
-import com.google.common.graph.Graph;
 import com.google.common.graph.GraphBuilder;
 import com.google.common.graph.ImmutableGraph;
-import com.google.common.graph.ImmutableValueGraph;
 import com.google.common.graph.MutableGraph;
 import com.google.common.graph.ValueGraph;
-import com.google.common.graph.ValueGraphBuilder;
 
 import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
@@ -118,7 +113,7 @@ public class Summarize {
 		final ImmutableSet<GradePath> leaves = grade.toTree().asGraph().nodes().stream()
 				.filter(p -> p.startsWith(starting) && grade.getGrade(p).get().getSubGrades().isEmpty())
 				.collect(ImmutableSet.toImmutableSet());
-	
+
 		final ImmutableList.Builder<String> commentsBuilder = ImmutableList.builder();
 		double sumOfAbsolutePoints = 0d;
 		for (GradePath leaf : leaves) {
@@ -136,9 +131,8 @@ public class Summarize {
 
 	private static Mark toMark(IGrade grade) {
 		final ImmutableSet<GradePath> leaves = grade.toTree().asGraph().nodes().stream()
-				.filter(p -> grade.getGrade(p).get().getSubGrades().isEmpty())
-				.collect(ImmutableSet.toImmutableSet());
-	
+				.filter(p -> grade.getGrade(p).get().getSubGrades().isEmpty()).collect(ImmutableSet.toImmutableSet());
+
 		final ImmutableList.Builder<String> commentsBuilder = ImmutableList.builder();
 		double sumOfAbsolutePoints = 0d;
 		for (GradePath leaf : leaves) {
@@ -298,7 +292,7 @@ public class Summarize {
 				CriterionGradeWeight.from(Criterion.given("Time penalty"), Mark.one("No time penalty"), 0d)));
 	}
 
-	private static Optional<ImmutableGraph<ImmutableList<Criterion>>> getCommonTree(Set<IGrade> grades) {
+	private static Optional<GradeStructure> getCommonTree(Set<IGrade> grades) {
 		checkArgument(!grades.isEmpty());
 
 		final Optional<Set<Criterion>> commonChildrenOpt = grades.stream().map(IGrade::getSubGrades).map(Map::keySet)
@@ -306,17 +300,17 @@ public class Summarize {
 		final Optional<ImmutableGraph<ImmutableList<Criterion>>> common;
 		if (commonChildrenOpt.isEmpty()) {
 			/** ≠ children? intersect all possibilities until empty or finished. */
-			Set<ImmutableGraph<ImmutableList<Criterion>>> remainingIntersection = null;
+			Set<GradeStructure> remainingIntersection = null;
 			for (IGrade grade : grades) {
-				final ImmutableGraph<ImmutableList<Criterion>> basicTree = toTree(grade);
-				final Optional<ImmutableGraph<ImmutableList<Criterion>>> commonSubTree = grade.getSubGrades().values()
-						.stream().map(Summarize::toTree).collect(Utils.singleOrEmpty());
-				final ImmutableSet.Builder<ImmutableGraph<ImmutableList<Criterion>>> builder = ImmutableSet.builder();
+				final GradeStructure basicTree = toTree(grade);
+				final Optional<GradeStructure> commonSubTree = grade.getSubGrades().values().stream()
+						.map(Summarize::toTree).collect(Utils.singleOrEmpty());
+				final ImmutableSet.Builder<GradeStructure> builder = ImmutableSet.builder();
 				builder.add(basicTree);
 				if (commonSubTree.isPresent()) {
 					builder.add(commonSubTree.get());
 				}
-				final ImmutableSet<ImmutableGraph<ImmutableList<Criterion>>> current = builder.build();
+				final ImmutableSet<GradeStructure> current = builder.build();
 				if (remainingIntersection == null) {
 					remainingIntersection = current;
 				} else {
@@ -336,19 +330,19 @@ public class Summarize {
 		} else {
 			/** same children? investigate each child. */
 			final Set<Criterion> commonChildren = commonChildrenOpt.get();
-			final ImmutableMap<Criterion, Optional<ImmutableGraph<ImmutableList<Criterion>>>> treesOptPerCriterion = Maps
-					.toMap(commonChildren, c -> getCommonTree(
+			final ImmutableMap<Criterion, Optional<GradeStructure>> treesOptPerCriterion = Maps.toMap(commonChildren,
+					c -> getCommonTree(
 							grades.stream().map(g -> g.getSubGrades().get(c)).collect(ImmutableSet.toImmutableSet())));
 			if (treesOptPerCriterion.values().stream().anyMatch(Optional::isEmpty)) {
 				common = Optional.empty();
 			} else {
-				final ImmutableMap<Criterion, ImmutableGraph<ImmutableList<Criterion>>> treesPerCriterion = Maps
+				final ImmutableMap<Criterion, GradeStructure> treesPerCriterion = Maps
 						.toMap(treesOptPerCriterion.keySet(), c -> treesOptPerCriterion.get(c).get());
-				final ImmutableMap<Criterion, ImmutableGraph<ImmutableList<Criterion>>> rightlyRootedTrees = Maps
+				final ImmutableMap<Criterion, GradeStructure> rightlyRootedTrees = Maps
 						.toMap(treesPerCriterion.keySet(), c -> embedInto(c, treesPerCriterion.get(c)));
 				final ImmutableGraph.Builder<ImmutableList<Criterion>> builder = GraphBuilder.directed().immutable();
 				for (Criterion criterion : rightlyRootedTrees.keySet()) {
-					final ImmutableGraph<ImmutableList<Criterion>> tree = rightlyRootedTrees.get(criterion);
+					final GradeStructure tree = rightlyRootedTrees.get(criterion);
 					builder.putEdge(ImmutableList.of(), ImmutableList.of(criterion));
 					tree.edges().stream().forEach(builder::putEdge);
 				}
@@ -357,48 +351,6 @@ public class Summarize {
 		}
 		return common;
 
-	}
-
-	/**
-	 * @return the same tree but rooted as given and with all its paths shifted
-	 *         correspondingly.
-	 */
-	private static ImmutableGraph<ImmutableList<Criterion>> embedInto(Criterion root,
-			Graph<ImmutableList<Criterion>> tree) {
-		return Utils.asImmutableGraph(tree, p -> ImmutableList.<Criterion>builderWithExpectedSize(p.size()).add(root)
-				.addAll(p.subList(1, p.size() - 1)).build());
-	}
-
-	/**
-	 * @param grade has all the same trees of criteria as subgrades
-	 * @return the same tree of criteria, with weighted average grades. Comments are
-	 *         concatenated.
-	 */
-	public static IGrade compress(WeightingGrade grade) {
-		final ImmutableSet<ImmutableValueGraph<ImmutableList<Criterion>, Double>> valueTrees = grade.getSubGrades()
-				.values().stream().map(IGrade::toValueTree).collect(ImmutableSet.toImmutableSet());
-		final ImmutableSet<ImmutableGraph<ImmutableList<Criterion>>> trees = valueTrees.stream()
-				.map(ImmutableValueGraph::asGraph).collect(ImmutableSet.toImmutableSet());
-		checkArgument(trees.stream().distinct().count() == 1);
-		final ImmutableGraph<ImmutableList<Criterion>> tree = trees.stream().distinct()
-				.collect(MoreCollectors.onlyElement());
-		final ImmutableValueGraph.Builder<ImmutableList<Criterion>, Double> newValueTreeBuilder = ValueGraphBuilder
-				.directed().allowsSelfLoops(false).immutable();
-		for (ImmutableList<Criterion> path : tree.nodes()) {
-			final ImmutableSet<ImmutableList<Criterion>> pathsRooted = grade.getSubGrades().keySet().stream().map(
-					c -> ImmutableList.<Criterion>builderWithExpectedSize(path.size() + 1).add(c).addAll(path).build())
-					.collect(ImmutableSet.toImmutableSet());
-			final double totalWeight = pathsRooted.stream().mapToDouble(p -> grade.getWeight(p)).sum();
-			if (!path.isEmpty()) {
-				verify(totalWeight < 1d + 1e-6d, String.format("Path: %s, total weight: %s", path, totalWeight));
-				final ImmutableList<Criterion> parentPath = path.subList(0, path.size() - 1);
-				newValueTreeBuilder.putEdgeValue(parentPath, path, totalWeight);
-			}
-		}
-		final ImmutableValueGraph<ImmutableList<Criterion>, Double> newValueTree = newValueTreeBuilder.build();
-		final ImmutableMap<ImmutableList<Criterion>, Mark> leafMarks = Maps.toMap(getLeafPaths(tree),
-				l -> getAverageMark(grade.getSubGradesAsSet(), l, getPathWeight(newValueTree, l)));
-		return toGrade(newValueTree, leafMarks);
 	}
 
 	/**
@@ -443,45 +395,5 @@ public class Summarize {
 			newGrade = WeightingGrade.from(subBuilder.build());
 		}
 		return newGrade;
-	}
-
-	private static Mark getAverageMark(ImmutableSet<CriterionGradeWeight> grades, List<Criterion> leafPath,
-			double weight) {
-		double sumOfAbsolutePoints = 0d;
-		final ImmutableList.Builder<String> commentsBuilder = ImmutableList.builder();
-		for (CriterionGradeWeight sub : grades) {
-			final IGrade subGrade = sub.getGrade();
-			final ImmutableValueGraph<ImmutableList<Criterion>, Double> subValueTree = subGrade.toValueTree();
-			final double pathWeight = sub.getWeight() * getPathWeight(subValueTree, leafPath);
-			final IGrade leafGrade = subGrade.getGrade(leafPath).orElseThrow(VerifyException::new);
-			final double absolutePoints = leafGrade.getPoints() * pathWeight;
-			LOGGER.info("For {}, in {}, given {} weight, got {} absolute points.", leafPath, sub.getCriterion(),
-					pathWeight, absolutePoints);
-			sumOfAbsolutePoints += absolutePoints;
-			final String comment = leafGrade.getComment();
-			commentsBuilder.add(sub.getCriterion().getName() + " – " + comment);
-		}
-		return Mark.given(sumOfAbsolutePoints / weight,
-				commentsBuilder.build().stream().collect(Collectors.joining("\n")));
-	}
-
-	private static ImmutableSet<ImmutableList<Criterion>> getLeafPaths(Graph<ImmutableList<Criterion>> tree) {
-		final ImmutableList<Criterion> root = ImmutableList.of();
-		checkArgument(tree.nodes().contains(root));
-		checkArgument(tree.predecessors(root).isEmpty());
-		return getLeafSubPaths(tree, root);
-	}
-
-	private static ImmutableSet<ImmutableList<Criterion>> getLeafSubPaths(Graph<ImmutableList<Criterion>> tree,
-			ImmutableList<Criterion> path) {
-		final Set<ImmutableList<Criterion>> successors = tree.successors(path);
-		if (successors.isEmpty()) {
-			return ImmutableSet.of(path);
-		}
-		final ImmutableSet.Builder<ImmutableList<Criterion>> builder = ImmutableSet.builder();
-		for (ImmutableList<Criterion> subPath : successors) {
-			builder.addAll(getLeafSubPaths(tree, subPath));
-		}
-		return builder.build();
 	}
 }
