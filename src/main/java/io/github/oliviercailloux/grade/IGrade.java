@@ -1,9 +1,12 @@
 package io.github.oliviercailloux.grade;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
 import java.util.List;
 import java.util.Optional;
 import java.util.RandomAccess;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import com.google.common.collect.ForwardingList;
 import com.google.common.collect.ImmutableList;
@@ -11,6 +14,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.graph.ImmutableValueGraph;
 import com.google.common.graph.ValueGraphBuilder;
+
+import io.github.oliviercailloux.grade.WeightingGrade.WeightedGrade;
 
 /**
  *
@@ -110,6 +115,13 @@ public interface IGrade {
 		public ImmutableList<Criterion> asImmutableList() {
 			return list;
 		}
+
+		/**
+		 * @return a possibly ambiguous but simple string
+		 */
+		public String toSimpleString() {
+			return list.stream().map(Criterion::getName).collect(Collectors.joining("/"));
+		}
 	}
 
 	/**
@@ -150,6 +162,10 @@ public interface IGrade {
 	 *         empty. Iterates in the order of the sub-grades.
 	 */
 	ImmutableMap<Criterion, Double> getWeights();
+
+	public default double getAbsolutePoints(GradePath path) {
+		return getWeight(path) * getGrade(path).get().getPoints();
+	}
 
 	public default GradeStructure toTree() {
 		return GradeStructure.given(toValueTree().asGraph());
@@ -201,6 +217,11 @@ public interface IGrade {
 			return Optional.empty();
 		}
 		return getSubGrades().get(criterion).getGrade(path.withoutHead());
+	}
+
+	public default WeightedGrade getWeightedGrade(GradePath path) {
+		checkArgument(toTree().asGraph().nodes().contains(path));
+		return WeightedGrade.given(getGrade(path).get(), getWeight(path));
 	}
 
 	public default double getWeight(GradePath path) {

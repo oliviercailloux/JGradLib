@@ -2,7 +2,10 @@ package io.github.oliviercailloux.grade;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
+import java.util.ArrayDeque;
+import java.util.LinkedHashSet;
 import java.util.Map;
+import java.util.Queue;
 import java.util.Set;
 
 import com.google.common.collect.ImmutableList;
@@ -10,7 +13,6 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.graph.EndpointPair;
 import com.google.common.graph.Graph;
 import com.google.common.graph.GraphBuilder;
-import com.google.common.graph.Graphs;
 import com.google.common.graph.ImmutableGraph;
 
 import io.github.oliviercailloux.grade.IGrade.GradePath;
@@ -19,6 +21,37 @@ public class GradeStructure {
 
 	public static GradeStructure given(Graph<GradePath> graph) {
 		return new GradeStructure(graph);
+	}
+
+	/**
+	 * @param paths need not contain every intermediate paths; anything is accepted
+	 *              (the whole structure is deduced anyway)
+	 * @return an empty grade structure iff the given paths set is empty or has only
+	 *         one root
+	 */
+	public static GradeStructure given(Set<GradePath> paths) {
+		final Queue<GradePath> toVisit = new ArrayDeque<>();
+		toVisit.addAll(paths);
+
+		final Set<GradePath> visited = new LinkedHashSet<>();
+
+		final ImmutableGraph.Builder<GradePath> builder = GraphBuilder.directed().immutable();
+		builder.addNode(GradePath.ROOT);
+
+		while (!toVisit.isEmpty()) {
+			final GradePath current = toVisit.remove();
+			if (visited.contains(current)) {
+				continue;
+			}
+			if (!current.isRoot()) {
+				final GradePath parent = current.withoutTail();
+				builder.putEdge(parent, current);
+				toVisit.add(parent);
+			}
+			visited.add(current);
+		}
+
+		return new GradeStructure(builder.build());
 	}
 
 	public static GradeStructure toTree(Set<Criterion> nodes) {
@@ -57,11 +90,25 @@ public class GradeStructure {
 		return ImmutableSet.copyOf(graph.nodes());
 	}
 
+	public ImmutableSet<GradePath> getLeaves() {
+		return graph.nodes().stream().filter(p -> graph.successors(p).isEmpty()).collect(ImmutableSet.toImmutableSet());
+	}
+
 	/**
 	 * @return all paths in this graph that have the given path as prefix
 	 */
 	public ImmutableSet<GradePath> getSuccessorPaths(GradePath path) {
 		return ImmutableSet.copyOf(graph.successors(path));
+	}
+
+	/**
+	 * @return all paths in this graph that have the given path as prefix
+	 */
+	public ImmutableSet<GradePath> getSiblings(GradePath path) {
+		if (path.isRoot()) {
+			return ImmutableSet.of(GradePath.ROOT);
+		}
+		return getSuccessorPaths(path.withoutTail());
 	}
 
 	/**

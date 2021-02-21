@@ -5,6 +5,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Verify.verify;
 
 import java.util.Collection;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -24,6 +25,8 @@ import com.google.common.base.MoreObjects;
 import com.google.common.base.Verify;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
 /**
@@ -56,6 +59,9 @@ import com.google.common.collect.Sets;
  * knows the best possible marks. As a convention, it is considered to be one
  * for all sub-grades.
  *
+ * Note that single children are not forbidden: this permits a node with two
+ * sub-criterion to remove one without losing the remaining criterion.
+ *
  * @author Olivier Cailloux
  *
  */
@@ -65,6 +71,34 @@ public class WeightingGrade implements IGrade {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(WeightingGrade.class);
 
+	public static class WeightedGrade {
+		public static WeightedGrade given(IGrade grade, double weight) {
+			return new WeightedGrade(grade, weight);
+		}
+
+		private final IGrade grade;
+		private final double weight;
+
+		private WeightedGrade(IGrade grade, double weight) {
+			this.grade = checkNotNull(grade);
+			this.weight = weight;
+			checkArgument(Double.isFinite(weight));
+			checkArgument(weight >= 0d);
+		}
+
+		public IGrade getGrade() {
+			return grade;
+		}
+
+		public double getWeight() {
+			return weight;
+		}
+
+		public double getAbsolutePoints() {
+			return weight * grade.getPoints();
+		}
+	}
+
 	/**
 	 * @param grades  its key set iteration order is used to determine the order of
 	 *                the sub-grades.
@@ -73,6 +107,15 @@ public class WeightingGrade implements IGrade {
 	 */
 	public static WeightingGrade from(Map<Criterion, ? extends IGrade> grades, Map<Criterion, Double> weights) {
 		return from(grades, weights, "");
+	}
+
+	/**
+	 * @param grades its key set iteration order is used to determine the order of
+	 *               the sub-grades.
+	 */
+	public static WeightingGrade fromWeightedGrades(Map<Criterion, WeightedGrade> weightedGrades) {
+		return from(Maps.toMap(weightedGrades.keySet(), c -> weightedGrades.get(c).getGrade()),
+				Maps.toMap(weightedGrades.keySet(), c -> weightedGrades.get(c).getWeight()), "");
 	}
 
 	public static WeightingGrade from(Map<Criterion, ? extends IGrade> grades, Map<Criterion, Double> weights,
@@ -127,6 +170,49 @@ public class WeightingGrade implements IGrade {
 			String comment) {
 		return WeightingGrade.from(ImmutableMap.of(c1, g1, c2, g2, c3, g3),
 				ImmutableMap.of(c1, 1d / 3d, c2, 1d / 3d, c3, 1d / 3d), comment);
+	}
+
+	/**
+	 * @param weightedGrades each of these grades will have an absolute weight given
+	 *                       by its weight divided by the sum of all weights ; non
+	 *                       empty; keys must be unrelated (if one is parent of
+	 *                       another entry there is no way to use both grades!)
+	 * @return may be a mark iff the map key set is the singleton ROOT (otherwise,
+	 *         necessarily not a mark)
+	 */
+	public static IGrade from(Map<GradePath, WeightedGrade> grades) {
+		checkArgument(!grades.isEmpty());
+
+		final Map<GradePath, WeightedGrade> modifiableGrades = new LinkedHashMap<>(grades);
+
+		final GradeStructure structure = GradeStructure.given(grades.keySet());
+		checkArgument(structure.getLeaves().equals(grades.keySet()));
+
+		/**
+		 * We will populate modifiable grades from “right to left”, from children nodes
+		 * to parent nodes, until reaching the root node. Note that we can’t simply stop
+		 * when the map has only one remaining entry: at some point there may remain a
+		 * single key "[a/b/c]", for example.
+		 */
+		while (!modifiableGrades.keySet().contains(GradePath.ROOT)) {
+			final GradePath remainingLeaf = modifiableGrades.keySet().iterator().next();
+			verify(!remainingLeaf.isRoot());
+			final GradePath parent = remainingLeaf.withoutTail();
+			verify(!modifiableGrades.containsKey(parent));
+			final ImmutableSet<GradePath> childrenPaths = structure.getSuccessorPaths(parent);
+			{
+				/** Modifiable grades has entries for all children nodes. */
+				final ImmutableMap<Criterion, WeightedGrade> childrenWGrades = childrenPaths.stream()
+						.collect(ImmutableMap.toImmutableMap(GradePath::getTail, grades::get));
+				final WeightedGrade aggregated = WeightedGrade.given(fromWeightedGrades(childrenWGrades),
+						childrenWGrades.values().stream().mapToDouble(WeightedGrade::getWeight).sum());
+				modifiableGrades.put(parent, aggregated);
+			}
+			childrenPaths.stream().forEach(modifiableGrades::remove);
+		}
+		verify(modifiableGrades.keySet().equals(ImmutableSet.of(GradePath.ROOT)));
+
+		return Iterables.getOnlyElement(modifiableGrades.values()).getGrade();
 	}
 
 	private static final double MAX_MARK = 1d;

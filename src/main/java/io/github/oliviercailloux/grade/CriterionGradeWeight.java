@@ -13,6 +13,8 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.base.MoreObjects;
 
+import io.github.oliviercailloux.grade.WeightingGrade.WeightedGrade;
+
 @JsonbPropertyOrder({ "criterion", "grade", "weight" })
 public class CriterionGradeWeight {
 	@SuppressWarnings("unused")
@@ -22,6 +24,10 @@ public class CriterionGradeWeight {
 	public static CriterionGradeWeight from(@JsonbProperty("criterion") Criterion criterion,
 			@JsonbProperty("grade") IGrade grade, @JsonbProperty("weight") double weight) {
 		return new CriterionGradeWeight(criterion, grade, weight);
+	}
+
+	public static CriterionGradeWeight from(Criterion criterion, WeightedGrade weightedGrade) {
+		return new CriterionGradeWeight(criterion, weightedGrade.getGrade(), weightedGrade.getWeight());
 	}
 
 	private final Criterion criterion;

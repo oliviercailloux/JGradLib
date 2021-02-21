@@ -27,6 +27,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
+import com.google.common.collect.MoreCollectors;
 import com.google.common.collect.Sets;
 import com.google.common.graph.GraphBuilder;
 import com.google.common.graph.ImmutableGraph;
@@ -42,6 +43,7 @@ import io.github.oliviercailloux.grade.IGrade;
 import io.github.oliviercailloux.grade.IGrade.GradePath;
 import io.github.oliviercailloux.grade.Mark;
 import io.github.oliviercailloux.grade.WeightingGrade;
+import io.github.oliviercailloux.grade.WeightingGrade.WeightedGrade;
 import io.github.oliviercailloux.grade.comm.StudentOnGitHub;
 import io.github.oliviercailloux.grade.comm.json.JsonStudentsReader;
 import io.github.oliviercailloux.grade.format.CsvGrades;
@@ -63,20 +65,20 @@ public class Summarize {
 		private final MutableGraph<GradePath> compressedStructure;
 		private final Map<GradePath, Set<GradePath>> compressedToOriginalPaths;
 
-		private final Map<GradePath, Mark> leafMarks;
+		private final Map<GradePath, WeightedGrade> leafMarks;
 
 		private CompressedGrade(GradeStructure model, IGrade original) {
 			this.model = checkNotNull(model);
 			this.original = checkNotNull(original);
 		}
 
-		private IGrade compress() {
-			final ImmutableSet<Criterion> nextLevel = model.getSuccessorCriteria(GradePath.ROOT);
+		private IGrade compress(GradeStructure modelP, IGrade gradeO) {
 			compressedStructure.addNode(GradePath.ROOT);
 			final Queue<GradePath> toVisit = new ArrayDeque<>();
 			toVisit.add(GradePath.ROOT);
 			do {
 				final GradePath current = toVisit.remove();
+				final ImmutableSet<Criterion> nextLevel = model.getSuccessorCriteria(current);
 				final ImmutableSet<GradePath> originalPaths;
 				if (current.isRoot()) {
 					originalPaths = ImmutableSet.of(GradePath.ROOT);
@@ -86,19 +88,21 @@ public class Summarize {
 					originalPaths = originalParentPaths.stream().map(p -> p.withSuffix(current.getTail()))
 							.collect(ImmutableSet.toImmutableSet());
 				}
-				final ImmutableSet<GradePath> paths = findPaths(nextLevel, originalPaths, original.toTree());
+				final ImmutableSet<GradePath> paths;
+				if (nextLevel.isEmpty()) {
+					paths = ImmutableSet.of();
+				} else {
+					paths = findPaths(nextLevel, originalPaths, original.toTree());
+				}
 				if (paths.isEmpty()) {
-					leafMarks.put(current, toMark(original.getGrade(current).get()));
+					leafMarks.put(current, compressGrades(Maps.toMap(originalPaths, original::getWeightedGrade)));
 				} else {
 					compressedToOriginalPaths.put(current, paths);
-					for (Criterion criterion : nextLevel) {
-						final boolean matchedCriterion = paths.stream()
-								.anyMatch(p -> original.getGrade(p).get().getSubGrades().keySet().contains(criterion));
-						if (matchedCriterion) {
-							verify(paths.stream().allMatch(
-									p -> original.getGrade(p).get().getSubGrades().keySet().contains(criterion)));
-							toVisit.add(current.withSuffix(criterion));
-						}
+					final ImmutableSet<Criterion> nextCriteria = paths.stream()
+							.map(p -> original.toTree().getSuccessorCriteria(p)).collect(MoreCollectors.onlyElement());
+					verify(nextLevel.containsAll(nextCriteria));
+					for (Criterion criterion : nextCriteria) {
+						toVisit.add(current.withSuffix(criterion));
 					}
 				}
 			} while (!toVisit.isEmpty());
@@ -109,42 +113,28 @@ public class Summarize {
 		summarize("admin-manages-users", Paths.get(""), true);
 	}
 
-	private static Mark toMark(IGrade grade, GradePath starting) {
-		final ImmutableSet<GradePath> leaves = grade.toTree().asGraph().nodes().stream()
-				.filter(p -> p.startsWith(starting) && grade.getGrade(p).get().getSubGrades().isEmpty())
-				.collect(ImmutableSet.toImmutableSet());
+	/**
+	 * @param grades the keys are used only as part of the comment of the resulting
+	 *               grade
+	 * @return a mark that aggregates all the given grades (with weighted sum of the
+	 *         points) and with a weight of the sum of the given weights.
+	 */
+	public static WeightedGrade compressGrades(Map<GradePath, WeightedGrade> grades) {
+		final double sumOfAbsolutePoints = grades.values().stream().mapToDouble(WeightedGrade::getAbsolutePoints).sum();
+		final String comment = grades.keySet().stream()
+				.map(l -> l.toSimpleString() + " – " + grades.get(l).getGrade().getComment())
+				.collect(Collectors.joining("\n"));
 
-		final ImmutableList.Builder<String> commentsBuilder = ImmutableList.builder();
-		double sumOfAbsolutePoints = 0d;
-		for (GradePath leaf : leaves) {
-			final double absolutePoints = grade.getWeight(leaf) * grade.getGrade(leaf).get().getPoints();
-			final IGrade leafGrade = grade.getGrade(leaf).get();
-			final StringBuilder commentBuilder = new StringBuilder();
-			sumOfAbsolutePoints += absolutePoints;
-			final String comment = leafGrade.getComment();
-			commentsBuilder.add(leaf.subList(starting.size(), leaf.size() - starting.size()).stream()
-					.map(Criterion::getName).collect(Collectors.joining("/")) + " – " + comment);
-		}
-		return Mark.given(sumOfAbsolutePoints / grade.getWeight(starting),
-				commentsBuilder.build().stream().collect(Collectors.joining("\n")));
+		final Mark mark = Mark.given(sumOfAbsolutePoints, comment);
+		final double weight = grades.values().stream().mapToDouble(WeightedGrade::getWeight).sum();
+		return WeightedGrade.given(mark, weight);
 	}
 
-	private static Mark toMark(IGrade grade) {
-		final ImmutableSet<GradePath> leaves = grade.toTree().asGraph().nodes().stream()
-				.filter(p -> grade.getGrade(p).get().getSubGrades().isEmpty()).collect(ImmutableSet.toImmutableSet());
-
-		final ImmutableList.Builder<String> commentsBuilder = ImmutableList.builder();
-		double sumOfAbsolutePoints = 0d;
-		for (GradePath leaf : leaves) {
-			final double absolutePoints = grade.getWeight(leaf) * grade.getGrade(leaf).get().getPoints();
-			final IGrade leafGrade = grade.getGrade(leaf).get();
-			final StringBuilder commentBuilder = new StringBuilder();
-			sumOfAbsolutePoints += absolutePoints;
-			final String comment = leafGrade.getComment();
-			commentsBuilder
-					.add(leaf.stream().map(Criterion::getName).collect(Collectors.joining("/")) + " – " + comment);
-		}
-		return Mark.given(sumOfAbsolutePoints, commentsBuilder.build().stream().collect(Collectors.joining("\n")));
+	public static WeightedGrade toWeightedMark(IGrade grade) {
+		final GradeStructure structure = grade.toTree();
+		final ImmutableMap<GradePath, WeightedGrade> leaveGrades = Maps.toMap(structure.getLeaves(),
+				grade::getWeightedGrade);
+		return compressGrades(leaveGrades);
 	}
 
 	/**
