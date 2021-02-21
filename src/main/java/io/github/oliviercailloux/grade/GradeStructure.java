@@ -118,6 +118,15 @@ public class GradeStructure {
 		return graph.successors(path).stream().map(p -> p.getTail()).collect(ImmutableSet.toImmutableSet());
 	}
 
+	public GradeStructure getStructure(Criterion child) {
+		return getStructure(GradePath.from(ImmutableList.of(child)));
+	}
+
+	public GradeStructure getStructure(GradePath path) {
+		return given(graph.nodes().stream().filter(p -> p.startsWith(path))
+				.map(p -> GradePath.from(p.subList(path.size(), p.size()))).collect(ImmutableSet.toImmutableSet()));
+	}
+
 	public ImmutableGraph<GradePath> asGraph() {
 		return graph;
 	}

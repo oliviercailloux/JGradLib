@@ -76,6 +76,12 @@ public class WeightingGrade implements IGrade {
 			return new WeightedGrade(grade, weight);
 		}
 
+		public static WeightedGrade given(Map<Criterion, WeightedGrade> subGrades) {
+			final WeightingGrade aggregated = WeightingGrade.fromWeightedGrades(subGrades);
+			return WeightedGrade.given(aggregated,
+					subGrades.values().stream().mapToDouble(WeightedGrade::getWeight).sum());
+		}
+
 		private final IGrade grade;
 		private final double weight;
 
@@ -313,17 +319,6 @@ public class WeightingGrade implements IGrade {
 	@Override
 	public WeightingGrade withSubGrade(Criterion criterion, IGrade newSubGrade) {
 		return new WeightingGrade(GradeUtils.withUpdatedEntry(subGrades, criterion, newSubGrade), weights, comment);
-	}
-
-	private static IGrade merge(double w1, IGrade g1, double w2, IGrade g2) {
-		final ImmutableSet<Criterion> children1 = g1.getSubGrades().keySet();
-		final ImmutableSet<Criterion> children2 = g2.getSubGrades().keySet();
-		if (children1.equals(children2)) {
-			if (children1.isEmpty()) {
-				return Mark.given(w1 * g1.getPoints() + w2 * g2.getPoints(), g1.getComment() + "; " + g2.getComment());
-			}
-
-		}
 	}
 
 	@Override

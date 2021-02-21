@@ -13,7 +13,6 @@ import java.util.ArrayDeque;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Queue;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -27,7 +26,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
-import com.google.common.collect.MoreCollectors;
 import com.google.common.collect.Sets;
 import com.google.common.graph.GraphBuilder;
 import com.google.common.graph.ImmutableGraph;
@@ -72,40 +70,33 @@ public class Summarize {
 			this.original = checkNotNull(original);
 		}
 
-		private IGrade compress(GradeStructure modelP, IGrade gradeO) {
-			compressedStructure.addNode(GradePath.ROOT);
-			final Queue<GradePath> toVisit = new ArrayDeque<>();
-			toVisit.add(GradePath.ROOT);
-			do {
-				final GradePath current = toVisit.remove();
-				final ImmutableSet<Criterion> nextLevel = model.getSuccessorCriteria(current);
-				final ImmutableSet<GradePath> originalPaths;
-				if (current.isRoot()) {
-					originalPaths = ImmutableSet.of(GradePath.ROOT);
-				} else {
-					final GradePath parent = Iterables.getOnlyElement(compressedStructure.predecessors(current));
-					final Set<GradePath> originalParentPaths = compressedToOriginalPaths.get(parent);
-					originalPaths = originalParentPaths.stream().map(p -> p.withSuffix(current.getTail()))
-							.collect(ImmutableSet.toImmutableSet());
-				}
-				final ImmutableSet<GradePath> paths;
-				if (nextLevel.isEmpty()) {
-					paths = ImmutableSet.of();
-				} else {
-					paths = findPaths(nextLevel, originalPaths, original.toTree());
-				}
-				if (paths.isEmpty()) {
-					leafMarks.put(current, compressGrades(Maps.toMap(originalPaths, original::getWeightedGrade)));
-				} else {
-					compressedToOriginalPaths.put(current, paths);
-					final ImmutableSet<Criterion> nextCriteria = paths.stream()
-							.map(p -> original.toTree().getSuccessorCriteria(p)).collect(MoreCollectors.onlyElement());
-					verify(nextLevel.containsAll(nextCriteria));
-					for (Criterion criterion : nextCriteria) {
-						toVisit.add(current.withSuffix(criterion));
-					}
-				}
-			} while (!toVisit.isEmpty());
+		public static IGrade compress(IGrade grade, GradeStructure model) {
+			return compress(ImmutableSet.of(GradePath.ROOT), grade, model).getGrade();
+		}
+
+		private static WeightedGrade compress(Set<GradePath> originalPaths, IGrade grade, GradeStructure model) {
+			final ImmutableSet<Criterion> nextLevel = model.getSuccessorCriteria(GradePath.ROOT);
+			final ImmutableSet<GradePath> paths;
+			if (nextLevel.isEmpty()) {
+				paths = ImmutableSet.of();
+			} else {
+				paths = findPaths(nextLevel, originalPaths, grade.toTree());
+			}
+			final ImmutableSet<Criterion> nextCriteria = paths.stream().map(p -> grade.toTree().getSuccessorCriteria(p))
+					.distinct().collect(Utils.singleOrEmpty()).orElse(ImmutableSet.of());
+			verify(nextLevel.containsAll(nextCriteria));
+			if (nextCriteria.isEmpty()) {
+				return compressGrades(Maps.toMap(originalPaths, grade::getWeightedGrade));
+			}
+			final ImmutableMap.Builder<Criterion, WeightedGrade> builder = ImmutableMap.builder();
+			for (Criterion criterion : nextCriteria) {
+				final GradeStructure sub = model.getStructure(criterion);
+				final Set<GradePath> subPaths = originalPaths.stream().map(p -> p.withSuffix(criterion))
+						.collect(ImmutableSet.toImmutableSet());
+				final WeightedGrade subGrade = compress(subPaths, grade, sub);
+				builder.put(criterion, subGrade);
+			}
+			return WeightedGrade.given(builder.build());
 		}
 	}
 
