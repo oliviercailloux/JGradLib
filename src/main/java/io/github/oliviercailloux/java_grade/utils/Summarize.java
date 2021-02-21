@@ -57,51 +57,37 @@ public class Summarize {
 
 	private static final Path READ_DIR = Paths.get("");
 
-	private static class CompressedGrade {
-		private final GradeStructure model;
-		private final IGrade original;
-		private final MutableGraph<GradePath> compressedStructure;
-		private final Map<GradePath, Set<GradePath>> compressedToOriginalPaths;
-
-		private final Map<GradePath, WeightedGrade> leafMarks;
-
-		private CompressedGrade(GradeStructure model, IGrade original) {
-			this.model = checkNotNull(model);
-			this.original = checkNotNull(original);
-		}
-
-		public static IGrade compress(IGrade grade, GradeStructure model) {
-			return compress(ImmutableSet.of(GradePath.ROOT), grade, model).getGrade();
-		}
-
-		private static WeightedGrade compress(Set<GradePath> originalPaths, IGrade grade, GradeStructure model) {
-			final ImmutableSet<Criterion> nextLevel = model.getSuccessorCriteria(GradePath.ROOT);
-			final ImmutableSet<GradePath> paths;
-			if (nextLevel.isEmpty()) {
-				paths = ImmutableSet.of();
-			} else {
-				paths = findPaths(nextLevel, originalPaths, grade.toTree());
-			}
-			final ImmutableSet<Criterion> nextCriteria = paths.stream().map(p -> grade.toTree().getSuccessorCriteria(p))
-					.distinct().collect(Utils.singleOrEmpty()).orElse(ImmutableSet.of());
-			verify(nextLevel.containsAll(nextCriteria));
-			if (nextCriteria.isEmpty()) {
-				return compressGrades(Maps.toMap(originalPaths, grade::getWeightedGrade));
-			}
-			final ImmutableMap.Builder<Criterion, WeightedGrade> builder = ImmutableMap.builder();
-			for (Criterion criterion : nextCriteria) {
-				final GradeStructure sub = model.getStructure(criterion);
-				final Set<GradePath> subPaths = originalPaths.stream().map(p -> p.withSuffix(criterion))
-						.collect(ImmutableSet.toImmutableSet());
-				final WeightedGrade subGrade = compress(subPaths, grade, sub);
-				builder.put(criterion, subGrade);
-			}
-			return WeightedGrade.given(builder.build());
-		}
-	}
-
 	public static void main(String[] args) throws Exception {
 		summarize("admin-manages-users", Paths.get(""), true);
+	}
+
+	public static IGrade compress(IGrade grade, GradeStructure model) {
+		return compress(ImmutableSet.of(GradePath.ROOT), grade, model).getGrade();
+	}
+
+	private static WeightedGrade compress(Set<GradePath> originalPaths, IGrade grade, GradeStructure model) {
+		final ImmutableSet<Criterion> nextLevel = model.getSuccessorCriteria(GradePath.ROOT);
+		final ImmutableSet<GradePath> paths;
+		if (nextLevel.isEmpty()) {
+			paths = ImmutableSet.of();
+		} else {
+			paths = findPaths(nextLevel, originalPaths, grade.toTree());
+		}
+		final ImmutableSet<Criterion> nextCriteria = paths.stream().map(p -> grade.toTree().getSuccessorCriteria(p))
+				.distinct().collect(Utils.singleOrEmpty()).orElse(ImmutableSet.of());
+		verify(nextLevel.containsAll(nextCriteria));
+		if (nextCriteria.isEmpty()) {
+			return compressGrades(Maps.toMap(originalPaths, grade::getWeightedGrade));
+		}
+		final ImmutableMap.Builder<Criterion, WeightedGrade> builder = ImmutableMap.builder();
+		for (Criterion criterion : nextCriteria) {
+			final GradeStructure sub = model.getStructure(criterion);
+			final Set<GradePath> subPaths = originalPaths.stream().map(p -> p.withSuffix(criterion))
+					.collect(ImmutableSet.toImmutableSet());
+			final WeightedGrade subGrade = compress(subPaths, grade, sub);
+			builder.put(criterion, subGrade);
+		}
+		return WeightedGrade.given(builder.build());
 	}
 
 	/**
