@@ -16,6 +16,7 @@ import com.google.common.graph.ImmutableValueGraph;
 import com.google.common.graph.ValueGraphBuilder;
 
 import io.github.oliviercailloux.grade.WeightingGrade.WeightedGrade;
+import io.github.oliviercailloux.grade.WeightingGrade.WeightedMark;
 
 /**
  *
@@ -208,6 +209,15 @@ public interface IGrade {
 	 */
 	public IGrade withSubGrade(Criterion criterion, IGrade newSubGrade);
 
+	public default Mark getMark(GradePath path) {
+		if (path.isRoot()) {
+			return (Mark) this;
+		}
+		final Criterion criterion = path.getHead();
+		checkArgument(getSubGrades().containsKey(criterion));
+		return getSubGrades().get(criterion).getMark(path.withoutHead());
+	}
+
 	public default Optional<IGrade> getGrade(GradePath path) {
 		if (path.isRoot()) {
 			return Optional.of(this);
@@ -217,6 +227,11 @@ public interface IGrade {
 			return Optional.empty();
 		}
 		return getSubGrades().get(criterion).getGrade(path.withoutHead());
+	}
+
+	public default WeightedMark getWeightedMark(GradePath path) {
+		checkArgument(toTree().asGraph().nodes().contains(path));
+		return WeightedMark.given(getMark(path), getWeight(path));
 	}
 
 	public default WeightedGrade getWeightedGrade(GradePath path) {

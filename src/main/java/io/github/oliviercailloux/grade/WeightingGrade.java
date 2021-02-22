@@ -85,7 +85,7 @@ public class WeightingGrade implements IGrade {
 		private final IGrade grade;
 		private final double weight;
 
-		private WeightedGrade(IGrade grade, double weight) {
+		protected WeightedGrade(IGrade grade, double weight) {
 			this.grade = checkNotNull(grade);
 			this.weight = weight;
 			checkArgument(Double.isFinite(weight));
@@ -102,6 +102,26 @@ public class WeightingGrade implements IGrade {
 
 		public double getAbsolutePoints() {
 			return weight * grade.getPoints();
+		}
+
+		public WeightedMark getWeightedMark(GradePath path) {
+			final WeightedMark weightedMark = grade.getWeightedMark(path);
+			return WeightedMark.given(weightedMark.getGrade(), weight * weightedMark.getWeight());
+		}
+	}
+
+	public static class WeightedMark extends WeightedGrade {
+		public static WeightedMark given(Mark mark, double weight) {
+			return new WeightedMark(mark, weight);
+		}
+
+		private WeightedMark(Mark mark, double weight) {
+			super(mark, weight);
+		}
+
+		@Override
+		public Mark getGrade() {
+			return (Mark) super.getGrade();
 		}
 	}
 

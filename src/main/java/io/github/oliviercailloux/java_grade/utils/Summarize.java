@@ -1,7 +1,6 @@
 package io.github.oliviercailloux.java_grade.utils;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Verify.verify;
 
 import java.io.IOException;
@@ -20,7 +19,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
 
-import com.google.common.base.VerifyException;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -29,8 +27,6 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.graph.GraphBuilder;
 import com.google.common.graph.ImmutableGraph;
-import com.google.common.graph.MutableGraph;
-import com.google.common.graph.ValueGraph;
 
 import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
@@ -42,6 +38,7 @@ import io.github.oliviercailloux.grade.IGrade.GradePath;
 import io.github.oliviercailloux.grade.Mark;
 import io.github.oliviercailloux.grade.WeightingGrade;
 import io.github.oliviercailloux.grade.WeightingGrade.WeightedGrade;
+import io.github.oliviercailloux.grade.WeightingGrade.WeightedMark;
 import io.github.oliviercailloux.grade.comm.StudentOnGitHub;
 import io.github.oliviercailloux.grade.comm.json.JsonStudentsReader;
 import io.github.oliviercailloux.grade.format.CsvGrades;
@@ -59,122 +56,6 @@ public class Summarize {
 
 	public static void main(String[] args) throws Exception {
 		summarize("admin-manages-users", Paths.get(""), true);
-	}
-
-	public static IGrade compress(IGrade grade, GradeStructure model) {
-		return compress(ImmutableSet.of(GradePath.ROOT), grade, model).getGrade();
-	}
-
-	private static WeightedGrade compress(Set<GradePath> originalPaths, IGrade grade, GradeStructure model) {
-		final ImmutableSet<Criterion> nextLevel = model.getSuccessorCriteria(GradePath.ROOT);
-		final ImmutableSet<GradePath> paths;
-		if (nextLevel.isEmpty()) {
-			paths = ImmutableSet.of();
-		} else {
-			paths = findPaths(nextLevel, originalPaths, grade.toTree());
-		}
-		final ImmutableSet<Criterion> nextCriteria = paths.stream().map(p -> grade.toTree().getSuccessorCriteria(p))
-				.distinct().collect(Utils.singleOrEmpty()).orElse(ImmutableSet.of());
-		verify(nextLevel.containsAll(nextCriteria));
-		if (nextCriteria.isEmpty()) {
-			return compressGrades(Maps.toMap(originalPaths, grade::getWeightedGrade));
-		}
-		final ImmutableMap.Builder<Criterion, WeightedGrade> builder = ImmutableMap.builder();
-		for (Criterion criterion : nextCriteria) {
-			final GradeStructure sub = model.getStructure(criterion);
-			final Set<GradePath> subPaths = originalPaths.stream().map(p -> p.withSuffix(criterion))
-					.collect(ImmutableSet.toImmutableSet());
-			final WeightedGrade subGrade = compress(subPaths, grade, sub);
-			builder.put(criterion, subGrade);
-		}
-		return WeightedGrade.given(builder.build());
-	}
-
-	/**
-	 * @param grades the keys are used only as part of the comment of the resulting
-	 *               grade
-	 * @return a mark that aggregates all the given grades (with weighted sum of the
-	 *         points) and with a weight of the sum of the given weights.
-	 */
-	public static WeightedGrade compressGrades(Map<GradePath, WeightedGrade> grades) {
-		final double sumOfAbsolutePoints = grades.values().stream().mapToDouble(WeightedGrade::getAbsolutePoints).sum();
-		final String comment = grades.keySet().stream()
-				.map(l -> l.toSimpleString() + " – " + grades.get(l).getGrade().getComment())
-				.collect(Collectors.joining("\n"));
-
-		final Mark mark = Mark.given(sumOfAbsolutePoints, comment);
-		final double weight = grades.values().stream().mapToDouble(WeightedGrade::getWeight).sum();
-		return WeightedGrade.given(mark, weight);
-	}
-
-	public static WeightedGrade toWeightedMark(IGrade grade) {
-		final GradeStructure structure = grade.toTree();
-		final ImmutableMap<GradePath, WeightedGrade> leaveGrades = Maps.toMap(structure.getLeaves(),
-				grade::getWeightedGrade);
-		return compressGrades(leaveGrades);
-	}
-
-	/**
-	 * @param nodes        the criteria that must be children of all paths, non
-	 *                     empty
-	 * @param startingPath the starting path in the tree
-	 * @param tree         containing the paths among which to search
-	 * @return a set of paths that cover a pruned version of the tree, such that all
-	 *         paths end with the given set of nodes; an empty set iff such a cover
-	 *         does not exist
-	 */
-	private static ImmutableSet<GradePath> findConformingPaths(Set<Criterion> nodes, GradePath startingPath,
-			GradeStructure tree) {
-		checkArgument(!nodes.isEmpty());
-		final ArrayDeque<GradePath> toCheck = new ArrayDeque<>();
-		toCheck.add(startingPath);
-		final ImmutableSet.Builder<GradePath> builder = ImmutableSet.builder();
-		boolean failed = false;
-		do {
-			final GradePath current = toCheck.pop();
-			final ImmutableSet<Criterion> succ = tree.getSuccessorCriteria(current);
-			if (succ.isEmpty()) {
-				failed = true;
-				break;
-			}
-			final ImmutableSet<Criterion> toVisit;
-			if (succ.containsAll(nodes)) {
-				builder.add(current);
-				toVisit = Sets.difference(succ, nodes).immutableCopy();
-			} else {
-				toVisit = succ;
-			}
-			toCheck.addAll(toVisit.stream().map(current::withSuffix).collect(ImmutableSet.toImmutableSet()));
-		} while (!toCheck.isEmpty());
-
-		if (failed) {
-			return ImmutableSet.of();
-		}
-		return builder.build();
-	}
-
-	private static ImmutableSet<GradePath> findPaths(Set<Criterion> nodes, Set<GradePath> startingPaths,
-			GradeStructure tree) {
-		final Set<Set<Criterion>> nodeSets = Sets.powerSet(nodes);
-		for (Set<Criterion> nodeSubset : nodeSets) {
-			final ImmutableSet<GradePath> found = findConformingPaths(nodeSubset, startingPaths, tree);
-			if (!found.isEmpty()) {
-				return found;
-			}
-		}
-	}
-
-	private static ImmutableSet<GradePath> findConformingPaths(Set<Criterion> nodes, Set<GradePath> startingPaths,
-			GradeStructure tree) {
-		final ImmutableSet.Builder<GradePath> builder = ImmutableSet.builder();
-		for (GradePath startingPath : startingPaths) {
-			final ImmutableSet<GradePath> found = findConformingPaths(nodes, startingPath, tree);
-			if (found.isEmpty()) {
-				return ImmutableSet.of();
-			}
-			builder.addAll(found);
-		}
-		return builder.build();
 	}
 
 	public static void summarize(String prefix, Path outDir, boolean ignoreZeroWeights) throws IOException {
@@ -264,14 +145,14 @@ public class Summarize {
 
 		final Optional<Set<Criterion>> commonChildrenOpt = grades.stream().map(IGrade::getSubGrades).map(Map::keySet)
 				.collect(Utils.singleOrEmpty());
-		final Optional<ImmutableGraph<ImmutableList<Criterion>>> common;
+		final Optional<GradeStructure> common;
 		if (commonChildrenOpt.isEmpty()) {
 			/** ≠ children? intersect all possibilities until empty or finished. */
 			Set<GradeStructure> remainingIntersection = null;
 			for (IGrade grade : grades) {
-				final GradeStructure basicTree = toTree(grade);
+				final GradeStructure basicTree = grade.toTree();
 				final Optional<GradeStructure> commonSubTree = grade.getSubGrades().values().stream()
-						.map(Summarize::toTree).collect(Utils.singleOrEmpty());
+						.map(IGrade::toTree).collect(Utils.singleOrEmpty());
 				final ImmutableSet.Builder<GradeStructure> builder = ImmutableSet.builder();
 				builder.add(basicTree);
 				if (commonSubTree.isPresent()) {
@@ -306,7 +187,7 @@ public class Summarize {
 				final ImmutableMap<Criterion, GradeStructure> treesPerCriterion = Maps
 						.toMap(treesOptPerCriterion.keySet(), c -> treesOptPerCriterion.get(c).get());
 				final ImmutableMap<Criterion, GradeStructure> rightlyRootedTrees = Maps
-						.toMap(treesPerCriterion.keySet(), c -> embedInto(c, treesPerCriterion.get(c)));
+						.toMap(treesPerCriterion.keySet(), c -> treesPerCriterion.get(c).getStructure(c));
 				final ImmutableGraph.Builder<ImmutableList<Criterion>> builder = GraphBuilder.directed().immutable();
 				for (Criterion criterion : rightlyRootedTrees.keySet()) {
 					final GradeStructure tree = rightlyRootedTrees.get(criterion);
@@ -318,49 +199,5 @@ public class Summarize {
 		}
 		return common;
 
-	}
-
-	/**
-	 * @param valueTree for each path, the absolute weight of this path.
-	 * @param leafMarks one mark for each leaf path
-	 */
-	private static IGrade toGrade(ValueGraph<ImmutableList<Criterion>, Double> valueTree,
-			Map<ImmutableList<Criterion>, Mark> leafMarks) {
-		final ImmutableList<Criterion> root = ImmutableList.of();
-		return toGrade(valueTree, leafMarks, root);
-	}
-
-	private static IGrade toGrade(ValueGraph<ImmutableList<Criterion>, Double> valueTree,
-			Map<ImmutableList<Criterion>, Mark> leafMarks, ImmutableList<Criterion> level) {
-		checkArgument(valueTree.nodes().contains(level));
-		/** Ether a leaf or has successors. */
-		final boolean isLeaf = leafMarks.keySet().contains(level);
-		final Set<ImmutableList<Criterion>> children = valueTree.successors(level);
-		final boolean hasChildren = !children.isEmpty();
-		verify(isLeaf != hasChildren);
-		final IGrade newGrade;
-		if (isLeaf) {
-			newGrade = leafMarks.get(level);
-		} else {
-			final ImmutableSet.Builder<CriterionGradeWeight> subBuilder = ImmutableSet.builder();
-			for (ImmutableList<Criterion> child : children) {
-				final ImmutableList<Criterion> prefix = child.subList(0, child.size() - 1);
-				verify(prefix.equals(level));
-				final Criterion newSegment = child.get(child.size() - 1);
-				final double totalWeight;
-				if (level.isEmpty()) {
-					totalWeight = 1d;
-				} else {
-					final ImmutableList<Criterion> previous = level.subList(0, level.size() - 1);
-					totalWeight = valueTree.edgeValue(previous, level).orElseThrow(VerifyException::new);
-				}
-				final double childWeight = valueTree.edgeValue(level, child).orElseThrow(VerifyException::new);
-				final double childRelativeWeight = childWeight / totalWeight;
-				final IGrade childGrade = toGrade(valueTree, leafMarks, child);
-				subBuilder.add(CriterionGradeWeight.from(newSegment, childGrade, childRelativeWeight));
-			}
-			newGrade = WeightingGrade.from(subBuilder.build());
-		}
-		return newGrade;
 	}
 }
