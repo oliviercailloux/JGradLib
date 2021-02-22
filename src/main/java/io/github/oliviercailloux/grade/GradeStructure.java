@@ -5,9 +5,11 @@ import static com.google.common.base.Preconditions.checkArgument;
 import java.util.ArrayDeque;
 import java.util.LinkedHashSet;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Queue;
 import java.util.Set;
 
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.graph.EndpointPair;
@@ -129,6 +131,25 @@ public class GradeStructure {
 
 	public ImmutableGraph<GradePath> asGraph() {
 		return graph;
+	}
+
+	@Override
+	public boolean equals(Object o2) {
+		if (!(o2 instanceof GradeStructure)) {
+			return false;
+		}
+		final GradeStructure t2 = (GradeStructure) o2;
+		return graph.equals(t2.graph);
+	}
+
+	@Override
+	public int hashCode() {
+		return Objects.hash(graph);
+	}
+
+	@Override
+	public String toString() {
+		return MoreObjects.toStringHelper(this).add("Paths", getLeaves()).toString();
 	}
 
 }

@@ -71,6 +71,34 @@ public class WeightingGrade implements IGrade {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(WeightingGrade.class);
 
+	public static class PathGradeWeight {
+		public static PathGradeWeight given(GradePath path, IGrade grade, double weight) {
+			return new PathGradeWeight(path, grade, weight);
+		}
+
+		private final GradePath path;
+		private final IGrade grade;
+		private final double weight;
+
+		private PathGradeWeight(GradePath path, IGrade grade, double weight) {
+			this.path = checkNotNull(path);
+			this.grade = checkNotNull(grade);
+			this.weight = weight;
+		}
+
+		public GradePath getPath() {
+			return path;
+		}
+
+		public IGrade getGrade() {
+			return grade;
+		}
+
+		public double getWeight() {
+			return weight;
+		}
+	}
+
 	public static class WeightedGrade {
 		public static WeightedGrade given(IGrade grade, double weight) {
 			return new WeightedGrade(grade, weight);
@@ -107,6 +135,25 @@ public class WeightingGrade implements IGrade {
 		public WeightedMark getWeightedMark(GradePath path) {
 			final WeightedMark weightedMark = grade.getWeightedMark(path);
 			return WeightedMark.given(weightedMark.getGrade(), weight * weightedMark.getWeight());
+		}
+
+		@Override
+		public boolean equals(Object o2) {
+			if (!(o2 instanceof WeightingGrade.WeightedGrade)) {
+				return false;
+			}
+			final WeightingGrade.WeightedGrade t2 = (WeightingGrade.WeightedGrade) o2;
+			return grade.equals(t2.grade) && weight == t2.weight;
+		}
+
+		@Override
+		public int hashCode() {
+			return Objects.hash(grade, weight);
+		}
+
+		@Override
+		public String toString() {
+			return MoreObjects.toStringHelper(this).add("Grade", grade).add("Weight", weight).toString();
 		}
 	}
 
@@ -305,6 +352,12 @@ public class WeightingGrade implements IGrade {
 	@JsonbProperty("subGrades")
 	public ImmutableSet<CriterionGradeWeight> getSubGradesAsSet() {
 		return subGrades.keySet().stream().map((c) -> CriterionGradeWeight.from(c, subGrades.get(c), weights.get(c)))
+				.collect(ImmutableSet.toImmutableSet());
+	}
+
+	@JsonbTransient
+	public ImmutableSet<PathGradeWeight> getAllSubGrades() {
+		return toTree().getPaths().stream().map(p -> PathGradeWeight.given(p, getGrade(p).get(), getWeight(p)))
 				.collect(ImmutableSet.toImmutableSet());
 	}
 

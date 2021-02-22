@@ -1,6 +1,8 @@
 package io.github.oliviercailloux.java_grade.utils;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.base.Verify.verify;
 
 import java.io.IOException;
@@ -8,17 +10,17 @@ import java.lang.reflect.Type;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayDeque;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.stream.Collectors;
+import java.util.function.Predicate;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
 
+import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -37,13 +39,13 @@ import io.github.oliviercailloux.grade.IGrade;
 import io.github.oliviercailloux.grade.IGrade.GradePath;
 import io.github.oliviercailloux.grade.Mark;
 import io.github.oliviercailloux.grade.WeightingGrade;
-import io.github.oliviercailloux.grade.WeightingGrade.WeightedGrade;
-import io.github.oliviercailloux.grade.WeightingGrade.WeightedMark;
+import io.github.oliviercailloux.grade.WeightingGrade.PathGradeWeight;
 import io.github.oliviercailloux.grade.comm.StudentOnGitHub;
 import io.github.oliviercailloux.grade.comm.json.JsonStudentsReader;
 import io.github.oliviercailloux.grade.format.CsvGrades;
 import io.github.oliviercailloux.grade.format.HtmlGrades;
 import io.github.oliviercailloux.grade.format.json.JsonGrade;
+import io.github.oliviercailloux.grade.utils.Compressor;
 import io.github.oliviercailloux.json.JsonbUtils;
 import io.github.oliviercailloux.utils.Utils;
 import io.github.oliviercailloux.xml.XmlUtils;
@@ -52,56 +54,182 @@ public class Summarize {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(Summarize.class);
 
-	private static final Path READ_DIR = Paths.get("");
-
 	public static void main(String[] args) throws Exception {
-		summarize("admin-manages-users", Paths.get(""), true);
+		new Summarize().setPrefix("admin-manages-users").summarize();
 	}
 
-	public static void summarize(String prefix, Path outDir, boolean ignoreZeroWeights) throws IOException {
+	private Predicate<PathGradeWeight> predicate;
+
+	private Path gradesInputPath;
+	private Path csvOutputPath;
+	private Path htmlOutputPath;
+	private GradeStructure model;
+
+	private Summarize() {
+		predicate = g -> g.getWeight() != 0d;
+		gradesInputPath = Path.of("grades.json");
+		csvOutputPath = Path.of("grades.csv");
+		htmlOutputPath = Path.of("grades.html");
+		model = null;
+	}
+
+	public Path getGradesInputPath() {
+		return gradesInputPath;
+	}
+
+	public Summarize setGradesInputPath(Path gradesInputPath) {
+		this.gradesInputPath = checkNotNull(gradesInputPath);
+		return this;
+	}
+
+	public Path getCsvOutputPath() {
+		return csvOutputPath;
+	}
+
+	public Summarize setCsvOutputPath(Path csvOutputPath) {
+		this.csvOutputPath = checkNotNull(csvOutputPath);
+		return this;
+	}
+
+	public Path getHtmlOutputPath() {
+		return htmlOutputPath;
+	}
+
+	public Summarize setHtmlOutputPath(Path htmlOutputPath) {
+		this.htmlOutputPath = checkNotNull(htmlOutputPath);
+		return this;
+	}
+
+	public Summarize setPrefix(String prefix) {
+		checkNotNull(prefix);
+		gradesInputPath = Path.of("grades " + prefix + ".json");
+		csvOutputPath = Path.of("grades " + prefix + ".csv");
+		htmlOutputPath = Path.of("grades " + prefix + ".html");
+		return this;
+	}
+
+	public GradeStructure getModel() {
+		return model;
+	}
+
+	public Summarize setModel(GradeStructure model) {
+		this.model = model;
+		return this;
+	}
+
+	public void summarize() throws IOException {
+		final Map<GitHubUsername, IGrade> grades = readGrades(gradesInputPath);
+		final ImmutableMap<GitHubUsername, IGrade> filtered = Maps.toMap(grades.keySet(), u -> filter(grades.get(u)));
+		final ImmutableMap<GitHubUsername, IGrade> modeled = Maps.toMap(grades.keySet(), u -> model(filtered.get(u)));
+
+		final ImmutableBiMap<GitHubUsername, StudentOnGitHub> usernames = readUsernames();
+		final ImmutableSet<GitHubUsername> missing = Sets.difference(usernames.keySet(), grades.keySet())
+				.immutableCopy();
+		final ImmutableSet<GitHubUsername> unknown = Sets.difference(grades.keySet(), usernames.keySet())
+				.immutableCopy();
+		checkState(unknown.isEmpty());
+		if (!missing.isEmpty()) {
+			LOGGER.warn("Missing: {}.", unknown);
+		}
+
+		final ImmutableMap<StudentOnGitHub, IGrade> completedGrades = Maps.toMap(usernames.values(),
+				s -> modeled.getOrDefault(usernames.inverse().get(s), Mark.zero("No grade")));
+
+		LOGGER.info("Writing grades CSV.");
+		Files.writeString(csvOutputPath, CsvGrades.asCsv(completedGrades, 20d));
+
+		LOGGER.info("Writing grades Html.");
+		final ImmutableMap<String, IGrade> gradesByString = Maps.toMap(
+				grades.keySet().stream().map(GitHubUsername::getUsername).collect(ImmutableSet.toImmutableSet()),
+				u -> grades.get(GitHubUsername.given(u)));
+		final Document doc = HtmlGrades.asHtml(gradesByString, "All grades", 20d);
+		Files.writeString(htmlOutputPath, XmlUtils.asString(doc));
+	}
+
+	private static ImmutableBiMap<GitHubUsername, StudentOnGitHub> readUsernames() throws IOException {
+		LOGGER.debug("Reading usernames.");
+		final JsonStudentsReader students = JsonStudentsReader.from(Files.readString(Path.of("usernames.json")));
+		final ImmutableBiMap<GitHubUsername, StudentOnGitHub> usernames = students.getStudentsByGitHubUsername();
+		return usernames;
+	}
+
+	private static ImmutableMap<GitHubUsername, IGrade> readGrades(Path input) throws IOException {
 		@SuppressWarnings("all")
 		final Type type = new LinkedHashMap<RepositoryCoordinates, IGrade>() {
 		}.getClass().getGenericSuperclass();
 
 		LOGGER.debug("Reading grades.");
-		final String sourceGrades = Files.readString(READ_DIR.resolve("grades " + prefix + ".json"));
+		final String sourceGrades = Files.readString(input);
 		final Map<String, IGrade> grades = JsonbUtils.fromJson(sourceGrades, type, JsonGrade.asAdapter());
 		LOGGER.debug("Read {}, keys: {}.", sourceGrades, grades.keySet());
+		final ImmutableMap<GitHubUsername, IGrade> gradesByUsername = Maps.toMap(
+				grades.keySet().stream().map(GitHubUsername::given).collect(ImmutableSet.toImmutableSet()),
+				u -> grades.get(u.getUsername()));
+		return gradesByUsername;
+	}
 
-		final ImmutableMap<String, IGrade> transformed;
-		if (ignoreZeroWeights) {
-			transformed = grades.entrySet().stream().collect(
-					ImmutableMap.toImmutableMap(Map.Entry::getKey, e -> withTimePenalty(nonZero(e.getValue()))));
+	public IGrade filter(IGrade grade) {
+		final Optional<CriterionGradeWeight> filtered = filter(GradePath.ROOT, grade);
+		checkState(!filtered.isEmpty());
+		final CriterionGradeWeight result = filtered.get();
+		verify(result.getCriterion().getName().isEmpty());
+		verify(result.getWeight() == 1d);
+		return result.getGrade();
+	}
+
+	public IGrade model(IGrade grade) {
+		if (model == null) {
+			return grade;
+		}
+		return Compressor.compress(grade, model);
+	}
+
+	/**
+	 * The predicate must ensure that we are not left with only subgrades with a
+	 * zero weight. (TODO consider allowing only zero weight children with an
+	 * arbitrary points of one)
+	 */
+	private Optional<CriterionGradeWeight> filter(GradePath context, IGrade grade) {
+		final IGrade result;
+		if (!(grade instanceof WeightingGrade)) {
+			result = grade;
 		} else {
-			transformed = ImmutableMap.copyOf(grades);
+			final ImmutableSet<CriterionGradeWeight> subGrades = grade.toTree().getSuccessorPaths(context).stream()
+					.map(grade::getPathGradeWeight).filter(predicate).map(g -> filter(g.getPath(), grade))
+					.flatMap(Optional::stream).collect(ImmutableSet.toImmutableSet());
+			if (subGrades.isEmpty()) {
+				result = null;
+			} else {
+//		if (subGrades.size() == 1) {
+//			final IGrade subGradesOnlyGrade = Iterables.getOnlyElement(subGrades).getGrade();
+//			LOGGER.info("Instead of {}, returning {}.", w, subGradesOnlyGrade);
+//			return subGradesOnlyGrade;
+//		}
+				result = WeightingGrade.from(subGrades);
+			}
 		}
-		final ImmutableSet<GitHubUsername> gradesUsernames = transformed.keySet().stream().map(GitHubUsername::given)
-				.collect(ImmutableSet.toImmutableSet());
-		LOGGER.debug("Reading usernames.");
-		final JsonStudentsReader students = JsonStudentsReader
-				.from(Files.readString(READ_DIR.resolve("usernames.json")));
-		final ImmutableMap<GitHubUsername, StudentOnGitHub> usernames = students.getStudentsByGitHubUsername();
-		final ImmutableSet<GitHubUsername> missing = Sets.difference(gradesUsernames, usernames.keySet())
-				.immutableCopy();
-		if (!missing.isEmpty()) {
-			LOGGER.warn("Missing: {}.", missing);
+		if (result == null) {
+			return Optional.empty();
 		}
-//
-		final ImmutableMap<StudentOnGitHub, IGrade> byStudent = transformed.entrySet().stream().collect(
-				ImmutableMap.toImmutableMap(e -> usernames.get(GitHubUsername.given(e.getKey())), Map.Entry::getValue));
-//		final ImmutableMap<StudentOnGitHub, IGrade> byStudent = transformed.entrySet().stream()
-//				.collect(ImmutableMap.toImmutableMap(e -> StudentOnGitHub.with(e.getKey()), Map.Entry::getValue));
-		LOGGER.debug("Grades keys: {}.", byStudent.keySet());
+		final Criterion criterion = context.isRoot() ? Criterion.given("") : context.getTail();
+		return Optional.of(CriterionGradeWeight.from(criterion, result, grade.getLocalWeight(context)));
+	}
 
-		final ImmutableMap<StudentOnGitHub, IGrade> byStudentCompressed = Maps.toMap(byStudent.keySet(),
-				s -> Summarize.compress((WeightingGrade) byStudent.get(s)));
+	public static IGrade withTimePenalty(IGrade grade) {
+		if (!(grade instanceof WeightingGrade)) {
+			return grade;
+		}
 
-		LOGGER.info("Writing grades CSV.");
-		Files.writeString(outDir.resolve("grades " + prefix + ".csv"), CsvGrades.asCsv(byStudentCompressed, 20d));
-
-		LOGGER.info("Writing grades Html.");
-		final Document doc = HtmlGrades.asHtml(transformed, "All grades " + prefix, 20d);
-		Files.writeString(outDir.resolve("grades " + prefix + ".html"), XmlUtils.asString(doc));
+		/**
+		 * More general: should observe that the small trees (a/b/c) are included in the
+		 * large trees (g/a/b/c + t) and align them with zero or one weight grades
+		 */
+		final WeightingGrade w = (WeightingGrade) grade;
+		if (w.getSubGrades().keySet().contains(Criterion.given("Time penalty"))) {
+			return w;
+		}
+		return WeightingGrade.from(ImmutableSet.of(CriterionGradeWeight.from(Criterion.given("grade"), grade, 1d),
+				CriterionGradeWeight.from(Criterion.given("Time penalty"), Mark.one("No time penalty"), 0d)));
 	}
 
 	public static IGrade nonZero(IGrade grade) {
@@ -121,23 +249,6 @@ public class Summarize {
 			return subGradesOnlyGrade;
 		}
 		return w;
-	}
-
-	public static IGrade withTimePenalty(IGrade grade) {
-		if (!(grade instanceof WeightingGrade)) {
-			return grade;
-		}
-
-		/**
-		 * More general: should observe that the small trees (a/b/c) are included in the
-		 * large trees (g/a/b/c + t) and align them with zero or one weight grades
-		 */
-		final WeightingGrade w = (WeightingGrade) grade;
-		if (w.getSubGrades().keySet().contains(Criterion.given("Time penalty"))) {
-			return w;
-		}
-		return WeightingGrade.from(ImmutableSet.of(CriterionGradeWeight.from(Criterion.given("grade"), grade, 1d),
-				CriterionGradeWeight.from(Criterion.given("Time penalty"), Mark.one("No time penalty"), 0d)));
 	}
 
 	private static Optional<GradeStructure> getCommonTree(Set<IGrade> grades) {

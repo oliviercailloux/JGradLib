@@ -15,6 +15,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.graph.ImmutableValueGraph;
 import com.google.common.graph.ValueGraphBuilder;
 
+import io.github.oliviercailloux.grade.WeightingGrade.PathGradeWeight;
 import io.github.oliviercailloux.grade.WeightingGrade.WeightedGrade;
 import io.github.oliviercailloux.grade.WeightingGrade.WeightedMark;
 
@@ -109,6 +110,9 @@ public interface IGrade {
 		}
 
 		public boolean startsWith(GradePath starting) {
+			if (starting.size() > list.size()) {
+				return false;
+			}
 			final List<Criterion> startingList = starting;
 			return list.subList(0, starting.size()).equals(startingList);
 		}
@@ -239,6 +243,11 @@ public interface IGrade {
 		return WeightedGrade.given(getGrade(path).get(), getWeight(path));
 	}
 
+	public default PathGradeWeight getPathGradeWeight(GradePath path) {
+		checkArgument(toTree().asGraph().nodes().contains(path));
+		return PathGradeWeight.given(path, getGrade(path).get(), getWeight(path));
+	}
+
 	public default double getWeight(GradePath path) {
 		if (path.isRoot()) {
 			return 1d;
@@ -248,6 +257,14 @@ public interface IGrade {
 		final IGrade first = Optional.ofNullable(subGrades.get(head)).orElseThrow(IllegalArgumentException::new);
 		final double local = getWeights().get(head);
 		return local == 0d ? local : local * first.getWeight(path.withoutHead());
+	}
+
+	public default double getLocalWeight(GradePath path) {
+		if (path.isRoot()) {
+			return 1d;
+		}
+		final GradePath parent = path.withoutTail();
+		return getGrade(parent).get().getWeights().get(path.getTail());
 	}
 
 	public default IGrade withPatch(Patch patch) {
