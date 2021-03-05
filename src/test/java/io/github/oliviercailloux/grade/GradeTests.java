@@ -2,12 +2,22 @@ package io.github.oliviercailloux.grade;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import java.nio.charset.StandardCharsets;
+
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.io.Resources;
+
+import io.github.oliviercailloux.grade.IGrade.GradePath;
+import io.github.oliviercailloux.grade.WeightingGrade.WeightedGrade;
+import io.github.oliviercailloux.grade.format.json.JsonGrade;
+import io.github.oliviercailloux.grade.format.json.JsonGradeTests;
+import io.github.oliviercailloux.json.PrintableJsonObjectFactory;
 
 public class GradeTests {
 	@SuppressWarnings("unused")
@@ -32,7 +42,7 @@ public class GradeTests {
 		final Criterion c1 = Criterion.given("C1");
 		final Criterion c2 = Criterion.given("C2");
 		final Criterion criterion = Criterion.given("criterion");
-		final ImmutableList<Criterion> c1SlashCriterion = ImmutableList.of(c1, criterion);
+		final GradePath c1SlashCriterion = GradePath.from(ImmutableList.of(c1, criterion));
 		final Patch patch = Patch.create(c1SlashCriterion, Mark.zero("A comment"));
 
 		final WeightingGrade complexGrade = GradeTestsHelper.getComplexGrade();
@@ -41,5 +51,49 @@ public class GradeTests {
 		final IGrade patched = complexGrade.withPatches(ImmutableSet.of(patch));
 		assertEquals(complexGrade.getSubGrades().get(c2), patched.getSubGrades().get(c2));
 		assertEquals(Mark.zero("A comment"), patched.getGrade(c1SlashCriterion).get());
+	}
+
+	@Test
+	void testTree() throws Exception {
+		final IGrade grade = JsonGrade.asGrade(PrintableJsonObjectFactory.wrapPrettyPrintedString(
+				Resources.toString(JsonGradeTests.class.getResource("ComplexGrade.json"), StandardCharsets.UTF_8)));
+//		final IGrade grade = JsonGrade
+//				.asGrade(PrintableJsonObjectFactory.wrapPrettyPrintedString(Files.readString(Path.of("grade.json"))));
+		final GradeStructure actual = grade.toTree();
+		LOGGER.info("Structure: {}.", actual);
+		assertEquals(GradeStructure.from(ImmutableSet.of("C1/criterion", "C2")), actual);
+	}
+
+	@Test
+	void testBuildKeepsOrderOfKeys() throws Exception {
+		final IGrade grade = WeightingGrade.from(ImmutableMap.of(GradePath.from("user.name"),
+				WeightedGrade.given(Mark.one(), 1d), GradePath.from("main"), WeightedGrade.given(Mark.one(), 1d)));
+		assertEquals(ImmutableList.of(Criterion.given("user.name"), Criterion.given("main")),
+				grade.getSubGrades().keySet().asList());
+		final GradeStructure tree = grade.toTree();
+		assertEquals(ImmutableList.of(GradePath.ROOT, GradePath.from("user.name"), GradePath.from("main")),
+				ImmutableList.copyOf(tree.asGraph().nodes()));
+		assertEquals(ImmutableList.of(Criterion.given("user.name"), Criterion.given("main")),
+				tree.getSuccessorCriteria(GradePath.ROOT).asList());
+	}
+
+	@Test
+	void testDissolve() throws Exception {
+		final IGrade grade = WeightingGrade
+				.from(ImmutableMap.of(GradePath.from("c1"), WeightedGrade.given(Mark.given(0.5d, ""), 4d),
+						GradePath.from("c2"), WeightedGrade.given(Mark.one(), 1d)));
+		final Criterion c1 = Criterion.given("c1");
+		final Criterion c2 = Criterion.given("c2");
+		final IGrade dissolved = grade.withDissolved(c2);
+
+		final GradeStructure expectedTree = GradeStructure.from(ImmutableSet.of("c1/c1", "c1/c2"));
+		assertEquals(expectedTree, dissolved.toTree());
+
+		assertEquals(1d, dissolved.getWeights().get(c1), 1e-6d);
+		assertEquals(4d / 5d, dissolved.getLocalWeight(GradePath.from("c1/c1")), 1e-6d);
+		assertEquals(1d / 5d, dissolved.getLocalWeight(GradePath.from("c1/c2")), 1e-6d);
+
+		assertEquals(3d / 5d, grade.getPoints(), 1e-6d);
+		assertEquals(3d / 5d, dissolved.getPoints(), 1e-6d);
 	}
 }

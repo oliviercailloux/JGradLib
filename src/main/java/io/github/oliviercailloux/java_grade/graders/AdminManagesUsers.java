@@ -2,6 +2,23 @@ package io.github.oliviercailloux.java_grade.graders;
 
 import static com.google.common.base.Verify.verify;
 
+import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Sets;
+import com.google.common.collect.Streams;
+import com.google.common.graph.Graph;
+import io.github.oliviercailloux.grade.Criterion;
+import io.github.oliviercailloux.grade.CriterionGradeWeight;
+import io.github.oliviercailloux.grade.DeadlineGrader;
+import io.github.oliviercailloux.grade.GitGeneralGrader;
+import io.github.oliviercailloux.grade.IGrade;
+import io.github.oliviercailloux.grade.Mark;
+import io.github.oliviercailloux.grade.RepositoryFetcher;
+import io.github.oliviercailloux.grade.WeightingGrade;
+import io.github.oliviercailloux.grade.markers.Marks;
+import io.github.oliviercailloux.jaris.xml.XmlUtils;
+import io.github.oliviercailloux.utils.Utils;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
@@ -14,11 +31,9 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Stream;
-
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
@@ -26,25 +41,6 @@ import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
-
-import com.google.common.base.Strings;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Sets;
-import com.google.common.collect.Streams;
-import com.google.common.graph.Graph;
-
-import io.github.oliviercailloux.grade.Criterion;
-import io.github.oliviercailloux.grade.CriterionGradeWeight;
-import io.github.oliviercailloux.grade.DeadlineGrader;
-import io.github.oliviercailloux.grade.GitGeneralGrader;
-import io.github.oliviercailloux.grade.IGrade;
-import io.github.oliviercailloux.grade.Mark;
-import io.github.oliviercailloux.grade.RepositoryFetcher;
-import io.github.oliviercailloux.grade.WeightingGrade;
-import io.github.oliviercailloux.grade.markers.Marks;
-import io.github.oliviercailloux.jaris.xml.XmlUtils;
-import io.github.oliviercailloux.utils.Utils;
 
 public class AdminManagesUsers {
 	private static final String XMI_NS = "http://www.omg.org/spec/XMI/20131001";
@@ -62,6 +58,7 @@ public class AdminManagesUsers {
 
 	public static void main(String[] args) throws Exception {
 		final RepositoryFetcher fetcher = RepositoryFetcher.withPrefix(PREFIX);
+//		.setRepositoriesFilter(r->r.getUsername().equals(""));
 		final GitGeneralGrader grader = GitGeneralGrader.using(fetcher,
 				DeadlineGrader.usingPathGrader(AdminManagesUsers::grade, DEADLINE)
 						.setPenalizer(DeadlineGrader.LinearPenalizer.proportionalToLateness(Duration.ofSeconds(600))));
@@ -220,30 +217,39 @@ public class AdminManagesUsers {
 				.collect(ImmutableList.toImmutableList());
 		final ImmutableList<Element> useCaseEls = getType(mainElements, "uml:UseCase");
 
-		final Optional<Element> manageUseCase = getUseCase(mainElements, "Manage\\h+users");
-		final Optional<String> manageUseCaseId = manageUseCase.flatMap(AdminManagesUsers::getId);
-		gradeBuilder.add(CriterionGradeWeight.from(Criterion.given("Use case Manage"),
-				gradeUseCase(manageUseCase, useCaseEls), 2d));
+		final ImmutableSet<Element> manageUseCases = getUseCases(mainElements, "Manage\\h+user?s");
+		final ImmutableSet<String> manageUseCaseIds = manageUseCases.stream().map(AdminManagesUsers::getId)
+				.flatMap(Optional::stream).collect(ImmutableSet.toImmutableSet());
+		LOGGER.debug("Manage: {}.", manageUseCaseIds);
+		final Optional<Element> manageUseCase = manageUseCases.stream().collect(Utils.singleOrEmpty());
+		gradeBuilder
+				.add(CriterionGradeWeight.from(Criterion.given("Use case Manage"), gradeUseCases(manageUseCases), 2d));
 
-		final Optional<Element> createUseCase = getUseCase(mainElements, "Create\\h+user");
-		gradeBuilder.add(CriterionGradeWeight.from(Criterion.given("Use case Create"),
-				gradeUseCase(createUseCase, useCaseEls), 2d));
+		final ImmutableSet<Element> createUseCases = getUseCases(mainElements, "Create\\h+user");
+		gradeBuilder
+				.add(CriterionGradeWeight.from(Criterion.given("Use case Create"), gradeUseCases(createUseCases), 2d));
 
-		final Optional<Element> deleteUseCase = getUseCase(mainElements, "Delete\\h+user");
-		gradeBuilder.add(CriterionGradeWeight.from(Criterion.given("Use case Delete"),
-				gradeUseCase(deleteUseCase, useCaseEls), 2d));
+		final ImmutableSet<Element> deleteUseCases = getUseCases(mainElements, "Delete\\h+user");
+		gradeBuilder
+				.add(CriterionGradeWeight.from(Criterion.given("Use case Delete"), gradeUseCases(deleteUseCases), 2d));
 
 		{
-			final ImmutableSet<Element> childrenUseCases = ImmutableSet.of(createUseCase, deleteUseCase).stream()
-					.filter(Optional::isPresent).map(Optional::get).collect(ImmutableSet.toImmutableSet());
+			final ImmutableSet<Element> childrenUseCases = Stream
+					.concat(createUseCases.stream(), deleteUseCases.stream()).collect(ImmutableSet.toImmutableSet());
 
 			final ImmutableSet<Element> useCasesWithGeneralization = useCaseEls.stream()
 					.filter(u -> getTargetOfUniqueGeneralization(u, useCaseEls).isPresent())
 					.collect(ImmutableSet.toImmutableSet());
-			final CriterionGradeWeight nbOneOrTwo = CriterionGradeWeight.from(Criterion.given("One or two"),
-					Mark.binary(useCasesWithGeneralization.size() == 1 || useCasesWithGeneralization.size() == 2), 2d);
-			final CriterionGradeWeight nbTwo = CriterionGradeWeight.from(Criterion.given("Exactly two"),
-					Mark.binary(useCasesWithGeneralization.size() == 2), 1d);
+			final boolean createGeneralized = !createUseCases.isEmpty() && createUseCases.stream()
+					.allMatch(u -> getTargetOfUniqueGeneralization(u, useCaseEls).isPresent());
+			final boolean deleteGeneralized = !deleteUseCases.isEmpty() && deleteUseCases.stream()
+					.allMatch(u -> getTargetOfUniqueGeneralization(u, useCaseEls).isPresent());
+			final CriterionGradeWeight nbOneOrTwo = CriterionGradeWeight.from(
+					Criterion.given("Create or Delete generalizes"),
+					Mark.binary(createGeneralized || deleteGeneralized), 2d);
+			final CriterionGradeWeight nbTwo = CriterionGradeWeight.from(
+					Criterion.given("Create and Delete generalize"),
+					Mark.binary(createGeneralized && deleteGeneralized), 1d);
 			final CriterionGradeWeight number = CriterionGradeWeight.from(Criterion.given("Number"),
 					WeightingGrade.from(ImmutableSet.of(nbOneOrTwo, nbTwo)), 1d);
 
@@ -256,7 +262,8 @@ public class AdminManagesUsers {
 					Mark.binary(allTargetsManage && childrenUseCases.containsAll(useCasesWithGeneralization)), 2d);
 			final CriterionGradeWeight idsTwo = CriterionGradeWeight.from(Criterion.given("Exactly two"),
 					Mark.binary(allTargetsManage && childrenUseCases.equals(useCasesWithGeneralization)), 1d);
-			final CriterionGradeWeight ids = CriterionGradeWeight.from(Criterion.given("Identities"),
+			final CriterionGradeWeight ids = CriterionGradeWeight.from(
+					Criterion.given("Generalizes is the unique Manage UC"),
 					WeightingGrade.from(ImmutableSet.of(idsOneOrTwo, idsTwo)), 1d);
 			gradeBuilder.add(CriterionGradeWeight.from(Criterion.given("Generalization"),
 					WeightingGrade.from(ImmutableSet.of(number, ids)), 3d));
@@ -272,7 +279,7 @@ public class AdminManagesUsers {
 					.filter(e -> e.getAttributeNS(XMI_NS, "type").equals("uml:Association"))
 					.collect(Utils.singleOrEmpty());
 			gradeBuilder.add(CriterionGradeWeight.from(Criterion.given("Association"),
-					gradeAssociation(association, actorId, manageUseCaseId), 2.5d));
+					gradeAssociation(association, actorId, manageUseCaseIds), 2.5d));
 
 		}
 		return WeightingGrade.from(gradeBuilder.build());
@@ -298,7 +305,7 @@ public class AdminManagesUsers {
 	}
 
 	private static IGrade gradeAssociation(Optional<Element> association, Optional<String> actorId,
-			Optional<String> manageUseCaseId) {
+			Set<String> manageUseCaseIds) {
 		final CriterionGradeWeight associationGrade = CriterionGradeWeight.from(Criterion.given("Actor"),
 				Mark.binary(association.isPresent()), 1d);
 		final ImmutableList<Element> ownedAttributes = association
@@ -312,13 +319,13 @@ public class AdminManagesUsers {
 				.collect(ImmutableList.toImmutableList());
 		final ImmutableList<String> targetIds = properties.stream().map(p -> p.getAttribute("type"))
 				.collect(ImmutableList.toImmutableList());
-		final ImmutableSet<String> possibleTargets = ImmutableSet.of(actorId, manageUseCaseId).stream()
-				.filter(Optional::isPresent).map(Optional::get).collect(ImmutableSet.toImmutableSet());
-		final ImmutableSet<String> targettedValidIds = Sets
-				.intersection(ImmutableSet.copyOf(targetIds), possibleTargets).immutableCopy();
-		LOGGER.debug("Targets: {}, possible: {}.", targetIds, possibleTargets);
+		final boolean targetsAnActor = actorId.isPresent() && targetIds.contains(actorId.get());
+		final ImmutableSet<String> targettedUcIds = Sets.intersection(ImmutableSet.copyOf(targetIds), manageUseCaseIds)
+				.immutableCopy();
+		final boolean targetsAnUc = targettedUcIds.size() == 1;
+		LOGGER.debug("Targets: {}, to ucs: {}.", targetIds, targettedUcIds);
 		final CriterionGradeWeight propertiesGrade = CriterionGradeWeight.from(Criterion.given("Properties"),
-				Mark.binary(targettedValidIds.size() == 2), 1d);
+				Mark.binary(targetsAnActor && targetsAnUc), 1d);
 
 		return WeightingGrade.from(ImmutableSet.of(associationGrade, propertiesGrade));
 	}
@@ -335,15 +342,15 @@ public class AdminManagesUsers {
 		return elements.stream().filter(e -> e.getAttributeNS(XMI_NS, "id").equals(id)).collect(Utils.singleOrEmpty());
 	}
 
-	private static WeightingGrade gradeUseCase(Optional<Element> useCase, Collection<Element> useCaseEls) {
-		final Optional<String> useCaseId = useCase.flatMap(AdminManagesUsers::getId);
-		final boolean typeAndName = useCaseId.isPresent();
-		final CriterionGradeWeight ucGrade = CriterionGradeWeight.from(Criterion.given("Use case"),
-				Mark.binary(typeAndName || useCaseEls.size() == 3), 3d);
-		final CriterionGradeWeight nameGrade = CriterionGradeWeight.from(Criterion.given("Name"),
-				Mark.binary(typeAndName), 3d);
-		final CriterionGradeWeight subjectGrade = CriterionGradeWeight.from(Criterion.given("Subject"),
-				Mark.binary(typeAndName && useCase.get().hasAttribute("subject")), 2d);
+	private static WeightingGrade gradeUseCases(Set<Element> useCases) {
+		final Set<String> useCaseIds = useCases.stream().map(AdminManagesUsers::getId).flatMap(Optional::stream)
+				.collect(ImmutableSet.toImmutableSet());
+		final CriterionGradeWeight ucGrade = CriterionGradeWeight.from(Criterion.given("Exists"),
+				Mark.binary(!useCases.isEmpty() && useCaseIds.size() == useCases.size()), 1d);
+		final CriterionGradeWeight nameGrade = CriterionGradeWeight.from(Criterion.given("Subject"),
+				Mark.binary(!useCases.isEmpty() && useCases.stream().allMatch(u -> u.hasAttribute("subject"))), 2d);
+		final CriterionGradeWeight subjectGrade = CriterionGradeWeight.from(Criterion.given("Unique"),
+				Mark.binary(useCases.size() == 1), 3d);
 		return WeightingGrade.from(ImmutableSet.of(ucGrade, nameGrade, subjectGrade));
 	}
 
@@ -351,10 +358,10 @@ public class AdminManagesUsers {
 		return Optional.ofNullable(Strings.emptyToNull(element.getAttributeNS(XMI_NS, "id")));
 	}
 
-	private static Optional<Element> getUseCase(Iterable<Element> elements, String namePattern) {
+	private static ImmutableSet<Element> getUseCases(Iterable<Element> elements, String namePattern) {
 		final ImmutableList<Element> useCases = getType(elements, "uml:UseCase");
 		return useCases.stream().filter(e -> Marks.extendAll(namePattern).matcher(e.getAttribute("name")).matches())
-				.collect(Utils.singleOrEmpty());
+				.collect(ImmutableSet.toImmutableSet());
 	}
 
 	private static ImmutableList<Element> getType(Iterable<Element> elements, String type) {

@@ -2,19 +2,6 @@ package io.github.oliviercailloux.java_grade.utils;
 
 import static com.google.common.base.Verify.verify;
 
-import java.lang.reflect.Type;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-
-import javax.mail.Folder;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.google.common.base.Verify;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -22,14 +9,15 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import com.google.common.math.Quantiles;
 import com.google.common.math.Stats;
-
 import io.github.oliviercailloux.email.EmailAddress;
 import io.github.oliviercailloux.email.EmailAddressAndPersonal;
 import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
 import io.github.oliviercailloux.grade.Criterion;
 import io.github.oliviercailloux.grade.IGrade;
+import io.github.oliviercailloux.grade.IGrade.GradePath;
 import io.github.oliviercailloux.grade.Mark;
 import io.github.oliviercailloux.grade.WeightingGrade;
+import io.github.oliviercailloux.grade.WeightingGrade.WeightedGrade;
 import io.github.oliviercailloux.grade.comm.Email;
 import io.github.oliviercailloux.grade.comm.Emailer;
 import io.github.oliviercailloux.grade.comm.EmailerDauphineHelper;
@@ -39,12 +27,23 @@ import io.github.oliviercailloux.grade.comm.json.JsonStudentsReader;
 import io.github.oliviercailloux.grade.format.json.JsonGrade;
 import io.github.oliviercailloux.json.JsonbUtils;
 import io.github.oliviercailloux.xml.XmlUtils;
+import java.lang.reflect.Type;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Stream;
+import javax.mail.Folder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class SendEmails {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(SendEmails.class);
 
-	private static final String PREFIX = "eclipse";
+	private static final String PREFIX = "Projet UML";
 	private static final Path WORK_DIR = Path.of("");
 
 	public static void main(String[] args) throws Exception {
@@ -56,8 +55,8 @@ public class SendEmails {
 		@SuppressWarnings("all")
 		final Type type = new HashMap<String, IGrade>() {
 		}.getClass().getGenericSuperclass();
-		final Map<String, IGrade> gradesByString = JsonbUtils.fromJson(
-				Files.readString(WORK_DIR.resolve("grades " + PREFIX + " patched.json")), type, JsonGrade.asAdapter());
+		final Map<String, IGrade> gradesByString = JsonbUtils
+				.fromJson(Files.readString(WORK_DIR.resolve("" + PREFIX + ".json")), type, JsonGrade.asAdapter());
 
 		final ImmutableSet<String> missing = gradesByString.keySet().stream()
 				.filter(s -> !usernames.containsKey(GitHubUsername.given(s))).collect(ImmutableSet.toImmutableSet());
@@ -94,8 +93,15 @@ public class SendEmails {
 					final IGrade lastGrade = lastGradeOpt.get();
 					final IGrade gradeFromJson = gradesByEmail.get(address);
 					if (!lastGrade.equals(gradeFromJson)) {
-						LOGGER.info("Diff {}: {} (before {}, after {}).", address, getDiff(lastGrade, gradeFromJson),
-								lastGrade, gradeFromJson);
+//						LOGGER.info("Diff {}: {} (before {}, after {}).", address, getDiff(lastGrade, gradeFromJson),
+//								lastGrade, gradeFromJson);
+						final double before = lastGrade.getPoints();
+						final double after = gradeFromJson.getPoints();
+						LOGGER.info("Diff {} (before {}, after {}).", address, before, after);
+						if (before > after) {
+							LOGGER.warn("Losing points.");
+						}
+						computeDiffUsingLeaves(lastGrade, gradeFromJson);
 					}
 				} else {
 					LOGGER.info("Not found {}.", address);
@@ -117,11 +123,34 @@ public class SendEmails {
 //			LOGGER.info("Prepared {}.", effectiveEmails);
 
 			emailer.saveInto(folder);
-			emailer.send(effectiveEmails, EmailerDauphineHelper.FROM);
+//			emailer.send(effectiveEmails, EmailerDauphineHelper.FROM);
 		}
 	}
 
-	private static String getDiff(IGrade grade1, IGrade grade2) {
+	static void computeDiffUsingLeaves(IGrade grade1, IGrade grade2) {
+		/*
+		 * Considers the leaves that are different or do not exist in one. Builds a
+		 * grade with that.
+		 */
+		final ImmutableSet<GradePath> allLeaves = Stream.of(grade1, grade2)
+				.flatMap(g -> g.toTree().getLeaves().stream()).collect(ImmutableSet.toImmutableSet());
+		for (GradePath leaf : allLeaves) {
+			final boolean contains1 = grade1.toTree().getPaths().contains(leaf);
+			final boolean contains2 = grade2.toTree().getPaths().contains(leaf);
+			verify(contains1 || contains2, leaf.toSimpleString());
+			final Optional<WeightedGrade> sub1 = contains1 ? Optional.of(grade1.getWeightedGrade(leaf))
+					: Optional.empty();
+			final Optional<WeightedGrade> sub2 = contains2 ? Optional.of(grade2.getWeightedGrade(leaf))
+					: Optional.empty();
+			if (!sub1.equals(sub2)) {
+				final String sub1String = sub1.map(Object::toString).orElse("");
+				final String sub2String = sub2.map(Object::toString).orElse("");
+				LOGGER.info("Path: {}, first: {}, second: {}.", leaf.toSimpleString(), sub1String, sub2String);
+			}
+		}
+	}
+
+	static String getDiff(IGrade grade1, IGrade grade2) {
 		if (grade1.equals(grade2)) {
 			return "";
 		}

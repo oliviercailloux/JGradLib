@@ -53,8 +53,10 @@ public class DeadlineGrader {
 			final GitFileSystemHistory history = work.getHistory();
 			final CheckedStream<GitPathRoot, IOException> checkedCommits = CheckedStream
 					.wrapping(history.getGraph().nodes().stream());
-			final Optional<String> author = checkedCommits.map(GitPathRoot::getCommit).map(Commit::getAuthorName)
-					.collect(Utils.singleOrEmpty());
+			final ImmutableSet<String> authors = checkedCommits.map(GitPathRoot::getCommit).map(Commit::getAuthorName)
+					.collect(ImmutableSet.toImmutableSet());
+			LOGGER.debug("Authors: {}.", authors);
+			final Optional<String> author = authors.stream().collect(Utils.singleOrEmpty());
 			final Mark userGrade = Mark
 					.binary(author.isPresent() && author.get().equals(work.getAuthor().getUsername()));
 			final ImmutableSet<GitPathRootSha> latestTiedPathsOnTime = SimpleToGitGrader.getLatest(history);

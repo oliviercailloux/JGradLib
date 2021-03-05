@@ -75,11 +75,13 @@ public class Mark implements IGrade {
 	}
 
 	@Override
+	@JsonbTransient
 	public ImmutableSet<CriterionGradeWeight> getSubGradesAsSet() {
 		return ImmutableSet.of();
 	}
 
 	@Override
+	@JsonbTransient
 	public ImmutableMap<Criterion, Double> getWeights() {
 		return ImmutableMap.of();
 	}

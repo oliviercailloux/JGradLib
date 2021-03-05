@@ -5,6 +5,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Verify.verify;
 
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -101,6 +102,10 @@ public class WeightingGrade implements IGrade {
 
 	public static class WeightedGrade {
 		public static WeightedGrade given(IGrade grade, double weight) {
+			if (grade instanceof Mark) {
+				final Mark mark = (Mark) grade;
+				return new WeightedMark(mark, weight);
+			}
 			return new WeightedGrade(grade, weight);
 		}
 
@@ -250,13 +255,22 @@ public class WeightingGrade implements IGrade {
 	 *                       by its weight divided by the sum of all weights ; non
 	 *                       empty; keys must be unrelated (if one is parent of
 	 *                       another entry there is no way to use both grades!)
-	 * @return may be a mark iff the map key set is the singleton ROOT (otherwise,
-	 *         necessarily not a mark)
+	 * @return a mark iff the map key set is the singleton ROOT and the (single)
+	 *         weighted grade is a weighted mark
 	 */
 	public static IGrade from(Map<GradePath, WeightedGrade> grades) {
+		return from(grades, false);
+	}
+
+	public static IGrade withZeroesRectified(Map<GradePath, WeightedGrade> grades) {
+		return from(grades, true);
+	}
+
+	private static IGrade from(Map<GradePath, WeightedGrade> grades, boolean changeZeroChildren) {
 		checkArgument(!grades.isEmpty());
 
 		final Map<GradePath, WeightedGrade> modifiableGrades = new LinkedHashMap<>(grades);
+		LOGGER.debug("Initialized modifiable as: {}.", modifiableGrades);
 
 		final GradeStructure structure = GradeStructure.given(grades.keySet());
 		checkArgument(structure.getLeaves().equals(grades.keySet()));
@@ -268,24 +282,49 @@ public class WeightingGrade implements IGrade {
 		 * single key "[a/b/c]", for example.
 		 */
 		while (!modifiableGrades.keySet().contains(GradePath.ROOT)) {
-			final GradePath remainingLeaf = modifiableGrades.keySet().iterator().next();
-			verify(!remainingLeaf.isRoot());
-			final GradePath parent = remainingLeaf.withoutTail();
+			/**
+			 * We need to consider the highest depths first, because we want all siblings to
+			 * be aggregated already.
+			 */
+			final GradePath remainingPath = modifiableGrades.keySet().stream()
+					.max(Comparator.comparing(GradePath::size)).get();
+			LOGGER.debug("Considering {}.", remainingPath);
+			verify(!remainingPath.isRoot());
+			final GradePath parent = remainingPath.withoutTail();
 			verify(!modifiableGrades.containsKey(parent));
 			final ImmutableSet<GradePath> childrenPaths = structure.getSuccessorPaths(parent);
 			{
 				/** Modifiable grades has entries for all children nodes. */
 				final ImmutableMap<Criterion, WeightedGrade> childrenWGrades = childrenPaths.stream()
-						.collect(ImmutableMap.toImmutableMap(GradePath::getTail, grades::get));
-				final WeightedGrade aggregated = WeightedGrade.given(fromWeightedGrades(childrenWGrades),
+						.collect(ImmutableMap.toImmutableMap(GradePath::getTail, modifiableGrades::get));
+				final boolean allZeroes = childrenWGrades.values().stream().mapToDouble(WeightedGrade::getWeight)
+						.allMatch(w -> w == 0d);
+				final ImmutableMap<Criterion, WeightedGrade> nonZeroesChildrenWGrades;
+				if (allZeroes) {
+					checkArgument(changeZeroChildren,
+							"Path has only zero-weight children, but I can’t rectify it: " + parent);
+					nonZeroesChildrenWGrades = ImmutableMap
+							.copyOf(Maps.transformValues(childrenWGrades, g -> WeightedGrade.given(g.getGrade(), 1d)));
+				} else {
+					nonZeroesChildrenWGrades = childrenWGrades;
+				}
+
+				final WeightedGrade aggregated = WeightedGrade.given(fromWeightedGrades(nonZeroesChildrenWGrades),
 						childrenWGrades.values().stream().mapToDouble(WeightedGrade::getWeight).sum());
 				modifiableGrades.put(parent, aggregated);
+				LOGGER.debug("Added to {} aggregated {}.", parent, aggregated);
 			}
 			childrenPaths.stream().forEach(modifiableGrades::remove);
 		}
+
 		verify(modifiableGrades.keySet().equals(ImmutableSet.of(GradePath.ROOT)));
 
-		return Iterables.getOnlyElement(modifiableGrades.values()).getGrade();
+		final IGrade grade = Iterables.getOnlyElement(modifiableGrades.values()).getGrade();
+		final ImmutableSet<GradePath> expectedLeaves = grades.keySet().stream()
+				.flatMap(p -> grades.get(p).getGrade().toTree().getLeaves().stream().map(l -> l.withPrefix(p)))
+				.collect(ImmutableSet.toImmutableSet());
+		verify(grade.toTree().getLeaves().equals(expectedLeaves));
+		return grade;
 	}
 
 	private static final double MAX_MARK = 1d;

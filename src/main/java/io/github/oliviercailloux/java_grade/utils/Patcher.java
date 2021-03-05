@@ -19,7 +19,7 @@ import io.github.oliviercailloux.json.JsonbUtils;
 
 public class Patcher {
 	public static void main(String[] args) throws Exception {
-		final String prefix = "eclipse";
+		final String prefix = "admin-manages-users";
 
 		@SuppressWarnings("serial")
 		final Type typePatch = new LinkedHashMap<String, LinkedHashSet<Patch>>() {

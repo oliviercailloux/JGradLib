@@ -37,6 +37,8 @@ public class Compressor {
 		verify(DoubleMath.fuzzyEquals(compressed.getWeight(), 1d, 1e-6d));
 		final IGrade compressedGrade = compressed.getGrade();
 		verify(DoubleMath.fuzzyEquals(compressedGrade.getPoints(), grade.getPoints(), 1e-6d));
+		verify(model.getSuccessorCriteria(GradePath.ROOT).containsAll(compressedGrade.getSubGrades().keySet()));
+		verify(model.asGraph().edges().containsAll(compressedGrade.toTree().asGraph().edges()));
 		return compressedGrade;
 	}
 
@@ -129,6 +131,9 @@ public class Compressor {
 		final Iterable<Set<Criterion>> wholeFirst = Iterables.concat(ImmutableSet.of(nodes), nodeSets);
 		ImmutableSet<GradePath> result = null;
 		for (Set<Criterion> nodeSubset : wholeFirst) {
+			if (nodeSubset.isEmpty()) {
+				continue;
+			}
 			final ImmutableSet<GradePath> found = findConformingPaths(nodeSubset, startingPaths, tree);
 			if (!found.isEmpty()) {
 				result = found;
@@ -138,7 +143,7 @@ public class Compressor {
 		if (result == null) {
 			result = ImmutableSet.of();
 		}
-		LOGGER.debug("Searching for {} among {} and {}, found {}.", nodes, startingPaths, tree, result);
+		LOGGER.debug("Searching for {} starting from {} among {}, found {}.", nodes, startingPaths, tree, result);
 		return result;
 	}
 

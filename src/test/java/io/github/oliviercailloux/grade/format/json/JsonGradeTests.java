@@ -32,9 +32,9 @@ import io.github.oliviercailloux.json.JsonbUtils;
 import io.github.oliviercailloux.json.PrintableJsonObject;
 import io.github.oliviercailloux.json.PrintableJsonObjectFactory;
 
-public class JsonGradeTest {
+public class JsonGradeTests {
 	@SuppressWarnings("unused")
-	private static final Logger LOGGER = LoggerFactory.getLogger(JsonGradeTest.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(JsonGradeTests.class);
 
 	@Test
 	public void markWriteJson() throws Exception {

@@ -12,26 +12,31 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.MoreObjects;
-import com.google.common.collect.ImmutableList;
+
+import io.github.oliviercailloux.grade.IGrade.GradePath;
 
 public class Patch {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(Patch.class);
 
-	private final ImmutableList<Criterion> path;
+	private final GradePath path;
 	private final IGrade grade;
 
 	@JsonbCreator
 	public static Patch create(@JsonbProperty("path") List<Criterion> path, @JsonbProperty("grade") IGrade grade) {
+		return new Patch(GradePath.from(path), grade);
+	}
+
+	public static Patch create(@JsonbProperty("path") GradePath path, @JsonbProperty("grade") IGrade grade) {
 		return new Patch(path, grade);
 	}
 
-	private Patch(List<Criterion> path, IGrade grade) {
-		this.path = ImmutableList.copyOf(path);
+	private Patch(GradePath path, IGrade grade) {
+		this.path = checkNotNull(path);
 		this.grade = checkNotNull(grade);
 	}
 
-	public ImmutableList<Criterion> getPath() {
+	public GradePath getPath() {
 		return path;
 	}
 

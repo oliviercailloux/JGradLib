@@ -1,12 +1,7 @@
 package io.github.oliviercailloux.grade;
 
 import static com.google.common.base.Preconditions.checkArgument;
-
-import java.util.List;
-import java.util.Optional;
-import java.util.RandomAccess;
-import java.util.Set;
-import java.util.stream.Collectors;
+import static com.google.common.base.Verify.verify;
 
 import com.google.common.collect.ForwardingList;
 import com.google.common.collect.ImmutableList;
@@ -14,10 +9,15 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.graph.ImmutableValueGraph;
 import com.google.common.graph.ValueGraphBuilder;
-
+import com.google.common.math.DoubleMath;
 import io.github.oliviercailloux.grade.WeightingGrade.PathGradeWeight;
 import io.github.oliviercailloux.grade.WeightingGrade.WeightedGrade;
 import io.github.oliviercailloux.grade.WeightingGrade.WeightedMark;
+import java.util.List;
+import java.util.Optional;
+import java.util.RandomAccess;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  *
@@ -60,6 +60,11 @@ public interface IGrade {
 			return new GradePath(list);
 		}
 
+		public static GradePath from(String pathString) {
+			return GradePath.from(ImmutableList.copyOf(pathString.split("/")).stream().map(Criterion::given)
+					.collect(ImmutableList.toImmutableList()));
+		}
+
 		private final ImmutableList<Criterion> list;
 
 		private GradePath(List<Criterion> list) {
@@ -81,6 +86,11 @@ public interface IGrade {
 
 		public Criterion getTail() {
 			return list.get(list.size() - 1);
+		}
+
+		public GradePath withPrefix(GradePath prefix) {
+			return new GradePath(ImmutableList.<Criterion>builderWithExpectedSize(size() + prefix.size()).addAll(prefix)
+					.addAll(list).build());
 		}
 
 		public GradePath withPrefix(Criterion root) {
@@ -109,12 +119,28 @@ public interface IGrade {
 					.addAll(list.subList(0, list.size() - 1)).build());
 		}
 
-		public boolean startsWith(GradePath starting) {
-			if (starting.size() > list.size()) {
+		public boolean startsWith(Criterion criterion) {
+			return !isRoot() && getHead().equals(criterion);
+		}
+
+		public boolean startsWith(GradePath subPath) {
+			if (list.size() < subPath.size()) {
 				return false;
 			}
-			final List<Criterion> startingList = starting;
-			return list.subList(0, starting.size()).equals(startingList);
+			final List<Criterion> startingList = subPath;
+			return list.subList(0, subPath.size()).equals(startingList);
+		}
+
+		public boolean endsWith(GradePath subPath) {
+			if (list.size() < subPath.size()) {
+				return false;
+			}
+			final List<Criterion> subList = subPath;
+			return list.subList(list.size() - subPath.size(), list.size()).equals(subList);
+		}
+
+		public boolean endsWith(Criterion criterion) {
+			return !isRoot() && getTail().equals(criterion);
 		}
 
 		public ImmutableList<Criterion> asImmutableList() {
@@ -213,6 +239,53 @@ public interface IGrade {
 	 */
 	public IGrade withSubGrade(Criterion criterion, IGrade newSubGrade);
 
+	public default IGrade withSubGrade(GradePath path, IGrade grade) {
+		if (path.isRoot()) {
+			return grade;
+		}
+		final Criterion criterion = path.getHead();
+		checkArgument(getSubGrades().containsKey(criterion), criterion);
+		final IGrade subPatched = getSubGrades().get(criterion).withSubGrade(path.withoutHead(), grade);
+		return withSubGrade(criterion, subPatched);
+	}
+
+	public default IGrade withPatch(Patch patch) {
+		return withSubGrade(patch.getPath(), patch.getGrade());
+	}
+
+	public default IGrade withDissolved(Criterion criterion) {
+		/**
+		 * Considers each other branches b and each leaf in branch b. The leaf is
+		 * replaced by a weighting grade of wofbranch b * originalleaf + wofdissolved *
+		 * dissolved.
+		 */
+		final ImmutableSet<Criterion> criteria = getSubGrades().keySet();
+		checkArgument(criteria.contains(criterion));
+		checkArgument(criteria.size() >= 2);
+		final PathGradeWeight toDissolve = getPathGradeWeight(GradePath.ROOT.withSuffix(criterion));
+		final ImmutableMap<GradePath, WeightedGrade> newGrades = toTree().getLeaves().stream()
+				.filter(l -> !l.getHead().equals(criterion)).map(this::getPathGradeWeight)
+				.collect(ImmutableMap.toImmutableMap(g -> g.getPath(), g -> integrate(g, toDissolve)));
+		final IGrade dissolved = WeightingGrade.withZeroesRectified(newGrades);
+		verify(DoubleMath.fuzzyEquals(dissolved.getPoints(), getPoints(), 1e-6d));
+		return dissolved;
+	}
+
+	private WeightedGrade integrate(PathGradeWeight remaining, PathGradeWeight toDissolve) {
+		final Criterion remainingBranch = remaining.getPath().getHead();
+		final Double weightRemaining = getWeights().get(remainingBranch);
+		final CriterionGradeWeight gRemaining = CriterionGradeWeight.from(remaining.getPath().getTail(),
+				remaining.getGrade(), weightRemaining);
+
+		final Criterion toDissolveCriterion = toDissolve.getPath().getHead();
+		final Double toDissolveWeight = getWeights().get(toDissolveCriterion);
+		final CriterionGradeWeight gDissolved = CriterionGradeWeight.from(toDissolveCriterion, toDissolve.getGrade(),
+				toDissolveWeight);
+
+		final WeightingGrade integrated = WeightingGrade.from(ImmutableSet.of(gRemaining, gDissolved));
+		return WeightedGrade.given(integrated, getWeight(remaining.getPath()));
+	}
+
 	public default Mark getMark(GradePath path) {
 		if (path.isRoot()) {
 			return (Mark) this;
@@ -265,17 +338,6 @@ public interface IGrade {
 		}
 		final GradePath parent = path.withoutTail();
 		return getGrade(parent).get().getWeights().get(path.getTail());
-	}
-
-	public default IGrade withPatch(Patch patch) {
-		final ImmutableList<Criterion> path = patch.getPath();
-		if (path.isEmpty()) {
-			return patch.getGrade();
-		}
-		final Criterion criterion = path.get(0);
-		final IGrade subPatched = getSubGrades().get(criterion)
-				.withPatch(Patch.create(path.subList(1, path.size()), patch.getGrade()));
-		return withSubGrade(criterion, subPatched);
 	}
 
 	public default IGrade withPatches(Set<Patch> patches) {

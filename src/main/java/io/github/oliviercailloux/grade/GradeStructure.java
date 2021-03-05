@@ -77,6 +77,14 @@ public class GradeStructure {
 		return new GradeStructure(builder.build());
 	}
 
+	public static GradeStructure merge(Set<GradeStructure> grades) {
+		return given(grades.stream().flatMap(g -> g.getLeaves().stream()).collect(ImmutableSet.toImmutableSet()));
+	}
+
+	public static GradeStructure from(Set<String> paths) {
+		return GradeStructure.given(paths.stream().map(GradePath::from).collect(ImmutableSet.toImmutableSet()));
+	}
+
 	private final ImmutableGraph<GradePath> graph;
 
 	private GradeStructure(Graph<GradePath> graph) {
@@ -149,7 +157,7 @@ public class GradeStructure {
 
 	@Override
 	public String toString() {
-		return MoreObjects.toStringHelper(this).add("Paths", getLeaves()).toString();
+		return MoreObjects.toStringHelper(this).add("Leaves", getLeaves()).toString();
 	}
 
 }

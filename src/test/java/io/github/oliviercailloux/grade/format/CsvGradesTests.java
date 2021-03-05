@@ -21,8 +21,8 @@ import io.github.oliviercailloux.grade.WeightingGrade;
 import io.github.oliviercailloux.grade.comm.InstitutionalStudent;
 import io.github.oliviercailloux.grade.comm.StudentOnGitHub;
 import io.github.oliviercailloux.grade.format.json.JsonGrade;
-import io.github.oliviercailloux.grade.format.json.JsonGradeTest;
-import io.github.oliviercailloux.java_grade.utils.Summarize;
+import io.github.oliviercailloux.grade.format.json.JsonGradeTests;
+import io.github.oliviercailloux.java_grade.utils.Summarizer;
 
 class CsvGradesTests {
 	@SuppressWarnings("unused")
@@ -44,7 +44,7 @@ class CsvGradesTests {
 
 	@Test
 	void writeVeryComplexGradeTest() throws Exception {
-		final String jsonGrade = Resources.toString(JsonGradeTest.class.getResource("VeryComplexGrade.json"),
+		final String jsonGrade = Resources.toString(JsonGradeTests.class.getResource("VeryComplexGrade.json"),
 				StandardCharsets.UTF_8);
 		final IGrade grade = JsonGrade.asGrade(jsonGrade);
 		final String written = CsvGrades.asCsv(ImmutableMap.of(StudentOnGitHub.with("u"), grade));

@@ -56,12 +56,9 @@ import com.google.common.graph.EndpointPair;
 import com.google.common.graph.Graph;
 import com.google.common.graph.GraphBuilder;
 import com.google.common.graph.ImmutableGraph;
-import com.google.common.graph.ImmutableGraph.Builder;
 import com.google.common.graph.MutableGraph;
 import com.google.common.graph.SuccessorsFunction;
 
-import io.github.oliviercailloux.grade.Criterion;
-import io.github.oliviercailloux.grade.IGrade.GradePath;
 import io.github.oliviercailloux.jaris.exceptions.CheckedStream;
 import io.github.oliviercailloux.jaris.exceptions.Throwing;
 
@@ -294,6 +291,13 @@ public class Utils {
 		}
 	}
 
+	/**
+	 * I believe I found this on SO, but I can’t find the source now. If you find
+	 * it, please write to me.
+	 *
+	 * @return a collector that collects multiple elements to an empty optional; and
+	 *         a single element to a present optional.
+	 */
 	public static <T> Collector<T, ?, Optional<T>> singleOrEmpty() {
 		return Collectors.collectingAndThen(
 				Collectors.mapping(Optional::of, Collectors.reducing((a, b) -> Optional.empty())),
