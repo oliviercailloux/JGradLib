@@ -6,11 +6,16 @@ import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.base.Verify.verify;
 import static io.github.oliviercailloux.jaris.exceptions.Unchecker.URI_UNCHECKER;
 
+import com.google.common.base.Splitter;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
+import io.github.classgraph.ClassGraph;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.io.UncheckedIOException;
+import java.net.URI;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -19,7 +24,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
-
 import javax.tools.Diagnostic;
 import javax.tools.DiagnosticCollector;
 import javax.tools.JavaCompiler;
@@ -27,14 +31,9 @@ import javax.tools.JavaFileObject;
 import javax.tools.StandardJavaFileManager;
 import javax.tools.StandardLocation;
 import javax.tools.ToolProvider;
-
 import org.eclipse.jdt.core.compiler.batch.BatchCompiler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.base.Splitter;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 
 /**
  * In the below list, “checked” means that I checked everything there and
@@ -171,14 +170,32 @@ public class Compiler {
 		return eclipseCompile(classPath, targets, true);
 	}
 
+	public static CompilationResult eclipseCompileUsingOurClasspath(Set<Path> targets, Path destinationDir) {
+		final List<URI> classpath = new ClassGraph().getClasspathURIs();
+		final ImmutableSet<Path> classpathPaths = classpath.stream().map(Path::of)
+				.collect(ImmutableSet.toImmutableSet());
+		return eclipseCompile(classpathPaths.asList(), targets, true, Optional.of(destinationDir));
+	}
+
 	public static CompilationResult eclipseCompile(List<Path> classPath, Set<Path> targets, boolean useStrictWarnings) {
+		return eclipseCompile(classPath, targets, useStrictWarnings, Optional.empty());
+	}
+
+	/**
+	 * TODO org.eclipse.jdt.internal.compiler.batch.Main#performCompilation.
+	 *
+	 */
+	public static CompilationResult eclipseCompile(List<Path> classPath, Set<Path> targets, boolean useStrictWarnings,
+			Optional<Path> destination) {
 		checkArgument(targets.stream().allMatch(Files::exists));
 
 		final StringWriter out = new StringWriter();
 		final StringWriter err = new StringWriter();
 
 		final ImmutableList.Builder<String> builder = ImmutableList.builder();
-		builder.add("--release", "11");
+		{
+			builder.add("--release", "11");
+		}
 		if (useStrictWarnings) {
 			/** Could instead use options such as "-warn:+allDeadCode,allDeprecation…". */
 			final URL propertiesUrl = Compiler.class.getResource("Eclipse-prefs.epf");
@@ -187,9 +204,16 @@ public class Compiler {
 			checkState(Files.exists(propertiesPath));
 			builder.add("-properties", propertiesPath.toString());
 		}
-		builder.add("-classpath",
-				classPath.stream().map(Path::toString).collect(Collectors.joining(File.pathSeparator)));
-		targets.stream().map(Path::toString).forEach(builder::add);
+		{
+			builder.add("-classpath",
+					classPath.stream().map(Path::toString).collect(Collectors.joining(File.pathSeparator)));
+		}
+		if (destination.isPresent()) {
+			builder.add("-d", destination.get().toString());
+		}
+		{
+			targets.stream().map(Path::toString).forEach(builder::add);
+		}
 		final ImmutableList<String> args = builder.build();
 
 		final boolean compiled = BatchCompiler.compile(args.toArray(new String[args.size()]), new PrintWriter(out),

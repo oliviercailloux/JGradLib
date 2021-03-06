@@ -1,16 +1,31 @@
 package io.github.oliviercailloux.bytecode;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.google.common.base.VerifyException;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
+import com.google.common.jimfs.Configuration;
+import com.google.common.jimfs.Jimfs;
+import io.github.classgraph.ClassGraph;
+import io.github.oliviercailloux.java_grade.bytecode.Compiler;
+import io.github.oliviercailloux.java_grade.bytecode.Compiler.CompilationResult;
+import java.io.IOException;
 import java.io.StringWriter;
+import java.net.URI;
 import java.nio.file.FileSystem;
+import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Stream;
-
 import javax.tools.Diagnostic;
 import javax.tools.DiagnosticCollector;
 import javax.tools.JavaCompiler;
@@ -19,24 +34,78 @@ import javax.tools.JavaFileObject;
 import javax.tools.StandardJavaFileManager;
 import javax.tools.StandardLocation;
 import javax.tools.ToolProvider;
-
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.VerifyException;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterables;
-import com.google.common.jimfs.Configuration;
-import com.google.common.jimfs.Jimfs;
-
-import io.github.oliviercailloux.java_grade.bytecode.Compiler;
-import io.github.oliviercailloux.java_grade.bytecode.Compiler.CompilationResult;
-
 class CompilerTests {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(CompilerTests.class);
+
+	@Test
+	void testEclipseDestination() throws Exception {
+		final String className = "SourceWithNoWarnings";
+		final Path source = Path.of(getClass().getResource(className + ".java").toURI());
+		{
+			final Path destDir = Files.createTempDirectory("compiled");
+			final CompilationResult result = Compiler.eclipseCompile(ImmutableList.of(Path.of(".")),
+					ImmutableSet.of(source), true, Optional.of(destDir));
+			assertTrue(result.compiled);
+			assertEquals(0, result.countWarnings());
+			final String packagePath = getClass().getPackageName().replace(".", "/");
+			final Path compiledPath = destDir.resolve(packagePath).resolve(className + ".class");
+			assertTrue(Files.exists(compiledPath), compiledPath.toString());
+			delete(destDir);
+		}
+	}
+
+	private static Path delete(Path destDir) throws IOException {
+		return Files.walkFileTree(destDir, new SimpleFileVisitor<Path>() {
+			@Override
+			public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+				Files.delete(file);
+				return FileVisitResult.CONTINUE;
+			}
+
+			@Override
+			public FileVisitResult postVisitDirectory(Path dir, IOException e) throws IOException {
+				if (e != null) {
+					throw e;
+				}
+				Files.delete(dir);
+				return FileVisitResult.CONTINUE;
+			}
+		});
+	}
+
+	@Test
+	void testEclipseMissingDep() throws Exception {
+		final Path source = Path.of(getClass().getResource("UsingGuava.java").toURI());
+		{
+			final CompilationResult result = Compiler.eclipseCompile(ImmutableList.of(Path.of(".")),
+					ImmutableSet.of(source));
+			assertFalse(result.compiled);
+			assertEquals(0, result.countWarnings());
+			assertTrue(result.err.contains("The import com.google cannot be resolved"));
+			assertTrue(result.err.contains("ImmutableList cannot be resolved"));
+			assertEquals(2, result.countErrors());
+		}
+	}
+
+	@Test
+	void testEclipseWithDep() throws Exception {
+		final Path source = Path.of(getClass().getResource("UsingGuava.java").toURI());
+		final List<URI> classpath = new ClassGraph().getClasspathURIs();
+		final ImmutableSet<URI> guavas = classpath.stream().filter(u -> u.toString().contains("/guava-"))
+				.collect(ImmutableSet.toImmutableSet());
+		final ImmutableSet<Path> guavaPaths = guavas.stream().map(Path::of).collect(ImmutableSet.toImmutableSet());
+		{
+			final CompilationResult result = Compiler.eclipseCompile(guavaPaths.asList(), ImmutableSet.of(source));
+			assertEquals(0, result.countWarnings());
+			assertEquals(0, result.countErrors());
+			assertTrue(result.compiled);
+		}
+	}
 
 	@Test
 	void testEclipseWarn() throws Exception {

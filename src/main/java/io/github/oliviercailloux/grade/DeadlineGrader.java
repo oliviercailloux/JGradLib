@@ -5,7 +5,27 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Verify.verify;
 import static io.github.oliviercailloux.jaris.exceptions.Unchecker.IO_UNCHECKER;
 
+import com.google.common.base.MoreObjects;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ImmutableSortedSet;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.MoreCollectors;
+import io.github.oliviercailloux.git.fs.Commit;
+import io.github.oliviercailloux.git.fs.GitPathRoot;
+import io.github.oliviercailloux.git.fs.GitPathRootSha;
+import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
+import io.github.oliviercailloux.jaris.collections.CollectionUtils;
+import io.github.oliviercailloux.jaris.exceptions.CheckedStream;
+import io.github.oliviercailloux.jaris.exceptions.Throwing;
+import io.github.oliviercailloux.jaris.io.IoUtils;
+import io.github.oliviercailloux.java_grade.JavaGradeUtils;
+import io.github.oliviercailloux.java_grade.bytecode.Compiler;
+import io.github.oliviercailloux.java_grade.bytecode.Compiler.CompilationResult;
+import io.github.oliviercailloux.java_grade.bytecode.Instanciator;
+import io.github.oliviercailloux.utils.Utils;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
@@ -14,23 +34,11 @@ import java.util.Comparator;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-
+import java.util.function.Function;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.base.MoreObjects;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.ImmutableSortedSet;
-import com.google.common.collect.MoreCollectors;
-
-import io.github.oliviercailloux.git.fs.Commit;
-import io.github.oliviercailloux.git.fs.GitPathRoot;
-import io.github.oliviercailloux.git.fs.GitPathRootSha;
-import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
-import io.github.oliviercailloux.jaris.exceptions.CheckedStream;
-import io.github.oliviercailloux.jaris.exceptions.Throwing;
-import io.github.oliviercailloux.utils.Utils;
 
 /**
  * Is given a deadline. And a penalizer. Function that grades a git work. Cap at
@@ -41,11 +49,11 @@ public class DeadlineGrader {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(DeadlineGrader.Penalizer.class);
 
-	private static class SimpleToGitGrader {
+	private static class PathToGitGrader {
 
 		private final Throwing.Function<Path, IGrade, IOException> simpleWorkGrader;
 
-		private SimpleToGitGrader(Throwing.Function<Path, IGrade, IOException> simpleWorkGrader) {
+		private PathToGitGrader(Throwing.Function<Path, IGrade, IOException> simpleWorkGrader) {
 			this.simpleWorkGrader = checkNotNull(simpleWorkGrader);
 		}
 
@@ -59,7 +67,7 @@ public class DeadlineGrader {
 			final Optional<String> author = authors.stream().collect(Utils.singleOrEmpty());
 			final Mark userGrade = Mark
 					.binary(author.isPresent() && author.get().equals(work.getAuthor().getUsername()));
-			final ImmutableSet<GitPathRootSha> latestTiedPathsOnTime = SimpleToGitGrader.getLatest(history);
+			final ImmutableSet<GitPathRootSha> latestTiedPathsOnTime = PathToGitGrader.getLatest(history);
 			checkArgument(!latestTiedPathsOnTime.isEmpty());
 			final IGrade mainGrade = CheckedStream.<GitPathRootSha, IOException>wrapping(latestTiedPathsOnTime.stream())
 					.map(simpleWorkGrader).min(Comparator.comparing(IGrade::getPoints)).get();
@@ -102,6 +110,71 @@ public class DeadlineGrader {
 			final Throwing.Comparator<GitPathRootSha, IOException> byDate = (t1, t2) -> byAuthorDate
 					.thenComparing(byCommitDate).compare(t1, t2);
 			return Utils.<GitPathRootSha, IOException>getMaximalElements(leaves, byDate);
+		}
+
+	}
+
+	private static class InstanciatorToPathGrader {
+
+		private final Function<Instanciator, IGrade> grader;
+
+		private InstanciatorToPathGrader(Function<Instanciator, IGrade> grader) {
+			this.grader = checkNotNull(grader);
+		}
+
+		public IGrade grade(Path work) throws IOException {
+			final ImmutableSet<Path> poms = IoUtils.getMatchingChildren(work, p -> p.endsWith("pom.xml"));
+			final ImmutableMap<Path, IGrade> gradedPoms = CollectionUtils.toMap(poms,
+					p -> gradeProject(p.getParent() == null ? work : p.getParent()));
+			if (gradedPoms.size() == 1) {
+				return Iterables.getOnlyElement(gradedPoms.values());
+			}
+			final ImmutableSet<CriterionGradeWeight> cgws = gradedPoms.keySet().stream()
+					.map(p -> CriterionGradeWeight.from(Criterion.given(p.toString()), gradedPoms.get(p), 1d))
+					.collect(ImmutableSet.toImmutableSet());
+			return WeightingGrade.from(cgws);
+		}
+
+		private IGrade gradeProject(Path projectDirectory) throws IOException {
+			final Path compiledDir = Path.of("out/");
+			final Path srcDir = projectDirectory.resolve("src/main/java/");
+			final ImmutableSet<Path> javaPaths = IoUtils.getMatchingChildren(srcDir,
+					p -> String.valueOf(p.getFileName()).endsWith(".java"));
+			final CompilationResult eclipseResult = Compiler.eclipseCompileUsingOurClasspath(javaPaths, compiledDir);
+			final int nbSuppressed = (int) CheckedStream.<Path, IOException>wrapping(javaPaths.stream())
+					.map(p -> Files.readString(p))
+					.flatMap(s -> Pattern.compile("@SuppressWarnings").matcher(s).results()).count();
+			final String eclipseStr = eclipseResult.err.replaceAll(projectDirectory.toAbsolutePath().toString() + "/",
+					"");
+			final IGrade pomGrade;
+			if (eclipseResult.countErrors() > 0) {
+				pomGrade = Mark.zero(eclipseStr);
+			} else {
+				final IGrade codeGrade = JavaGradeUtils.gradeSecurely(compiledDir, grader);
+				final int nbWarningsTot = eclipseResult.countWarnings() + nbSuppressed;
+				final boolean hasWarnings = nbWarningsTot > 0;
+				if (!hasWarnings) {
+					pomGrade = codeGrade;
+				} else {
+					final ImmutableSet.Builder<String> commentsBuilder = ImmutableSet.builder();
+					if (eclipseResult.countWarnings() > 0) {
+						commentsBuilder.add(eclipseStr);
+					}
+					if (nbSuppressed > 0) {
+						commentsBuilder.add("Found " + nbSuppressed + " suppressed warnings");
+					}
+					final String comment = commentsBuilder.build().stream().collect(Collectors.joining(". "));
+					final Mark warningsGrade = Mark.zero(comment);
+					final double lowWeightWarnings = 0.05d;
+					final double highWeightWarnings = 0.10d;
+					final double weightWarnings = nbWarningsTot == 1 ? lowWeightWarnings : highWeightWarnings;
+					pomGrade = WeightingGrade
+							.from(ImmutableSet.of(CriterionGradeWeight.from(Criterion.given("Code"), codeGrade, 1d),
+									CriterionGradeWeight.from(Criterion.given("Warnings"), warningsGrade,
+											weightWarnings / (1d - weightWarnings))));
+				}
+			}
+			return pomGrade;
 		}
 
 	}
@@ -156,7 +229,17 @@ public class DeadlineGrader {
 
 	public static DeadlineGrader usingPathGrader(Throwing.Function<Path, IGrade, IOException> grader,
 			ZonedDateTime deadline) {
-		return new DeadlineGrader(new SimpleToGitGrader(grader)::grade, deadline, LinearPenalizer.DEFAULT_PENALIZER);
+		return new DeadlineGrader(new PathToGitGrader(grader)::grade, deadline, LinearPenalizer.DEFAULT_PENALIZER);
+	}
+
+	/**
+	 * This should go in another package as it is Java specific.
+	 */
+	public static DeadlineGrader usingInstantiatorGrader(Function<Instanciator, IGrade> grader,
+			ZonedDateTime deadline) {
+
+		return new DeadlineGrader(new PathToGitGrader(new InstanciatorToPathGrader(grader)::grade)::grade, deadline,
+				LinearPenalizer.DEFAULT_PENALIZER);
 	}
 
 	private final Throwing.Function<GitWork, IGrade, IOException> grader;
