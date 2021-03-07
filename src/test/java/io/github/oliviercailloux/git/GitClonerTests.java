@@ -152,55 +152,6 @@ class GitClonerTests {
 	}
 
 	@Test
-	@Disabled("Trying to create a “wrong” repo using git plumbing. Gave up.")
-	void testCreateGitlinkWithoutSubmodule() throws Exception {
-		final Path gitPath = Files.createTempDirectory("gitlink");
-		try (Repository repository = new FileRepository(gitPath.resolve(".git").toFile())) {
-			repository.create();
-			final Path subPath = gitPath.resolve("sub");
-			try (Repository sub = new FileRepository(subPath.resolve(".git").toFile())) {
-				sub.create();
-
-				final ObjectDatabase objectDatabase = sub.getObjectDatabase();
-				final PersonIdent personIdent = new PersonIdent("Me", "email");
-				final ObjectInserter inserter = objectDatabase.newInserter();
-				final CommitBuilder commitBuilder = new CommitBuilder();
-				commitBuilder.setMessage("First");
-				commitBuilder.setAuthor(personIdent);
-				commitBuilder.setCommitter(personIdent);
-				final ObjectId fileOId = inserter.insert(Constants.OBJ_BLOB, "".getBytes(StandardCharsets.UTF_8));
-				final TreeFormatter treeFormatter = new TreeFormatter();
-				treeFormatter.append("sub", FileMode.GITLINK, fileOId);
-				final ObjectId treeId = inserter.insert(treeFormatter);
-				commitBuilder.setTreeId(treeId);
-				final ObjectId commitId = inserter.insert(commitBuilder);
-				inserter.flush();
-				LOGGER.info("Commit: {}.", commitId);
-			}
-
-		}
-	}
-
-	@Test
-	void testReadGitlinkWithoutSubmodule() throws Exception {
-		/*
-		 * To create that repo: git init; mkdir sub; cd sub; git init; touch coucou; git
-		 * add coucou; git commit -m Sub; cd ..; git add sub; git commit -m Main; git
-		 * ls-files --stage | grep 160000.
-		 *
-		 * See
-		 * https://stackoverflow.com/questions/4185365/no-submodule-mapping-found-in-
-		 * gitmodule-for-a-path-thats-not-a-submodule.
-		 */
-		try (Repository repository = Git.cloneRepository().setURI("ssh://git@github.com/oliviercailloux/gitlink.git")
-				.setDirectory(Path.of("/tmp/cloned").toFile()).call().getRepository()) {
-			IndexDiff diff = new IndexDiff(repository, Constants.HEAD, new FileTreeIterator(repository));
-			diff.diff();
-			assertEquals(ImmutableSet.of(), diff.getMissing());
-		}
-	}
-
-	@Test
 	void testSimpleClone() throws Exception {
 		/* OK with 5.5.1.201910021850-r. */
 		try (Repository repository = Git.cloneRepository().setURI("ssh://git@github.com/oliviercailloux/testrel.git")
