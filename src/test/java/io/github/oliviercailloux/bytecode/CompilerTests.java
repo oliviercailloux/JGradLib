@@ -12,17 +12,14 @@ import com.google.common.collect.Iterables;
 import com.google.common.jimfs.Configuration;
 import com.google.common.jimfs.Jimfs;
 import io.github.classgraph.ClassGraph;
+import io.github.oliviercailloux.jaris.io.IoUtils;
 import io.github.oliviercailloux.java_grade.bytecode.Compiler;
 import io.github.oliviercailloux.java_grade.bytecode.Compiler.CompilationResult;
-import java.io.IOException;
 import java.io.StringWriter;
 import java.net.URI;
 import java.nio.file.FileSystem;
-import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.SimpleFileVisitor;
-import java.nio.file.attribute.BasicFileAttributes;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
@@ -55,27 +52,8 @@ class CompilerTests {
 			final String packagePath = getClass().getPackageName().replace(".", "/");
 			final Path compiledPath = destDir.resolve(packagePath).resolve(className + ".class");
 			assertTrue(Files.exists(compiledPath), compiledPath.toString());
-			delete(destDir);
+			IoUtils.deleteRecursively(destDir);
 		}
-	}
-
-	private static Path delete(Path destDir) throws IOException {
-		return Files.walkFileTree(destDir, new SimpleFileVisitor<Path>() {
-			@Override
-			public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-				Files.delete(file);
-				return FileVisitResult.CONTINUE;
-			}
-
-			@Override
-			public FileVisitResult postVisitDirectory(Path dir, IOException e) throws IOException {
-				if (e != null) {
-					throw e;
-				}
-				Files.delete(dir);
-				return FileVisitResult.CONTINUE;
-			}
-		});
 	}
 
 	@Test

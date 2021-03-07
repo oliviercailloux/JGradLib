@@ -7,30 +7,6 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.net.URI;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.time.Instant;
-import java.util.List;
-
-import org.eclipse.jgit.api.CommitCommand;
-import org.eclipse.jgit.api.Git;
-import org.eclipse.jgit.errors.RepositoryNotFoundException;
-import org.eclipse.jgit.internal.storage.dfs.DfsRepository;
-import org.eclipse.jgit.internal.storage.dfs.DfsRepositoryDescription;
-import org.eclipse.jgit.internal.storage.dfs.InMemoryRepository;
-import org.eclipse.jgit.internal.storage.file.FileRepository;
-import org.eclipse.jgit.lib.Constants;
-import org.eclipse.jgit.lib.ObjectId;
-import org.eclipse.jgit.lib.PersonIdent;
-import org.eclipse.jgit.lib.Ref;
-import org.eclipse.jgit.lib.Repository;
-import org.eclipse.jgit.revwalk.RevCommit;
-import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
-import org.junit.jupiter.api.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.google.common.base.Verify;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -38,7 +14,6 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.MoreCollectors;
 import com.google.common.graph.GraphBuilder;
 import com.google.common.graph.Traverser;
-
 import io.github.oliviercailloux.git.fs.GitFileSystem;
 import io.github.oliviercailloux.git.fs.GitFileSystemProvider;
 import io.github.oliviercailloux.git.git_hub.model.GitHubToken;
@@ -46,6 +21,37 @@ import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.git.git_hub.model.v3.CommitGitHubDescription;
 import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherV3;
 import io.github.oliviercailloux.utils.Utils;
+import java.net.URI;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.time.Instant;
+import java.util.List;
+import org.eclipse.jgit.api.CommitCommand;
+import org.eclipse.jgit.api.Git;
+import org.eclipse.jgit.errors.RepositoryNotFoundException;
+import org.eclipse.jgit.internal.storage.dfs.DfsRepository;
+import org.eclipse.jgit.internal.storage.dfs.DfsRepositoryDescription;
+import org.eclipse.jgit.internal.storage.dfs.InMemoryRepository;
+import org.eclipse.jgit.internal.storage.file.FileRepository;
+import org.eclipse.jgit.lib.CommitBuilder;
+import org.eclipse.jgit.lib.Constants;
+import org.eclipse.jgit.lib.FileMode;
+import org.eclipse.jgit.lib.IndexDiff;
+import org.eclipse.jgit.lib.ObjectDatabase;
+import org.eclipse.jgit.lib.ObjectId;
+import org.eclipse.jgit.lib.ObjectInserter;
+import org.eclipse.jgit.lib.PersonIdent;
+import org.eclipse.jgit.lib.Ref;
+import org.eclipse.jgit.lib.Repository;
+import org.eclipse.jgit.lib.TreeFormatter;
+import org.eclipse.jgit.revwalk.RevCommit;
+import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
+import org.eclipse.jgit.treewalk.FileTreeIterator;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 class GitClonerTests {
 	@SuppressWarnings("unused")
@@ -143,6 +149,66 @@ class GitClonerTests {
 				.close();
 		assertTrue(Files.exists(gitDirPath.resolve("refs")));
 		assertFalse(Files.exists(gitDirPath.resolve(".git")));
+	}
+
+	@Test
+	@Disabled("Trying to create a “wrong” repo using git plumbing. Gave up.")
+	void testCreateGitlinkWithoutSubmodule() throws Exception {
+		final Path gitPath = Files.createTempDirectory("gitlink");
+		try (Repository repository = new FileRepository(gitPath.resolve(".git").toFile())) {
+			repository.create();
+			final Path subPath = gitPath.resolve("sub");
+			try (Repository sub = new FileRepository(subPath.resolve(".git").toFile())) {
+				sub.create();
+
+				final ObjectDatabase objectDatabase = sub.getObjectDatabase();
+				final PersonIdent personIdent = new PersonIdent("Me", "email");
+				final ObjectInserter inserter = objectDatabase.newInserter();
+				final CommitBuilder commitBuilder = new CommitBuilder();
+				commitBuilder.setMessage("First");
+				commitBuilder.setAuthor(personIdent);
+				commitBuilder.setCommitter(personIdent);
+				final ObjectId fileOId = inserter.insert(Constants.OBJ_BLOB, "".getBytes(StandardCharsets.UTF_8));
+				final TreeFormatter treeFormatter = new TreeFormatter();
+				treeFormatter.append("sub", FileMode.GITLINK, fileOId);
+				final ObjectId treeId = inserter.insert(treeFormatter);
+				commitBuilder.setTreeId(treeId);
+				final ObjectId commitId = inserter.insert(commitBuilder);
+				inserter.flush();
+				LOGGER.info("Commit: {}.", commitId);
+			}
+
+		}
+	}
+
+	@Test
+	void testReadGitlinkWithoutSubmodule() throws Exception {
+		/*
+		 * To create that repo: git init; mkdir sub; cd sub; git init; touch coucou; git
+		 * add coucou; git commit -m Sub; cd ..; git add sub; git commit -m Main; git
+		 * ls-files --stage | grep 160000.
+		 *
+		 * See
+		 * https://stackoverflow.com/questions/4185365/no-submodule-mapping-found-in-
+		 * gitmodule-for-a-path-thats-not-a-submodule.
+		 */
+		try (Repository repository = Git.cloneRepository().setURI("ssh://git@github.com/oliviercailloux/gitlink.git")
+				.setDirectory(Path.of("/tmp/cloned").toFile()).call().getRepository()) {
+			IndexDiff diff = new IndexDiff(repository, Constants.HEAD, new FileTreeIterator(repository));
+			diff.diff();
+			assertEquals(ImmutableSet.of(), diff.getMissing());
+		}
+	}
+
+	@Test
+	void testSimpleClone() throws Exception {
+		/* OK with 5.5.1.201910021850-r. */
+		try (Repository repository = Git.cloneRepository().setURI("ssh://git@github.com/oliviercailloux/testrel.git")
+				.setDirectory(Path.of("/tmp/cloned").toFile()).call().getRepository()) {
+			IndexDiff diff = new IndexDiff(repository, Constants.HEAD, new FileTreeIterator(repository));
+			diff.diff();
+			assertEquals(ImmutableSet.of(), diff.getMissing());
+		}
 	}
 
 	@Test

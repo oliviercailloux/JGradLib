@@ -124,28 +124,43 @@ public class DeadlineGrader {
 
 		public IGrade grade(Path work) throws IOException {
 			final ImmutableSet<Path> poms = IoUtils.getMatchingChildren(work, p -> p.endsWith("pom.xml"));
-			final ImmutableMap<Path, IGrade> gradedPoms = CollectionUtils.toMap(poms,
-					p -> gradeProject(p.getParent() == null ? work : p.getParent()));
-			if (gradedPoms.size() == 1) {
-				return Iterables.getOnlyElement(gradedPoms.values());
+			final ImmutableSet<Path> possibleDirs;
+			if (poms.isEmpty()) {
+				possibleDirs = ImmutableSet.of(work);
+			} else {
+				possibleDirs = poms.stream().map(Path::getParent).collect(ImmutableSet.toImmutableSet());
 			}
-			final ImmutableSet<CriterionGradeWeight> cgws = gradedPoms.keySet().stream()
-					.map(p -> CriterionGradeWeight.from(Criterion.given(p.toString()), gradedPoms.get(p), 1d))
-					.collect(ImmutableSet.toImmutableSet());
-			return WeightingGrade.from(cgws);
+			final ImmutableMap<Path, IGrade> gradedProjects = CollectionUtils.toMap(possibleDirs, this::gradeProject);
+			final IGrade grade;
+			verify(!gradedProjects.isEmpty());
+			if (gradedProjects.size() == 1) {
+				grade = Iterables.getOnlyElement(gradedProjects.values());
+			} else {
+				final ImmutableSet<CriterionGradeWeight> cgws = gradedProjects
+						.keySet().stream().map(p -> CriterionGradeWeight
+								.from(Criterion.given("Using project dir " + p.toString()), gradedProjects.get(p), 1d))
+						.collect(ImmutableSet.toImmutableSet());
+				grade = WeightingGrade.from(cgws);
+			}
+			return grade;
 		}
 
 		private IGrade gradeProject(Path projectDirectory) throws IOException {
 			final Path compiledDir = Path.of("out/");
-			final Path srcDir = projectDirectory.resolve("src/main/java/");
+			final Path srcDir;
+			final boolean hasPom = Files.exists(projectDirectory.resolve("pom.xml"));
+			if (hasPom) {
+				srcDir = projectDirectory.resolve("src/main/java/");
+			} else {
+				srcDir = projectDirectory;
+			}
 			final ImmutableSet<Path> javaPaths = IoUtils.getMatchingChildren(srcDir,
 					p -> String.valueOf(p.getFileName()).endsWith(".java"));
 			final CompilationResult eclipseResult = Compiler.eclipseCompileUsingOurClasspath(javaPaths, compiledDir);
 			final int nbSuppressed = (int) CheckedStream.<Path, IOException>wrapping(javaPaths.stream())
 					.map(p -> Files.readString(p))
 					.flatMap(s -> Pattern.compile("@SuppressWarnings").matcher(s).results()).count();
-			final String eclipseStr = eclipseResult.err.replaceAll(projectDirectory.toAbsolutePath().toString() + "/",
-					"");
+			final String eclipseStr = eclipseResult.err.replaceAll(srcDir.toAbsolutePath().toString() + "/", "");
 			final IGrade pomGrade;
 			if (eclipseResult.countErrors() > 0) {
 				pomGrade = Mark.zero(eclipseStr);

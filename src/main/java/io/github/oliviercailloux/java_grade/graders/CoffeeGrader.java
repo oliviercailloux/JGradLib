@@ -10,6 +10,7 @@ import io.github.oliviercailloux.grade.IGrade;
 import io.github.oliviercailloux.grade.Mark;
 import io.github.oliviercailloux.grade.RepositoryFetcher;
 import io.github.oliviercailloux.grade.WeightingGrade;
+import io.github.oliviercailloux.jaris.exceptions.Try;
 import io.github.oliviercailloux.java_grade.bytecode.Instanciator;
 import io.github.oliviercailloux.samples.coffee.CoffeeMachine;
 import io.github.oliviercailloux.samples.coffee.EspressoMachine;
@@ -30,33 +31,33 @@ import org.slf4j.LoggerFactory;
 public class CoffeeGrader {
 
 	@SuppressWarnings("unused")
-	private static final Logger LOGGER = LoggerFactory.getLogger(AdminManagesUsers.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(CoffeeGrader.class);
 	public static final String PREFIX = "coffee";
 	public static final ZonedDateTime DEADLINE = ZonedDateTime.parse("2021-01-25T14:11:00+01:00[Europe/Paris]");
 
-	CoffeeGrader() {
+	private CoffeeGrader() {
 	}
 
 	public static void main(String[] args) throws Exception {
 		final RepositoryFetcher fetcher = RepositoryFetcher.withPrefix(PREFIX);
-		// .setRepositoriesFilter(r->r.getUsername().equals(""));
+//				.setRepositoriesFilter(r -> r.getUsername().equals(""));
 		final GitGeneralGrader grader = GitGeneralGrader.using(fetcher,
 				DeadlineGrader.usingInstantiatorGrader(CoffeeGrader::grade, DEADLINE)
 						.setPenalizer(DeadlineGrader.LinearPenalizer.proportionalToLateness(Duration.ofSeconds(300))));
 		grader.grade();
+		/** TODO see why still open. */
+//		final Path src = Path.of("/tmp/coffee-Dahuiss/.git/");
+//		final GitFileFileSystem gitFs = GitFileSystemProvider.getInstance().newFileSystemFromGitDir(src);
 	}
 
 	public static IGrade grade(Instanciator instanciator) {
 		final ImmutableSet.Builder<CriterionGradeWeight> gradeBuilder = ImmutableSet.builder();
-		final Optional<CoffeeMachine> dripMachineOpt = instanciator.getInstance(CoffeeMachine.class, "newInstance")
-				.or(() -> instanciator.getInstance(CoffeeMachine.class));
+		final Optional<CoffeeMachine> dripMachineOpt = instanciator.getInstance(CoffeeMachine.class);
 		final IGrade dripGrade = dripMachineOpt.map(CoffeeGrader::getDripGrade)
 				.orElse(Mark.zero("Could not initialize drip machine."));
 		gradeBuilder.add(CriterionGradeWeight.from(Criterion.given("Drip"), dripGrade, 7d));
 
-		final Optional<EspressoMachine> espressoMachineOpt = instanciator
-				.getInstance(EspressoMachine.class, "newInstance")
-				.or(() -> instanciator.getInstance(EspressoMachine.class));
+		final Optional<EspressoMachine> espressoMachineOpt = instanciator.getInstance(EspressoMachine.class);
 		final IGrade espressoGrade = espressoMachineOpt.map(CoffeeGrader::getEspressoGrade)
 				.orElse(Mark.zero("Could not initialize espresso machine."));
 		gradeBuilder.add(CriterionGradeWeight.from(Criterion.given("Espresso"), espressoGrade, 8d));
@@ -69,51 +70,51 @@ public class CoffeeGrader {
 		{
 			boolean thrown = doesThrow(dripMachine::getEnergySpent, e -> e instanceof IllegalStateException);
 			dripGradeBuilder
-					.add(CriterionGradeWeight.from(Criterion.given("ENERGY_STATE_EXCEPTION"), Mark.binary(thrown), 1d));
+					.add(CriterionGradeWeight.from(Criterion.given("Energy state exception"), Mark.binary(thrown), 1d));
 		}
 		{
 			final int nbStart = dripMachine.getNumberOfCoffeesProduced();
 			dripMachine.produceCoffee(1d);
 			final int nbOne = dripMachine.getNumberOfCoffeesProduced();
-			dripGradeBuilder.add(CriterionGradeWeight.from(Criterion.given("NB_STARTS_AT_ZERO"),
+			dripGradeBuilder.add(CriterionGradeWeight.from(Criterion.given("Nb starts at zero"),
 					Mark.binary(nbStart == 0 && nbOne == 1), 1d));
 		}
 		{
 			final double maxStrength = dripMachine.getMaxStrength();
 			dripGradeBuilder.add(
-					CriterionGradeWeight.from(Criterion.given("MAX_STRENGTH"), Mark.binary(maxStrength == 10d), 1d));
+					CriterionGradeWeight.from(Criterion.given("Max strength"), Mark.binary(maxStrength == 10d), 1d));
 		}
 		{
 			final int nbBefore = dripMachine.getNumberOfCoffeesProduced();
 			dripMachine.produceCoffee(0d);
 			final int nbAfter = dripMachine.getNumberOfCoffeesProduced();
-			dripGradeBuilder.add(CriterionGradeWeight.from(Criterion.given("NB_INCLUDES_ZERO_STRENGTH"),
+			dripGradeBuilder.add(CriterionGradeWeight.from(Criterion.given("Nb includes zero strength"),
 					Mark.binary(nbAfter == nbBefore + 1), 1d));
 		}
 		{
 			dripMachine.produceCoffee(0.3d);
-			final double energyNonZero = dripMachine.getEnergySpent();
-			dripGradeBuilder.add(CriterionGradeWeight.from(Criterion.given("ENERGY_NON_ZERO"),
-					Mark.binary(energyNonZero == 83d), 1d));
+			final Try<Double> energyNonZero = Try.of(() -> dripMachine.getEnergySpent());
+			dripGradeBuilder.add(CriterionGradeWeight.from(Criterion.given("Energy non zero"),
+					Mark.binary(energyNonZero.equals(Try.success(83d))), 1d));
 
 			dripMachine.produceCoffee(0d);
-			final double energyZero = dripMachine.getEnergySpent();
-			dripGradeBuilder.add(CriterionGradeWeight.from(Criterion.given("ENERGY_ZERO"),
-					Mark.binary((energyZero == 0d) && (energyNonZero != 0d)), 1d));
+			final Try<Double> energyZero = Try.of(() -> dripMachine.getEnergySpent());
+			dripGradeBuilder.add(CriterionGradeWeight.from(Criterion.given("Energy zero"), Mark.binary(
+					energyZero.equals(Try.success(0d)) && energyNonZero.isSuccess() && energyNonZero.get() != 0d), 1d));
 		}
 		{
 			final int timeNonZero = dripMachine.getTimeForCoffee(0.8d);
 			dripGradeBuilder.add(
-					CriterionGradeWeight.from(Criterion.given("TIME_NON_ZERO"), Mark.binary(timeNonZero == 120), 1d));
+					CriterionGradeWeight.from(Criterion.given("Time non zero"), Mark.binary(timeNonZero == 120), 1d));
 
 			final int timeZero = dripMachine.getTimeForCoffee(0d);
-			dripGradeBuilder.add(CriterionGradeWeight.from(Criterion.given("TIME_ZERO"),
+			dripGradeBuilder.add(CriterionGradeWeight.from(Criterion.given("Time zero"),
 					Mark.binary((timeZero == 0) && (timeNonZero != 0)), 1d));
 		}
 		{
 			boolean thrown = doesThrow(() -> dripMachine.getTimeForCoffee(10.2d),
 					e -> e instanceof IllegalArgumentException);
-			dripGradeBuilder.add(CriterionGradeWeight.from(Criterion.given("TIME_THROWS"), Mark.binary(thrown), 1d));
+			dripGradeBuilder.add(CriterionGradeWeight.from(Criterion.given("Time throws"), Mark.binary(thrown), 1d));
 		}
 
 		return WeightingGrade.from(dripGradeBuilder.build());
@@ -124,25 +125,25 @@ public class CoffeeGrader {
 		{
 			boolean thrown = doesThrow(espressoMachine::getEnergySpent, e -> e instanceof IllegalStateException);
 			espressoGradeBuilder
-					.add(CriterionGradeWeight.from(Criterion.given("ENERGY_STATE_EXCEPTION"), Mark.binary(thrown), 1d));
+					.add(CriterionGradeWeight.from(Criterion.given("Energy state exception"), Mark.binary(thrown), 1d));
 		}
 		{
 			final int nbStart = espressoMachine.getNumberOfCoffeesProduced();
 			espressoMachine.produceCoffee(1d);
 			final int nbOne = espressoMachine.getNumberOfCoffeesProduced();
-			espressoGradeBuilder.add(CriterionGradeWeight.from(Criterion.given("NB_STARTS_AT_ZERO"),
+			espressoGradeBuilder.add(CriterionGradeWeight.from(Criterion.given("Nb starts at zero"),
 					Mark.binary(nbStart == 0 && nbOne == 1), 1d));
 		}
 		{
 			final double maxStrength = espressoMachine.getMaxStrength();
 			espressoGradeBuilder.add(
-					CriterionGradeWeight.from(Criterion.given("MAX_STRENGTH"), Mark.binary(maxStrength == 20d), 1d));
+					CriterionGradeWeight.from(Criterion.given("Max strength"), Mark.binary(maxStrength == 20d), 1d));
 		}
 		{
 			final int nbBefore = espressoMachine.getNumberOfCoffeesProduced();
 			espressoMachine.produceCoffee(0d);
 			final int nbAfter = espressoMachine.getNumberOfCoffeesProduced();
-			espressoGradeBuilder.add(CriterionGradeWeight.from(Criterion.given("NB_INCLUDES_ZERO_STRENGTH"),
+			espressoGradeBuilder.add(CriterionGradeWeight.from(Criterion.given("Nb includes zero strength"),
 					Mark.binary(nbAfter == nbBefore + 1), 1d));
 		}
 		{
@@ -150,33 +151,33 @@ public class CoffeeGrader {
 			final double energyNonZero = espressoMachine.getEnergySpent();
 			final double expected = 2000d * 162d / 3600d + 15d;
 			espressoGradeBuilder
-					.add(CriterionGradeWeight.from(Criterion.given("ENERGY_NON_ZERO"),
+					.add(CriterionGradeWeight.from(Criterion.given("Energy non zero"),
 							Mark.binary(DoubleMath.fuzzyEquals(energyNonZero, expected, 0.1d), "",
 									"For strength 11, expected 2000 watt × 162 sec / 3600 (sec/h) + 15 watt hours"),
 							1d));
 
 			espressoMachine.produceCoffee(0d);
 			final double energyZero = espressoMachine.getEnergySpent();
-			espressoGradeBuilder.add(CriterionGradeWeight.from(Criterion.given("ENERGY_ZERO"),
+			espressoGradeBuilder.add(CriterionGradeWeight.from(Criterion.given("Energy zero"),
 					Mark.binary((energyZero == 0d) && (energyNonZero != 0d)), 1d));
 		}
 		{
 			final int timeNonZero = espressoMachine.getTimeForCoffee(19.6d);
-			espressoGradeBuilder.add(CriterionGradeWeight.from(Criterion.given("TIME_NON_ZERO"),
+			espressoGradeBuilder.add(CriterionGradeWeight.from(Criterion.given("Time non zero"),
 					Mark.binary((Math.abs(timeNonZero - 179.2d) < 1d)), 1d));
 
 			final int timeZero = espressoMachine.getTimeForCoffee(0d);
-			espressoGradeBuilder.add(CriterionGradeWeight.from(Criterion.given("TIME_ZERO"),
+			espressoGradeBuilder.add(CriterionGradeWeight.from(Criterion.given("Time zero"),
 					Mark.binary((timeZero == 0) && (timeNonZero != 0)), 1d));
 		}
 		{
 			boolean thrown = doesThrow(() -> espressoMachine.getTimeForCoffee(-0.2d),
 					e -> e instanceof IllegalArgumentException);
 			espressoGradeBuilder
-					.add(CriterionGradeWeight.from(Criterion.given("TIME_THROWS"), Mark.binary(thrown), 1d));
+					.add(CriterionGradeWeight.from(Criterion.given("Time throws"), Mark.binary(thrown), 1d));
 		}
 		{
-			espressoGradeBuilder.add(CriterionGradeWeight.from(Criterion.given("POWER"),
+			espressoGradeBuilder.add(CriterionGradeWeight.from(Criterion.given("Power"),
 					Mark.binary(espressoMachine.getPower() == 2000d), 1d));
 		}
 

@@ -65,7 +65,7 @@ public class AdminManagesUsers {
 		grader.grade();
 	}
 
-	AdminManagesUsers() {
+	private AdminManagesUsers() {
 	}
 
 	public static IGrade grade(Path work) throws IOException {

@@ -4,6 +4,14 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static io.github.oliviercailloux.jaris.exceptions.Unchecker.IO_UNCHECKER;
 
+import com.google.common.base.MoreObjects;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ImmutableTable;
+import com.google.common.collect.MoreCollectors;
+import com.google.common.collect.Sets;
+import com.google.common.collect.Sets.SetView;
+import io.github.oliviercailloux.jaris.exceptions.Unchecker;
 import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -13,7 +21,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
 import org.eclipse.jgit.api.CloneCommand;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.ListBranchCommand.ListMode;
@@ -31,16 +38,6 @@ import org.eclipse.jgit.transport.RefSpec;
 import org.eclipse.jgit.transport.RemoteConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.base.MoreObjects;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.ImmutableTable;
-import com.google.common.collect.MoreCollectors;
-import com.google.common.collect.Sets;
-import com.google.common.collect.Sets.SetView;
-
-import io.github.oliviercailloux.jaris.exceptions.Unchecker;
 
 public class GitCloner {
 	@SuppressWarnings("unused")
@@ -107,6 +104,7 @@ public class GitCloner {
 		remoteRefs = null;
 		final FileRepository repository;
 		final boolean exists = Files.exists(repositoryDirectory);
+		LOGGER.info("Downloading to {}, exists? {}.", repositoryDirectory, exists);
 		if (!exists) {
 			final CloneCommand cloneCmd = Git.cloneRepository();
 			cloneCmd.setURI(uri.asString());

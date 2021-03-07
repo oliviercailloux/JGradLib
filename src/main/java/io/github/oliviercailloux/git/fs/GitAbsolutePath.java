@@ -4,6 +4,10 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Verify.verify;
 
+import io.github.oliviercailloux.git.fs.GitFileSystem.FollowLinksBehavior;
+import io.github.oliviercailloux.git.fs.GitFileSystem.GitObject;
+import io.github.oliviercailloux.git.fs.GitFileSystem.NoContextAbsoluteLinkException;
+import io.github.oliviercailloux.utils.SeekableInMemoryByteChannel;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SeekableByteChannel;
@@ -17,17 +21,11 @@ import java.nio.file.attribute.FileTime;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
-
 import org.eclipse.jgit.lib.FileMode;
 import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.revwalk.RevTree;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import io.github.oliviercailloux.git.fs.GitFileSystem.FollowLinksBehavior;
-import io.github.oliviercailloux.git.fs.GitFileSystem.GitObject;
-import io.github.oliviercailloux.git.fs.GitFileSystem.NoContextAbsoluteLinkException;
-import io.github.oliviercailloux.utils.SeekableInMemoryByteChannel;
 
 /**
  * A git path with a root component and a (possibly empty) sequence of non-empty
@@ -94,7 +92,6 @@ abstract class GitAbsolutePath extends GitPath {
 		public GitBasicFileAttributes(GitObject gitObject, long size) {
 			this.objectId = checkNotNull(gitObject.getObjectId());
 			this.fileMode = gitObject.getFileMode();
-			checkArgument(!fileMode.equals(FileMode.GITLINK));
 			checkArgument(!fileMode.equals(FileMode.MISSING));
 			this.size = size;
 		}
@@ -111,12 +108,12 @@ abstract class GitAbsolutePath extends GitPath {
 
 		@Override
 		public boolean isDirectory() {
-			return fileMode == null || Objects.equals(fileMode, FileMode.TREE);
+			return Objects.equals(fileMode, FileMode.TREE);
 		}
 
 		@Override
 		public boolean isOther() {
-			return false;
+			return fileMode.equals(FileMode.GITLINK);
 		}
 
 		@Override
@@ -233,7 +230,14 @@ abstract class GitAbsolutePath extends GitPath {
 				followLinks ? FollowLinksBehavior.FOLLOW_ALL_LINKS : FollowLinksBehavior.DO_NOT_FOLLOW_LINKS);
 
 		// TODO what’s the nio size supposed to represent for a directory?
-		final long size = gitObject.getFileMode().equals(FileMode.TREE) ? 1 : getFileSystem().getSize(gitObject);
+		final long size;
+		if (gitObject.getFileMode().equals(FileMode.TREE)) {
+			size = 1;
+		} else if (gitObject.getFileMode().equals(FileMode.GITLINK)) {
+			size = 0;
+		} else {
+			size = getFileSystem().getSize(gitObject);
+		}
 		final GitBasicFileAttributes gitBasicFileAttributes = new GitBasicFileAttributes(gitObject, size);
 		if (followLinks) {
 			verify(!gitBasicFileAttributes.isSymbolicLink());

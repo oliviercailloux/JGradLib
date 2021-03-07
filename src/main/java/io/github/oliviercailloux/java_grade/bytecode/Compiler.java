@@ -8,14 +8,17 @@ import static io.github.oliviercailloux.jaris.exceptions.Unchecker.URI_UNCHECKER
 
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Maps;
 import io.github.classgraph.ClassGraph;
+import io.github.oliviercailloux.jaris.exceptions.CheckedStream;
+import io.github.oliviercailloux.jaris.io.IoUtils;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.io.UncheckedIOException;
-import java.net.URI;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -164,29 +167,35 @@ public class Compiler {
 	 * Note that this will fail if the properties file is in a resource, not in a
 	 * reachable file.
 	 *
+	 * @throws IOException
+	 *
 	 * @see https://help.eclipse.org/2020-03/index.jsp?topic=%2Forg.eclipse.jdt.doc.user%2Ftasks%2Ftask-using_batch_compiler.htm
 	 */
-	public static CompilationResult eclipseCompile(List<Path> classPath, Set<Path> targets) {
+	public static CompilationResult eclipseCompile(List<Path> classPath, Set<Path> targets) throws IOException {
 		return eclipseCompile(classPath, targets, true);
 	}
 
-	public static CompilationResult eclipseCompileUsingOurClasspath(Set<Path> targets, Path destinationDir) {
-		final List<URI> classpath = new ClassGraph().getClasspathURIs();
-		final ImmutableSet<Path> classpathPaths = classpath.stream().map(Path::of)
+	public static CompilationResult eclipseCompileUsingOurClasspath(Set<Path> targets, Path destinationDir)
+			throws IOException {
+		final List<File> classpath = new ClassGraph().getClasspathFiles();
+		final ImmutableSet<Path> classpathPaths = classpath.stream().map(File::toPath)
 				.collect(ImmutableSet.toImmutableSet());
 		return eclipseCompile(classpathPaths.asList(), targets, true, Optional.of(destinationDir));
 	}
 
-	public static CompilationResult eclipseCompile(List<Path> classPath, Set<Path> targets, boolean useStrictWarnings) {
+	public static CompilationResult eclipseCompile(List<Path> classPath, Set<Path> targets, boolean useStrictWarnings)
+			throws IOException {
 		return eclipseCompile(classPath, targets, useStrictWarnings, Optional.empty());
 	}
 
 	/**
 	 * TODO org.eclipse.jdt.internal.compiler.batch.Main#performCompilation.
 	 *
+	 * @throws IOException
+	 *
 	 */
 	public static CompilationResult eclipseCompile(List<Path> classPath, Set<Path> targets, boolean useStrictWarnings,
-			Optional<Path> destination) {
+			Optional<Path> destination) throws IOException {
 		checkArgument(targets.stream().allMatch(Files::exists));
 
 		final StringWriter out = new StringWriter();
@@ -201,18 +210,42 @@ public class Compiler {
 			final URL propertiesUrl = Compiler.class.getResource("Eclipse-prefs.epf");
 			checkState(propertiesUrl != null);
 			final Path propertiesPath = Path.of(URI_UNCHECKER.getUsing(() -> propertiesUrl.toURI()));
-			checkState(Files.exists(propertiesPath));
+			verify(Files.exists(propertiesPath));
+			verify(propertiesPath.getFileSystem().provider().getScheme().equals("file"));
 			builder.add("-properties", propertiesPath.toString());
 		}
+		checkArgument(classPath.stream().allMatch(p -> p.getFileSystem().provider().getScheme().equals("file")));
 		{
 			builder.add("-classpath",
 					classPath.stream().map(Path::toString).collect(Collectors.joining(File.pathSeparator)));
 		}
 		if (destination.isPresent()) {
-			builder.add("-d", destination.get().toString());
+			final Path destinationPath = destination.get();
+			checkArgument(destinationPath.getFileSystem().provider().getScheme().equals("file"));
+			builder.add("-d", destinationPath.toString());
 		}
+
+		final boolean targetsAreFiles = targets.stream()
+				.allMatch(p -> p.getFileSystem().provider().getScheme().equals("file"));
+		final ImmutableSet<Path> effectiveTargets;
+		final Optional<Path> toDelete;
+		if (targetsAreFiles) {
+			effectiveTargets = ImmutableSet.copyOf(targets);
+			toDelete = Optional.empty();
+		} else {
+			final Path newStartPath = Files.createTempDirectory("sources");
+			toDelete = Optional.of(newStartPath);
+			final ImmutableMap<Path, Path> corrPaths = Maps.toMap(targets,
+					p -> newStartPath.resolve(p.relativize(p.getRoot()).toString()));
+			LOGGER.debug("Corr: {}.", corrPaths.values());
+			CheckedStream.<Path, IOException>wrapping(targets.stream())
+					.peek(p -> Files.createDirectories(corrPaths.get(p).getParent()))
+					.forEach(p -> Files.copy(p, corrPaths.get(p)));
+			effectiveTargets = corrPaths.values().stream().collect(ImmutableSet.toImmutableSet());
+		}
+
 		{
-			targets.stream().map(Path::toString).forEach(builder::add);
+			effectiveTargets.stream().map(Path::toString).forEach(builder::add);
 		}
 		final ImmutableList<String> args = builder.build();
 
@@ -220,6 +253,11 @@ public class Compiler {
 				new PrintWriter(err), null);
 
 		LOGGER.debug("Compiled with output: {}, error: {}.", out, err);
+
+		if (toDelete.isPresent()) {
+			IoUtils.deleteRecursively(toDelete.get());
+		}
+
 		return new CompilationResult(compiled, out.toString(), err.toString());
 	}
 

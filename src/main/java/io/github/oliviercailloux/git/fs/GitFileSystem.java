@@ -6,6 +6,18 @@ import static com.google.common.base.Verify.verify;
 import static com.google.common.base.Verify.verifyNotNull;
 import static io.github.oliviercailloux.jaris.exceptions.Unchecker.IO_UNCHECKER;
 
+import com.google.common.base.MoreObjects;
+import com.google.common.base.VerifyException;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.PeekingIterator;
+import com.google.common.collect.Streams;
+import com.google.common.graph.Graphs;
+import com.google.common.graph.ImmutableGraph;
+import com.google.common.jimfs.Configuration;
+import com.google.common.jimfs.Jimfs;
+import io.github.oliviercailloux.utils.Utils;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.URI;
@@ -33,7 +45,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Stream;
-
 import org.eclipse.jgit.errors.IncorrectObjectTypeException;
 import org.eclipse.jgit.errors.MissingObjectException;
 import org.eclipse.jgit.lib.AnyObjectId;
@@ -51,20 +62,6 @@ import org.eclipse.jgit.treewalk.TreeWalk;
 import org.eclipse.jgit.treewalk.filter.PathFilter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.base.MoreObjects;
-import com.google.common.base.VerifyException;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.PeekingIterator;
-import com.google.common.collect.Streams;
-import com.google.common.graph.Graphs;
-import com.google.common.graph.ImmutableGraph;
-import com.google.common.jimfs.Configuration;
-import com.google.common.jimfs.Jimfs;
-
-import io.github.oliviercailloux.utils.Utils;
 
 /**
  * <p>
@@ -200,11 +197,13 @@ public abstract class GitFileSystem extends FileSystem {
 	}
 
 	static class TreeWalkDirectoryStream implements DirectoryStream<GitStringObject> {
+		private final TreeWalk walk;
 		private final TreeWalkIterator iterator;
 		private boolean returned;
 		private boolean closed;
 
 		public TreeWalkDirectoryStream(TreeWalk walk) {
+			this.walk = checkNotNull(walk);
 			iterator = new TreeWalkIterator(walk);
 			returned = false;
 			closed = false;
@@ -214,6 +213,7 @@ public abstract class GitFileSystem extends FileSystem {
 		public void close() {
 			closed = true;
 			iterator.close();
+			walk.close();
 		}
 
 		/**
@@ -911,6 +911,12 @@ public abstract class GitFileSystem extends FileSystem {
 						if (!remainingNames.isEmpty()) {
 							throw new NoContextNoSuchFileException(String.format(
 									"Path '%s' is a file, but remaining path is '%s'.", currentPath, remainingNames));
+						}
+					} else if (fileMode.equals(FileMode.GITLINK)) {
+						if (!remainingNames.isEmpty()) {
+							throw new NoContextNoSuchFileException(
+									String.format("Path '%s' is a git link, but remaining path is '%s'.", currentPath,
+											remainingNames));
 						}
 					} else if (fileMode.equals(FileMode.SYMLINK)) {
 						final boolean followThisLink;
