@@ -1,4 +1,4 @@
-package io.github.oliviercailloux.java_grade.graders;
+package io.github.oliviercailloux.uml_graders;
 
 import static com.google.common.base.Verify.verify;
 

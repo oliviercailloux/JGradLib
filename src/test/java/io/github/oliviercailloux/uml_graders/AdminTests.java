@@ -1,9 +1,10 @@
-package io.github.oliviercailloux.java_grade.graders;
+package io.github.oliviercailloux.uml_graders;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.google.common.jimfs.Jimfs;
 import io.github.oliviercailloux.grade.IGrade;
+import io.github.oliviercailloux.uml_graders.AdminManagesUsers;
 import java.nio.file.FileSystem;
 import java.nio.file.Files;
 import java.nio.file.Path;

@@ -129,7 +129,9 @@ public class Compiler {
 			 * class path, which fails if the paths do not refer to File instances, because
 			 * JavacFileManager#getClassLoader(Location location) calls getLocation, which
 			 * tries to return File instances, instead of getLocationAsPaths(Location
-			 * location). See CompilerTests#testBugJdk().
+			 * location). See CompilerTests#testBugJdk(). I got an email on the 10th of
+			 * March, 2021, stating that the incident is fixed in https://jdk.java.net/16/.
+			 * I have not checked.
 			 * https://github.com/openjdk/jdk/blob/master/src/jdk.compiler/share/classes/com/sun/tools/javac/file/JavacFileManager.java#L744
 			 */
 			fileManager.setLocationFromPaths(StandardLocation.ANNOTATION_PROCESSOR_PATH, ImmutableList.of());

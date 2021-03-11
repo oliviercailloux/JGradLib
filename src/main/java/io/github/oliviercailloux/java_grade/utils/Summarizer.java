@@ -8,10 +8,12 @@ import static com.google.common.base.Verify.verify;
 import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableMultiset;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.collect.MoreCollectors;
+import com.google.common.collect.Multisets;
 import com.google.common.collect.Sets;
 import com.google.common.collect.Streams;
 import com.google.common.graph.GraphBuilder;
@@ -52,14 +54,16 @@ public class Summarizer {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(Summarizer.class);
 
-	public static Summarizer create() {
-		return new Summarizer();
+	public static void main(String[] args) throws Exception {
+		new Summarizer().setPrefix("coffee")
+//		.setPatched()
+				// .restrictTo(ImmutableSet.of(GitHubUsername.given(""),
+				// GitHubUsername.given("")))
+				.summarize();
 	}
 
-	public static void main(String[] args) throws Exception {
-		new Summarizer().setPrefix("admin-manages-users").setPatched()
-//				.restrictTo(ImmutableSet.of(GitHubUsername.given(""), GitHubUsername.given("")))
-				.summarize();
+	public static Summarizer create() {
+		return new Summarizer();
 	}
 
 	private Predicate<PathGradeWeight> predicate;
@@ -154,7 +158,8 @@ public class Summarizer {
 				filtered.values().stream().map(g -> g.limitedDepth(1)).collect(ImmutableList.toImmutableList()));
 
 		if (model == null) {
-			final GradeStructure struct = getAutoModel(ImmutableSet.copyOf(filtered.values()));
+//			final GradeStructure struct = getAutoModel(ImmutableSet.copyOf(filtered.values()));
+			final GradeStructure struct = getMajoritarianModel(ImmutableSet.copyOf(filtered.values()));
 			setModel(struct);
 		}
 		final ImmutableMap<GitHubUsername, IGrade> modeled = Maps.toMap(grades.keySet(), u -> model(filtered.get(u)));
@@ -210,6 +215,14 @@ public class Summarizer {
 		}
 
 		return result;
+	}
+
+	public static GradeStructure getMajoritarianModel(Set<IGrade> grades) {
+		checkArgument(!grades.isEmpty());
+
+		final ImmutableMultiset<GradeStructure> trees = grades.stream().map(IGrade::toTree)
+				.collect(ImmutableMultiset.toImmutableMultiset());
+		return Multisets.copyHighestCountFirst(trees).iterator().next();
 	}
 
 	public static GradeStructure getAutoModel(Set<IGrade> grades) {
