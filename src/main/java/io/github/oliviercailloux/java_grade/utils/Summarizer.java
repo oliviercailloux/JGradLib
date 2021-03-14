@@ -13,13 +13,13 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.collect.MoreCollectors;
+import com.google.common.collect.Multiset.Entry;
 import com.google.common.collect.Multisets;
 import com.google.common.collect.Sets;
 import com.google.common.collect.Streams;
 import com.google.common.graph.GraphBuilder;
 import com.google.common.graph.ImmutableGraph;
 import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
-import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.grade.Criterion;
 import io.github.oliviercailloux.grade.CriterionGradeWeight;
 import io.github.oliviercailloux.grade.GradeStructure;
@@ -32,16 +32,13 @@ import io.github.oliviercailloux.grade.comm.StudentOnGitHub;
 import io.github.oliviercailloux.grade.comm.json.JsonStudentsReader;
 import io.github.oliviercailloux.grade.format.CsvGrades;
 import io.github.oliviercailloux.grade.format.HtmlGrades;
-import io.github.oliviercailloux.grade.format.json.JsonGrade;
 import io.github.oliviercailloux.grade.utils.Compressor;
-import io.github.oliviercailloux.json.JsonbUtils;
+import io.github.oliviercailloux.java_grade.graders.Coffee;
 import io.github.oliviercailloux.utils.Utils;
 import io.github.oliviercailloux.xml.XmlUtils;
 import java.io.IOException;
-import java.lang.reflect.Type;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -55,42 +52,38 @@ public class Summarizer {
 	private static final Logger LOGGER = LoggerFactory.getLogger(Summarizer.class);
 
 	public static void main(String[] args) throws Exception {
-		new Summarizer().setPrefix("coffee")
+		final Summarizer summarizer = new Summarizer().setPrefix(Coffee.PREFIX)
+				.setDissolveCriteria(ImmutableSet.of(Criterion.given("Warnings")));
 //		.setPatched()
-				// .restrictTo(ImmutableSet.of(GitHubUsername.given(""),
-				// GitHubUsername.given("")))
-				.summarize();
+//		summarizer.getReader().restrictTo(ImmutableSet.of(GitHubUsername.given("Miaoulelion")));
+		summarizer.summarize();
 	}
 
 	public static Summarizer create() {
 		return new Summarizer();
 	}
 
-	private Predicate<PathGradeWeight> predicate;
+	private GradesByGitHubReader reader;
 
-	private Path gradesInputPath;
+	private Predicate<PathGradeWeight> filter;
+
+	private Predicate<PathGradeWeight> dissolve;
+
 	private Path csvOutputPath;
 	private Path htmlOutputPath;
 	private GradeStructure model;
 
-	private ImmutableSet<GitHubUsername> restrictTo;
-
 	private Summarizer() {
-		predicate = g -> g.getWeight() != 0d;
-		gradesInputPath = Path.of("grades.json");
+		filter = g -> g.getWeight() != 0d;
+		reader = new GradesByGitHubReader(Path.of("grades.json"));
 		csvOutputPath = Path.of("grades.csv");
 		htmlOutputPath = Path.of("grades.html");
 		model = null;
-		restrictTo = null;
+		dissolve = g -> false;
 	}
 
-	public Path getGradesInputPath() {
-		return gradesInputPath;
-	}
-
-	public Summarizer setGradesInputPath(Path gradesInputPath) {
-		this.gradesInputPath = checkNotNull(gradesInputPath);
-		return this;
+	public GradesByGitHubReader getReader() {
+		return reader;
 	}
 
 	public Path getCsvOutputPath() {
@@ -113,18 +106,9 @@ public class Summarizer {
 
 	public Summarizer setPrefix(String prefix) {
 		checkNotNull(prefix);
-		gradesInputPath = Path.of("grades " + prefix + ".json");
+		reader.setInputPath(Path.of("grades " + prefix + ".json"));
 		csvOutputPath = Path.of("grades " + prefix + ".csv");
 		htmlOutputPath = Path.of("grades " + prefix + ".html");
-		return this;
-	}
-
-	public Summarizer setPatched() {
-		final String ext = com.google.common.io.Files.getFileExtension(gradesInputPath.toString());
-		final String name = com.google.common.io.Files.getNameWithoutExtension(gradesInputPath.toString());
-		final Path givenParent = gradesInputPath.getParent();
-		final Path parent = givenParent == null ? Path.of("") : givenParent;
-		gradesInputPath = parent.resolve(name + " patched" + "." + ext);
 		return this;
 	}
 
@@ -137,20 +121,26 @@ public class Summarizer {
 		return this;
 	}
 
-	public Summarizer restrictTo(Set<GitHubUsername> restrict) {
-		this.restrictTo = ImmutableSet.copyOf(restrict);
+	public Summarizer setDissolve(Predicate<PathGradeWeight> dissolve) {
+		this.dissolve = checkNotNull(dissolve);
+		return this;
+	}
+
+	public Summarizer setDissolveCriteria(Set<Criterion> dissolve) {
+		this.dissolve = g -> dissolve.stream()
+				.anyMatch(c -> g.getPath().endsWith(c) && Iterables.frequency(g.getPath(), c) == 1);
 		return this;
 	}
 
 	public void summarize() throws IOException {
-		final ImmutableMap<GitHubUsername, IGrade> grades = readGrades(gradesInputPath);
+		final ImmutableMap<GitHubUsername, IGrade> grades = reader.readGrades();
 		LOGGER.debug("Grades: {}.",
 				grades.values().stream().map(g -> g.limitedDepth(1)).collect(ImmutableList.toImmutableList()));
 
 		final ImmutableMap<GitHubUsername, IGrade> dissolved = Maps.toMap(grades.keySet(),
-				u -> dissolveTimePenalty(grades.get(u)));
+				u -> dissolveInto(dissolveTimePenalty(grades.get(u))));
 		LOGGER.debug("Dissolved: {}.",
-				dissolved.values().stream().map(g -> g.limitedDepth(1)).collect(ImmutableList.toImmutableList()));
+				dissolved.values().stream().map(g -> g.toTree()).collect(ImmutableList.toImmutableList()));
 
 		final ImmutableMap<GitHubUsername, IGrade> filtered = Maps.toMap(grades.keySet(),
 				u -> filter(dissolved.get(u)));
@@ -187,7 +177,7 @@ public class Summarizer {
 		LOGGER.info("Writing grades Html.");
 		final ImmutableMap<String, IGrade> gradesByString = Maps.toMap(
 				grades.keySet().stream().map(GitHubUsername::getUsername).collect(ImmutableSet.toImmutableSet()),
-				u -> grades.get(GitHubUsername.given(u)));
+				u -> filtered.get(GitHubUsername.given(u)));
 		final Document doc = HtmlGrades.asHtml(gradesByString, "All grades", 20d);
 		Files.writeString(htmlOutputPath, XmlUtils.asString(doc));
 
@@ -207,11 +197,12 @@ public class Summarizer {
 
 		IGrade result = grade;
 		for (GradePath penaltyPath : penaltyPaths) {
-			final GradePath penaltyParentPath = penaltyPath.withoutTail();
-			final IGrade dissolved = result.getGrade(penaltyParentPath).get().withDissolved(toDissolve);
-			LOGGER.debug("Got dissolved: {}.", dissolved);
-			result = result.withSubGrade(penaltyParentPath, dissolved);
-			LOGGER.debug("Got intermediary: {}.", result);
+//			final GradePath penaltyParentPath = penaltyPath.withoutTail();
+//			final IGrade dissolved = result.getGrade(penaltyParentPath).get().withDissolved(toDissolve);
+//			LOGGER.debug("Got dissolved: {}.", dissolved);
+//			result = result.withSubGrade(penaltyParentPath, dissolved);
+//			LOGGER.debug("Got intermediary: {}.", result);
+			result = dissolve(result, penaltyPath);
 		}
 
 		return result;
@@ -222,7 +213,10 @@ public class Summarizer {
 
 		final ImmutableMultiset<GradeStructure> trees = grades.stream().map(IGrade::toTree)
 				.collect(ImmutableMultiset.toImmutableMultiset());
-		return Multisets.copyHighestCountFirst(trees).iterator().next();
+		final Entry<GradeStructure> highestCountEntry = Multisets.copyHighestCountFirst(trees).entrySet().iterator()
+				.next();
+		return trees.entrySet().stream().filter(e -> e.getCount() == highestCountEntry.getCount())
+				.map(Entry::getElement).distinct().collect(MoreCollectors.onlyElement());
 	}
 
 	public static GradeStructure getAutoModel(Set<IGrade> grades) {
@@ -258,28 +252,6 @@ public class Summarizer {
 		return usernames;
 	}
 
-	private ImmutableMap<GitHubUsername, IGrade> readGrades(Path input) throws IOException {
-		@SuppressWarnings("all")
-		final Type type = new LinkedHashMap<RepositoryCoordinates, IGrade>() {
-		}.getClass().getGenericSuperclass();
-
-		LOGGER.debug("Reading grades.");
-		final String sourceGrades = Files.readString(input);
-		final Map<String, IGrade> grades = JsonbUtils.fromJson(sourceGrades, type, JsonGrade.asAdapter());
-		LOGGER.debug("Read keys: {}.", grades.keySet());
-		final ImmutableMap<GitHubUsername, IGrade> gradesByUsername = Maps.toMap(
-				grades.keySet().stream().map(GitHubUsername::given).collect(ImmutableSet.toImmutableSet()),
-				u -> grades.get(u.getUsername()));
-
-		final ImmutableMap<GitHubUsername, IGrade> restricted;
-		if (restrictTo == null) {
-			restricted = gradesByUsername;
-		} else {
-			restricted = ImmutableMap.copyOf(Maps.filterKeys(gradesByUsername, restrictTo::contains));
-		}
-		return restricted;
-	}
-
 	public IGrade filter(IGrade grade) {
 		final Optional<CriterionGradeWeight> filtered = filter(GradePath.ROOT, grade);
 		checkState(!filtered.isEmpty(), grade);
@@ -309,7 +281,7 @@ public class Summarizer {
 			result = thisGrade;
 		} else {
 			final ImmutableSet<CriterionGradeWeight> subGrades = successorPaths.stream().map(grade::getPathGradeWeight)
-					.filter(predicate).map(g -> filter(g.getPath(), grade)).flatMap(Optional::stream)
+					.filter(filter).map(g -> filter(g.getPath(), grade)).flatMap(Optional::stream)
 					.collect(ImmutableSet.toImmutableSet());
 			LOGGER.debug("Filtering {}, obtained {}.", context, subGrades);
 			if (subGrades.isEmpty()) {
@@ -330,6 +302,36 @@ public class Summarizer {
 		}
 		final Criterion criterion = context.isRoot() ? Criterion.given("") : context.getTail();
 		return Optional.of(CriterionGradeWeight.from(criterion, result, grade.getLocalWeight(context)));
+	}
+
+	public IGrade dissolveInto(IGrade grade) {
+		final ImmutableSet<PathGradeWeight> pathsToDissolve = grade.toTree().getPaths().stream()
+				.map(grade::getPathGradeWeight).filter(dissolve).collect(ImmutableSet.toImmutableSet());
+		LOGGER.debug("Found paths to dissolve: {}.",
+				pathsToDissolve.stream().map(PathGradeWeight::getPath).collect(ImmutableSet.toImmutableSet()));
+		IGrade result = grade;
+		for (PathGradeWeight toDissolve : pathsToDissolve) {
+			result = dissolve(result, toDissolve.getPath());
+		}
+		return result;
+	}
+
+	private static IGrade dissolve(IGrade grade, GradePath toDissolvePath) {
+		checkArgument(grade.toTree().getPaths().contains(toDissolvePath));
+		// TODO
+//		checkArgument(grade.toTree().getSiblings(toDissolvePath).size() >= 2);
+//		verify(!toDissolvePath.isRoot());
+		checkArgument(!toDissolvePath.isRoot());
+
+		LOGGER.debug("Dissolving {}.", toDissolvePath);
+		final GradePath parent = toDissolvePath.withoutTail();
+		final Criterion toDissolveCriterion = toDissolvePath.getTail();
+		/* Need to replace parent with parent-with-dissolved-child. */
+		final IGrade parentGrade = grade.getGrade(parent).get();
+		final IGrade newParent = parentGrade.withDissolved(toDissolveCriterion);
+		final IGrade newG = grade.withSubGrade(parent, newParent);
+		LOGGER.debug("Old str: {}. New str: {}.", grade.toTree(), newG.toTree());
+		return newG;
 	}
 
 	public IGrade model(IGrade grade) {

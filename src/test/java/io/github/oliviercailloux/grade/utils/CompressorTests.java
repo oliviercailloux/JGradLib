@@ -2,14 +2,8 @@ package io.github.oliviercailloux.grade.utils;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
-
-import org.junit.jupiter.api.Test;
-
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-
 import io.github.oliviercailloux.grade.GradeStructure;
 import io.github.oliviercailloux.grade.IGrade;
 import io.github.oliviercailloux.grade.IGrade.GradePath;
@@ -17,6 +11,9 @@ import io.github.oliviercailloux.grade.Mark;
 import io.github.oliviercailloux.grade.WeightingGrade;
 import io.github.oliviercailloux.grade.WeightingGrade.WeightedGrade;
 import io.github.oliviercailloux.grade.format.json.JsonGrade;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import org.junit.jupiter.api.Test;
 
 public class CompressorTests {
 	@Test
@@ -39,5 +36,16 @@ public class CompressorTests {
 				WeightedGrade.given(Mark.one(), 1d), GradePath.from("c2/sub"), WeightedGrade.given(Mark.one(), 1d)));
 		final IGrade obtained = Compressor.compress(grade, model);
 		assertEquals(expected, obtained);
+	}
+
+	@Test
+	void testCompressTwoTwo() throws Exception {
+		final GradeStructure model = GradeStructure.from(ImmutableSet.of("user.name", "main/Class1", "main/Class2"));
+		final WeightedGrade one = WeightedGrade.given(Mark.one(), 1d);
+		final IGrade grade = WeightingGrade
+				.from(ImmutableMap.of(GradePath.from("user.name"), one, GradePath.from("main/Impl/Class1"), one,
+						GradePath.from("main/Impl/Class2"), one, GradePath.from("main/Warnings"), one));
+		final IGrade obtained = Compressor.compress(grade, model);
+		assertEquals(model, obtained.toTree());
 	}
 }

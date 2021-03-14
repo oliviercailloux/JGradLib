@@ -3,14 +3,6 @@ package io.github.oliviercailloux.grade.utils;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Verify.verify;
 
-import java.util.ArrayDeque;
-import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
@@ -18,7 +10,6 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.graph.ImmutableGraph;
 import com.google.common.math.DoubleMath;
-
 import io.github.oliviercailloux.grade.Criterion;
 import io.github.oliviercailloux.grade.GradeStructure;
 import io.github.oliviercailloux.grade.IGrade;
@@ -27,6 +18,12 @@ import io.github.oliviercailloux.grade.Mark;
 import io.github.oliviercailloux.grade.WeightingGrade.WeightedGrade;
 import io.github.oliviercailloux.grade.WeightingGrade.WeightedMark;
 import io.github.oliviercailloux.utils.Utils;
+import java.util.ArrayDeque;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class Compressor {
 	@SuppressWarnings("unused")
@@ -93,6 +90,9 @@ public class Compressor {
 			compressed = WeightedGrade.given(subGrades);
 		}
 
+		if (compressed.getGrade().getSubGrades().isEmpty() && model.getPaths().size() >= 2) {
+			LOGGER.info("Failed compressing at: {}, {}.", originalPaths, model);
+		}
 		return compressed;
 	}
 

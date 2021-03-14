@@ -69,6 +69,7 @@ public class DeadlineGrader {
 					.binary(author.isPresent() && author.get().equals(work.getAuthor().getUsername()));
 			final ImmutableSet<GitPathRootSha> latestTiedPathsOnTime = PathToGitGrader.getLatest(history);
 			checkArgument(!latestTiedPathsOnTime.isEmpty());
+			LOGGER.debug("Considering {}.", latestTiedPathsOnTime);
 			final IGrade mainGrade = CheckedStream.<GitPathRootSha, IOException>wrapping(latestTiedPathsOnTime.stream())
 					.map(simpleWorkGrader).min(Comparator.comparing(IGrade::getPoints)).get();
 			return WeightingGrade
@@ -124,11 +125,17 @@ public class DeadlineGrader {
 
 		public IGrade grade(Path work) throws IOException {
 			final ImmutableSet<Path> poms = IoUtils.getMatchingChildren(work, p -> p.endsWith("pom.xml"));
+			LOGGER.debug("Poms: {}.", poms);
+			final ImmutableSet<Path> pomsWithJava = CheckedStream
+					.<Path, IOException>wrapping(poms.stream()).filter(p -> !IoUtils
+							.getMatchingChildren(p, s -> String.valueOf(s.getFileName()).endsWith(".java")).isEmpty())
+					.collect(ImmutableSet.toImmutableSet());
+			LOGGER.debug("Poms with java: {}.", pomsWithJava);
 			final ImmutableSet<Path> possibleDirs;
-			if (poms.isEmpty()) {
+			if (pomsWithJava.isEmpty()) {
 				possibleDirs = ImmutableSet.of(work);
 			} else {
-				possibleDirs = poms.stream().map(Path::getParent).collect(ImmutableSet.toImmutableSet());
+				possibleDirs = pomsWithJava.stream().map(Path::getParent).collect(ImmutableSet.toImmutableSet());
 			}
 			final ImmutableMap<Path, IGrade> gradedProjects = CollectionUtils.toMap(possibleDirs, this::gradeProject);
 			final IGrade grade;
@@ -136,9 +143,9 @@ public class DeadlineGrader {
 			if (gradedProjects.size() == 1) {
 				grade = Iterables.getOnlyElement(gradedProjects.values());
 			} else {
-				final ImmutableSet<CriterionGradeWeight> cgws = gradedProjects
-						.keySet().stream().map(p -> CriterionGradeWeight
-								.from(Criterion.given("Using project dir " + p.toString()), gradedProjects.get(p), 1d))
+				final ImmutableSet<CriterionGradeWeight> cgws = gradedProjects.keySet().stream()
+						.map(p -> CriterionGradeWeight.from(Criterion.given("Using project dir " + p.toString()),
+								gradedProjects.get(p), gradedProjects.get(p).getPoints() > 0d ? 1d : 0d))
 						.collect(ImmutableSet.toImmutableSet());
 				grade = WeightingGrade.from(cgws);
 			}
@@ -146,30 +153,36 @@ public class DeadlineGrader {
 		}
 
 		private IGrade gradeProject(Path projectDirectory) throws IOException {
-			final Path compiledDir = Path.of("out/");
+			final Path compiledDir = Utils.getTempUniqueDirectory("compile");
 			final Path srcDir;
 			final boolean hasPom = Files.exists(projectDirectory.resolve("pom.xml"));
 			if (hasPom) {
 				srcDir = projectDirectory.resolve("src/main/java/");
 			} else {
+//				srcDir = projectDirectory.resolve("src/main/java/");
 				srcDir = projectDirectory;
 			}
-			final ImmutableSet<Path> javaPaths = IoUtils.getMatchingChildren(srcDir,
-					p -> String.valueOf(p.getFileName()).endsWith(".java"));
+			final ImmutableSet<Path> javaPaths = Files.exists(srcDir)
+					? IoUtils.getMatchingChildren(srcDir, p -> String.valueOf(p.getFileName()).endsWith(".java"))
+					: ImmutableSet.of();
 			final CompilationResult eclipseResult = Compiler.eclipseCompileUsingOurClasspath(javaPaths, compiledDir);
 			final int nbSuppressed = (int) CheckedStream.<Path, IOException>wrapping(javaPaths.stream())
 					.map(p -> Files.readString(p))
 					.flatMap(s -> Pattern.compile("@SuppressWarnings").matcher(s).results()).count();
-			final String eclipseStr = eclipseResult.err.replaceAll(srcDir.toAbsolutePath().toString() + "/", "");
-			final IGrade pomGrade;
+			final Pattern pathPattern = Pattern.compile("/tmp/sources[0-9]*/");
+			final String eclipseStr = pathPattern.matcher(eclipseResult.err).replaceAll("/…/");
+			final IGrade projectGrade;
 			if (eclipseResult.countErrors() > 0) {
-				pomGrade = Mark.zero(eclipseStr);
+				projectGrade = Mark.zero(eclipseStr);
+			} else if (javaPaths.isEmpty()) {
+				LOGGER.debug("No java files at {}.", srcDir);
+				projectGrade = Mark.zero("No java files found");
 			} else {
-				final IGrade codeGrade = JavaGradeUtils.gradeSecurely(compiledDir, grader);
 				final int nbWarningsTot = eclipseResult.countWarnings() + nbSuppressed;
 				final boolean hasWarnings = nbWarningsTot > 0;
+				final IGrade codeGrade = JavaGradeUtils.gradeSecurely(compiledDir, grader);
 				if (!hasWarnings) {
-					pomGrade = codeGrade;
+					projectGrade = codeGrade;
 				} else {
 					final ImmutableSet.Builder<String> commentsBuilder = ImmutableSet.builder();
 					if (eclipseResult.countWarnings() > 0) {
@@ -183,13 +196,13 @@ public class DeadlineGrader {
 					final double lowWeightWarnings = 0.05d;
 					final double highWeightWarnings = 0.10d;
 					final double weightWarnings = nbWarningsTot == 1 ? lowWeightWarnings : highWeightWarnings;
-					pomGrade = WeightingGrade
+					projectGrade = WeightingGrade
 							.from(ImmutableSet.of(CriterionGradeWeight.from(Criterion.given("Code"), codeGrade, 1d),
 									CriterionGradeWeight.from(Criterion.given("Warnings"), warningsGrade,
 											weightWarnings / (1d - weightWarnings))));
 				}
 			}
-			return pomGrade;
+			return projectGrade;
 		}
 
 	}

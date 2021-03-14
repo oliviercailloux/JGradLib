@@ -2,22 +2,19 @@ package io.github.oliviercailloux.grade;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import java.nio.charset.StandardCharsets;
-
-import org.junit.jupiter.api.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.io.Resources;
-
 import io.github.oliviercailloux.grade.IGrade.GradePath;
 import io.github.oliviercailloux.grade.WeightingGrade.WeightedGrade;
 import io.github.oliviercailloux.grade.format.json.JsonGrade;
 import io.github.oliviercailloux.grade.format.json.JsonGradeTests;
 import io.github.oliviercailloux.json.PrintableJsonObjectFactory;
+import java.nio.charset.StandardCharsets;
+import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class GradeTests {
 	@SuppressWarnings("unused")
@@ -95,5 +92,19 @@ public class GradeTests {
 
 		assertEquals(3d / 5d, grade.getPoints(), 1e-6d);
 		assertEquals(3d / 5d, dissolved.getPoints(), 1e-6d);
+	}
+
+	@Test
+	void testDissolveStructure() throws Exception {
+		final WeightedGrade one = WeightedGrade.given(Mark.one(), 1d);
+		final GradePath w = GradePath.from("Warnings");
+		final IGrade grade = WeightingGrade
+				.from(ImmutableMap.of(GradePath.from("Impl/Class1"), one, GradePath.from("Impl/Class2"), one, w, one));
+		final Criterion wc = Criterion.given("Warnings");
+		final IGrade dissolved = grade.withDissolved(wc);
+
+		final GradeStructure expectedTree = GradeStructure.from(ImmutableSet.of("Impl/Class1/Class1",
+				"Impl/Class1/Warnings", "Impl/Class2/Class2", "Impl/Class2/Warnings"));
+		assertEquals(expectedTree, dissolved.toTree());
 	}
 }

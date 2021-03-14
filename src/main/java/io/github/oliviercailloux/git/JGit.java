@@ -5,6 +5,17 @@ import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.base.Verify.verify;
 import static io.github.oliviercailloux.jaris.exceptions.Unchecker.IO_UNCHECKER;
 
+import com.google.common.base.Verify;
+import com.google.common.collect.BiMap;
+import com.google.common.collect.HashBiMap;
+import com.google.common.collect.ImmutableBiMap;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.graph.Graph;
+import com.google.common.graph.Graphs;
+import com.google.common.jimfs.Configuration;
+import com.google.common.jimfs.Jimfs;
+import io.github.oliviercailloux.utils.Utils;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
@@ -15,7 +26,6 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Stream;
-
 import org.eclipse.jgit.internal.storage.dfs.DfsRepositoryDescription;
 import org.eclipse.jgit.internal.storage.dfs.InMemoryRepository;
 import org.eclipse.jgit.lib.CommitBuilder;
@@ -31,19 +41,6 @@ import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.lib.TreeFormatter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.base.Verify;
-import com.google.common.collect.BiMap;
-import com.google.common.collect.HashBiMap;
-import com.google.common.collect.ImmutableBiMap;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.graph.Graph;
-import com.google.common.graph.Graphs;
-import com.google.common.jimfs.Configuration;
-import com.google.common.jimfs.Jimfs;
-
-import io.github.oliviercailloux.utils.Utils;
 
 public class JGit {
 	@SuppressWarnings("unused")
@@ -290,7 +287,7 @@ public class JGit {
 							destSlashSeparated = dest.toString();
 						}
 					}
-					final byte[] destAsBytes = destSlashSeparated.getBytes(Constants.CHARACTER_ENCODING);
+					final byte[] destAsBytes = destSlashSeparated.getBytes(StandardCharsets.UTF_8);
 					final ObjectId fileOId = inserter.insert(Constants.OBJ_BLOB, destAsBytes);
 					treeFormatter.append(entryName, FileMode.SYMLINK, fileOId);
 				} else {

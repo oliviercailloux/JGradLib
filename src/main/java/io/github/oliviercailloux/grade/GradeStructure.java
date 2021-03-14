@@ -2,13 +2,6 @@ package io.github.oliviercailloux.grade;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
-import java.util.ArrayDeque;
-import java.util.LinkedHashSet;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Queue;
-import java.util.Set;
-
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -16,8 +9,13 @@ import com.google.common.graph.EndpointPair;
 import com.google.common.graph.Graph;
 import com.google.common.graph.GraphBuilder;
 import com.google.common.graph.ImmutableGraph;
-
 import io.github.oliviercailloux.grade.IGrade.GradePath;
+import java.util.ArrayDeque;
+import java.util.LinkedHashSet;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Queue;
+import java.util.Set;
 
 public class GradeStructure {
 
@@ -114,7 +112,7 @@ public class GradeStructure {
 	/**
 	 * @return all paths in this graph that have the given path as prefix
 	 */
-	public ImmutableSet<GradePath> getSiblings(GradePath path) {
+	public ImmutableSet<GradePath> getSiblingsIfTail(GradePath path) {
 		if (path.isRoot()) {
 			return ImmutableSet.of(GradePath.ROOT);
 		}

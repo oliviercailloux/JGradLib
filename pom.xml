@@ -160,7 +160,7 @@
 		<dependency>
 			<groupId>org.eclipse.jdt</groupId>
 			<artifactId>ecj</artifactId>
-			<version>3.21.0</version>
+			<version>3.24.0</version>
 		</dependency>
 		<dependency>
 			<groupId>org.eclipse.uml2</groupId>
@@ -181,21 +181,21 @@
 				</exclusion>
 			</exclusions>
 		</dependency>
-<!-- 		<dependency> -->
-<!-- 			<groupId>org.eclipse.emf</groupId> -->
-<!-- 			<artifactId>ecore</artifactId> -->
-<!-- 			<version>2.3.0-v200706262000</version> -->
-<!-- 		</dependency> -->
-<!-- 		<dependency> -->
-<!-- 			<groupId>org.eclipse.emf.ecore</groupId> -->
-<!-- 			<artifactId>xmi</artifactId> -->
-<!-- 			<version>2.3.0-v200706262000</version> -->
-<!-- 		</dependency> -->
-<!-- 		<dependency> -->
-<!-- 			<groupId>org.eclipse.emf.mapping</groupId> -->
-<!-- 			<artifactId>ecore2xml</artifactId> -->
-<!-- 			<version>2.3.0-v200706262000</version> -->
-<!-- 		</dependency> -->
+		<!-- <dependency> -->
+		<!-- <groupId>org.eclipse.emf</groupId> -->
+		<!-- <artifactId>ecore</artifactId> -->
+		<!-- <version>2.3.0-v200706262000</version> -->
+		<!-- </dependency> -->
+		<!-- <dependency> -->
+		<!-- <groupId>org.eclipse.emf.ecore</groupId> -->
+		<!-- <artifactId>xmi</artifactId> -->
+		<!-- <version>2.3.0-v200706262000</version> -->
+		<!-- </dependency> -->
+		<!-- <dependency> -->
+		<!-- <groupId>org.eclipse.emf.mapping</groupId> -->
+		<!-- <artifactId>ecore2xml</artifactId> -->
+		<!-- <version>2.3.0-v200706262000</version> -->
+		<!-- </dependency> -->
 		<dependency>
 			<groupId>org.eclipse.uml2.uml</groupId>
 			<artifactId>resources</artifactId>

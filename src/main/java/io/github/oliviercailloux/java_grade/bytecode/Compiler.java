@@ -198,6 +198,7 @@ public class Compiler {
 	 */
 	public static CompilationResult eclipseCompile(List<Path> classPath, Set<Path> targets, boolean useStrictWarnings,
 			Optional<Path> destination) throws IOException {
+		// TODO what if targets is empty?
 		checkArgument(targets.stream().allMatch(Files::exists));
 
 		final StringWriter out = new StringWriter();

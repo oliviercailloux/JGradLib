@@ -4,6 +4,13 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Verify.verify;
 
+import com.google.common.base.MoreObjects;
+import com.google.common.base.Verify;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -12,23 +19,13 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.stream.Collectors;
-
 import javax.json.bind.annotation.JsonbCreator;
 import javax.json.bind.annotation.JsonbProperty;
 import javax.json.bind.annotation.JsonbPropertyOrder;
 import javax.json.bind.annotation.JsonbTransient;
 import javax.json.bind.annotation.JsonbVisibility;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.base.MoreObjects;
-import com.google.common.base.Verify;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 
 /**
  * containing positive points only and at one weights per sub-grade, at least
@@ -97,6 +94,26 @@ public class WeightingGrade implements IGrade {
 
 		public double getWeight() {
 			return weight;
+		}
+
+		@Override
+		public boolean equals(Object o2) {
+			if (!(o2 instanceof WeightingGrade.PathGradeWeight)) {
+				return false;
+			}
+			final WeightingGrade.PathGradeWeight t2 = (WeightingGrade.PathGradeWeight) o2;
+			return path.equals(t2.path) && grade.equals(t2.grade) && weight == t2.weight;
+		}
+
+		@Override
+		public int hashCode() {
+			return Objects.hash(path, grade, weight);
+		}
+
+		@Override
+		public String toString() {
+			return MoreObjects.toStringHelper(this).add("Path", path).add("Grade", grade).add("Weight", weight)
+					.toString();
 		}
 	}
 
@@ -343,7 +360,7 @@ public class WeightingGrade implements IGrade {
 
 	private WeightingGrade(Map<Criterion, ? extends IGrade> subGrades, Map<Criterion, Double> weights, String comment) {
 		checkArgument(weights.values().stream().allMatch(d -> Double.isFinite(d)));
-		checkArgument(weights.values().stream().anyMatch(d -> d > 0d));
+		checkArgument(weights.values().stream().anyMatch(d -> d > 0d), "Must have at least one non-zero weight.");
 		checkArgument(subGrades.values().stream().allMatch(g -> 0d <= g.getPoints() && g.getPoints() <= 1d));
 		checkArgument(subGrades.keySet().equals(weights.keySet()),
 				String.format("Sub grades have keys: %s, weights have keys: %s, diff: %s", subGrades.keySet(),
