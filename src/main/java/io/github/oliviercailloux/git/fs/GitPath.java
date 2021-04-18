@@ -5,6 +5,12 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Verify.verify;
 import static io.github.oliviercailloux.jaris.exceptions.Unchecker.URI_UNCHECKER;
 
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.PeekingIterator;
+import io.github.oliviercailloux.git.fs.GitFileSystem.FollowLinksBehavior;
+import io.github.oliviercailloux.git.fs.GitFileSystem.GitObject;
+import io.github.oliviercailloux.git.fs.GitFileSystem.GitStringObject;
+import io.github.oliviercailloux.git.fs.GitFileSystem.TreeWalkDirectoryStream;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.file.DirectoryIteratorException;
@@ -26,21 +32,12 @@ import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
-
 import org.eclipse.jgit.lib.FileMode;
 import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.lib.Ref;
 import org.eclipse.jgit.revwalk.RevTree;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.PeekingIterator;
-
-import io.github.oliviercailloux.git.fs.GitFileSystem.FollowLinksBehavior;
-import io.github.oliviercailloux.git.fs.GitFileSystem.GitObject;
-import io.github.oliviercailloux.git.fs.GitFileSystem.GitStringObject;
-import io.github.oliviercailloux.git.fs.GitFileSystem.TreeWalkDirectoryStream;
 
 /**
  * A git path has an optional root component and a (possibly empty) sequence of
@@ -75,6 +72,7 @@ import io.github.oliviercailloux.git.fs.GitFileSystem.TreeWalkDirectoryStream;
  * <p>
  * The string form of a path consists in the string form of its root component,
  * if it has one, followed by its internal path.
+ * </p>
  * <ul>
  * <li>The string form of a root component is <tt>/gitref/</tt>, where
  * <tt>gitref</tt> is a git reference; or <tt>/sha1/</tt>, where <tt>sha1</tt>
@@ -88,6 +86,7 @@ import io.github.oliviercailloux.git.fs.GitFileSystem.TreeWalkDirectoryStream;
  * <p>
  * It follows from these rules that an instance of this class matches exactly
  * one of these two cases (each admitting a special case).
+ * </p>
  * <ul>
  * <li>It has no root component. Equivalently, its string form contains no
  * leading slash. Equivalently, its string form contains no two consecutive

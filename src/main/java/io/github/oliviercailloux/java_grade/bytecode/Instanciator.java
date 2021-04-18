@@ -2,27 +2,28 @@ package io.github.oliviercailloux.java_grade.bytecode;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
-
-import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.net.URLClassLoader;
-import java.util.Optional;
-import java.util.stream.Stream;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import static com.google.common.base.Verify.verify;
 
 import com.google.common.base.VerifyException;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.MoreCollectors;
-
 import io.github.classgraph.ClassGraph;
 import io.github.classgraph.ClassInfo;
 import io.github.classgraph.ClassInfoList;
 import io.github.classgraph.MethodInfo;
 import io.github.classgraph.MethodInfoList;
 import io.github.classgraph.ScanResult;
+import io.github.oliviercailloux.jaris.exceptions.TryCatchAll;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.net.URLClassLoader;
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Stream;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class Instanciator {
 	@SuppressWarnings("unused")
@@ -43,14 +44,35 @@ public class Instanciator {
 	}
 
 	public <T> Optional<T> getInstance(Class<T> type) {
-		return getInstance(type, Optional.empty());
+		return getInstance(type, Optional.empty(), ImmutableList.of());
+	}
+
+	public <T> TryCatchAll<T> tryGetInstance(Class<T> type) {
+		final Optional<T> instance = getInstance(type, Optional.empty(), ImmutableList.of());
+		return instance.map(TryCatchAll::success).orElseGet(() -> TryCatchAll.failure(getLastException()));
+	}
+
+	public <T> T getInstanceOrThrow(Class<T> type) throws ReflectiveOperationException {
+		final Optional<T> instance = getInstance(type, Optional.empty(), ImmutableList.of());
+		return instance.orElseThrow(() -> getLastException());
 	}
 
 	public <T> Optional<T> getInstance(Class<T> type, String staticFactoryMethodName) {
-		return getInstance(type, Optional.of(staticFactoryMethodName));
+		return getInstance(type, Optional.of(staticFactoryMethodName), ImmutableList.of());
 	}
 
-	private <T> Optional<T> getInstance(Class<T> type, Optional<String> staticFactoryMethodNameOpt) {
+	public <T> TryCatchAll<T> tryGetInstance(Class<T> type, String staticFactoryMethodName) {
+		final Optional<T> instance = getInstance(type, Optional.of(staticFactoryMethodName), ImmutableList.of());
+		return instance.map(TryCatchAll::success).orElseGet(() -> TryCatchAll.failure(getLastException()));
+	}
+
+	public <T> T getInstanceOrThrow(Class<T> type, String staticFactoryMethodName, List<Object> args)
+			throws ReflectiveOperationException {
+		final Optional<T> instance = getInstance(type, Optional.of(staticFactoryMethodName), args);
+		return instance.orElseThrow(() -> getLastException());
+	}
+
+	private <T> Optional<T> getInstance(Class<T> type, Optional<String> staticFactoryMethodNameOpt, List<Object> args) {
 		checkNotNull(staticFactoryMethodNameOpt);
 		lastException = null;
 
@@ -65,6 +87,9 @@ public class Instanciator {
 			final Optional<ClassInfo> infoOpt = implementingClasses.directOnly().getStandardClasses().stream()
 					.collect(MoreCollectors.toOptional());
 			classOpt = infoOpt.map(ClassInfo::loadClass);
+			if (infoOpt.isPresent() && !infoOpt.get().isPublic()) {
+				LOGGER.debug("Class {} is not public, problem might follow.", infoOpt);
+			}
 			Optional<Object> instanceOpt;
 			if (staticFactoryMethodNameOpt.isPresent()) {
 				final Optional<MethodInfoList> methodInfoListOpt = infoOpt
@@ -77,8 +102,9 @@ public class Instanciator {
 				final boolean isPublic = methodInfoOpt.map(MethodInfo::isPublic).orElse(false);
 				if (isPublic) {
 					final Method method = methodInfoOpt.get().loadClassAndGetMethod();
+					method.setAccessible(true);
 					try {
-						instanceOpt = Optional.of(method.invoke(null));
+						instanceOpt = Optional.of(method.invoke(null, args.toArray()));
 					} catch (IllegalAccessException | IllegalArgumentException e) {
 						throw new VerifyException(e);
 					} catch (InvocationTargetException e) {
@@ -96,7 +122,9 @@ public class Instanciator {
 						.filter(c -> c.getParameters().length == 0).collect(MoreCollectors.toOptional());
 				if (parameterlessConstructor.isPresent()) {
 					try {
-						instanceOpt = Optional.of(parameterlessConstructor.get().newInstance());
+						final Constructor<?> constructor = parameterlessConstructor.get();
+						constructor.setAccessible(true);
+						instanceOpt = Optional.of(constructor.newInstance());
 					} catch (IllegalAccessException | IllegalArgumentException e) {
 						throw new VerifyException(e);
 					} catch (InvocationTargetException | InstantiationException e) {
@@ -109,6 +137,7 @@ public class Instanciator {
 					instanceOpt = Optional.empty();
 				}
 			}
+			verify(instanceOpt.isEmpty() == (lastException != null));
 			return instanceOpt.map(type::cast);
 		}
 	}

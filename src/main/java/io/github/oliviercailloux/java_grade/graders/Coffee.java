@@ -1,5 +1,6 @@
 package io.github.oliviercailloux.java_grade.graders;
 
+import com.google.common.base.VerifyException;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.math.DoubleMath;
 import io.github.oliviercailloux.grade.Criterion;
@@ -10,8 +11,8 @@ import io.github.oliviercailloux.grade.IGrade;
 import io.github.oliviercailloux.grade.Mark;
 import io.github.oliviercailloux.grade.RepositoryFetcher;
 import io.github.oliviercailloux.grade.WeightingGrade;
-import io.github.oliviercailloux.jaris.exceptions.Try;
-import io.github.oliviercailloux.jaris.exceptions.TryVoid;
+import io.github.oliviercailloux.jaris.exceptions.TryCatchAll;
+import io.github.oliviercailloux.jaris.exceptions.TryCatchAllVoid;
 import io.github.oliviercailloux.java_grade.bytecode.Instanciator;
 import io.github.oliviercailloux.java_grade.utils.Summarizer;
 import io.github.oliviercailloux.samples.coffee.CoffeeMachine;
@@ -25,11 +26,6 @@ import java.util.function.Predicate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
- * Provide a grader from an Instanciator.
- *
- * From repo: find pom. Find path. Get instanciator. Get grade.
- */
 public class Coffee {
 
 	@SuppressWarnings("unused")
@@ -38,13 +34,14 @@ public class Coffee {
 	public static final ZonedDateTime DEADLINE = ZonedDateTime.parse("2021-03-03T14:31:00+01:00[Europe/Paris]");
 
 	public static void main(String[] args) throws Exception {
+		/* Nb should give 1.0/20 pts for user.grade. */
 		final RepositoryFetcher fetcher = RepositoryFetcher.withPrefix(PREFIX);
 //				.setRepositoriesFilter(r -> r.getUsername().equals("…"));
 		final GitGeneralGrader grader = GitGeneralGrader
 				.using(fetcher,
 						DeadlineGrader.usingInstantiatorGrader(Coffee::grade, DEADLINE).setPenalizer(
 								DeadlineGrader.LinearPenalizer.proportionalToLateness(Duration.ofSeconds(300))))
-				.setExcludeCommitsByAuthors(ImmutableSet.of("Olivier Cailloux")).setExcludeCommitsByGitHub(true);
+				.setExcludeCommitsByAuthors(ImmutableSet.of("Olivier Cailloux"));// .setExcludeCommitsByGitHub(true);
 		grader.grade();
 		/** TODO see why still open. */
 		// final Path src = Path.of("/tmp/coffee-…/.git/");
@@ -103,26 +100,32 @@ public class Coffee {
 //					Mark.binary(nbAfter == nbBefore + 1), 1d));
 //		}
 		{
-			final TryVoid ran = TryVoid.run(() -> dripMachine.produceCoffee(0.3d));
-			final Try<Double> energyNonZero = Try.of(() -> dripMachine.getEnergySpent());
+			final TryCatchAllVoid ran = TryCatchAllVoid.run(() -> dripMachine.produceCoffee(0.3d));
+
+			final TryCatchAll<Double> energyNonZero = ran.andGet(() -> dripMachine.getEnergySpent());
 			dripGradeBuilder.add(CriterionGradeWeight.from(Criterion.given("Energy non zero"),
-					Mark.binary(ran.isSuccess() && energyNonZero.equals(Try.success(83d))), 1d));
+					Mark.binary(ran.isSuccess() && energyNonZero.equals(TryCatchAll.success(83d))), 1d));
 
 			dripMachine.produceCoffee(0d);
-			final Try<Double> energyZero = Try.of(() -> dripMachine.getEnergySpent());
-			dripGradeBuilder.add(CriterionGradeWeight.from(Criterion.given("Energy zero"),
-					Mark.binary(energyZero.equals(Try.success(0d)) && ran.isSuccess() && energyNonZero.isSuccess()
-							&& energyNonZero.get() != 0d),
-					1d));
+//			final TryCatchAll<Double> energyZero = TryCatchAll.get(dripMachine::getEnergySpent);
+//			final Mark mark = energyNonZero
+//					.and(energyZero, (n, z) -> Mark.binary(z == 0d && n != 0d, "", "Unexpected energy results"))
+			final Mark mark = energyNonZero.andApply(
+					n -> Mark.binary(dripMachine.getEnergySpent() == 0d && n != 0d, "", "Unexpected energy results"))
+					.orMapCause(Coffee::failed);
+			dripGradeBuilder.add(CriterionGradeWeight.from(Criterion.given("Energy zero"), mark, 1d));
 		}
 		{
-			final Try<Integer> timeNonZero = Try.of(() -> dripMachine.getTimeForCoffee(0.8d));
+			final TryCatchAll<Integer> timeNonZero = TryCatchAll.get(() -> dripMachine.getTimeForCoffee(0.8d));
 			dripGradeBuilder.add(CriterionGradeWeight.from(Criterion.given("Time non zero"),
-					Mark.binary(timeNonZero.equals(Try.success(120))), 1d));
+					Mark.binary(timeNonZero.equals(TryCatchAll.success(120))), 1d));
 
 			final int timeZero = dripMachine.getTimeForCoffee(0d);
 			dripGradeBuilder.add(CriterionGradeWeight.from(Criterion.given("Time zero"),
-					Mark.binary((timeZero == 0) && (timeNonZero.isSuccess() && timeNonZero.get() != 0)), 1d));
+					timeNonZero
+							.andApply(t -> (t != 0 ? Mark.binary(timeZero == 0) : Mark.zero("Got zero time for 0.8d")))
+							.orMapCause(Coffee::failed),
+					1d));
 
 			boolean thrown = doesThrow(() -> dripMachine.getTimeForCoffee(10.2d),
 					e -> e instanceof IllegalArgumentException);
@@ -142,7 +145,7 @@ public class Coffee {
 		}
 		{
 			final int nbStart = espressoMachine.getNumberOfCoffeesProduced();
-			final TryVoid ran = TryVoid.run(() -> espressoMachine.produceCoffee(1d));
+			final TryCatchAllVoid ran = TryCatchAllVoid.run(() -> espressoMachine.produceCoffee(1d));
 			final int nbOne = espressoMachine.getNumberOfCoffeesProduced();
 			espressoGradeBuilder.add(CriterionGradeWeight.from(Criterion.given("Nb starts at zero"),
 					Mark.binary(ran.isSuccess() && nbStart == 0 && nbOne == 1), 4d));
@@ -160,31 +163,32 @@ public class Coffee {
 //					Mark.binary(ran.isSuccess() && (nbAfter == nbBefore + 1)), 1d));
 //		}
 		{
-			final TryVoid ran = TryVoid.run(() -> espressoMachine.produceCoffee(11d));
-			final Try<Double> energyNonZero = Try.of(() -> espressoMachine.getEnergySpent());
+			final TryCatchAllVoid ran = TryCatchAllVoid.run(() -> espressoMachine.produceCoffee(11d));
+			final TryCatchAll<Double> energyNonZero = ran.andGet(() -> espressoMachine.getEnergySpent());
 			final double expected = 2000d * 162d / 3600d + 15d;
-			espressoGradeBuilder.add(CriterionGradeWeight.from(Criterion.given("Energy non zero"),
-					Mark.binary(
-							ran.isSuccess() && energyNonZero.isSuccess()
-									&& DoubleMath.fuzzyEquals(energyNonZero.get(), expected, 0.1d),
-							"", "For strength 11, expected 2000 watt × 162 sec / 3600 (sec/h) + 15 watt hours"),
-					4d));
+			espressoGradeBuilder
+					.add(CriterionGradeWeight.from(Criterion.given("Energy non zero"),
+							energyNonZero.map(n -> Mark.binary(DoubleMath.fuzzyEquals(n, expected, 0.1d), "",
+									"For strength 11, expected 2000 watt × 162 sec / 3600 (sec/h) + 15 watt hours"),
+									Coffee::failed),
+							4d));
 
-			final TryVoid ranZero = TryVoid.run(() -> espressoMachine.produceCoffee(0d));
-			final Try<Double> energyZero = Try.of(() -> espressoMachine.getEnergySpent());
+			final TryCatchAllVoid ranZero = TryCatchAllVoid.run(() -> espressoMachine.produceCoffee(0d));
+			final TryCatchAll<Double> energyZero = ranZero.andGet(() -> espressoMachine.getEnergySpent());
 			espressoGradeBuilder.add(CriterionGradeWeight.from(Criterion.given("Energy zero"),
-					Mark.binary(ranZero.isSuccess() && energyZero.equals(Try.success(0d)) && energyNonZero.isSuccess()
-							&& (energyNonZero.get() != 0d)),
+					energyZero.and(energyNonZero, (z, n) -> Mark.binary(z == 0d && n != 0d)).orMapCause(Coffee::failed),
 					4d));
 		}
 		{
-			final Try<Integer> timeNonZero = Try.of(() -> espressoMachine.getTimeForCoffee(19.6d));
+			final TryCatchAll<Integer> timeNonZero = TryCatchAll.get(() -> espressoMachine.getTimeForCoffee(19.6d));
 			espressoGradeBuilder.add(CriterionGradeWeight.from(Criterion.given("Time non zero"),
-					Mark.binary(timeNonZero.isSuccess() && (Math.abs(timeNonZero.get() - 179.2d) < 1d)), 3d));
+					timeNonZero.map(n -> Mark.binary(Math.abs(n - 179.2d) < 1d), Coffee::failed), 3d));
 
 			final int timeZero = espressoMachine.getTimeForCoffee(0d);
 			espressoGradeBuilder.add(CriterionGradeWeight.from(Criterion.given("Time zero"),
-					Mark.binary((timeZero == 0) && (timeNonZero.isSuccess() && timeNonZero.get() != 0)), 4d));
+					Mark.binary((timeZero == 0) && (timeNonZero.isSuccess() && timeNonZero.orMapCause(t -> {
+						throw new VerifyException(t);
+					}) != 0)), 4d));
 
 			boolean thrown = doesThrow(() -> espressoMachine.getTimeForCoffee(-0.2d),
 					e -> e instanceof IllegalArgumentException);
@@ -197,6 +201,10 @@ public class Coffee {
 		}
 
 		return WeightingGrade.from(espressoGradeBuilder.build());
+	}
+
+	private static Mark failed(Throwable t) {
+		return Mark.zero("Got exception: " + t);
 	}
 
 	@SafeVarargs

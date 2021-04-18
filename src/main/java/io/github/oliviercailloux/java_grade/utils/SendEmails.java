@@ -7,6 +7,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
+import com.google.common.math.DoubleMath;
 import com.google.common.math.Quantiles;
 import com.google.common.math.Stats;
 import io.github.oliviercailloux.email.EmailAddress;
@@ -25,6 +26,7 @@ import io.github.oliviercailloux.grade.comm.GradesInEmails;
 import io.github.oliviercailloux.grade.comm.StudentOnGitHubKnown;
 import io.github.oliviercailloux.grade.comm.json.JsonStudentsReader;
 import io.github.oliviercailloux.grade.format.json.JsonGrade;
+import io.github.oliviercailloux.java_grade.graders.PersonsManagerGrader;
 import io.github.oliviercailloux.json.JsonbUtils;
 import io.github.oliviercailloux.xml.XmlUtils;
 import java.lang.reflect.Type;
@@ -43,10 +45,11 @@ public class SendEmails {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(SendEmails.class);
 
-	private static final String PREFIX = "coffee";
 	private static final Path WORK_DIR = Path.of("");
 
 	public static void main(String[] args) throws Exception {
+		final String prefix = PersonsManagerGrader.PREFIX;
+
 		final JsonStudentsReader students = JsonStudentsReader
 				.from(Files.readString(WORK_DIR.resolve("usernames.json")));
 		final ImmutableMap<GitHubUsername, StudentOnGitHubKnown> usernames = students
@@ -56,19 +59,22 @@ public class SendEmails {
 		final Type type = new HashMap<String, IGrade>() {
 		}.getClass().getGenericSuperclass();
 		final Map<String, IGrade> gradesByString = JsonbUtils.fromJson(
-				Files.readString(WORK_DIR.resolve("grades " + PREFIX + ".json")), type, JsonGrade.asAdapter());
+				Files.readString(WORK_DIR.resolve("grades " + prefix + ".json")), type, JsonGrade.asAdapter());
 
 		final ImmutableSet<String> missing = gradesByString.keySet().stream()
 				.filter(s -> !usernames.containsKey(GitHubUsername.given(s))).collect(ImmutableSet.toImmutableSet());
+		final ImmutableMap<String, IGrade> knownGrades = gradesByString.keySet().stream()
+				.filter(s -> usernames.containsKey(GitHubUsername.given(s)))
+				.collect(ImmutableMap.toImmutableMap(s -> s, gradesByString::get));
 		if (!missing.isEmpty()) {
 			LOGGER.warn("Missing: {} out of usernames: {}.", missing, usernames);
 		}
 
-		final ImmutableMap<EmailAddressAndPersonal, IGrade> gradesByEmail = gradesByString.entrySet().stream()
+		final ImmutableMap<EmailAddressAndPersonal, IGrade> gradesByEmail = knownGrades.entrySet().stream()
 				.collect(ImmutableMap.toImmutableMap(e -> usernames.get(GitHubUsername.given(e.getKey())).getEmail(),
 						Map.Entry::getValue));
 
-		final ImmutableList<Double> points = gradesByString.values().stream().map(IGrade::getPoints)
+		final ImmutableList<Double> points = knownGrades.values().stream().map(IGrade::getPoints)
 				.collect(ImmutableList.toImmutableList());
 		final Stats stats = Stats.of(points);
 		final Map<Integer, Double> quartiles = Quantiles.quartiles().indexes(1, 2, 3).compute(points);
@@ -84,42 +90,50 @@ public class SendEmails {
 			final ImmutableSet<EmailAddress> addresses = gradesByEmail.keySet().stream()
 					.map(EmailAddressAndPersonal::getAddress).collect(ImmutableSet.toImmutableSet());
 			gradesInEmails.filterRecipients(addresses);
-			final ImmutableMap<EmailAddress, IGrade> lastGrades = gradesInEmails.getLastGrades(PREFIX);
+			final ImmutableMap<EmailAddress, IGrade> lastGrades = gradesInEmails.getLastGrades(prefix);
 			LOGGER.debug("Searching grades sent to {}, got those sent to {}.", addresses, lastGrades.keySet());
 
 			for (EmailAddressAndPersonal address : gradesByEmail.keySet()) {
-				final Optional<IGrade> lastGradeOpt = Optional.ofNullable(lastGrades.get(address.getAddress()));
-				if (lastGradeOpt.isPresent()) {
-					final IGrade lastGrade = lastGradeOpt.get();
-					final IGrade gradeFromJson = gradesByEmail.get(address);
-					if (!lastGrade.equals(gradeFromJson)) {
-//						LOGGER.info("Diff {}: {} (before {}, after {}).", address, getDiff(lastGrade, gradeFromJson),
-//								lastGrade, gradeFromJson);
-						final double before = lastGrade.getPoints();
-						final double after = gradeFromJson.getPoints();
-						LOGGER.info("Diff {} (before {}, after {}).", address, before, after);
-						if (before > after) {
-							LOGGER.warn("Losing points.");
-						}
-						computeDiffUsingLeaves(lastGrade, gradeFromJson);
-					}
-				} else {
-					LOGGER.info("Not found {}.", address);
+				if (!lastGrades.containsKey(address.getAddress())) {
+					LOGGER.info("Not found {} among {}.", address, lastGrades.keySet());
 				}
 			}
 
-			final Map<EmailAddressAndPersonal, IGrade> gradesDiffering = gradesByEmail.entrySet().stream()
-					.filter(e -> !e.getValue().equals(lastGrades.get(e.getKey().getAddress())))
+			final Map<EmailAddressAndPersonal, IGrade> gradesDiffering = gradesByEmail
+					.entrySet().stream().filter(
+							e -> !e.getValue().equals(lastGrades.get(e.getKey().getAddress()))
+									&& !DoubleMath.fuzzyEquals(
+											Optional.ofNullable(lastGrades.get(e.getKey().getAddress()))
+													.map(IGrade::getPoints).orElse(-1d),
+											e.getValue().getPoints(), 1e-8d))
+//					.filter(e -> !e.getKey().getPersonal().contains("…"))
 					.collect(ImmutableMap.toImmutableMap(Map.Entry::getKey, Map.Entry::getValue));
 
+			for (EmailAddressAndPersonal address : gradesDiffering.keySet()) {
+				final IGrade lastGrade = lastGrades.get(address.getAddress());
+				if (lastGrade == null) {
+					continue;
+				}
+				final IGrade gradeFromJson = gradesByEmail.get(address);
+//						LOGGER.info("Diff {}: {} (before {}, after {}).", address, getDiff(lastGrade, gradeFromJson),
+//								lastGrade, gradeFromJson);
+				final double before = lastGrade.getPoints();
+				final double after = gradeFromJson.getPoints();
+				LOGGER.info("Diff {} (before {}, after {}).", address, before, after);
+				if (before > after) {
+					LOGGER.warn("Losing points.");
+				}
+				computeDiffUsingLeaves(lastGrade, gradeFromJson);
+			}
+
 			final ImmutableSet<Email> emails = gradesDiffering.entrySet().stream()
-					.map(e -> GradesInEmails.asEmail(e.getKey(), PREFIX, e.getValue(), stats, quartiles))
+					.map(e -> GradesInEmails.asEmail(e.getKey(), prefix, e.getValue(), stats, quartiles))
 					.collect(ImmutableSet.toImmutableSet());
 
 			final ImmutableSet<Email> effectiveEmails = emails;
-			// final ImmutableSet<Email> effectiveEmails =
-			// emails.stream().limit(1).collect(ImmutableSet.toImmutableSet());
-			LOGGER.info("Prepared first doc {}.", XmlUtils.asString(effectiveEmails.iterator().next().getDocument()));
+//			final ImmutableSet<Email> effectiveEmails = emails.stream().limit(3).collect(ImmutableSet.toImmutableSet());
+			LOGGER.info("Prepared first doc (out of {}): {}.", effectiveEmails.size(),
+					XmlUtils.asString(effectiveEmails.iterator().next().getDocument()));
 //			LOGGER.info("Prepared {}.", effectiveEmails);
 
 			emailer.saveInto(folder);
@@ -145,7 +159,7 @@ public class SendEmails {
 			if (!sub1.equals(sub2)) {
 				final String sub1String = sub1.map(Object::toString).orElse("");
 				final String sub2String = sub2.map(Object::toString).orElse("");
-				LOGGER.info("Path: {}, first: {}, second: {}.", leaf.toSimpleString(), sub1String, sub2String);
+				LOGGER.debug("Path: {}, first: {}, second: {}.", leaf.toSimpleString(), sub1String, sub2String);
 			}
 		}
 	}
@@ -154,6 +168,7 @@ public class SendEmails {
 		if (grade1.equals(grade2)) {
 			return "";
 		}
+
 		if (ImmutableSet.of(grade1.getClass(), grade2.getClass())
 				.equals(ImmutableSet.of(Mark.class, WeightingGrade.class))) {
 			return "Different types.";

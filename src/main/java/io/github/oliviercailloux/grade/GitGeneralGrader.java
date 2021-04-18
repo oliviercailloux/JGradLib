@@ -110,9 +110,8 @@ public class GitGeneralGrader {
 
 	IGrade grade(RepositoryCoordinatesWithPrefix coordinates) throws IOException {
 		final Path dir = Utils.getTempDirectory().resolve(coordinates.getRepositoryName());
-		try (FileRepository repository = getFileRepo(coordinates, dir)) {
-			final GitFileSystem gitFs = GitFileSystemProvider.getInstance().newFileSystemFromRepository(repository);
-
+		try (FileRepository repository = getFileRepo(coordinates, dir);
+				GitFileSystem gitFs = GitFileSystemProvider.getInstance().newFileSystemFromRepository(repository)) {
 			final GitHistory pushHistory;
 			{
 				final GitHubHistory gitHubHistory;

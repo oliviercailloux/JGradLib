@@ -189,6 +189,7 @@ public class CsvGrades<K> {
 						.map(CriterionGradeWeight::getWeight).collect(ImmutableSet.toImmutableSet())));
 		final boolean homogeneousWeights = weightsPerCriterion.values().stream().allMatch(s -> s.size() == 1);
 
+		LOGGER.debug("Writing summary data.");
 		{
 			writer.addValue(firstHeader, "Range");
 			if (homogeneousWeights) {
@@ -258,6 +259,7 @@ public class CsvGrades<K> {
 			writer.writeValuesToRow();
 		}
 
+		LOGGER.debug("Done writing.");
 		writer.close();
 
 		return stringWriter.toString();

@@ -4,30 +4,6 @@ import static com.google.common.base.Verify.verify;
 import static io.github.oliviercailloux.jaris.exceptions.Unchecker.IO_UNCHECKER;
 import static java.util.Objects.requireNonNull;
 
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Path;
-import java.time.Instant;
-import java.util.List;
-import java.util.Optional;
-import java.util.function.Function;
-import java.util.stream.Collectors;
-
-import javax.json.Json;
-import javax.json.JsonArray;
-import javax.json.JsonBuilderFactory;
-import javax.json.JsonObject;
-import javax.json.JsonObjectBuilder;
-import javax.ws.rs.WebApplicationException;
-import javax.ws.rs.client.Client;
-import javax.ws.rs.client.ClientBuilder;
-import javax.ws.rs.client.Entity;
-import javax.ws.rs.client.Invocation.Builder;
-import javax.ws.rs.core.Response;
-
-import org.eclipse.jgit.lib.ObjectId;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.ImmutableList;
@@ -38,7 +14,6 @@ import com.google.common.collect.Streams;
 import com.google.common.graph.Graph;
 import com.google.common.graph.Graphs;
 import com.google.common.io.Resources;
-
 import io.github.oliviercailloux.git.GitHubHistory;
 import io.github.oliviercailloux.git.git_hub.model.GitHubRealToken;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
@@ -49,6 +24,29 @@ import io.github.oliviercailloux.git.git_hub.model.graph_ql.RepositoryWithFiles;
 import io.github.oliviercailloux.git.git_hub.model.graph_ql.RepositoryWithIssuesWithHistory;
 import io.github.oliviercailloux.json.PrintableJsonObjectFactory;
 import io.github.oliviercailloux.utils.Utils;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
+import java.time.Instant;
+import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import javax.json.Json;
+import javax.json.JsonArray;
+import javax.json.JsonBuilderFactory;
+import javax.json.JsonObject;
+import javax.json.JsonObjectBuilder;
+import javax.ws.rs.ProcessingException;
+import javax.ws.rs.WebApplicationException;
+import javax.ws.rs.client.Client;
+import javax.ws.rs.client.ClientBuilder;
+import javax.ws.rs.client.Entity;
+import javax.ws.rs.client.Invocation;
+import javax.ws.rs.core.Response;
+import org.eclipse.jgit.lib.ObjectId;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class GitHubFetcherQL implements AutoCloseable {
 	public static final String GRAPHQL_ENDPOINT = "https://api.github.com/graphql";
@@ -81,7 +79,9 @@ public class GitHubFetcherQL implements AutoCloseable {
 		this.token = requireNonNull(token);
 		rateLimit = "";
 		rateReset = null;
-		client = ClientBuilder.newClient();
+		client = ClientBuilder.newBuilder().connectTimeout(100, TimeUnit.SECONDS).readTimeout(120, TimeUnit.SECONDS)
+				.build();
+//		client = ClientBuilder.newClient();
 		jsonBuilderFactory = Json.createBuilderFactory(null);
 	}
 
@@ -231,25 +231,30 @@ public class GitHubFetcherQL implements AutoCloseable {
 					.add("variables", variables).build();
 		}
 
-		final Builder request = client.target(GRAPHQL_ENDPOINT).request();
+		final Invocation.Builder request = client.target(GRAPHQL_ENDPOINT).request();
 		token.addToRequest(request);
 
-		final JsonObject ret;
-		try (Response response = request.post(Entity.json(queryJson))) {
-			readRates(response);
-			if (response.getStatus() != Response.Status.OK.getStatusCode()) {
-				String message;
-				try {
-					ret = response.readEntity(JsonObject.class);
-					message = PrintableJsonObjectFactory.wrapObject(ret).toString();
-				} catch (Exception masqued) {
-					message = "(and could not read entity: " + masqued.getMessage() + ")";
+		JsonObject ret = null;
+		for (int i = 0; i < 5; ++i) {
+			try (Response response = request.post(Entity.json(queryJson))) {
+				readRates(response);
+				if (response.getStatus() != Response.Status.OK.getStatusCode()) {
+					String message;
+					try {
+						ret = response.readEntity(JsonObject.class);
+						message = PrintableJsonObjectFactory.wrapObject(ret).toString();
+					} catch (Exception masqued) {
+						message = "(and could not read entity: " + masqued.getMessage() + ")";
+					}
+					throw new WebApplicationException(message, response);
 				}
-				throw new WebApplicationException(message, response);
+				ret = response.readEntity(JsonObject.class);
+				return ret;
+			} catch (ProcessingException e) {
+				LOGGER.error("Temporary retry mechanism", e);
 			}
-			ret = response.readEntity(JsonObject.class);
 		}
-		return ret;
+		throw new ProcessingException("Oops multiple!");
 	}
 
 	private void readRates(Response response) {

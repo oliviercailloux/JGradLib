@@ -11,6 +11,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import com.google.common.math.DoubleMath;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -368,12 +369,19 @@ public class WeightingGrade implements IGrade {
 		final double sumPosWeights = weights.values().stream().filter(d -> d > 0d)
 				.collect(Collectors.summingDouble(d -> d));
 		verify(sumPosWeights > 0d);
+		/* See JsonGradeTests#gradePrecisionRoundTrip. */
+		final double effectiveNormalizer;
+		if (DoubleMath.fuzzyEquals(1.0d, sumPosWeights, 1e-8d)) {
+			effectiveNormalizer = 1.0d;
+		} else {
+			effectiveNormalizer = sumPosWeights;
+		}
 		/**
 		 * I iterate over the sub grades key set in order to guarantee iteration order
 		 * of the weights reflects the order of the sub-grades.
 		 */
 		this.weights = subGrades.keySet().stream().collect(ImmutableMap.toImmutableMap(c -> c,
-				c -> weights.get(c) > 0d ? weights.get(c) / sumPosWeights : weights.get(c)));
+				c -> weights.get(c) > 0d ? weights.get(c) / effectiveNormalizer : weights.get(c)));
 		this.subGrades = ImmutableMap.copyOf(subGrades);
 		this.comment = checkNotNull(comment);
 	}

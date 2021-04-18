@@ -8,7 +8,6 @@ import javax.json.bind.JsonbBuilder;
 import javax.json.bind.JsonbConfig;
 import javax.json.bind.JsonbException;
 import javax.json.bind.adapter.JsonbAdapter;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -101,9 +100,11 @@ public class JsonGrade implements JsonbAdapter<IGrade, JsonObject> {
 
 	public WeightingGrade instanceAsWeightingGrade(JsonObject json) {
 		final WeightingGrade grade = jsonb.fromJson(json.toString(), WeightingGrade.class);
-		final double sourcePoints = json.getJsonNumber("points").doubleValue();
-		checkArgument(DoubleMath.fuzzyEquals(sourcePoints, grade.getPoints(), 1e-4),
-				"Computed " + grade.getPoints() + "; read " + sourcePoints + " - " + json);
+		if (json.containsKey("points")) {
+			final double sourcePoints = json.getJsonNumber("points").doubleValue();
+			checkArgument(DoubleMath.fuzzyEquals(sourcePoints, grade.getPoints(), 1e-4),
+					"Computed " + grade.getPoints() + "; read " + sourcePoints + " - " + json);
+		}
 		return grade;
 	}
 

@@ -10,7 +10,6 @@ import java.util.Map;
 import java.util.function.Function;
 
 import javax.mail.Folder;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
@@ -58,19 +57,19 @@ public class SummarizeEmails {
 			@SuppressWarnings("resource")
 			final Folder folder = emailer.getFolderReadWrite("Grades");
 			gradesInEmails.setFolder(folder);
-			gradesInEmails.filterSent(Range.atLeast(Instant.parse("2020-01-01T00:00:00.00Z")));
+			gradesInEmails.filterSent(Range.atLeast(Instant.parse("2021-01-01T00:00:00.00Z")));
 			lastGrades = gradesInEmails.getLastGrades();
-			LOGGER.info("Got {} grades.", lastGrades.size());
+			LOGGER.info("Got {} grades, keys: {}.", lastGrades.size(), lastGrades.columnKeySet());
 		}
 
-		final ImmutableSet<EmailAddress> addressesFound = lastGrades.rowKeySet();
-		final ImmutableSet<EmailAddress> addresses = addressesFound.stream()
-				.filter(a -> !a.getAddress().startsWith("olivier.cailloux@")).collect(ImmutableSet.toImmutableSet());
+		final ImmutableSet<EmailAddress> addresses = lastGrades.rowKeySet();
+//		final ImmutableSet<EmailAddress> addresses = addressesFound.stream()
+//				.filter(a -> !a.getAddress().startsWith("olivier.cailloux@")).collect(ImmutableSet.toImmutableSet());
 //		final ImmutableMap<EmailAddress, WeightingGrade> grades = addresses.stream()
 //				.collect(ImmutableMap.toImmutableMap(a -> a, a -> from(lastGrades.row(a), Criterion::given, s -> 1d)));
 
 		final ImmutableMap<EmailAddress, WeightingGrade> grades = Maps.toMap(addresses,
-				a -> getWeightingGrade(lastGrades.row(a)));
+				a -> getWeightingGrade(lastGrades.row(a), a));
 
 		final JsonStudentsReader students = JsonStudentsReader
 				.from(Files.readString(workDir.resolve("usernames.json")));
@@ -100,7 +99,7 @@ public class SummarizeEmails {
 				.collect(ImmutableMap.toImmutableMap(e -> otherKeys.get(e.getKey()), Map.Entry::getValue));
 	}
 
-	public static WeightingGrade getWeightingGrade(Map<String, IGrade> grades) {
+	public static WeightingGrade getWeightingGradeOld(Map<String, IGrade> grades) {
 		verify(!grades.containsKey("chess-both"));
 		verify(grades.containsKey("chess"));
 		verify(grades.containsKey("scorers"));
@@ -134,6 +133,29 @@ public class SummarizeEmails {
 		final ImmutableMap<Criterion, IGrade> gradesByCriterion = grades.entrySet().stream().collect(
 				ImmutableMap.toImmutableMap(e -> Criterion.given(e.getKey()), e -> e.getValue().limitedDepth(0)));
 		return (WeightingGrade) GradeUtils.toGrade(root, staticTree.build(), gradesByCriterion);
+	}
+
+	public static WeightingGrade getWeightingGrade(Map<String, IGrade> grades, EmailAddress a) {
+		LOGGER.info("Recap for {}.", a);
+		final ImmutableMap<Criterion, IGrade> gradesByCriterion = grades.entrySet().stream().collect(
+				ImmutableMap.toImmutableMap(e -> Criterion.given(e.getKey()), e -> e.getValue().limitedDepth(0)));
+		{
+			final ImmutableMap.Builder<Criterion, Double> javaWeightsBuilder = ImmutableMap.builder();
+			javaWeightsBuilder.put(Criterion.given("git-branching"), 1d).put(Criterion.given("eclipse"), 1d)
+					.put(Criterion.given("persons-manager"), 3d).put(Criterion.given("coffee"), 1d)
+					.put(Criterion.given("admin-manages-users"), 0d).put(Criterion.given("Projet UML"), 0d);
+			if (grades.containsKey("commit")) {
+				javaWeightsBuilder.put(Criterion.given("commit"), 0d);
+			}
+		}
+		final ImmutableMap.Builder<Criterion, Double> umlWeightsBuilder = ImmutableMap.builder();
+		umlWeightsBuilder.put(Criterion.given("git-branching"), 0d).put(Criterion.given("eclipse"), 0d)
+				.put(Criterion.given("persons-manager"), 0d).put(Criterion.given("coffee"), 0d)
+				.put(Criterion.given("admin-manages-users"), 1d).put(Criterion.given("Projet UML"), 2d);
+		if (grades.containsKey("commit")) {
+			umlWeightsBuilder.put(Criterion.given("commit"), 1d);
+		}
+		return WeightingGrade.from(gradesByCriterion, umlWeightsBuilder.build());
 	}
 
 	public static <K> WeightingGrade from(Map<K, IGrade> grades, Function<K, Criterion> criterionFunction,

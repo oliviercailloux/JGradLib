@@ -29,8 +29,7 @@ public class CoffeeTests {
 
 		final IGrade codeGrade = JavaGradeUtils.gradeSecurely(compiledDir, Coffee::grade);
 //		Files.writeString(Path.of("out.html"), XmlUtils.toString(HtmlGrades.asHtml(codeGrade, "bad")));
-		/* Nb produced includes zero strength. */
-		assertEquals(2d / 19d, codeGrade.getPoints(), 1e-6d);
+		assertEquals(0d, codeGrade.getPoints(), 1e-6d);
 	}
 
 	@Test
@@ -49,7 +48,7 @@ public class CoffeeTests {
 				p -> p.getFileName().toString().endsWith(".java"));
 //		CheckedStream.<Path, IOException>wrapping(javas.stream()).map(p -> Files.readString(p)).forEach(LOGGER::info);
 		final CompilationResult eclipseResult = Compiler.eclipseCompileUsingOurClasspath(javas, compiledDir);
-		assertTrue(eclipseResult.compiled);
+		assertTrue(eclipseResult.compiled, eclipseResult.err);
 		assertEquals(0, eclipseResult.countWarnings(), eclipseResult.err);
 	}
 }

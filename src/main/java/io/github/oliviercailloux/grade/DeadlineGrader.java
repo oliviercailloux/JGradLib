@@ -6,11 +6,11 @@ import static com.google.common.base.Verify.verify;
 import static io.github.oliviercailloux.jaris.exceptions.Unchecker.IO_UNCHECKER;
 
 import com.google.common.base.MoreObjects;
+import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.MoreCollectors;
 import io.github.oliviercailloux.git.fs.Commit;
 import io.github.oliviercailloux.git.fs.GitPathRoot;
 import io.github.oliviercailloux.git.fs.GitPathRootSha;
@@ -23,6 +23,7 @@ import io.github.oliviercailloux.java_grade.JavaGradeUtils;
 import io.github.oliviercailloux.java_grade.bytecode.Compiler;
 import io.github.oliviercailloux.java_grade.bytecode.Compiler.CompilationResult;
 import io.github.oliviercailloux.java_grade.bytecode.Instanciator;
+import io.github.oliviercailloux.java_grade.testers.JavaMarkHelper;
 import io.github.oliviercailloux.utils.Utils;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -31,7 +32,6 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.ZonedDateTime;
 import java.util.Comparator;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
@@ -44,6 +44,10 @@ import org.slf4j.LoggerFactory;
  * Is given a deadline. And a penalizer. Function that grades a git work. Cap at
  * various points (obtain pairs of git work and lateness); ask penalizer, obtain
  * grade. Then take the best grade and aggregates.
+ * <p>
+ * TODO refactor the whole thing into a unique grader that delegates; rather
+ * than a chain. Make sure we can grade as well the github-committed bits, with
+ * a penalty (supplemental to the time penalty!).
  */
 public class DeadlineGrader {
 	@SuppressWarnings("unused")
@@ -51,6 +55,7 @@ public class DeadlineGrader {
 
 	private static class PathToGitGrader {
 
+		private static final double USER_GRADE_WEIGHT = 0.5d / 20d;
 		private final Throwing.Function<Path, IGrade, IOException> simpleWorkGrader;
 
 		private PathToGitGrader(Throwing.Function<Path, IGrade, IOException> simpleWorkGrader) {
@@ -72,9 +77,9 @@ public class DeadlineGrader {
 			LOGGER.debug("Considering {}.", latestTiedPathsOnTime);
 			final IGrade mainGrade = CheckedStream.<GitPathRootSha, IOException>wrapping(latestTiedPathsOnTime.stream())
 					.map(simpleWorkGrader).min(Comparator.comparing(IGrade::getPoints)).get();
-			return WeightingGrade
-					.from(ImmutableSet.of(CriterionGradeWeight.from(Criterion.given("user.name"), userGrade, 1d),
-							CriterionGradeWeight.from(Criterion.given("main"), mainGrade, 19d)));
+			return WeightingGrade.from(ImmutableSet.of(
+					CriterionGradeWeight.from(Criterion.given("user.name"), userGrade, USER_GRADE_WEIGHT),
+					CriterionGradeWeight.from(Criterion.given("main"), mainGrade, 1d - USER_GRADE_WEIGHT)));
 		}
 
 		/**
@@ -166,9 +171,6 @@ public class DeadlineGrader {
 					? IoUtils.getMatchingChildren(srcDir, p -> String.valueOf(p.getFileName()).endsWith(".java"))
 					: ImmutableSet.of();
 			final CompilationResult eclipseResult = Compiler.eclipseCompileUsingOurClasspath(javaPaths, compiledDir);
-			final int nbSuppressed = (int) CheckedStream.<Path, IOException>wrapping(javaPaths.stream())
-					.map(p -> Files.readString(p))
-					.flatMap(s -> Pattern.compile("@SuppressWarnings").matcher(s).results()).count();
 			final Pattern pathPattern = Pattern.compile("/tmp/sources[0-9]*/");
 			final String eclipseStr = pathPattern.matcher(eclipseResult.err).replaceAll("/…/");
 			final IGrade projectGrade;
@@ -178,6 +180,10 @@ public class DeadlineGrader {
 				LOGGER.debug("No java files at {}.", srcDir);
 				projectGrade = Mark.zero("No java files found");
 			} else {
+				final int nbSuppressed = (int) CheckedStream.<Path, IOException>wrapping(javaPaths.stream())
+						.map(p -> Files.readString(p))
+						.flatMap(s -> Pattern.compile("@SuppressWarnings").matcher(s).results()).count();
+
 				final int nbWarningsTot = eclipseResult.countWarnings() + nbSuppressed;
 				final boolean hasWarnings = nbWarningsTot > 0;
 				final IGrade codeGrade = JavaGradeUtils.gradeSecurely(compiledDir, grader);
@@ -292,7 +298,7 @@ public class DeadlineGrader {
 
 	public IGrade grade(GitWork work) throws IOException {
 
-		final ImmutableMap<Instant, IGrade> byTime = getPenalizedGradesByCap(work);
+		final ImmutableBiMap<Instant, IGrade> byTime = getPenalizedGradesByCap(work);
 
 		final Optional<IGrade> bestGrade = byTime.values().stream().max(Comparator.comparing(IGrade::getPoints));
 		final IGrade finalGrade;
@@ -311,29 +317,35 @@ public class DeadlineGrader {
 	 *         other grades with weight 0, and indicates for each of them where they
 	 *         have been capped.
 	 */
-	private IGrade getBestAndSub(IGrade best, ImmutableMap<Instant, IGrade> byTime) {
+	private IGrade getBestAndSub(IGrade best, ImmutableBiMap<Instant, IGrade> byTime) {
 		final IGrade finalGrade;
-		final Instant mainInstant = byTime.entrySet().stream().filter(e -> e.getValue().equals(best))
-				.map(Map.Entry::getKey).collect(MoreCollectors.onlyElement());
+		final Instant mainInstant = byTime.inverse().get(best);
 		final ImmutableSet<CriterionGradeWeight> grades = byTime.entrySet().stream()
 				.map(e -> CriterionGradeWeight.from(
 						Criterion.given("Cap at " + e.getKey().atZone(deadline.getZone()).toString()), e.getValue(),
-						e.getValue().getPoints() == best.getPoints() ? 1d : 0d))
+						e.getKey().equals(mainInstant) ? 1d : 0d))
 				.collect(ImmutableSet.toImmutableSet());
 		finalGrade = WeightingGrade.from(grades,
 				"Using best grade, from " + mainInstant.atZone(deadline.getZone()).toString());
 		return finalGrade;
 	}
 
-	private ImmutableMap<Instant, IGrade> getPenalizedGradesByCap(GitWork work) throws IOException {
+	/**
+	 * Is a BiMap because only one grade has no penalty, the other ones have
+	 * different penalties, so they are unique. (Il multiple grades have no penalty,
+	 * this basically means that the student can try several times without
+	 * drawback.)");
+	 *
+	 */
+	private ImmutableBiMap<Instant, IGrade> getPenalizedGradesByCap(GitWork work) throws IOException {
 		final ImmutableSortedSet<Instant> toConsider = fromJustBeforeDeadline(work.getHistory());
 
-		final ImmutableMap.Builder<Instant, IGrade> byTimeBuilder = ImmutableMap.builder();
+		final ImmutableBiMap.Builder<Instant, IGrade> byTimeBuilder = ImmutableBiMap.builder();
 		for (Instant timeCap : toConsider) {
 			final IGrade penalizedGrade = getPenalized(work, timeCap);
 			byTimeBuilder.put(timeCap, penalizedGrade);
 		}
-		final ImmutableMap<Instant, IGrade> byTime = byTimeBuilder.build();
+		final ImmutableBiMap<Instant, IGrade> byTime = byTimeBuilder.build();
 		verify(toConsider.isEmpty() == work.getHistory().getGraph().nodes().isEmpty());
 		return byTime;
 	}
@@ -342,12 +354,22 @@ public class DeadlineGrader {
 		final GitHubUsername author = work.getAuthor();
 		final GitFileSystemHistory history = work.getHistory();
 		checkArgument(!history.isEmpty());
-		final GitFileSystemHistory onTime = history.filter(r -> !history.getCommitDate(r).isAfter(timeCap));
-		checkArgument(!onTime.isEmpty());
-		final IGrade grade = grader.apply(GitWork.given(author, onTime));
+		final GitFileSystemHistory withinCap = history.filter(r -> !history.getCommitDate(r).isAfter(timeCap));
+		checkArgument(!withinCap.isEmpty(), timeCap);
+		final IGrade grade = grader.apply(GitWork.given(author, withinCap));
 		final Duration lateness = Duration.between(deadline.toInstant(), timeCap);
-		final IGrade penalizedGrade = penalizer.penalize(lateness, grade);
-		return penalizedGrade;
+		final IGrade penalizedForTimeGrade = penalizer.penalize(lateness, grade);
+		if (!withinCap.filter(r -> JavaMarkHelper.committerIsGitHub(r)).isEmpty()) {
+			return penalizeForGitHub(penalizedForTimeGrade);
+		}
+		return penalizedForTimeGrade;
+	}
+
+	private IGrade penalizeForGitHub(IGrade grade) {
+		final double fractionPenalty = 0.7d;
+		return WeightingGrade.from(ImmutableSet.of(
+				CriterionGradeWeight.from(Criterion.given("grade"), grade, 1d - fractionPenalty),
+				CriterionGradeWeight.from(Criterion.given("Penalty: commit by GitHub"), Mark.zero(), fractionPenalty)));
 	}
 
 	/**
@@ -366,13 +388,23 @@ public class DeadlineGrader {
 		return considerFrom;
 	}
 
-	private ImmutableSortedSet<Instant> fromJustBeforeDeadline(GitFileSystemHistory history) {
+	private ImmutableSortedSet<Instant> fromJustBeforeDeadline(GitFileSystemHistory history) throws IOException {
 		final ImmutableSortedSet<Instant> toConsider;
 		{
 			final ImmutableSortedSet<Instant> timestamps = history.asGitHistory().getCommitDates().values().stream()
 					.collect(ImmutableSortedSet.toImmutableSortedSet(Comparator.naturalOrder()));
-			final Instant considerFrom = getLatestBefore(timestamps, deadline.toInstant());
-			toConsider = timestamps.tailSet(considerFrom);
+			final Instant latestAll = getLatestBefore(timestamps, deadline.toInstant());
+			final ImmutableSortedSet<Instant> fromJustBefore = timestamps.tailSet(latestAll);
+
+			final ImmutableSortedSet<Instant> timestampsNonGitHub = history
+					.filter(p -> !JavaMarkHelper.committerIsGitHub(p)).asGitHistory().getCommitDates().values().stream()
+					.collect(ImmutableSortedSet.toImmutableSortedSet(Comparator.naturalOrder()));
+			final Instant latestNonGitHub = getLatestBefore(timestampsNonGitHub, deadline.toInstant());
+			final ImmutableSortedSet.Builder<Instant> builder = ImmutableSortedSet.naturalOrder();
+			if (!timestamps.headSet(latestNonGitHub, true).isEmpty()) {
+				builder.add(latestNonGitHub);
+			}
+			toConsider = builder.addAll(fromJustBefore).build();
 		}
 		/** Temporary patch in wait for a better adjustment of GitHub push dates. */
 		final ImmutableSortedSet<Instant> adjustedConsider;
@@ -384,7 +416,8 @@ public class DeadlineGrader {
 			adjustedConsider = toConsider;
 		}
 		LOGGER.debug("Given {}, to consider: {}, adjusted: {}.", history, toConsider, adjustedConsider);
-		verify(toConsider.isEmpty() == history.getGraph().nodes().isEmpty());
+		verify(toConsider.isEmpty() == history.getGraph().nodes().isEmpty(),
+				toConsider.toString() + history.getGraph().nodes());
 		return adjustedConsider;
 	}
 

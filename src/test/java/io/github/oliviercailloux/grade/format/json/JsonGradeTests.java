@@ -88,6 +88,24 @@ public class JsonGradeTests {
 		assertEquals(expected, readVague);
 	}
 
+	/**
+	 * Tests whether reading weights that slightly do not sum to one results in
+	 * computing the points in a different way than when exporting initially. This
+	 * could be due to normalizing the weights again after reading. We want, on the
+	 * contrary, that exporting then reading again rounds-trip.
+	 */
+	@Test
+	void gradePrecisionRoundTrip() throws Exception {
+		final String json = Resources.toString(this.getClass().getResource("PrecisionGrade.json"),
+				StandardCharsets.UTF_8);
+		final WeightingGrade read = JsonGrade
+				.asWeightingGrade(PrintableJsonObjectFactory.wrapPrettyPrintedString(json));
+		final double pointsReadAndComputed = read.getPoints();
+		final PrintableJsonObject exported = JsonGrade.asJson(read);
+		final WeightingGrade readAgain = JsonGrade.asWeightingGrade(exported);
+		assertEquals(pointsReadAndComputed, readAgain.getPoints());
+	}
+
 	@Test
 	void gradeSingletonRead() throws Exception {
 		final Criterion criterion = Criterion.given("criterion");

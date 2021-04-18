@@ -79,11 +79,22 @@ public class GitCloner {
 	}
 
 	public FileRepository download(GitUri uri, Path workTree) {
-		return download(uri, workTree, false);
+		for (int i = 0; i < 5; ++i) {
+			try {
+				return download(uri, workTree, false);
+			} catch (GitAPIException e) {
+				LOGGER.error("Oops, retrying temporarily.", e);
+			}
+		}
+		throw new IllegalStateException("Failed.");
 	}
 
 	public FileRepository downloadBare(GitUri uri, Path gitDir) {
-		return download(uri, gitDir, true);
+		try {
+			return download(uri, gitDir, true);
+		} catch (GitAPIException e) {
+			throw new IllegalStateException(e);
+		}
 	}
 
 	/**
@@ -98,8 +109,9 @@ public class GitCloner {
 	 *                            exists, this method will not check whether it is
 	 *                            bare)
 	 * @return
+	 * @throws GitAPIException
 	 */
-	private FileRepository download(GitUri uri, Path repositoryDirectory, boolean allowBare) {
+	private FileRepository download(GitUri uri, Path repositoryDirectory, boolean allowBare) throws GitAPIException {
 		localRefs = null;
 		remoteRefs = null;
 		final FileRepository repository;
@@ -118,13 +130,9 @@ public class GitCloner {
 //				throw new IOException(e);
 //			}
 //			try (Git git = Git.open(repositoryDirectory.toFile())) {
-			try {
-				Git git = cloneCmd.call();
-				maybeCheckCommonRefs(git);
-				repository = (FileRepository) git.getRepository();
-			} catch (GitAPIException e) {
-				throw new IllegalStateException(e);
-			}
+			Git git = cloneCmd.call();
+			maybeCheckCommonRefs(git);
+			repository = (FileRepository) git.getRepository();
 		} else {
 			try {
 				repository = (FileRepository) new FileRepositoryBuilder().setWorkTree(repositoryDirectory.toFile())
@@ -159,6 +167,10 @@ public class GitCloner {
 						final Ref r = fetchResult.getAdvertisedRef(fullBranch);
 						if (r == null) {
 							/** Happens with a repository on GitHub that has never been pushed to. */
+							/*
+							 * TODO happens if I manually check out an older commit from the locally clone
+							 * repository.
+							 */
 							LOGGER.info("Did not pull, remote server did not advertise {}.", fullBranch);
 						} else {
 							final PullResult pullResult = git.pull().call();
@@ -176,8 +188,6 @@ public class GitCloner {
 				maybeCheckCommonRefs(git);
 			} catch (IOException e) {
 				throw new UncheckedIOException(e);
-			} catch (GitAPIException e) {
-				throw new IllegalStateException(e);
 			}
 		}
 		return repository;

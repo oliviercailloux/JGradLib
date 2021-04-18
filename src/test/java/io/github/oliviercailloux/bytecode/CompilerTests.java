@@ -15,6 +15,7 @@ import io.github.classgraph.ClassGraph;
 import io.github.oliviercailloux.jaris.io.IoUtils;
 import io.github.oliviercailloux.java_grade.bytecode.Compiler;
 import io.github.oliviercailloux.java_grade.bytecode.Compiler.CompilationResult;
+import io.github.oliviercailloux.java_grade.bytecode.NewCompiler;
 import java.io.StringWriter;
 import java.net.URI;
 import java.nio.file.FileSystem;
@@ -113,6 +114,22 @@ class CompilerTests {
 				ImmutableSet.of(source));
 		assertTrue(result.compiled);
 		assertEquals(0, result.countWarnings());
+	}
+
+	@Test
+	void testNewCompilerWarn() throws Exception {
+		final Path source = Path.of(getClass().getResource("SourceWithWarnings.java").toURI());
+		final ImmutableList<Diagnostic<? extends JavaFileObject>> result = NewCompiler.create()
+				.setSourcePaths(ImmutableSet.of(source)).compile();
+		assertEquals(0, result.size());
+	}
+
+	@Test
+	void testNewCompilerNoWarn() throws Exception {
+		final Path source = Path.of(getClass().getResource("SourceWithNoWarnings.java").toURI());
+		final ImmutableList<Diagnostic<? extends JavaFileObject>> result = NewCompiler.create()
+				.setSourcePaths(ImmutableSet.of(source)).compile();
+		assertEquals(0, result.size());
 	}
 
 	@Test

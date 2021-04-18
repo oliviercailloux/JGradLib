@@ -5,6 +5,20 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.MoreCollectors;
+import com.google.common.jimfs.Configuration;
+import com.google.common.jimfs.Jimfs;
+import io.github.classgraph.ClassGraph;
+import io.github.classgraph.ClassInfo;
+import io.github.classgraph.ClassInfoList;
+import io.github.classgraph.MethodInfo;
+import io.github.classgraph.MethodInfoList;
+import io.github.classgraph.ScanResult;
+import io.github.oliviercailloux.java_grade.bytecode.Compiler;
+import io.github.oliviercailloux.java_grade.bytecode.Instanciator;
+import io.github.oliviercailloux.persons_manager.PersonsManager;
+import java.lang.reflect.Method;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.file.FileSystem;
@@ -13,17 +27,9 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
-
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.collect.ImmutableList;
-import com.google.common.jimfs.Configuration;
-import com.google.common.jimfs.Jimfs;
-
-import io.github.oliviercailloux.java_grade.bytecode.Compiler;
-import io.github.oliviercailloux.java_grade.bytecode.Instanciator;
 
 public class InstanciatorTests {
 	@SuppressWarnings("unused")
@@ -32,6 +38,24 @@ public class InstanciatorTests {
 	@Test
 	void testGetInstance() throws Exception {
 		final Path sourcePath = Path.of(getClass().getResource("MyIdentityFunction.java").toURI());
+		try (FileSystem jimFs = Jimfs.newFileSystem(Configuration.unix())) {
+			final Path work = jimFs.getPath("");
+
+			Compiler.intolerant(ImmutableList.of(), work).compile(ImmutableList.of(sourcePath));
+
+			final URL url = work.toUri().toURL();
+			try (URLClassLoader loader = new URLClassLoader(new URL[] { url }, getClass().getClassLoader())) {
+				final Instanciator instanciator = Instanciator.given(loader);
+				assertTrue(instanciator.getInstance(List.class, "newInstance").isEmpty());
+				assertTrue(instanciator.getInstance(Function.class, "newInstanceWrongName").isEmpty());
+				assertTrue(instanciator.getInstance(Function.class, "newInstance").isPresent());
+			}
+		}
+	}
+
+	@Test
+	void testGetInstancePackagePrivate() throws Exception {
+		final Path sourcePath = Path.of(getClass().getResource("MyPackagePrivateIdentityFunction.java").toURI());
 		try (FileSystem jimFs = Jimfs.newFileSystem(Configuration.unix())) {
 			final Path work = jimFs.getPath("");
 
@@ -95,6 +119,67 @@ public class InstanciatorTests {
 				assertNotNull(lastException);
 			}
 		}
+	}
+
+	/**
+	 * Just to test what is allowed.
+	 */
+	@Test
+	void testLoadManually() throws Exception {
+		final ClassGraph classGraph = new ClassGraph();
+		final ClassGraph graph = classGraph.enableAllInfo();
+		LOGGER.debug("Scanning.");
+		try (ScanResult scanResult = graph.scan()) {
+			LOGGER.info("Scan found: {}.", scanResult.getAllClasses().size());
+			final ClassInfoList implementingClasses = scanResult
+					.getClassesImplementing(PersonsManager.class.getTypeName());
+			LOGGER.info("Implementing: {}.", implementingClasses.size());
+			final ClassInfo info = implementingClasses.directOnly().getStandardClasses().stream()
+					.collect(MoreCollectors.onlyElement());
+			final MethodInfoList methodInfoList = info.getDeclaredMethodInfo("empty");
+			LOGGER.debug("Found {} classes, implementing: {}, with method: {}.", scanResult.getAllClasses().size(),
+					implementingClasses.size(), methodInfoList);
+			final MethodInfo methodInfo = methodInfoList.stream().collect(MoreCollectors.onlyElement());
+			assertTrue(methodInfo.isPublic());
+			final Method method = methodInfo.loadClassAndGetMethod();
+			method.invoke(null);
+		}
+	}
+
+	/**
+	 * Just to test what is allowed.
+	 */
+	@Test
+	void testLoadManuallyThis() throws Exception {
+		final ClassGraph classGraph = new ClassGraph();
+		final ClassGraph graph = classGraph.enableAllInfo();
+		LOGGER.debug("Scanning.");
+		{
+			final Method method = getClass().getMethod("empty");
+			method.invoke(null);
+		}
+		try (ScanResult scanResult = graph.scan()) {
+			LOGGER.debug("Scan found: {}.", scanResult.getAllClasses().size());
+			final ClassInfoList implementingClasses = scanResult
+					.getClassesImplementing(PersonsManager.class.getTypeName());
+			LOGGER.debug("Implementing: {}.", implementingClasses.size());
+			final ClassInfo info = implementingClasses.directOnly().getStandardClasses().stream()
+					.collect(MoreCollectors.onlyElement());
+			LOGGER.info("Found class {}.", info);
+			final Method directMethod = info.loadClass().getMethod("empty");
+			directMethod.invoke(null);
+			final MethodInfoList methodInfoList = info.getDeclaredMethodInfo("empty");
+			LOGGER.debug("Found {} classes, implementing: {}, with method: {}.", scanResult.getAllClasses().size(),
+					implementingClasses.size(), methodInfoList);
+			final MethodInfo methodInfo = methodInfoList.stream().collect(MoreCollectors.onlyElement());
+			assertTrue(methodInfo.isPublic());
+			final Method method = methodInfo.loadClassAndGetMethod();
+			method.invoke(null);
+		}
+	}
+
+	public static void empty() {
+		LOGGER.info("Called.");
 	}
 
 }

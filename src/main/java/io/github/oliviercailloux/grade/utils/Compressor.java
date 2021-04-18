@@ -91,7 +91,7 @@ public class Compressor {
 		}
 
 		if (compressed.getGrade().getSubGrades().isEmpty() && model.getPaths().size() >= 2) {
-			LOGGER.info("Failed compressing at: {}, {}.", originalPaths, model);
+			LOGGER.debug("Failed compressing at: {}, {}.", originalPaths, model);
 		}
 		return compressed;
 	}

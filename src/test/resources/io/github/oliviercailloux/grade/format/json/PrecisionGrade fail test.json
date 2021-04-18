@@ -1,0 +1,369 @@
+{
+    "points": 0.8325,
+    "comment": "",
+    "subGrades": [
+        {
+            "criterion": "user.name",
+            "grade": {
+                "points": 1.0,
+                "comment": ""
+            },
+            "weight": 0.025
+        },
+        {
+            "criterion": "main",
+            "grade": {
+                "points": 0.8282051282051283,
+                "comment": "",
+                "subGrades": [
+                    {
+                        "criterion": "Code",
+                        "grade": {
+                            "points": 0.8717948717948718,
+                            "comment": "",
+                            "subGrades": [
+                                {
+                                    "criterion": "Size and static factories",
+                                    "grade": {
+                                        "points": 0.8,
+                                        "comment": "",
+                                        "subGrades": [
+                                            {
+                                                "criterion": "Empty",
+                                                "grade": {
+                                                    "points": 1.0,
+                                                    "comment": ""
+                                                },
+                                                "weight": 0.2
+                                            },
+                                            {
+                                                "criterion": "Given empty coll",
+                                                "grade": {
+                                                    "points": 0.0,
+                                                    "comment": "Got exception: com.google.common.base.VerifyException: java.lang.IllegalArgumentException: argument type mismatch"
+                                                },
+                                                "weight": 0.1
+                                            },
+                                            {
+                                                "criterion": "Given 100 distinct persons",
+                                                "grade": {
+                                                    "points": 0.0,
+                                                    "comment": "Got exception: com.google.common.base.VerifyException: java.lang.IllegalArgumentException: argument type mismatch"
+                                                },
+                                                "weight": 0.1
+                                            },
+                                            {
+                                                "criterion": "Set to empty",
+                                                "grade": {
+                                                    "points": 1.0,
+                                                    "comment": ""
+                                                },
+                                                "weight": 0.1
+                                            },
+                                            {
+                                                "criterion": "Set 100 persons",
+                                                "grade": {
+                                                    "points": 1.0,
+                                                    "comment": ""
+                                                },
+                                                "weight": 0.2
+                                            },
+                                            {
+                                                "criterion": "Set 200 persons with some duplicate ids",
+                                                "grade": {
+                                                    "points": 1.0,
+                                                    "comment": ""
+                                                },
+                                                "weight": 0.2
+                                            },
+                                            {
+                                                "criterion": "Set 100 unique persons with some duplicates and duplicate ids",
+                                                "grade": {
+                                                    "points": 1.0,
+                                                    "comment": ""
+                                                },
+                                                "weight": 0.1
+                                            }
+                                        ]
+                                    },
+                                    "weight": 0.1282051282051282
+                                },
+                                {
+                                    "criterion": "Task force",
+                                    "grade": {
+                                        "points": 1.0,
+                                        "comment": "",
+                                        "subGrades": [
+                                            {
+                                                "criterion": "Set empty task force, thrown IllegalArgumentException",
+                                                "grade": {
+                                                    "points": 1.0,
+                                                    "comment": ""
+                                                },
+                                                "weight": 0.25
+                                            },
+                                            {
+                                                "criterion": "Set triple task force, thrown IllegalArgumentException",
+                                                "grade": {
+                                                    "points": 1.0,
+                                                    "comment": ""
+                                                },
+                                                "weight": 0.25
+                                            },
+                                            {
+                                                "criterion": "Set singleton task force, size 1",
+                                                "grade": {
+                                                    "points": 1.0,
+                                                    "comment": ""
+                                                },
+                                                "weight": 0.25
+                                            },
+                                            {
+                                                "criterion": "Set dual task force, size 2",
+                                                "grade": {
+                                                    "points": 1.0,
+                                                    "comment": ""
+                                                },
+                                                "weight": 0.25
+                                            }
+                                        ]
+                                    },
+                                    "weight": 0.10256410256410256
+                                },
+                                {
+                                    "criterion": "Contains",
+                                    "grade": {
+                                        "points": 1.0,
+                                        "comment": "",
+                                        "subGrades": [
+                                            {
+                                                "criterion": "Set 100 persons",
+                                                "grade": {
+                                                    "points": 1.0,
+                                                    "comment": ""
+                                                },
+                                                "weight": 0.5
+                                            },
+                                            {
+                                                "criterion": "Set 100 unique persons with some duplicates and duplicate ids",
+                                                "grade": {
+                                                    "points": 1.0,
+                                                    "comment": ""
+                                                },
+                                                "weight": 0.5
+                                            }
+                                        ]
+                                    },
+                                    "weight": 0.10256410256410256
+                                },
+                                {
+                                    "criterion": "Contains stream",
+                                    "grade": {
+                                        "points": 1.0,
+                                        "comment": "",
+                                        "subGrades": [
+                                            {
+                                                "criterion": "Contains stream empty name",
+                                                "grade": {
+                                                    "points": 1.0,
+                                                    "comment": ""
+                                                },
+                                                "weight": 0.5
+                                            },
+                                            {
+                                                "criterion": "Contains stream Asbjørn Nuñez",
+                                                "grade": {
+                                                    "points": 1.0,
+                                                    "comment": "",
+                                                    "subGrades": [
+                                                        {
+                                                            "criterion": "Contains",
+                                                            "grade": {
+                                                                "points": 1.0,
+                                                                "comment": ""
+                                                            },
+                                                            "weight": 0.6
+                                                        },
+                                                        {
+                                                            "criterion": "Contains and not closed",
+                                                            "grade": {
+                                                                "points": 1.0,
+                                                                "comment": ""
+                                                            },
+                                                            "weight": 0.4
+                                                        }
+                                                    ]
+                                                },
+                                                "weight": 0.5
+                                            }
+                                        ]
+                                    },
+                                    "weight": 0.1282051282051282
+                                },
+                                {
+                                    "criterion": "Map",
+                                    "grade": {
+                                        "points": 1.0,
+                                        "comment": "",
+                                        "subGrades": [
+                                            {
+                                                "criterion": "Set a duplicate id, toMap throwing",
+                                                "grade": {
+                                                    "points": 1.0,
+                                                    "comment": ""
+                                                },
+                                                "weight": 0.5
+                                            },
+                                            {
+                                                "criterion": "Set 100 unique persons without duplicate ids, toMap",
+                                                "grade": {
+                                                    "points": 1.0,
+                                                    "comment": "",
+                                                    "subGrades": [
+                                                        {
+                                                            "criterion": "Expected map content",
+                                                            "grade": {
+                                                                "points": 1.0,
+                                                                "comment": ""
+                                                            },
+                                                            "weight": 0.5
+                                                        },
+                                                        {
+                                                            "criterion": "Immutable",
+                                                            "grade": {
+                                                                "points": 1.0,
+                                                                "comment": ""
+                                                            },
+                                                            "weight": 0.5
+                                                        }
+                                                    ]
+                                                },
+                                                "weight": 0.5
+                                            }
+                                        ]
+                                    },
+                                    "weight": 0.10256410256410256
+                                },
+                                {
+                                    "criterion": "Iterator",
+                                    "grade": {
+                                        "points": 1.0,
+                                        "comment": "",
+                                        "subGrades": [
+                                            {
+                                                "criterion": "Set 100 unique persons with no duplicate ids",
+                                                "grade": {
+                                                    "points": 1.0,
+                                                    "comment": ""
+                                                },
+                                                "weight": 0.5
+                                            },
+                                            {
+                                                "criterion": "Set 150 unique persons with some duplicates and duplicate ids",
+                                                "grade": {
+                                                    "points": 1.0,
+                                                    "comment": ""
+                                                },
+                                                "weight": 0.5
+                                            }
+                                        ]
+                                    },
+                                    "weight": 0.10256410256410256
+                                },
+                                {
+                                    "criterion": "Id iterator",
+                                    "grade": {
+                                        "points": 1.0,
+                                        "comment": "",
+                                        "subGrades": [
+                                            {
+                                                "criterion": "Set 100 unique persons with no duplicate ids",
+                                                "grade": {
+                                                    "points": 1.0,
+                                                    "comment": ""
+                                                },
+                                                "weight": 0.5
+                                            },
+                                            {
+                                                "criterion": "Set persons with some duplicates and duplicate ids",
+                                                "grade": {
+                                                    "points": 1.0,
+                                                    "comment": ""
+                                                },
+                                                "weight": 0.5
+                                            }
+                                        ]
+                                    },
+                                    "weight": 0.10256410256410256
+                                },
+                                {
+                                    "criterion": "Counter",
+                                    "grade": {
+                                        "points": 1.0,
+                                        "comment": "",
+                                        "subGrades": [
+                                            {
+                                                "criterion": "Start with 0 redundancy count",
+                                                "grade": {
+                                                    "points": 1.0,
+                                                    "comment": ""
+                                                },
+                                                "weight": 0.2
+                                            },
+                                            {
+                                                "criterion": "Switch to 1 unique count",
+                                                "grade": {
+                                                    "points": 1.0,
+                                                    "comment": ""
+                                                },
+                                                "weight": 0.4
+                                            },
+                                            {
+                                                "criterion": "Switch to “many” count",
+                                                "grade": {
+                                                    "points": 1.0,
+                                                    "comment": ""
+                                                },
+                                                "weight": 0.4
+                                            }
+                                        ]
+                                    },
+                                    "weight": 0.1282051282051282
+                                },
+                                {
+                                    "criterion": "To string",
+                                    "grade": {
+                                        "points": 0.0,
+                                        "comment": "",
+                                        "subGrades": [
+                                            {
+                                                "criterion": "Set to two unique persons",
+                                                "grade": {
+                                                    "points": 0.0,
+                                                    "comment": "Got: PersonsManager with2entries"
+                                                },
+                                                "weight": 1.0
+                                            }
+                                        ]
+                                    },
+                                    "weight": 0.10256410256410256
+                                }
+                            ]
+                        },
+                        "weight": 0.9500000000000001
+                    },
+                    {
+                        "criterion": "Warnings",
+                        "grade": {
+                            "points": 0.0,
+                            "comment": "----------\n1. WARNING in /…/src/main/java/io/github/oliviercailloux/persons_manager/MyPersonsManager.java (at line 136)\n\tpublic static void main(String[] args) {\n\n\t}\n\t                                       ^^^^^\nEmpty block should be documented\n----------\n1 problem (1 warning)\n"
+                        },
+                        "weight": 0.05000000000000001
+                    }
+                ]
+            },
+            "weight": 0.975
+        }
+    ]
+}
+

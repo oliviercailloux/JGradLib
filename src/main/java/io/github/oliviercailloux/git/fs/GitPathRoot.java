@@ -2,21 +2,18 @@ package io.github.oliviercailloux.git.fs;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import com.google.common.collect.ImmutableList;
+import io.github.oliviercailloux.git.fs.GitFileSystem.FollowLinksBehavior;
+import io.github.oliviercailloux.git.fs.GitFileSystem.GitObject;
 import java.io.IOException;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
-
 import org.eclipse.jgit.lib.FileMode;
 import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.revwalk.RevTree;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.collect.ImmutableList;
-
-import io.github.oliviercailloux.git.fs.GitFileSystem.FollowLinksBehavior;
-import io.github.oliviercailloux.git.fs.GitFileSystem.GitObject;
 
 /**
  * A git path root is an absolute git path that has an empty sequence of names.
@@ -155,6 +152,7 @@ public abstract class GitPathRoot extends GitAbsolutePath {
 	 * this git path root exists in the associated git file system.
 	 * <p>
 	 * Returns <code>false</code> when either:
+	 * </p>
 	 * <ul>
 	 * <li>this path root contains a git ref which does not exist in this
 	 * repository;</li>
@@ -162,6 +160,7 @@ public abstract class GitPathRoot extends GitAbsolutePath {
 	 * commit;</li>
 	 * <li>this path root contains a sha that is not a commit or does not
 	 * exist.</li>
+	 * </ul>
 	 *
 	 * @throws IOException if an error occurs while accessing the underlying
 	 *                     repository

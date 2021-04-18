@@ -3,6 +3,12 @@ package io.github.oliviercailloux.java_grade;
 import static com.google.common.base.Preconditions.checkArgument;
 import static io.github.oliviercailloux.jaris.exceptions.Unchecker.IO_UNCHECKER;
 
+import com.google.common.collect.ImmutableList;
+import io.github.oliviercailloux.grade.GradingException;
+import io.github.oliviercailloux.grade.IGrade;
+import io.github.oliviercailloux.jaris.exceptions.TryCatchAll;
+import io.github.oliviercailloux.java_grade.bytecode.Instanciator;
+import io.github.oliviercailloux.java_grade.bytecode.RestrictingClassLoader;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.URLClassLoader;
@@ -13,7 +19,6 @@ import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.util.Arrays;
-import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -21,18 +26,6 @@ import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Streams;
-
-import io.github.oliviercailloux.grade.GradingException;
-import io.github.oliviercailloux.grade.IGrade;
-import io.github.oliviercailloux.grade.Mark;
-import io.github.oliviercailloux.jaris.exceptions.CheckedStream;
-import io.github.oliviercailloux.jaris.exceptions.Throwing;
-import io.github.oliviercailloux.java_grade.bytecode.Instanciator;
-import io.github.oliviercailloux.java_grade.bytecode.RestrictingClassLoader;
 
 public class JavaGradeUtils {
 	/**
@@ -116,20 +109,14 @@ public class JavaGradeUtils {
 	}
 
 	public static <T> IGrade gradeSecurely(Path classPathRoot, Class<T> clazz,
-			Function<Supplier<T>, IGrade> gradeFunction) {
+			Function<Supplier<TryCatchAll<T>>, IGrade> gradeFunction) {
 		return gradeSecurely(classPathRoot, i -> fromInst(i, clazz, gradeFunction));
 	}
 
 	private static <T> IGrade fromInst(Instanciator instanciator, Class<T> clazz,
-			Function<Supplier<T>, IGrade> gradeFunction) {
-		final Optional<T> instanceOpt = instanciator.getInstance(clazz, "newInstance");
-		final IGrade implGrade;
-		if (instanceOpt.isPresent()) {
-			final Supplier<T> factory = () -> instanciator.getInstance(clazz, "newInstance").get();
-			implGrade = gradeFunction.apply(factory);
-		} else {
-			implGrade = Mark.zero("Could not initialize implementation: " + instanciator.getLastException());
-		}
+			Function<Supplier<TryCatchAll<T>>, IGrade> gradeFunction) {
+		final Supplier<TryCatchAll<T>> factory = () -> instanciator.tryGetInstance(clazz, "newInstance");
+		final IGrade implGrade = gradeFunction.apply(factory);
 		return implGrade;
 	}
 

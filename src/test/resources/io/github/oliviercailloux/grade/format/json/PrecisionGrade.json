@@ -1,0 +1,23 @@
+{
+    "points": 0.9500000000000001,
+    "comment": "",
+    "subGrades": [
+        {
+            "criterion": "Big",
+            "grade": {
+                "points": 1.0,
+                "comment": ""
+            },
+            "weight": 0.9500000000000001
+        },
+        {
+            "criterion": "Small",
+            "grade": {
+                "points": 0.0,
+                "comment": ""
+            },
+            "weight": 0.05000000000000001
+        }
+    ]
+}
+

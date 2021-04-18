@@ -33,7 +33,7 @@ import io.github.oliviercailloux.grade.comm.json.JsonStudentsReader;
 import io.github.oliviercailloux.grade.format.CsvGrades;
 import io.github.oliviercailloux.grade.format.HtmlGrades;
 import io.github.oliviercailloux.grade.utils.Compressor;
-import io.github.oliviercailloux.java_grade.graders.Coffee;
+import io.github.oliviercailloux.java_grade.graders.PersonsManagerGrader;
 import io.github.oliviercailloux.utils.Utils;
 import io.github.oliviercailloux.xml.XmlUtils;
 import java.io.IOException;
@@ -43,6 +43,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Predicate;
+import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
@@ -52,10 +53,10 @@ public class Summarizer {
 	private static final Logger LOGGER = LoggerFactory.getLogger(Summarizer.class);
 
 	public static void main(String[] args) throws Exception {
-		final Summarizer summarizer = new Summarizer().setPrefix(Coffee.PREFIX)
+		final Summarizer summarizer = new Summarizer().setPrefix(PersonsManagerGrader.PREFIX)
 				.setDissolveCriteria(ImmutableSet.of(Criterion.given("Warnings")));
 //		.setPatched()
-//		summarizer.getReader().restrictTo(ImmutableSet.of(GitHubUsername.given("Miaoulelion")));
+//		summarizer.getReader().restrictTo(ImmutableSet.of(GitHubUsername.given("…")));
 		summarizer.summarize();
 	}
 
@@ -137,8 +138,8 @@ public class Summarizer {
 		LOGGER.debug("Grades: {}.",
 				grades.values().stream().map(g -> g.limitedDepth(1)).collect(ImmutableList.toImmutableList()));
 
-		final ImmutableMap<GitHubUsername, IGrade> dissolved = Maps.toMap(grades.keySet(),
-				u -> dissolveInto(dissolveTimePenalty(grades.get(u))));
+		final ImmutableMap<GitHubUsername, IGrade> dissolved = Maps.toMap(grades.keySet(), u -> dissolveInto(
+				dissolve(dissolveTimePenalty(grades.get(u)), Criterion.given("Penalty: commit by GitHub"))));
 		LOGGER.debug("Dissolved: {}.",
 				dissolved.values().stream().map(g -> g.toTree()).collect(ImmutableList.toImmutableList()));
 
@@ -161,13 +162,16 @@ public class Summarizer {
 				.immutableCopy();
 		final ImmutableSet<GitHubUsername> unknown = Sets.difference(grades.keySet(), usernames.keySet())
 				.immutableCopy();
-		checkState(unknown.isEmpty());
-		if (!missing.isEmpty()) {
-			LOGGER.warn("Missing: {}.", missing);
+//		checkState(unknown.isEmpty(), unknown);
+		if ((!missing.isEmpty()) || (!unknown.isEmpty())) {
+			LOGGER.warn("Missing: {}; unknown: {}.", missing, unknown);
 		}
 
+		final ImmutableSet<GitHubUsername> toExport = Sets.intersection(grades.keySet(), usernames.keySet())
+				.immutableCopy();
+
 		/* NB we want to iterate using the reading order. */
-		final ImmutableSet<GitHubUsername> allUsernames = Streams.concat(grades.keySet().stream(), missing.stream())
+		final ImmutableSet<GitHubUsername> allUsernames = Streams.concat(toExport.stream(), missing.stream())
 				.collect(ImmutableSet.toImmutableSet());
 		final ImmutableMap<GitHubUsername, IGrade> completedGrades = Maps.toMap(allUsernames,
 				s -> modeled.getOrDefault(s, Mark.zero("No grade")));
@@ -176,8 +180,8 @@ public class Summarizer {
 
 		LOGGER.info("Writing grades Html.");
 		final ImmutableMap<String, IGrade> gradesByString = Maps.toMap(
-				grades.keySet().stream().map(GitHubUsername::getUsername).collect(ImmutableSet.toImmutableSet()),
-				u -> filtered.get(GitHubUsername.given(u)));
+				toExport.stream().map(GitHubUsername::getUsername).collect(ImmutableSet.toImmutableSet()),
+				u -> grades.get(GitHubUsername.given(u)));
 		final Document doc = HtmlGrades.asHtml(gradesByString, "All grades", 20d);
 		Files.writeString(htmlOutputPath, XmlUtils.asString(doc));
 
@@ -187,6 +191,10 @@ public class Summarizer {
 
 	private static IGrade dissolveTimePenalty(IGrade grade) {
 		final Criterion toDissolve = Criterion.given("Time penalty");
+		return dissolve(grade, toDissolve);
+	}
+
+	private static IGrade dissolve(IGrade grade, Criterion toDissolve) {
 		final ImmutableSet<GradePath> penaltyPaths = grade.toTree().getPaths().stream()
 				.filter(p -> !p.isRoot() && p.getTail().equals(toDissolve)).collect(ImmutableSet.toImmutableSet());
 		LOGGER.debug("Found penalty paths: {}.", penaltyPaths);
@@ -197,11 +205,6 @@ public class Summarizer {
 
 		IGrade result = grade;
 		for (GradePath penaltyPath : penaltyPaths) {
-//			final GradePath penaltyParentPath = penaltyPath.withoutTail();
-//			final IGrade dissolved = result.getGrade(penaltyParentPath).get().withDissolved(toDissolve);
-//			LOGGER.debug("Got dissolved: {}.", dissolved);
-//			result = result.withSubGrade(penaltyParentPath, dissolved);
-//			LOGGER.debug("Got intermediary: {}.", result);
 			result = dissolve(result, penaltyPath);
 		}
 
@@ -211,12 +214,27 @@ public class Summarizer {
 	public static GradeStructure getMajoritarianModel(Set<IGrade> grades) {
 		checkArgument(!grades.isEmpty());
 
-		final ImmutableMultiset<GradeStructure> trees = grades.stream().map(IGrade::toTree)
-				.collect(ImmutableMultiset.toImmutableMultiset());
+		final Criterion userName = Criterion.given("user.name");
+		final Criterion main = Criterion.given("main");
+//		final ImmutableSet<GradeStructure> templates = grades.stream()
+//				.filter(g -> g.getSubGrades().keySet().equals(ImmutableSet.of(userName, main))).map(IGrade::toTree)
+//				.map(t -> t.getStructure(main)).collect(ImmutableSet.toImmutableSet());
+
+		final Stream<GradeStructure> templates = grades.stream()
+				.flatMap(g -> Streams.concat(Stream.of(g), g.getSubGrades().values().stream()))
+				.filter(g -> g.getSubGrades().keySet().equals(ImmutableSet.of(userName, main))).map(IGrade::toTree)
+				.filter(s -> !s.getPaths().contains(GradePath.from("main/Code/")));
+//		final Stream<GradeStructure> templates = grades.stream().map(IGrade::toTree)
+//				.flatMap(s -> s.getPaths().stream().map(s::getStructure));
+		final ImmutableMultiset<GradeStructure> trees = templates.collect(ImmutableMultiset.toImmutableMultiset());
 		final Entry<GradeStructure> highestCountEntry = Multisets.copyHighestCountFirst(trees).entrySet().iterator()
 				.next();
-		return trees.entrySet().stream().filter(e -> e.getCount() == highestCountEntry.getCount())
+		final int majCount = highestCountEntry.getCount();
+		LOGGER.info("Maj count: {}, among {}.", majCount, trees);
+		final GradeStructure structure = trees.entrySet().stream().filter(e -> e.getCount() == majCount)
 				.map(Entry::getElement).distinct().collect(MoreCollectors.onlyElement());
+		LOGGER.info("Structure: {}.", structure);
+		return structure;
 	}
 
 	public static GradeStructure getAutoModel(Set<IGrade> grades) {
