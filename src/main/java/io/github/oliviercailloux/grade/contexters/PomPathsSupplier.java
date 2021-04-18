@@ -107,8 +107,8 @@ public class PomPathsSupplier {
 	}
 
 	/**
-	 * @return <code>true</code> iff only one pom has been found and it is at the
-	 *         project root, equivalently, <code>true</code> iff
+	 * @return {@code true} iff only one pom has been found and it is at the
+	 *         project root, equivalently, {@code true} iff
 	 *         {@link #getMavenRoot()} is the empty path.
 	 */
 	public boolean isMavenProjectAtRoot() {

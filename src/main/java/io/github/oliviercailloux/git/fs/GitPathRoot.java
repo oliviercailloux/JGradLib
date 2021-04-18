@@ -89,7 +89,7 @@ public abstract class GitPathRoot extends GitAbsolutePath {
 	/**
 	 * Indicates whether this root component contains a git ref or a commit id.
 	 *
-	 * @return <code>true</code> iff this root component contains a git ref;
+	 * @return {@code true} iff this root component contains a git ref;
 	 *         equivalently, iff this root component does not contain a commit id.
 	 */
 	public boolean isRef() {
@@ -99,7 +99,7 @@ public abstract class GitPathRoot extends GitAbsolutePath {
 	/**
 	 * Indicates whether this root component contains a commit id or a git ref.
 	 *
-	 * @return <code>true</code> iff this root component contains a commit id;
+	 * @return {@code true} iff this root component contains a commit id;
 	 *         equivalently, iff this root component does not contain a git ref.
 	 */
 	public boolean isCommitId() {
@@ -148,10 +148,10 @@ public abstract class GitPathRoot extends GitAbsolutePath {
 	}
 
 	/**
-	 * Returns <code>true</code> iff the commit referred to (possibly indirectly) by
+	 * Returns {@code true} iff the commit referred to (possibly indirectly) by
 	 * this git path root exists in the associated git file system.
 	 * <p>
-	 * Returns <code>false</code> when either:
+	 * Returns {@code false} when either:
 	 * </p>
 	 * <ul>
 	 * <li>this path root contains a git ref which does not exist in this
@@ -184,7 +184,7 @@ public abstract class GitPathRoot extends GitAbsolutePath {
 	 * TODO return an own type Commit with nice getTime, no getTree (unuseful),
 	 * getParents() that return other commits, and so on.
 	 *
-	 * If {@link #exists()} returns <code>false</code>, an exception is thrown.
+	 * If {@link #exists()} returns {@code false}, an exception is thrown.
 	 *
 	 * @return
 	 * @throws IOException

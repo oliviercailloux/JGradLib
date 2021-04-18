@@ -127,7 +127,7 @@ public class GradesInEmails implements AutoCloseable {
 	}
 
 	/**
-	 * @param recipients <code>null</code> for no filter
+	 * @param recipients {@code null} for no filter
 	 */
 	public void filterRecipients(Set<EmailAddress> recipients) {
 		recipientsFilter = recipients == null ? null : ImmutableSet.copyOf(recipients);
@@ -188,7 +188,7 @@ public class GradesInEmails implements AutoCloseable {
 	}
 
 	/**
-	 * @param recipients <code>null</code> for no filter.
+	 * @param recipients {@code null} for no filter.
 	 */
 	private EmailAddress getUniqueRecipientAmong(Message message, Set<EmailAddress> recipients) {
 		final ImmutableSet<Address> seen = ImmutableSet
@@ -203,7 +203,7 @@ public class GradesInEmails implements AutoCloseable {
 	}
 
 	/**
-	 * @param recipients <code>null</code> for no filter.
+	 * @param recipients {@code null} for no filter.
 	 */
 	private ImmutableSet<Message> getMessagesTo(Set<EmailAddress> recipients, String subjectStartsWith) {
 		final ImapSearchPredicate subjectContains = ImapSearchPredicate.subjectContains(subjectStartsWith);
@@ -248,7 +248,7 @@ public class GradesInEmails implements AutoCloseable {
 	}
 
 	/**
-	 * @param recipients <code>null</code> for no filter.
+	 * @param recipients {@code null} for no filter.
 	 */
 	private ImmutableTable<EmailAddress, String, IGrade> getLastGradesToInternal(Set<EmailAddress> recipients,
 			String subjectPattern) {

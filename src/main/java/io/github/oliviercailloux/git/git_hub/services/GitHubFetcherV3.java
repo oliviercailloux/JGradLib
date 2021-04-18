@@ -113,14 +113,14 @@ public class GitHubFetcherV3 implements AutoCloseable {
 	private final Client client;
 
 	/**
-	 * Not <code>null</code>.
+	 * Not {@code null}.
 	 */
 	private String rateLimit;
 
 	private Instant rateReset;
 
 	/**
-	 * Not <code>null</code>.
+	 * Not {@code null}.
 	 */
 	private GitHubToken token;
 

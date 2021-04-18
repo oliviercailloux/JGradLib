@@ -105,7 +105,7 @@ public class GitCloner {
 	 * @param repositoryDirectory GIT_DIR (replacing .git dir) if bare (see
 	 *                            {@link FileRepository}), otherwise, work tree dir,
 	 *                            in which a .git dir will be created (or exists).
-	 * @param allowBare           <code>true</code> to clone bare if not exists (if
+	 * @param allowBare           {@code true} to clone bare if not exists (if
 	 *                            exists, this method will not check whether it is
 	 *                            bare)
 	 * @return

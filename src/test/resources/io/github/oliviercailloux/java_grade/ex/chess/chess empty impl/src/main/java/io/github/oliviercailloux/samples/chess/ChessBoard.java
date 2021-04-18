@@ -13,7 +13,7 @@ import com.google.common.collect.ImmutableSet;
  * containing a chess {@link Piece} or nothing.
  * </p>
  * <p>
- * This class rejects all <code>null</code> arguments (and all arguments that
+ * This class rejects all {@code null} arguments (and all arguments that
  * are not legal according to the respective contracts).
  * </p>
  * <p>
@@ -24,7 +24,7 @@ import com.google.common.collect.ImmutableSet;
  * </p>
  * <p>
  * <em>Hint for implementors</em>: it seems wise to store a
- * <code>Map&lt;String, Piece></code> internally.
+ * {@code Map&lt;String, Piece>} internally.
  * </p>
  */
 public interface ChessBoard {
@@ -51,7 +51,7 @@ public interface ChessBoard {
 	 *                   this list corresponds to the square "a1", the second one to
 	 *                   "b1", …, the eighth one to "h1", the ninth one to "a2", and
 	 *                   so on until "h8".
-	 * @return <code>true</code> iff this board has changed as a result of this
+	 * @return {@code true} iff this board has changed as a result of this
 	 *         call.
 	 * @see #setBoardByPieces(List)
 	 */
@@ -98,7 +98,7 @@ public interface ChessBoard {
 	 * Returns an optional containing the piece at the given position, or an empty
 	 * optional if there is no piece at the given position in this board.
 	 *
-	 * @param position any position from <code>"a1"</code> to <code>"h8"</code>
+	 * @param position any position from {@code "a1"} to {@code "h8"}
 	 */
 	public Optional<Piece> getPieceByPosition(String position);
 
@@ -138,9 +138,9 @@ public interface ChessBoard {
 	 * </p>
 	 *
 	 * @param oldPosition the position the piece moves from, any position from
-	 *                    <code>"a1"</code> to <code>"h8"</code> containing a piece
+	 *                    {@code "a1"} to {@code "h8"} containing a piece
 	 * @param newPosition the position that piece is going to, any position from
-	 *                    <code>"a1"</code> to <code>"h8"</code>
+	 *                    {@code "a1"} to {@code "h8"}
 	 */
 	public void movePiece(String oldPosition, String newPosition);
 }

@@ -9,10 +9,10 @@ import java.util.Objects;
 import com.google.common.base.MoreObjects;
 
 /**
- * A piece of the game of chess, with its <em>color</em> (<code>W</code> for
- * White and <code>B</code> for Black) and its <em>identifying letter</em>
- * (<code>P</code> for Pawn, <code>R</code> for Rook, <code>B</code> for Bishop,
- * <code>N</code> for kNight, <code>Q</code> for Queen, <code>K</code> for
+ * A piece of the game of chess, with its <em>color</em> ({@code W} for
+ * White and {@code B} for Black) and its <em>identifying letter</em>
+ * ({@code P} for Pawn, {@code R} for Rook, {@code B} for Bishop,
+ * {@code N} for kNight, {@code Q} for Queen, {@code K} for
  * King).
  * </p>
  * <p>
@@ -133,7 +133,7 @@ public class Piece {
 	}
 
 	/**
-	 * Returns <code>true</code> iff the given object is also a {@link Piece} and
+	 * Returns {@code true} iff the given object is also a {@link Piece} and
 	 * has the same color and identifying letter as this one.
 	 */
 	@Override

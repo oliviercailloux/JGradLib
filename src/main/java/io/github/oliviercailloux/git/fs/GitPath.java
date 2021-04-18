@@ -92,7 +92,7 @@ import org.slf4j.LoggerFactory;
  * leading slash. Equivalently, its string form contains no two consecutive
  * slashes. Equivalently, it is a relative path. It implies that its sequence of
  * names is not empty. An example of string form is
- * <code>"some/path"</code>.</li>
+ * {@code "some/path"}.</li>
  * <ul>
  * <li>As a special case, its sequence of names may consist in a unique empty
  * name. Equivalently, it is an empty path. Equivalently, its string form is
@@ -103,12 +103,12 @@ import org.slf4j.LoggerFactory;
  * slash. Equivalently, its string form contains two consecutive slashes exactly
  * once. Equivalently, it is an absolute path. Implies that its sequence of
  * names contain no empty name. An example of string form is
- * <code>"/refs/heads/main//some/path"</code>.</li>
+ * {@code "/refs/heads/main//some/path"}.</li>
  * <ul>
  * <li>As a special case, it may consist in a root component only, in other
  * words, have an empty sequence of names. Equivalently, its string form ends
  * with two slashes. An example of string form is
- * <code>"/refs/heads/main//"</code>.</li>
+ * {@code "/refs/heads/main//"}.</li>
  * </ul>
  * </ul>
  *
@@ -343,7 +343,7 @@ public abstract class GitPath implements Path {
 	public abstract GitFileSystem getFileSystem();
 
 	/**
-	 * Returns <code>true</code> iff this path has a root component.
+	 * Returns {@code true} iff this path has a root component.
 	 *
 	 * @return {@code true} if, and only if, this path is absolute
 	 */

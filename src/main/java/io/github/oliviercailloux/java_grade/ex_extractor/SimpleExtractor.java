@@ -30,7 +30,7 @@ public interface SimpleExtractor {
 	/**
 	 * Sets the text stripper to use in place of the default one.
 	 *
-	 * @param stripper the stripper to use, <code>null</code> to use the default
+	 * @param stripper the stripper to use, {@code null} to use the default
 	 *                 stripper
 	 */
 	public void setStripper(PDFTextStripper stripper);
@@ -38,14 +38,14 @@ public interface SimpleExtractor {
 	/**
 	 * <p>
 	 * Extracts text found in the given document, and writes it to the given
-	 * <code>Writer</code>.
+	 * {@code Writer}.
 	 * </p>
 	 *
-	 * @param document the document to extract text from, if <code>null</code>,
+	 * @param document the document to extract text from, if {@code null},
 	 *                 nothing is written
 	 * @param output   the writer where content should be written, not
-	 *                 <code>null</code> if <code>input</code> is not null,
-	 *                 otherwise, may be <code>null</code>
+	 *                 {@code null} if {@code input} is not null,
+	 *                 otherwise, may be {@code null}
 	 * @throws IOException in case of a reading, parsing or writing error
 	 * @see #setStripper(PDFTextStripper)
 	 */
@@ -54,16 +54,16 @@ public interface SimpleExtractor {
 	/**
 	 * <p>
 	 * Extracts text found in the given input stream representing a non-encrypted
-	 * PDF, and writes it to the given <code>Writer</code>.
+	 * PDF, and writes it to the given {@code Writer}.
 	 * </p>
 	 * <p>
 	 * Uses the given stripper or a default one if none is provided.
 	 * </p>
 	 *
-	 * @param input  the PDF byte stream, if <code>null</code>, nothing is written
+	 * @param input  the PDF byte stream, if {@code null}, nothing is written
 	 * @param output the writer where content should be written, not
-	 *               <code>null</code> if <code>input</code> is not null, otherwise,
-	 *               may be <code>null</code>
+	 *               {@code null} if {@code input} is not null, otherwise,
+	 *               may be {@code null}
 	 * @throws InvalidPasswordException if the PDF required a non-empty password
 	 * @throws IOException              in case of a reading, parsing or writing
 	 *                                  error
@@ -74,15 +74,15 @@ public interface SimpleExtractor {
 	/**
 	 * <p>
 	 * For each path given as input, extracts the text from the corresponding file,
-	 * assuming it is a PDF, and writes it to the given <code>Writer</code>. The
+	 * assuming it is a PDF, and writes it to the given {@code Writer}. The
 	 * text is written to the output with no separation indicating the boundaries of
 	 * the given PDFs.
 	 * </p>
 	 *
-	 * @param inputPaths not <code>null</code>, may be empty
+	 * @param inputPaths not {@code null}, may be empty
 	 * @param output     the writer where content should be written, not
-	 *                   <code>null</code> if <code>input</code> is not empty,
-	 *                   otherwise, may be <code>null</code>
+	 *                   {@code null} if {@code input} is not empty,
+	 *                   otherwise, may be {@code null}
 	 * @throws InvalidPasswordException if a PDF required a non-empty password
 	 * @throws IOException              in case of a reading, parsing or writing
 	 *                                  error
@@ -99,9 +99,9 @@ public interface SimpleExtractor {
 	 * Uses the given stripper or a default one if none is provided.
 	 * </p>
 	 *
-	 * @param inputPaths not <code>null</code>, may be empty
+	 * @param inputPaths not {@code null}, may be empty
 	 * @return a list containing as many entries as in the given collection, not
-	 *         <code>null</code>, but may be empty
+	 *         {@code null}, but may be empty
 	 *
 	 * @throws InvalidPasswordException if a PDF required a non-empty password
 	 * @throws IOException              in case of a reading or parsing error

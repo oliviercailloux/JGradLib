@@ -43,7 +43,7 @@ public class RepositoryWithIssuesWithHistory {
 	private final ImmutableList<String> files;
 
 	/**
-	 * Not <code>null</code>.
+	 * Not {@code null}.
 	 */
 	final private ImmutableList<IssueWithHistory> issues;
 

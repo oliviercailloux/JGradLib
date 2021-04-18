@@ -29,10 +29,10 @@ import com.google.common.base.VerifyException;
  * </ol>
  * Typical examples:
  * <ul>
- * <li><code>https://github.com/oliviercailloux/JARiS.git</code>,</li>
- * <li><code>ssh://git@github.com/oliviercailloux/JARiS.git</code>,</li>
- * <li><code>file:/some/absolute/path/</code> (with no authority), or
- * <code>file:///some/absolute/path/</code> (with an empty authority).</li>
+ * <li>{@code https://github.com/oliviercailloux/JARiS.git},</li>
+ * <li>{@code ssh://git@github.com/oliviercailloux/JARiS.git},</li>
+ * <li>{@code file:/some/absolute/path/} (with no authority), or
+ * {@code file:///some/absolute/path/} (with an empty authority).</li>
  * </ul>
  * This is (IMHO) the cleanest usage as it relies on a RFC compliant URI which
  * is furthermore also a valid Git URL (except for the version with no
@@ -47,12 +47,12 @@ import com.google.common.base.VerifyException;
  * Examples:
  * <ul>
  * <li>creating an instance using the SCP Git URL
- * <code>git@github.com:oliviercailloux/JARiS.git</code> results in the
- * <code>ssh://git@github.com/oliviercailloux/JARiS.git</code> absolute
+ * {@code git@github.com:oliviercailloux/JARiS.git} results in the
+ * {@code ssh://git@github.com/oliviercailloux/JARiS.git} absolute
  * hierarchical URI;</li>
- * <li>creating an instance using the absolute path <code>/absolute/path</code>
- * results either in the <code>file:/absolute/path</code> or in the
- * <code>file:///absolute/path</code> absolute hierarchical URI.</li>
+ * <li>creating an instance using the absolute path {@code /absolute/path}
+ * results either in the {@code file:/absolute/path} or in the
+ * {@code file:///absolute/path} absolute hierarchical URI.</li>
  * </ul>
  *
  * <h1>Other possible uses</h1>
@@ -60,7 +60,7 @@ import com.google.common.base.VerifyException;
  * You may create an instance on the basis of:
  * <ul>
  * <li>any Git URL except for “relative path” Git URLs (thus GitHub-popular URLs
- * such as <code>git@github.com:oliviercailloux/JARiS.git</code> are accepted),
+ * such as {@code git@github.com:oliviercailloux/JARiS.git} are accepted),
  * or</li>
  * <li>any absolute hierarchical URI using a {@link GitScheme scheme} known to
  * Git (see examples above).</li>
@@ -76,13 +76,13 @@ import com.google.common.base.VerifyException;
  * usage.</dd>
  * <dt>Accepting no-authority URIs</dt>
  * <dd>According to the Git URL definition, any string starting with
- * <code>file:/</code> not followed by a slash (for example,
- * <code>file:/something/</code>) is a SCP URL designating some path (in this
- * example, <code>/something</code>) on the host named <code>file</code>. The
+ * {@code file:/} not followed by a slash (for example,
+ * {@code file:/something/}) is a SCP URL designating some path (in this
+ * example, {@code /something}) on the host named {@code file}. The
  * factory method {@link #fromGitUrl(String)} will indeed treat it as an SCP Git
  * URL. However, such a string can also be interpreted, following RFC 2396, as
  * an absolute hierarchical URIs using the file scheme with no authority (in
- * this example, designating the absolute local path <code>/something</code>).
+ * this example, designating the absolute local path {@code /something}).
  * The (recommended) {@link #fromUri(URI)} factory method of this class indeed
  * interprets it (IMHO, more reasonably) in such a way. This is the only kind of
  * input that is treated differently than Git URLs. This makes this method
@@ -118,8 +118,8 @@ import com.google.common.base.VerifyException;
  * </ul>
  * </dl>
  * These cases are exclusive, but some string match none of them, for example:
- * the empty string, <code>ssh://</code>, <code>https:///host/</code>,
- * <code>https://host</code>, <code>unknownscheme://host</code>… See
+ * the empty string, {@code ssh://}, {@code https:///host/},
+ * {@code https://host}, {@code unknownscheme://host}… See
  * {@link GitUrlKind} to detect which kind you face.
  *
  * <dt>Java {@link URI}</dt>
@@ -234,7 +234,7 @@ public class GitUri {
 	}
 
 	/**
-	 * @return is [<code>null</code> or empty] iff the scheme is
+	 * @return is [{@code null} or empty] iff the scheme is
 	 *         {@link GitScheme#FILE}.
 	 */
 	public String getAuthority() {

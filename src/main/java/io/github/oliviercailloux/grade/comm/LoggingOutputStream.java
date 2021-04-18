@@ -69,7 +69,7 @@ class LoggingOutputStream extends OutputStream {
 
 	/**
 	 * Closes this output stream and releases any system resources associated with
-	 * this stream. The general contract of <code>close</code> is that it closes the
+	 * this stream. The general contract of {@code close} is that it closes the
 	 * output stream. A closed stream cannot perform output operations and cannot be
 	 * reopened.
 	 */

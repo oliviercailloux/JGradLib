@@ -66,7 +66,7 @@ public class GitHubFetcherQL implements AutoCloseable {
 	private final JsonBuilderFactory jsonBuilderFactory;
 
 	/**
-	 * Not <code>null</code>.
+	 * Not {@code null}.
 	 */
 	private String rateLimit;
 

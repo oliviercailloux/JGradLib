@@ -129,14 +129,14 @@ class GitRev {
 	}
 
 	/**
-	 * @return <code>true</code> iff not {@link #isCommitId()}
+	 * @return {@code true} iff not {@link #isCommitId()}
 	 */
 	public boolean isRef() {
 		return gitRef != null;
 	}
 
 	/**
-	 * @return <code>true</code> iff not {@link #isRef()}
+	 * @return {@code true} iff not {@link #isRef()}
 	 */
 	public boolean isCommitId() {
 		return commitId != null;

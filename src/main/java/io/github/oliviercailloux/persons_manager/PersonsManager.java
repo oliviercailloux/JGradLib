@@ -28,7 +28,7 @@ public interface PersonsManager {
 	 * Sets the persons that this instance manages. This replaces any persons
 	 * previously set.
 	 *
-	 * @param persons not <code>null</code>, may contain non identical persons
+	 * @param persons not {@code null}, may contain non identical persons
 	 *                sharing an id.
 	 */
 	public void setPersons(List<Person> persons);
@@ -37,7 +37,7 @@ public interface PersonsManager {
 	 * Sets the persons that this instance manages as a “task force”, understood as
 	 * a set of one or two persons. This replaces any persons previously set.
 	 *
-	 * @param persons not <code>null</code>, may contain non identical persons
+	 * @param persons not {@code null}, may contain non identical persons
 	 *                sharing an id.
 	 * @throws IllegalArgumentException if zero or more than two persons are given.
 	 */
@@ -54,8 +54,8 @@ public interface PersonsManager {
 	/**
 	 * Indicates whether some managed person has that name
 	 *
-	 * @param name not <code>null</code>, not empty
-	 * @return <code>true</code> iff at least one person managed by this instance
+	 * @param name not {@code null}, not empty
+	 * @return {@code true} iff at least one person managed by this instance
 	 *         has that name
 	 */
 	public boolean contains(String name);
@@ -68,10 +68,10 @@ public interface PersonsManager {
 	 * Hint: use the appropriate {@link String} constructor to decode an array of
 	 * bytes.
 	 *
-	 * @param personNameAsStream not <code>null</code>, contains the name of a
+	 * @param personNameAsStream not {@code null}, contains the name of a
 	 *                           person encoded in {@link StandardCharsets#UTF_8
 	 *                           UTF-8}.
-	 * @return <code>true</code> iff at least one person managed by this instance
+	 * @return {@code true} iff at least one person managed by this instance
 	 *         has the name given in the stream
 	 * @throws IOException if an I/O error occurs
 	 */
@@ -84,7 +84,7 @@ public interface PersonsManager {
 	 * Returns an immutable copy of the persons this instance manages, as a mapping,
 	 * using the person’s id as a key.
 	 *
-	 * @return not <code>null</code>
+	 * @return not {@code null}
 	 */
 	public Map<Integer, Person> toMap();
 

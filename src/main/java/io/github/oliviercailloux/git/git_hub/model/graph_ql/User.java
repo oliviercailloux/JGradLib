@@ -16,7 +16,7 @@ public class User {
 	}
 
 	/**
-	 * Not <code>null</code>.
+	 * Not {@code null}.
 	 */
 	private final JsonObject json;
 

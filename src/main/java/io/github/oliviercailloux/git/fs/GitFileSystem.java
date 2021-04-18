@@ -446,9 +446,9 @@ public abstract class GitFileSystem extends FileSystem {
 
 	/**
 	 * Converts a path string, or a sequence of strings that when joined form a path
-	 * string, to a {@code GitPath}. If {@code first} starts with <code>/</code> (or
+	 * string, to a {@code GitPath}. If {@code first} starts with {@code /} (or
 	 * if {@code first} is empty and the first non-empty string in {@code more}
-	 * starts with <code>/</code>), this method behaves as if
+	 * starts with {@code /}), this method behaves as if
 	 * {@link #getAbsolutePath(String, String...)} had been called. Otherwise, it
 	 * behaves as if {@link #getRelativePath(String...)} had been called.
 	 * <p>
@@ -489,10 +489,10 @@ public abstract class GitFileSystem extends FileSystem {
 	 * <p>
 	 * If {@code more} specifies one or more elements then each non-empty string,
 	 * including {@code first}, is considered to be a sequence of name elements (see
-	 * {@link Path}) and is joined to form a path string using <code>/</code> as
-	 * separator. If {@code first} does not end with <code>//</code> (but ends with
-	 * <code>/</code>, as required), and if {@code more} does not start with
-	 * <code>/</code>, then a <code>/</code> is added so that there will be two
+	 * {@link Path}) and is joined to form a path string using {@code /} as
+	 * separator. If {@code first} does not end with {@code //} (but ends with
+	 * {@code /}, as required), and if {@code more} does not start with
+	 * {@code /}, then a {@code /} is added so that there will be two
 	 * slashes joining {@code first} to {@code more}.
 	 * </p>
 	 * <p>
@@ -509,9 +509,9 @@ public abstract class GitFileSystem extends FileSystem {
 	 *              other path segments. Must start with <tt>/refs/</tt> or
 	 *              <tt>/heads/</tt> or <tt>/tags/</tt> or be a slash followed by a
 	 *              40-characters long sha-1; must contain at most once
-	 *              <code>//</code>; if does not contain <code>//</code>, must end
-	 *              with <code>/</code>.
-	 * @param more  may start with <code>/</code>.
+	 *              {@code //}; if does not contain {@code //}, must end
+	 *              with {@code /}.
+	 * @param more  may start with {@code /}.
 	 * @return an absolute git path.
 	 * @throws InvalidPathException if {@code first} does not contain a syntaxically
 	 *                              valid root component
@@ -604,7 +604,7 @@ public abstract class GitFileSystem extends FileSystem {
 	 * <p>
 	 * Each non-empty string in {@code names} is considered to be a sequence of name
 	 * elements (see {@link Path}) and is joined to form a path string using
-	 * <code>/</code> as separator.
+	 * {@code /} as separator.
 	 * </p>
 	 * <p>
 	 * For example, if {@code getRelativePath("foo","bar")} is invoked, then the
@@ -620,10 +620,10 @@ public abstract class GitFileSystem extends FileSystem {
 	 * </p>
 	 *
 	 * @param names the internal path; its first element (if any) may not start with
-	 *              <code>/</code>.
+	 *              {@code /}.
 	 * @return a relative git path.
 	 * @throws InvalidPathException if the first non-empty string in {@code names}
-	 *                              start with <code>/</code>.
+	 *                              start with {@code /}.
 	 * @see GitPath
 	 */
 	public GitPath getRelativePath(String... names) throws InvalidPathException {
@@ -637,7 +637,7 @@ public abstract class GitFileSystem extends FileSystem {
 
 	/**
 	 * Retrieve the set of all commits of this repository. Consider calling rather
-	 * <code>{@link #getCommitsGraph()}.getNodes()</code>, whose type is more
+	 * {@code {@link #getCommitsGraph()}.getNodes()}, whose type is more
 	 * precise.
 	 *
 	 * @return absolute path roots referring to commit ids.
