@@ -6,11 +6,14 @@ import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.LoggerContext;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.Appender;
+import ch.qos.logback.core.ConsoleAppender;
+import ch.qos.logback.core.filter.Filter;
 import ch.qos.logback.core.read.ListAppender;
+import ch.qos.logback.core.spi.FilterReply;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Sets;
+import com.google.common.collect.MoreCollectors;
 import java.util.List;
+import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class LogCaptor implements AutoCloseable {
@@ -28,27 +31,44 @@ public class LogCaptor implements AutoCloseable {
 	private final ListAppender<ILoggingEvent> appender;
 
 	private LogCaptor(String loggerName) {
-		final LoggerContext lc = (LoggerContext) LoggerFactory.getILoggerFactory();
-		logger = lc.getLogger(loggerName);
+		logger = getLogger(loggerName);
 		appender = new ListAppender<>();
-		appender.setContext(lc);
+		appender.setContext(getLoggerContext());
 		logger.addAppender(appender);
+		logger.setAdditive(false);
 		logger.setLevel(Level.ALL);
 		appender.start();
 	}
 
-	public void doRedirect() {
-		final ImmutableSet<Appender<ILoggingEvent>> appenders = ImmutableSet.copyOf(logger.iteratorForAppenders());
-		final ImmutableSet<ListAppender<ILoggingEvent>> ours = ImmutableSet.of(appender);
-		if (appenders.equals(ours)) {
-			return;
-		}
+	private LoggerContext getLoggerContext() {
+		return (LoggerContext) LoggerFactory.getILoggerFactory();
+	}
 
-		final ImmutableSet<Appender<ILoggingEvent>> notOurs = Sets.difference(appenders, ours).immutableCopy();
-		checkState(notOurs.size() == 1, notOurs);
-		final Appender<ILoggingEvent> notOurAppender = Iterables.getOnlyElement(notOurs);
-		notOurAppender.stop();
-		logger.detachAppender(notOurAppender);
+	private ch.qos.logback.classic.Logger getLogger(String loggerName) {
+		return getLoggerContext().getLogger(loggerName);
+	}
+
+	private ch.qos.logback.classic.Logger getRootLogger() {
+		return getLogger(Logger.ROOT_LOGGER_NAME);
+	}
+
+	private Appender<ILoggingEvent> getRootConsoleAppender() {
+		final ImmutableSet<Appender<ILoggingEvent>> appenders = ImmutableSet
+				.copyOf(getRootLogger().iteratorForAppenders());
+		checkState(appenders.size() == 2);
+		final Appender<ILoggingEvent> consoleAppender = appenders.stream().filter(a -> a instanceof ConsoleAppender)
+				.collect(MoreCollectors.onlyElement());
+		return consoleAppender;
+	}
+
+	public void doRedirect() {
+		final Filter<ILoggingEvent> filter = new Filter<>() {
+			@Override
+			public FilterReply decide(ILoggingEvent event) {
+				return FilterReply.DENY;
+			}
+		};
+		getRootConsoleAppender().addFilter(filter);
 	}
 
 	/**
