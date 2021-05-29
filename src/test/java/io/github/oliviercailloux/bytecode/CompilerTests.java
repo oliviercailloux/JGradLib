@@ -9,10 +9,10 @@ import com.google.common.base.VerifyException;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import com.google.common.io.MoreFiles;
 import com.google.common.jimfs.Configuration;
 import com.google.common.jimfs.Jimfs;
 import io.github.classgraph.ClassGraph;
-import io.github.oliviercailloux.jaris.io.IoUtils;
 import io.github.oliviercailloux.java_grade.bytecode.Compiler;
 import io.github.oliviercailloux.java_grade.bytecode.Compiler.CompilationResult;
 import io.github.oliviercailloux.java_grade.bytecode.NewCompiler;
@@ -53,7 +53,7 @@ class CompilerTests {
 			final String packagePath = getClass().getPackageName().replace(".", "/");
 			final Path compiledPath = destDir.resolve(packagePath).resolve(className + ".class");
 			assertTrue(Files.exists(compiledPath), compiledPath.toString());
-			IoUtils.deleteRecursively(destDir);
+			MoreFiles.deleteRecursively(destDir);
 		}
 	}
 

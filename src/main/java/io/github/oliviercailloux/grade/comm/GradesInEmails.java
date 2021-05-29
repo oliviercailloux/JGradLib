@@ -56,12 +56,12 @@ import io.github.oliviercailloux.grade.format.HtmlGrades;
 import io.github.oliviercailloux.grade.format.json.JsonGrade;
 
 public class GradesInEmails implements AutoCloseable {
-	public static final String FILE_NAME = "data.json";
-
-	public static final String MIME_SUBTYPE = "json";
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(GradesInEmails.class);
 
+	public static final String FILE_NAME = "data.json";
+
+	public static final String MIME_SUBTYPE = "json";
 	private static ImmutableList<MimeBodyPart> getParts(MimeMessage source) throws IOException, MessagingException {
 		final MimeMultipart multipart = (MimeMultipart) source.getContent();
 		final ImmutableList.Builder<MimeBodyPart> partsBuilder = ImmutableList.<MimeBodyPart>builder();

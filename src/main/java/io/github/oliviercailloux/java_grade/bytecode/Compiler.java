@@ -11,9 +11,9 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
+import com.google.common.io.MoreFiles;
 import io.github.classgraph.ClassGraph;
 import io.github.oliviercailloux.jaris.exceptions.CheckedStream;
-import io.github.oliviercailloux.jaris.io.IoUtils;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -258,7 +258,7 @@ public class Compiler {
 		LOGGER.debug("Compiled with output: {}, error: {}.", out, err);
 
 		if (toDelete.isPresent()) {
-			IoUtils.deleteRecursively(toDelete.get());
+			MoreFiles.deleteRecursively(toDelete.get());
 		}
 
 		return new CompilationResult(compiled, out.toString(), err.toString());

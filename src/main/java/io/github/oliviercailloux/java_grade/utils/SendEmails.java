@@ -26,7 +26,6 @@ import io.github.oliviercailloux.grade.comm.GradesInEmails;
 import io.github.oliviercailloux.grade.comm.StudentOnGitHubKnown;
 import io.github.oliviercailloux.grade.comm.json.JsonStudentsReader;
 import io.github.oliviercailloux.grade.format.json.JsonGrade;
-import io.github.oliviercailloux.java_grade.graders.PersonsManagerGrader;
 import io.github.oliviercailloux.json.JsonbUtils;
 import io.github.oliviercailloux.xml.XmlUtils;
 import java.lang.reflect.Type;
@@ -48,7 +47,8 @@ public class SendEmails {
 	private static final Path WORK_DIR = Path.of("");
 
 	public static void main(String[] args) throws Exception {
-		final String prefix = PersonsManagerGrader.PREFIX;
+		// final String prefix = PersonsManagerGrader.PREFIX;
+		final String prefix = "Projet UML";
 
 		final JsonStudentsReader students = JsonStudentsReader
 				.from(Files.readString(WORK_DIR.resolve("usernames.json")));
@@ -106,7 +106,7 @@ public class SendEmails {
 											Optional.ofNullable(lastGrades.get(e.getKey().getAddress()))
 													.map(IGrade::getPoints).orElse(-1d),
 											e.getValue().getPoints(), 1e-8d))
-//					.filter(e -> !e.getKey().getPersonal().contains("…"))
+					// .filter(e -> !e.getKey().getPersonal().contains("…"))
 					.collect(ImmutableMap.toImmutableMap(Map.Entry::getKey, Map.Entry::getValue));
 
 			for (EmailAddressAndPersonal address : gradesDiffering.keySet()) {
@@ -115,8 +115,9 @@ public class SendEmails {
 					continue;
 				}
 				final IGrade gradeFromJson = gradesByEmail.get(address);
-//						LOGGER.info("Diff {}: {} (before {}, after {}).", address, getDiff(lastGrade, gradeFromJson),
-//								lastGrade, gradeFromJson);
+				// LOGGER.info("Diff {}: {} (before {}, after {}).", address, getDiff(lastGrade,
+				// gradeFromJson),
+				// lastGrade, gradeFromJson);
 				final double before = lastGrade.getPoints();
 				final double after = gradeFromJson.getPoints();
 				LOGGER.info("Diff {} (before {}, after {}).", address, before, after);
@@ -131,13 +132,14 @@ public class SendEmails {
 					.collect(ImmutableSet.toImmutableSet());
 
 			final ImmutableSet<Email> effectiveEmails = emails;
-//			final ImmutableSet<Email> effectiveEmails = emails.stream().limit(3).collect(ImmutableSet.toImmutableSet());
+			// final ImmutableSet<Email> effectiveEmails =
+			// emails.stream().limit(3).collect(ImmutableSet.toImmutableSet());
 			LOGGER.info("Prepared first doc (out of {}): {}.", effectiveEmails.size(),
 					XmlUtils.asString(effectiveEmails.iterator().next().getDocument()));
-//			LOGGER.info("Prepared {}.", effectiveEmails);
+			// LOGGER.info("Prepared {}.", effectiveEmails);
 
 			emailer.saveInto(folder);
-			emailer.send(effectiveEmails, EmailerDauphineHelper.FROM);
+//			emailer.send(effectiveEmails, EmailerDauphineHelper.FROM);
 		}
 	}
 
@@ -214,5 +216,4 @@ public class SendEmails {
 		Verify.verify(!diff.isEmpty(), String.format("Grade1: %s, Grade2: %s.", grade1, grade2));
 		return diff;
 	}
-
 }

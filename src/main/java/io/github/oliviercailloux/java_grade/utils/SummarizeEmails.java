@@ -2,18 +2,6 @@ package io.github.oliviercailloux.java_grade.utils;
 
 import static com.google.common.base.Verify.verify;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.time.Instant;
-import java.util.Map;
-import java.util.function.Function;
-
-import javax.mail.Folder;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.w3c.dom.Document;
-
 import com.google.common.collect.BiMap;
 import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.ImmutableMap;
@@ -23,7 +11,6 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Range;
 import com.google.common.graph.ImmutableValueGraph;
 import com.google.common.graph.ValueGraphBuilder;
-
 import io.github.oliviercailloux.email.EmailAddress;
 import io.github.oliviercailloux.grade.Criterion;
 import io.github.oliviercailloux.grade.CriterionGradeWeight;
@@ -40,6 +27,16 @@ import io.github.oliviercailloux.grade.format.HtmlGrades;
 import io.github.oliviercailloux.grade.format.json.JsonGrade;
 import io.github.oliviercailloux.json.JsonbUtils;
 import io.github.oliviercailloux.xml.XmlUtils;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.time.Instant;
+import java.util.Map;
+import java.util.function.Function;
+import javax.mail.Folder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.w3c.dom.Document;
 
 public class SummarizeEmails {
 	@SuppressWarnings("unused")
@@ -143,7 +140,8 @@ public class SummarizeEmails {
 			final ImmutableMap.Builder<Criterion, Double> javaWeightsBuilder = ImmutableMap.builder();
 			javaWeightsBuilder.put(Criterion.given("git-branching"), 1d).put(Criterion.given("eclipse"), 1d)
 					.put(Criterion.given("persons-manager"), 3d).put(Criterion.given("coffee"), 1d)
-					.put(Criterion.given("admin-manages-users"), 0d).put(Criterion.given("Projet UML"), 0d);
+					.put(Criterion.given("admin-manages-users"), 0d).put(Criterion.given("Projet UML"), 0d)
+					.put(Criterion.given("Projet Java"), 6d);
 			if (grades.containsKey("commit")) {
 				javaWeightsBuilder.put(Criterion.given("commit"), 0d);
 			}
@@ -154,6 +152,9 @@ public class SummarizeEmails {
 				.put(Criterion.given("admin-manages-users"), 1d).put(Criterion.given("Projet UML"), 2d);
 		if (grades.containsKey("commit")) {
 			umlWeightsBuilder.put(Criterion.given("commit"), 1d);
+		}
+		if (grades.containsKey("Projet Java")) {
+			umlWeightsBuilder.put(Criterion.given("Projet Java"), 0d);
 		}
 		return WeightingGrade.from(gradesByCriterion, umlWeightsBuilder.build());
 	}

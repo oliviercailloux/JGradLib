@@ -5,7 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.common.collect.ImmutableSet;
 import io.github.oliviercailloux.grade.IGrade;
-import io.github.oliviercailloux.jaris.io.IoUtils;
+import io.github.oliviercailloux.jaris.io.PathUtils;
 import io.github.oliviercailloux.java_grade.JavaGradeUtils;
 import io.github.oliviercailloux.java_grade.bytecode.Compiler;
 import io.github.oliviercailloux.java_grade.bytecode.Compiler.CompilationResult;
@@ -44,7 +44,7 @@ public class CoffeeTests {
 
 	public void compile(String subPath, Path compiledDir) throws URISyntaxException, IOException {
 		final Path src = Path.of(getClass().getResource(".").toURI()).resolve(subPath);
-		final ImmutableSet<Path> javas = IoUtils.getMatchingChildren(src,
+		final ImmutableSet<Path> javas = PathUtils.getMatchingChildren(src,
 				p -> p.getFileName().toString().endsWith(".java"));
 //		CheckedStream.<Path, IOException>wrapping(javas.stream()).map(p -> Files.readString(p)).forEach(LOGGER::info);
 		final CompilationResult eclipseResult = Compiler.eclipseCompileUsingOurClasspath(javas, compiledDir);

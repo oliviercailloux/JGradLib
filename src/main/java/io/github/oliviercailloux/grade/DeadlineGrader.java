@@ -18,7 +18,7 @@ import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
 import io.github.oliviercailloux.jaris.collections.CollectionUtils;
 import io.github.oliviercailloux.jaris.exceptions.CheckedStream;
 import io.github.oliviercailloux.jaris.exceptions.Throwing;
-import io.github.oliviercailloux.jaris.io.IoUtils;
+import io.github.oliviercailloux.jaris.io.PathUtils;
 import io.github.oliviercailloux.java_grade.JavaGradeUtils;
 import io.github.oliviercailloux.java_grade.bytecode.Compiler;
 import io.github.oliviercailloux.java_grade.bytecode.Compiler.CompilationResult;
@@ -76,7 +76,7 @@ public class DeadlineGrader {
 			checkArgument(!latestTiedPathsOnTime.isEmpty());
 			LOGGER.debug("Considering {}.", latestTiedPathsOnTime);
 			final IGrade mainGrade = CheckedStream.<GitPathRootSha, IOException>wrapping(latestTiedPathsOnTime.stream())
-					.map(simpleWorkGrader).min(Comparator.comparing(IGrade::getPoints)).get();
+					.map(simpleWorkGrader).min(Throwing.Comparator.comparing(IGrade::getPoints)).get();
 			return WeightingGrade.from(ImmutableSet.of(
 					CriterionGradeWeight.from(Criterion.given("user.name"), userGrade, USER_GRADE_WEIGHT),
 					CriterionGradeWeight.from(Criterion.given("main"), mainGrade, 1d - USER_GRADE_WEIGHT)));
@@ -129,10 +129,10 @@ public class DeadlineGrader {
 		}
 
 		public IGrade grade(Path work) throws IOException {
-			final ImmutableSet<Path> poms = IoUtils.getMatchingChildren(work, p -> p.endsWith("pom.xml"));
+			final ImmutableSet<Path> poms = PathUtils.getMatchingChildren(work, p -> p.endsWith("pom.xml"));
 			LOGGER.debug("Poms: {}.", poms);
-			final ImmutableSet<Path> pomsWithJava = CheckedStream
-					.<Path, IOException>wrapping(poms.stream()).filter(p -> !IoUtils
+			final ImmutableSet<Path> pomsWithJava = CheckedStream.<Path, IOException>wrapping(poms.stream())
+					.filter(p -> !PathUtils
 							.getMatchingChildren(p, s -> String.valueOf(s.getFileName()).endsWith(".java")).isEmpty())
 					.collect(ImmutableSet.toImmutableSet());
 			LOGGER.debug("Poms with java: {}.", pomsWithJava);
@@ -168,7 +168,7 @@ public class DeadlineGrader {
 				srcDir = projectDirectory;
 			}
 			final ImmutableSet<Path> javaPaths = Files.exists(srcDir)
-					? IoUtils.getMatchingChildren(srcDir, p -> String.valueOf(p.getFileName()).endsWith(".java"))
+					? PathUtils.getMatchingChildren(srcDir, p -> String.valueOf(p.getFileName()).endsWith(".java"))
 					: ImmutableSet.of();
 			final CompilationResult eclipseResult = Compiler.eclipseCompileUsingOurClasspath(javaPaths, compiledDir);
 			final Pattern pathPattern = Pattern.compile("/tmp/sources[0-9]*/");
