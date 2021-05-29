@@ -28,8 +28,8 @@ public class LogCaptor implements AutoCloseable {
 	private final ListAppender<ILoggingEvent> appender;
 
 	private LogCaptor(String loggerName) {
-		logger = (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(loggerName);
 		final LoggerContext lc = (LoggerContext) LoggerFactory.getILoggerFactory();
+		logger = lc.getLogger(loggerName);
 		appender = new ListAppender<>();
 		appender.setContext(lc);
 		logger.addAppender(appender);
