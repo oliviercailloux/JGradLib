@@ -6,40 +6,12 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.time.Instant;
-import java.util.Arrays;
-import java.util.Optional;
-import java.util.Properties;
-
-import javax.json.Json;
-import javax.mail.Address;
-import javax.mail.Folder;
-import javax.mail.Message;
-import javax.mail.Message.RecipientType;
-import javax.mail.Session;
-import javax.mail.Store;
-import javax.mail.internet.InternetAddress;
-import javax.mail.search.AndTerm;
-import javax.mail.search.OrTerm;
-import javax.mail.search.RecipientStringTerm;
-import javax.mail.search.RecipientTerm;
-import javax.mail.search.SearchTerm;
-import javax.mail.search.SubjectTerm;
-
-import org.junit.jupiter.api.Disabled;
-import org.junit.jupiter.api.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-
 import com.google.common.base.VerifyException;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableTable;
 import com.google.common.collect.Range;
-
 import io.github.oliviercailloux.email.EmailAddress;
 import io.github.oliviercailloux.email.EmailAddressAndPersonal;
 import io.github.oliviercailloux.email.ImapSearchPredicate;
@@ -50,6 +22,32 @@ import io.github.oliviercailloux.grade.format.HtmlGrades;
 import io.github.oliviercailloux.grade.format.json.JsonGrade;
 import io.github.oliviercailloux.xml.HtmlDocument;
 import io.github.oliviercailloux.xml.XmlUtils;
+import java.time.Instant;
+import java.util.Arrays;
+import java.util.Optional;
+import java.util.Properties;
+import java.util.Set;
+import javax.json.Json;
+import javax.mail.Address;
+import javax.mail.Folder;
+import javax.mail.Message;
+import javax.mail.Message.RecipientType;
+import javax.mail.MessagingException;
+import javax.mail.Session;
+import javax.mail.Store;
+import javax.mail.internet.InternetAddress;
+import javax.mail.search.AndTerm;
+import javax.mail.search.OrTerm;
+import javax.mail.search.RecipientStringTerm;
+import javax.mail.search.RecipientTerm;
+import javax.mail.search.SearchTerm;
+import javax.mail.search.SubjectTerm;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
 
 public class EmailerTests {
 	@SuppressWarnings("unused")
@@ -317,7 +315,11 @@ public class EmailerTests {
 			emailer.connectToStore(Emailer.getZohoImapSession(), EmailerDauphineHelper.USERNAME_OTHERS,
 					EmailerDauphineHelper.getZohoToken());
 			@SuppressWarnings("resource")
-			final Folder folder = emailer.getFolder("Grades");
+			final Folder folder = emailer.getFolder("Tests");
+
+			final ImmutableSet<Message> all = emailer.searchIn(folder, ImapSearchPredicate.TRUE);
+			assertEquals(2, all.size());
+			logMessagesRecipients(all);
 
 			assertEquals(1, emailer.searchIn(folder, ImapSearchPredicate.recipientAddressEquals(RecipientType.TO,
 					"olivier.cailloux@lamsade.dauphine.fr")).size());
@@ -351,6 +353,16 @@ public class EmailerTests {
 					emailer.searchIn(folder,
 							ImapSearchPredicate.recipientFullAddressContains(RecipientType.TO, "olivier cailloux <o"))
 							.size());
+		}
+	}
+
+	private void logMessagesRecipients(Set<Message> messages) throws MessagingException {
+		for (Message message : messages) {
+			LOGGER.info("Message recipients: {}.",
+					ImmutableSet
+							.copyOf(message.getAllRecipients()).stream().map(a -> (InternetAddress) a).map(a -> "Type: "
+									+ a.getType() + "; Personal: " + a.getPersonal() + "; Address: " + a.getAddress())
+							.collect(ImmutableSet.toImmutableSet()));
 		}
 	}
 
