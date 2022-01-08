@@ -7,9 +7,7 @@ import ch.qos.logback.classic.LoggerContext;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.Appender;
 import ch.qos.logback.core.ConsoleAppender;
-import ch.qos.logback.core.filter.Filter;
 import ch.qos.logback.core.read.ListAppender;
-import ch.qos.logback.core.spi.FilterReply;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.MoreCollectors;
 import java.util.List;
@@ -35,7 +33,6 @@ public class LogCaptor implements AutoCloseable {
 		appender = new ListAppender<>();
 		appender.setContext(getLoggerContext());
 		logger.addAppender(appender);
-		logger.setAdditive(false);
 		logger.setLevel(Level.ALL);
 		appender.start();
 	}
@@ -52,6 +49,7 @@ public class LogCaptor implements AutoCloseable {
 		return getLogger(Logger.ROOT_LOGGER_NAME);
 	}
 
+	@SuppressWarnings("unused")
 	private Appender<ILoggingEvent> getRootConsoleAppender() {
 		final ImmutableSet<Appender<ILoggingEvent>> appenders = ImmutableSet
 				.copyOf(getRootLogger().iteratorForAppenders());
@@ -62,13 +60,7 @@ public class LogCaptor implements AutoCloseable {
 	}
 
 	public void doRedirect() {
-		final Filter<ILoggingEvent> filter = new Filter<>() {
-			@Override
-			public FilterReply decide(ILoggingEvent event) {
-				return FilterReply.DENY;
-			}
-		};
-		getRootConsoleAppender().addFilter(filter);
+		logger.setAdditive(false);
 	}
 
 	/**

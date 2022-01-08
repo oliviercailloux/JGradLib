@@ -89,8 +89,8 @@ public class PersonsManagerGrader {
 
 	public static void main(String[] args) throws Exception {
 		/* Nb should give 0.5/20 pts for user.grade. */
-		final RepositoryFetcher fetcher = RepositoryFetcher.withPrefix(PREFIX);
-//				.setRepositoriesFilter(r -> r.getUsername().equals("…"));
+		final RepositoryFetcher fetcher = RepositoryFetcher.withPrefix(PREFIX)
+				.setRepositoriesFilter(r -> r.getUsername().equals("Yasmine-hamnache"));
 		final GitGeneralGrader grader = GitGeneralGrader
 				.using(fetcher,
 						DeadlineGrader.usingInstantiatorGrader(PersonsManagerGrader::grade, DEADLINE).setPenalizer(

@@ -4,6 +4,17 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 import static io.github.oliviercailloux.email.UncheckedMessagingException.MESSAGING_UNCHECKER;
 
+import com.google.common.base.VerifyException;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Maps;
+import com.google.common.collect.MoreCollectors;
+import com.sun.mail.imap.IMAPFolder;
+import io.github.oliviercailloux.email.EmailAddressAndPersonal;
+import io.github.oliviercailloux.email.ImapSearchPredicate;
+import io.github.oliviercailloux.email.UncheckedMessagingException;
+import io.github.oliviercailloux.xml.XmlUtils;
 import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
@@ -13,7 +24,6 @@ import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
 import java.util.stream.StreamSupport;
-
 import javax.mail.FetchProfile;
 import javax.mail.Folder;
 import javax.mail.Message;
@@ -29,22 +39,8 @@ import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeBodyPart;
 import javax.mail.internet.MimeMessage;
 import javax.mail.internet.MimeMultipart;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.base.VerifyException;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Maps;
-import com.google.common.collect.MoreCollectors;
-import com.sun.mail.imap.IMAPFolder;
-
-import io.github.oliviercailloux.email.EmailAddressAndPersonal;
-import io.github.oliviercailloux.email.ImapSearchPredicate;
-import io.github.oliviercailloux.email.UncheckedMessagingException;
-import io.github.oliviercailloux.xml.XmlUtils;
 
 /**
  * The time from connectToStore to close is supposed to be short. Meanwhile,
@@ -259,12 +255,19 @@ public class Emailer implements AutoCloseable {
 		final ImmutableSet<Message> found = ImmutableSet.copyOf(asArray);
 		LOGGER.info("Searched, got: {}.", found.size());
 		fetchHeaders(folder, found);
+
+		/* TODO Searching for "Grade Java" finds "Grade Projet Java". */
+		final boolean filter = false;
+		if (filter) {
+			return found.stream().filter(term.getPredicate()).collect(ImmutableSet.toImmutableSet());
+		}
+
 		final Optional<Message> notMatching = found.stream().filter(term.getPredicate().negate()).limit(1)
 				.collect(MoreCollectors.toOptional());
-		LOGGER.debug("Verified {}.", found.size());
 		if (notMatching.isPresent()) {
 			throw new VerifyException(getDescription(notMatching.get()));
 		}
+		LOGGER.debug("Verified {}.", found.size());
 		return found;
 	}
 

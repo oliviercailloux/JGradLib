@@ -2,18 +2,16 @@ package io.github.oliviercailloux.git.fs;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import com.google.common.base.MoreObjects;
+import com.google.common.collect.ImmutableList;
 import java.time.ZonedDateTime;
 import java.util.Date;
 import java.util.List;
 import java.util.Objects;
 import java.util.TimeZone;
-
 import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.lib.PersonIdent;
 import org.eclipse.jgit.revwalk.RevCommit;
-
-import com.google.common.base.MoreObjects;
-import com.google.common.collect.ImmutableList;
 
 /**
  * Authoring comes logically before committing, but because the dates are set by
@@ -130,7 +128,8 @@ public class Commit {
 
 	@Override
 	public String toString() {
-		return MoreObjects.toStringHelper(this).add("id", id).add("authorDate", authorDate)
-				.add("committerDate", committerDate).add("parents", parents).toString();
+		return MoreObjects.toStringHelper(this).add("id", id).add("authorName", authorName)
+				.add("authorDate", authorDate).add("committerName", committerName).add("committerDate", committerDate)
+				.add("parents", parents).toString();
 	}
 }

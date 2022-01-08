@@ -3,10 +3,9 @@ package io.github.oliviercailloux.git.git_hub.model;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import com.google.common.base.MoreObjects;
 import java.net.URI;
 import java.util.Objects;
-
-import com.google.common.base.MoreObjects;
 
 public class GitHubUsername {
 	public static GitHubUsername given(String gitHubUsername) {
@@ -20,6 +19,9 @@ public class GitHubUsername {
 		checkArgument(!username.isEmpty());
 	}
 
+	/**
+	 * @return not empty
+	 */
 	public String getUsername() {
 		return username;
 	}

@@ -3,6 +3,9 @@ package io.github.oliviercailloux.java_grade.testers;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 
+import com.sun.management.UnixOperatingSystemMXBean;
+import io.github.oliviercailloux.git.fs.Commit;
+import io.github.oliviercailloux.git.fs.GitPathRoot;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.lang.management.ManagementFactory;
@@ -11,15 +14,9 @@ import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.util.regex.Pattern;
-
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.sun.management.UnixOperatingSystemMXBean;
-
-import io.github.oliviercailloux.git.fs.Commit;
-import io.github.oliviercailloux.git.fs.GitPathRoot;
 
 public class JavaMarkHelper {
 
@@ -28,6 +25,8 @@ public class JavaMarkHelper {
 
 	final static Pattern HAS_JUNIT_TEST_CONTENT = Pattern
 			.compile("(\\h*@Test)|(org\\.junit\\.jupiter\\.api\\.Assertions)");
+
+	public static final String GIT_HUB_CLASSROOM_COMMITTER = "github-classroom[bot]";
 
 	public static final String GIT_HUB_COMMITTER = "GitHub";
 
@@ -53,7 +52,8 @@ public class JavaMarkHelper {
 	 * <noreply@github.com> while the author seems to be the logged user.
 	 */
 	public static boolean committerIsGitHub(Commit commit) {
-		return commit.getCommitterName().equals(GIT_HUB_COMMITTER);
+		return commit.getCommitterName().equals(GIT_HUB_COMMITTER)
+				|| commit.getCommitterName().equals(GIT_HUB_CLASSROOM_COMMITTER);
 	}
 
 	/**

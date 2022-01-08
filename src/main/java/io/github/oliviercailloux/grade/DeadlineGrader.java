@@ -51,7 +51,7 @@ import org.slf4j.LoggerFactory;
  */
 public class DeadlineGrader {
 	@SuppressWarnings("unused")
-	private static final Logger LOGGER = LoggerFactory.getLogger(DeadlineGrader.Penalizer.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(DeadlineGrader.class);
 
 	private static class PathToGitGrader {
 
@@ -69,9 +69,10 @@ public class DeadlineGrader {
 			final ImmutableSet<String> authors = checkedCommits.map(GitPathRoot::getCommit).map(Commit::getAuthorName)
 					.collect(ImmutableSet.toImmutableSet());
 			LOGGER.debug("Authors: {}.", authors);
-			final Optional<String> author = authors.stream().collect(Utils.singleOrEmpty());
-			final Mark userGrade = Mark
-					.binary(author.isPresent() && author.get().equals(work.getAuthor().getUsername()));
+			final String authorExpected = work.getAuthor().getUsername();
+			verify(!authorExpected.isEmpty());
+			final Mark userGrade = Mark.binary(authors.equals(ImmutableSet.of(authorExpected)), "",
+					"Expected " + authorExpected + ", seen " + authors);
 			final ImmutableSet<GitPathRootSha> latestTiedPathsOnTime = PathToGitGrader.getLatest(history);
 			checkArgument(!latestTiedPathsOnTime.isEmpty());
 			LOGGER.debug("Considering {}.", latestTiedPathsOnTime);

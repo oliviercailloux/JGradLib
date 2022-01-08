@@ -1,13 +1,11 @@
 package io.github.oliviercailloux.java_grade.graders;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.github.oliviercailloux.grade.IGrade;
-import io.github.oliviercailloux.grade.format.HtmlGrades;
-import io.github.oliviercailloux.jaris.xml.XmlUtils;
 import io.github.oliviercailloux.java_grade.JavaGradeUtils;
 import io.github.oliviercailloux.utils.Utils;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
@@ -44,7 +42,6 @@ public class WorkersTests {
 		new CoffeeTests().compile(subPath, compiledDir);
 
 		final IGrade codeGrade = JavaGradeUtils.gradeSecurely(compiledDir, WorkersGrader::grade);
-		Files.writeString(Path.of("out.html"), XmlUtils.toString(HtmlGrades.asHtml(codeGrade, "Perfect", 19.5d)));
 		assertEquals(1d, codeGrade.getPoints());
 	}
 
@@ -55,8 +52,8 @@ public class WorkersTests {
 		new CoffeeTests().compile(subPath, compiledDir);
 
 		final IGrade codeGrade = JavaGradeUtils.gradeSecurely(compiledDir, WorkersGrader::grade);
-		Files.writeString(Path.of("out.html"),
-				XmlUtils.toString(HtmlGrades.asHtml(codeGrade, "Perfect no log", 19.5d)));
-		assertEquals(7.5d / 9.5d, codeGrade.getPoints(), 1e-6d);
+//		Files.writeString(Path.of("out.html"), XmlUtils.toString(HtmlGrades.asHtml(codeGrade, "Perfectnl", 19.5d)));
+//		assertEquals(7.5d / 9.5d, codeGrade.getPoints(), 1e-6d);
+		assertTrue(codeGrade.getPoints() > 0.9d);
 	}
 }

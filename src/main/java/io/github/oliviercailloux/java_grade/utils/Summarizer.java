@@ -33,7 +33,6 @@ import io.github.oliviercailloux.grade.comm.json.JsonStudentsReader;
 import io.github.oliviercailloux.grade.format.CsvGrades;
 import io.github.oliviercailloux.grade.format.HtmlGrades;
 import io.github.oliviercailloux.grade.utils.Compressor;
-import io.github.oliviercailloux.java_grade.graders.PersonsManagerGrader;
 import io.github.oliviercailloux.utils.Utils;
 import io.github.oliviercailloux.xml.XmlUtils;
 import java.io.IOException;
@@ -53,7 +52,7 @@ public class Summarizer {
 	private static final Logger LOGGER = LoggerFactory.getLogger(Summarizer.class);
 
 	public static void main(String[] args) throws Exception {
-		final Summarizer summarizer = new Summarizer().setPrefix(PersonsManagerGrader.PREFIX)
+		final Summarizer summarizer = new Summarizer().setPrefix("UML")
 				.setDissolveCriteria(ImmutableSet.of(Criterion.given("Warnings")));
 //		.setPatched()
 //		summarizer.getReader().restrictTo(ImmutableSet.of(GitHubUsername.given("…")));
@@ -148,11 +147,15 @@ public class Summarizer {
 		LOGGER.debug("Filtered: {}.",
 				filtered.values().stream().map(g -> g.limitedDepth(1)).collect(ImmutableList.toImmutableList()));
 
-		if (model == null) {
-//			final GradeStructure struct = getAutoModel(ImmutableSet.copyOf(filtered.values()));
-			final GradeStructure struct = getMajoritarianModel(ImmutableSet.copyOf(filtered.values()));
-			setModel(struct);
-		}
+//		if (model == null) {
+////			final GradeStructure struct = getAutoModel(ImmutableSet.copyOf(filtered.values()));
+//			if (filtered.values().size() > 1) {
+//				final GradeStructure struct = getMajoritarianModel(ImmutableSet.copyOf(filtered.values()));
+//				setModel(struct);
+//			} else {
+//				setModel(Iterables.getOnlyElement(filtered.values()).toTree());
+//			}
+//		}
 		final ImmutableMap<GitHubUsername, IGrade> modeled = Maps.toMap(grades.keySet(), u -> model(filtered.get(u)));
 		LOGGER.debug("Modeled: {}.",
 				modeled.values().stream().map(g -> g.limitedDepth(1)).collect(ImmutableList.toImmutableList()));

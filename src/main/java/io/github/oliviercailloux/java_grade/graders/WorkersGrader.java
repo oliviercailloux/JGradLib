@@ -7,6 +7,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Streams;
+import com.google.common.util.concurrent.SimpleTimeLimiter;
 import io.github.oliviercailloux.grade.Criterion;
 import io.github.oliviercailloux.grade.CriterionGradeWeight;
 import io.github.oliviercailloux.grade.DeadlineGrader;
@@ -28,6 +29,8 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import org.slf4j.Logger;
@@ -38,16 +41,18 @@ public class WorkersGrader {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(WorkersGrader.class);
 	public static final String PREFIX = "workers";
-	public static final ZonedDateTime DEADLINE = ZonedDateTime.parse("2021-03-03T14:31:00+01:00[Europe/Paris]");
+	public static final ZonedDateTime DEADLINE_ONE = ZonedDateTime.parse("2021-05-05T14:48:00+02:00[Europe/Paris]");
+
+	public static final ZonedDateTime DEADLINE = ZonedDateTime.parse("2021-06-21T00:00:00+02:00[Europe/Paris]");
 
 	public static void main(String[] args) throws Exception {
 		final RepositoryFetcher fetcher = RepositoryFetcher.withPrefix(PREFIX);
-//				.setRepositoriesFilter(r -> r.getUsername().equals("…"));
+//				.setRepositoriesFilter(r -> r.getUsername().equals("EwenMarguet"));
 		final GitGeneralGrader grader = GitGeneralGrader
 				.using(fetcher,
 						DeadlineGrader.usingInstantiatorGrader(WorkersGrader::grade, DEADLINE).setPenalizer(
 								DeadlineGrader.LinearPenalizer.proportionalToLateness(Duration.ofSeconds(300))))
-				.setExcludeCommitsByAuthors(ImmutableSet.of("Olivier Cailloux"));// .setExcludeCommitsByGitHub(true);
+				.setExcludeCommitsByAuthors(ImmutableSet.of("Olivier Cailloux")).setExcludeCommitsByGitHub(true);
 		grader.grade();
 		// final Path src = Path.of("/tmp/coffee-…/.git/");
 		// final GitFileFileSystem gitFs =
@@ -65,9 +70,11 @@ public class WorkersGrader {
 	}
 
 	private final Instanciator instanciator;
+	private final ExecutorService executors;
 
 	private WorkersGrader(Instanciator instanciator) {
 		this.instanciator = checkNotNull(instanciator);
+		executors = Executors.newCachedThreadPool();
 	}
 
 	public IGrade grade() {
@@ -76,21 +83,33 @@ public class WorkersGrader {
 		try (LogCaptor capt = LogCaptor.redirecting("io.github.oliviercailloux.workers")) {
 			LOGGER.info("Grading");
 
-			gradeBuilder.add(CriterionGradeWeight.from(Criterion.given("Add"), add(), 2.0d));
-			gradeBuilder.add(CriterionGradeWeight.from(Criterion.given("Log"), log(capt), 2.0d));
-			gradeBuilder.add(CriterionGradeWeight.from(Criterion.given("Set"), set(), 2.0d));
-			gradeBuilder.add(CriterionGradeWeight.from(Criterion.given("To string"), toStringGrade(), 1.5d));
-			gradeBuilder.add(CriterionGradeWeight.from(Criterion.given("As teams"), asTeams(), 2.0d));
+			gradeBuilder.add(CriterionGradeWeight.from(Criterion.given("Add"), add(), 4.5d));
+			gradeBuilder.add(CriterionGradeWeight.from(Criterion.given("Log"), log(capt), 3.0d));
+			gradeBuilder.add(CriterionGradeWeight.from(Criterion.given("Set"), set(), 4.5d));
+			gradeBuilder.add(CriterionGradeWeight.from(Criterion.given("To string"), toStringGrade(), 3.0d));
+			gradeBuilder.add(CriterionGradeWeight.from(Criterion.given("As teams"), asTeams(), 4.5d));
 		}
+		executors.shutdownNow();
 
-		return WeightingGrade.from(gradeBuilder.build());
+		final WeightingGrade original = WeightingGrade.from(gradeBuilder.build()
+//				, "Using an ordered weighted average with weights from 1 to 24."
+		);
+		return original;
+
+//		final DoubleStream streamIncr = IntStream.range(1, 9).map(i -> i * 6).asDoubleStream();
+//		final ImmutableList<Double> increasingWeights = DoubleStream
+//				.concat(DoubleStream.of(2d, 2d, 2d, 3d, 3d), streamIncr).boxed()
+//				.collect(ImmutableList.toImmutableList());
+//
+//		return GradeUtils.toOwa(original, increasingWeights);
 	}
 
 	private TryCatchAll<Workers> getWorkers() {
 		final TryCatchAll<Workers> tryTarget = TryCatchAll
 				.get(() -> instanciator.getInstanceOrThrow(Workers.class, "empty", ImmutableList.of()))
 				.or(() -> instanciator.getInstanceOrThrow(Workers.class), (e1, e2) -> e1);
-		return tryTarget;
+		return tryTarget.andApply(
+				target -> SimpleTimeLimiter.create(executors).newProxy(target, Workers.class, Duration.ofSeconds(5)));
 	}
 
 	private TryCatchAll<Workers> getWorkersWith(Person... persons) {
@@ -168,7 +187,7 @@ public class WorkersGrader {
 		{
 			final TryCatchAll<Workers> workers = getWorkersWith(p0);
 			final Mark mark = compare(ImmutableList.of(Optional.of(p0), Optional.empty(), Optional.empty()), workers);
-			gradeBuilder.add(CriterionGradeWeight.from(Criterion.given("One"), mark, 1d));
+			gradeBuilder.add(CriterionGradeWeight.from(Criterion.given("One"), mark, 1.5d));
 		}
 		{
 			final TryCatchAll<Workers> workers = getWorkersWith(p0, p1);
@@ -197,8 +216,10 @@ public class WorkersGrader {
 		final ImmutableSet.Builder<CriterionGradeWeight> gradeBuilder = ImmutableSet.builder();
 
 		{
-			final TryCatchAll<Workers> workers = getWorkers().andConsume(w -> w.setPosition(pk, 0));
-			final Mark mark = workers.map(w -> Mark.zero("Did not throw"), e -> Mark.one());
+			final TryCatchAll<Workers> workers = getWorkers();
+			final TryCatchAll<Workers> workersPos = workers.andConsume(w -> w.setPosition(pk, 0));
+			final Mark mark = workersPos.map(w -> Mark.zero("Did not throw"), e -> Mark.binary(workers.isSuccess()
+					&& ((e instanceof IllegalArgumentException) || (e instanceof IllegalStateException))));
 			gradeBuilder.add(CriterionGradeWeight.from(Criterion.given("Trying to set empty instance"), mark, 1d));
 		}
 		{
@@ -236,13 +257,13 @@ public class WorkersGrader {
 		{
 			final TryCatchAll<Set<List<Person>>> workers = getWorkersWith(pk).andApply(w -> w.getAsTeamsOfSize(1));
 			final ImmutableSet<ImmutableList<Person>> exp = ImmutableSet.of(ImmutableList.of(pk));
-			final Mark mark = workers.map(s -> Mark.binary(Objects.equals(s, exp)), WorkersGrader::exc);
+			final Mark mark = workers.andApply(s -> Mark.binary(Objects.equals(s, exp))).orMapCause(WorkersGrader::exc);
 			gradeBuilder.add(CriterionGradeWeight.from(Criterion.given("Get unique team of 1"), mark, 1d));
 		}
 		{
 			final TryCatchAll<Set<List<Person>>> teams = getWorkersWith(pk, pd).andApply(w -> w.getAsTeamsOfSize(1));
 			final ImmutableSet<ImmutableList<Person>> exp = ImmutableSet.of(ImmutableList.of(pk), ImmutableList.of(pd));
-			final Mark mark = teams.map(s -> Mark.binary(Objects.equals(s, exp)), WorkersGrader::exc);
+			final Mark mark = teams.andApply(s -> Mark.binary(Objects.equals(s, exp))).orMapCause(WorkersGrader::exc);
 			gradeBuilder.add(CriterionGradeWeight.from(Criterion.given("Get teams of 1"), mark, 1d));
 		}
 		{
@@ -254,8 +275,8 @@ public class WorkersGrader {
 			final TryCatchAll<Workers> workers = getWorkersWith(many);
 			LOGGER.info("Teams orig: {}, teams to: {}, workers: {}.", many, exp, workers);
 			final TryCatchAll<Set<List<Person>>> teams = workers.andApply(w -> w.getAsTeamsOfSize(12));
-			final Mark mark = teams.map(s -> Mark.binary(Objects.equals(s, exp)), WorkersGrader::exc);
-			gradeBuilder.add(CriterionGradeWeight.from(Criterion.given("Get teams of 12"), mark, 1d));
+			final Mark mark = teams.andApply(s -> Mark.binary(Objects.equals(s, exp))).orMapCause(WorkersGrader::exc);
+			gradeBuilder.add(CriterionGradeWeight.from(Criterion.given("Get teams of 12"), mark, 1.5d));
 		}
 		{
 			final ImmutableList<Person> many = IntStream.range(0, 101).<Person>mapToObj(WorkersGrader::personWithId)
@@ -264,8 +285,8 @@ public class WorkersGrader {
 			LOGGER.info("Many: {}.", workers);
 			final TryCatchAll<Set<List<Person>>> teams = workers.andApply(w -> w.getAsTeamsOfSize(100));
 			LOGGER.info("Teams: {}.", teams);
-			final Mark mark = teams.map(s -> Mark.zero("Did not throw"),
-					e -> Mark.binary(!(e instanceof NullPointerException)));
+			final Mark mark = teams.map(s -> Mark.zero("Did not throw"), e -> Mark.binary(workers.isSuccess()
+					&& ((e instanceof IllegalArgumentException) || (e instanceof IllegalStateException))));
 			LOGGER.info("Mark: {}.", mark);
 			gradeBuilder.add(CriterionGradeWeight.from(Criterion.given("Wrong argument"), mark, 1d));
 		}

@@ -156,9 +156,12 @@ public class GitGeneralGrader {
 		final GitFileSystemHistory filteredHistory = manual
 				.filter(r -> !excludedAuthors.contains(r.getCommit().getAuthorName()));
 		final IGrade grade = deadlineGrader.grade(GitWork.given(work.getAuthor(), filteredHistory));
+		final String spaceBefore = grade.getComment().isEmpty() ? "" : " ";
 		final String added = excludedByGitHub.isEmpty() ? ""
-				: " (Ignored commits by GitHub: " + excludedByGitHub.stream()
-						.map(r -> r.getStaticCommitId().getName().toString()).collect(Collectors.joining(", "));
+				: spaceBefore
+						+ "(Ignored commits by GitHub: " + excludedByGitHub.stream()
+								.map(r -> r.getStaticCommitId().getName().toString()).collect(Collectors.joining(", "))
+						+ ")";
 		return grade.withComment(grade.getComment() + added);
 	}
 

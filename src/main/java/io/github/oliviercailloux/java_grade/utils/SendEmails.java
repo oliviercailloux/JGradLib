@@ -7,7 +7,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
-import com.google.common.math.DoubleMath;
 import com.google.common.math.Quantiles;
 import com.google.common.math.Stats;
 import io.github.oliviercailloux.email.EmailAddress;
@@ -47,8 +46,8 @@ public class SendEmails {
 	private static final Path WORK_DIR = Path.of("");
 
 	public static void main(String[] args) throws Exception {
-		// final String prefix = PersonsManagerGrader.PREFIX;
-		final String prefix = "Projet UML";
+//		final String prefix = PersonsManagerGrader.PREFIX;
+		final String prefix = "UML";
 
 		final JsonStudentsReader students = JsonStudentsReader
 				.from(Files.readString(WORK_DIR.resolve("usernames.json")));
@@ -99,13 +98,8 @@ public class SendEmails {
 				}
 			}
 
-			final Map<EmailAddressAndPersonal, IGrade> gradesDiffering = gradesByEmail
-					.entrySet().stream().filter(
-							e -> !e.getValue().equals(lastGrades.get(e.getKey().getAddress()))
-									&& !DoubleMath.fuzzyEquals(
-											Optional.ofNullable(lastGrades.get(e.getKey().getAddress()))
-													.map(IGrade::getPoints).orElse(-1d),
-											e.getValue().getPoints(), 1e-8d))
+			final Map<EmailAddressAndPersonal, IGrade> gradesDiffering = gradesByEmail.entrySet().stream()
+					.filter(e -> isDiff(Optional.ofNullable(lastGrades.get(e.getKey().getAddress())), e.getValue()))
 					// .filter(e -> !e.getKey().getPersonal().contains("…"))
 					.collect(ImmutableMap.toImmutableMap(Map.Entry::getKey, Map.Entry::getValue));
 
@@ -141,6 +135,11 @@ public class SendEmails {
 			emailer.saveInto(folder);
 //			emailer.send(effectiveEmails, EmailerDauphineHelper.FROM);
 		}
+	}
+
+	private static boolean isDiff(Optional<IGrade> lastGrade, IGrade current) {
+		return !current.equals(lastGrade.orElse(null));
+//		return !DoubleMath.fuzzyEquals(lastGrade.map(IGrade::getPoints).orElse(-1d), current.getPoints(), 1e-8d);
 	}
 
 	static void computeDiffUsingLeaves(IGrade grade1, IGrade grade2) {
