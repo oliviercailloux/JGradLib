@@ -7,22 +7,18 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.google.common.net.UrlEscapers;
+import io.github.oliviercailloux.git.JGit;
 import java.net.URI;
 import java.nio.file.InvalidPathException;
 import java.util.Map;
-
 import javax.ws.rs.core.UriBuilder;
-
 import org.eclipse.jgit.internal.storage.dfs.DfsRepository;
 import org.eclipse.jgit.internal.storage.dfs.DfsRepositoryDescription;
 import org.eclipse.jgit.internal.storage.dfs.InMemoryRepository;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.net.UrlEscapers;
-
-import io.github.oliviercailloux.git.JGit;
 
 /**
  * Tests that do not access the underlying git repository, just deal with git
