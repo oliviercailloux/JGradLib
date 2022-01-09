@@ -5,19 +5,17 @@ import static com.google.common.base.Verify.verify;
 import static com.google.common.base.Verify.verifyNotNull;
 import static io.github.oliviercailloux.jaris.exceptions.Unchecker.URI_UNCHECKER;
 
+import com.google.common.base.VerifyException;
+import com.google.common.collect.BiMap;
+import com.google.common.collect.HashBiMap;
 import java.net.URI;
 import java.nio.file.FileSystemAlreadyExistsException;
 import java.nio.file.FileSystemNotFoundException;
 import java.nio.file.Path;
 import java.util.Objects;
-
 import org.eclipse.jgit.internal.storage.dfs.DfsRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.base.VerifyException;
-import com.google.common.collect.BiMap;
-import com.google.common.collect.HashBiMap;
 
 class GitFileSystems {
 	@SuppressWarnings("unused")
@@ -83,9 +81,12 @@ class GitFileSystems {
 		 * It follows from these two checks that the uri is absolute (it has a scheme)
 		 * and hierarchical (it was further parsed).
 		 */
+		verify(gitFileUri.isAbsolute());
+		verify(!gitFileUri.isOpaque());
+
 		final String gitDirStr = gitFileUri.getPath();
 		/** An hierarchical absolute URI has an absolute path. */
-		assert gitDirStr != null;
+		verifyNotNull(gitDirStr);
 		checkArgument(gitDirStr.endsWith("/"));
 		final Path gitDir = Path.of(gitDirStr);
 		verify(gitDir.isAbsolute());

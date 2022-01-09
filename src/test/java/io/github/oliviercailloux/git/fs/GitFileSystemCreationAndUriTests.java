@@ -5,17 +5,21 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.graph.GraphBuilder;
+import io.github.oliviercailloux.git.JGit;
+import io.github.oliviercailloux.utils.Utils;
 import java.net.URI;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystemNotFoundException;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.ProviderNotFoundException;
 import java.time.Instant;
-
 import javax.ws.rs.core.UriBuilder;
-
 import org.eclipse.jgit.internal.storage.dfs.DfsRepository;
 import org.eclipse.jgit.internal.storage.dfs.DfsRepositoryDescription;
 import org.eclipse.jgit.internal.storage.dfs.InMemoryRepository;
@@ -25,13 +29,6 @@ import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.graph.GraphBuilder;
-
-import io.github.oliviercailloux.git.JGit;
-import io.github.oliviercailloux.utils.Utils;
 
 /**
  * Tests creation and URI of git file systems and paths.
@@ -51,16 +48,14 @@ class GitFileSystemCreationAndUriTests {
 	void testNoSystemThere() {
 		final Path noDir = Utils.getTempDirectory().resolve("test-" + Instant.now().toString());
 		assertFalse(Files.exists(noDir));
-		assertThrows(FileSystemNotFoundException.class,
+		/*
+		 * I believe that FileSystems.newFileSystem(noDir,
+		 * ClassLoader.getSystemClassLoader()) threw FileSystemNotFoundException under
+		 * Java 11; under Java 17, this throws NoSuchFileException, an arguably better
+		 * choice.
+		 */
+		assertThrows(NoSuchFileException.class,
 				() -> GitFileSystemProvider.getInstance().newFileSystemFromGitDir(noDir));
-	}
-
-	@Test
-	void testNone() throws Exception {
-		final Path emptyDir = Utils.getTempDirectory().resolve("test-" + Instant.now().toString());
-		assertFalse(Files.exists(emptyDir));
-		assertThrows(FileSystemNotFoundException.class,
-				() -> FileSystems.newFileSystem(emptyDir, ClassLoader.getSystemClassLoader()));
 	}
 
 	@Test
@@ -68,8 +63,7 @@ class GitFileSystemCreationAndUriTests {
 		final Path emptyDir = Utils.getTempUniqueDirectory("testEmpty");
 		Files.createDirectories(emptyDir);
 		assertTrue(Files.exists(emptyDir));
-		assertThrows(ProviderNotFoundException.class,
-				() -> FileSystems.newFileSystem(emptyDir, ClassLoader.getSystemClassLoader()));
+		assertThrows(ProviderNotFoundException.class, () -> FileSystems.newFileSystem(emptyDir));
 	}
 
 	@Test
@@ -128,6 +122,31 @@ class GitFileSystemCreationAndUriTests {
 				final URI expectedUri = URI.create("gitjfs://DFS/my/repo,@+%20space");
 				assertEquals(expectedUri, ((GitFileSystem) gitFs).toUri());
 				assertEquals(gitFs, GitFileSystemProvider.getInstance().getFileSystem(expectedUri));
+			}
+			assertThrows(FileSystemNotFoundException.class,
+					() -> GitFileSystemProvider.getInstance().getFileSystemFromRepositoryName(name));
+		}
+	}
+
+	@Test
+	void testDoubleMemRepo() throws Exception {
+		final String name = "sdqmj{~{}#@}#";
+		try (Repository repo = new InMemoryRepository(new DfsRepositoryDescription(name))) {
+			JGit.createBasicRepo(repo);
+			try (FileSystem gitFs = GitFileSystemProvider.getInstance().newFileSystemFromRepository(repo)) {
+				assertEquals(2, ImmutableList.copyOf(gitFs.getRootDirectories()).size());
+			}
+			assertThrows(FileSystemNotFoundException.class,
+					() -> GitFileSystemProvider.getInstance().getFileSystemFromRepositoryName(name));
+		}
+		/*
+		 * Let’s do it again to make sure that the first one is no more in memory (name
+		 * can be reused).
+		 */
+		try (Repository repo = new InMemoryRepository(new DfsRepositoryDescription(name))) {
+			JGit.createBasicRepo(repo);
+			try (FileSystem gitFs = GitFileSystemProvider.getInstance().newFileSystemFromRepository(repo)) {
+				assertEquals(2, ImmutableList.copyOf(gitFs.getRootDirectories()).size());
 			}
 			assertThrows(FileSystemNotFoundException.class,
 					() -> GitFileSystemProvider.getInstance().getFileSystemFromRepositoryName(name));

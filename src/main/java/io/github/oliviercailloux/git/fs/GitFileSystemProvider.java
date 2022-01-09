@@ -3,6 +3,11 @@ package io.github.oliviercailloux.git.fs;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Verify.verify;
 
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterators;
+import com.google.common.collect.Sets;
+import io.github.oliviercailloux.git.fs.GitFileSystem.FollowLinksBehavior;
+import io.github.oliviercailloux.git.fs.GitFileSystem.GitObject;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.channels.SeekableByteChannel;
@@ -31,7 +36,6 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-
 import org.eclipse.jgit.internal.storage.dfs.DfsRepository;
 import org.eclipse.jgit.internal.storage.file.FileRepository;
 import org.eclipse.jgit.lib.FileMode;
@@ -39,13 +43,6 @@ import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterators;
-import com.google.common.collect.Sets;
-
-import io.github.oliviercailloux.git.fs.GitFileSystem.FollowLinksBehavior;
-import io.github.oliviercailloux.git.fs.GitFileSystem.GitObject;
 
 /**
  * A (partial) implementation of {@link FileSystemProvider}, able to produce
@@ -147,13 +144,13 @@ public class GitFileSystemProvider extends FileSystemProvider {
 	 *                                          {@link #getFileSystemFromGitDir(Path)}).
 	 * @throws UnsupportedOperationException    if the path exists but does not seem
 	 *                                          to correspond to a git directory.
-	 * @throws FileSystemNotFoundException      if the path does not exist.
+	 * @throws NoSuchFileException              if the path does not exist.
 	 * @throws IOException                      if an exception occurred during
 	 *                                          access to the underlying file
 	 *                                          system.
 	 */
-	public GitFileFileSystem newFileSystem(URI gitFsUri) throws FileSystemAlreadyExistsException,
-			UnsupportedOperationException, FileSystemNotFoundException, IOException {
+	public GitFileFileSystem newFileSystem(URI gitFsUri)
+			throws FileSystemAlreadyExistsException, UnsupportedOperationException, NoSuchFileException, IOException {
 		final Path gitDir = fses.getGitDir(gitFsUri);
 		return newFileSystemFromGitDir(gitDir);
 	}
@@ -168,8 +165,8 @@ public class GitFileSystemProvider extends FileSystemProvider {
 	 */
 	@Deprecated
 	@Override
-	public GitFileFileSystem newFileSystem(URI gitFsUri, Map<String, ?> env) throws FileSystemAlreadyExistsException,
-			UnsupportedOperationException, FileSystemNotFoundException, IOException {
+	public GitFileFileSystem newFileSystem(URI gitFsUri, Map<String, ?> env)
+			throws FileSystemAlreadyExistsException, UnsupportedOperationException, NoSuchFileException, IOException {
 		return newFileSystem(gitFsUri);
 	}
 
@@ -184,8 +181,8 @@ public class GitFileSystemProvider extends FileSystemProvider {
 	 */
 	@Deprecated
 	@Override
-	public GitFileFileSystem newFileSystem(Path gitDir, Map<String, ?> env) throws FileSystemAlreadyExistsException,
-			UnsupportedOperationException, FileSystemNotFoundException, IOException {
+	public GitFileFileSystem newFileSystem(Path gitDir, Map<String, ?> env)
+			throws FileSystemAlreadyExistsException, UnsupportedOperationException, NoSuchFileException, IOException {
 		return newFileSystemFromGitDir(gitDir);
 	}
 
@@ -216,14 +213,14 @@ public class GitFileSystemProvider extends FileSystemProvider {
 	 *                                          {@link #getFileSystemFromGitDir(Path)}).
 	 * @throws UnsupportedOperationException    if the path exists but does not seem
 	 *                                          to correspond to a git directory.
-	 * @throws FileSystemNotFoundException      if the path does not exist.
+	 * @throws NoSuchFileException              if the path does not exist.
 	 * @throws IOException                      if an exception occurred during
 	 *                                          access to the underlying file
 	 *                                          system.
 	 */
 	@SuppressWarnings("resource")
-	public GitFileFileSystem newFileSystemFromGitDir(Path gitDir) throws FileSystemAlreadyExistsException,
-			UnsupportedOperationException, FileSystemNotFoundException, IOException {
+	public GitFileFileSystem newFileSystemFromGitDir(Path gitDir)
+			throws FileSystemAlreadyExistsException, UnsupportedOperationException, NoSuchFileException, IOException {
 		/**
 		 * Implementation note: this method also throws UnsupportedOperationException if
 		 * the path exists but is not associated with the default file system. But this
@@ -235,9 +232,18 @@ public class GitFileSystemProvider extends FileSystemProvider {
 		if (!Files.exists(gitDir)) {
 			/**
 			 * Not clear whether the specs mandate UnsupportedOperationException here. I
-			 * follow the observed behavior of ZipFileSystemProvider.
+			 * follow the observed behavior of ZipFileSystemProvider in not throwing UOE:
+			 * https://github.com/openjdk/jdk17/blob/master/src/jdk.zipfs/share/classes/jdk/nio/zipfs/ZipFileSystemProvider.java,
+			 * https://github.com/openjdk/jdk11/blob/master/src/jdk.zipfs/share/classes/jdk/nio/zipfs/ZipFileSystemProvider.java.
+			 *
+			 * ZipFSP throws a FileSystemNotFoundException but I favor NoSuchFileE, more
+			 * explicit and aligned to observed behavior of default FS (default FS throws
+			 * NSFE when invoked with a non existent path and throws
+			 * IllegalArgumentException when invoked with any URI whose path component is
+			 * not / – the latter is inappropriate here as non existant file is a dynamic
+			 * property).
 			 */
-			throw new FileSystemNotFoundException(String.format("Directory %s not found.", gitDir));
+			throw new NoSuchFileException(String.format("Directory %s not found.", gitDir));
 		}
 		final FileRepository repo = (FileRepository) new FileRepositoryBuilder().setGitDir(gitDir.toFile()).build();
 		try {
@@ -251,8 +257,7 @@ public class GitFileSystemProvider extends FileSystemProvider {
 			try {
 				repo.close();
 			} catch (Exception closing) {
-				LOGGER.debug("Exception while closing underlying repository.", closing);
-				// suppress
+				LOGGER.debug("Exception (suppressed) while closing underlying repository.", closing);
 			}
 			throw e;
 		}

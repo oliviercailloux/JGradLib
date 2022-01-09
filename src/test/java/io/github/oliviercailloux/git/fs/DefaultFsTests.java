@@ -8,6 +8,13 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
+import com.google.common.jimfs.Configuration;
+import com.google.common.jimfs.Jimfs;
+import io.github.oliviercailloux.utils.Utils;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.file.DirectoryStream;
@@ -15,19 +22,14 @@ import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
-
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterables;
-import com.google.common.jimfs.Configuration;
-import com.google.common.jimfs.Jimfs;
 
 /**
  * Just a few tests to examine the behavior of the default file system
@@ -53,7 +55,11 @@ public class DefaultFsTests {
 			assertTrue(Files.isSymbolicLink(lock));
 		}
 		{
-			final Path target = Files.readSymbolicLink(Path.of("/usr/lib/jvm/default-java"));
+			final Path target = Files.readSymbolicLink(Path.of("/usr/bin/java"));
+			assertTrue(target.isAbsolute());
+		}
+		{
+			final Path target = Files.readSymbolicLink(Path.of("/usr/lib/man-db/man"));
 			LOGGER.info("Target: {}.", target);
 			assertFalse(target.isAbsolute());
 		}
@@ -165,6 +171,28 @@ public class DefaultFsTests {
 		assertTrue(root.resolve(Path.of("dir", "ploum.txt")).startsWith(root));
 		assertFalse(Path.of("dir/ploum.txt").startsWith(Path.of("dir/p")));
 		assertTrue(Path.of("/dir").startsWith(Path.of("/")));
+	}
+
+	@Test
+	void testNone() throws Exception {
+		final Path noDir = Utils.getTempDirectory().resolve("test-" + Instant.now().toString());
+		assertFalse(Files.exists(noDir));
+		final URI noUri = noDir.toUri();
+		assertTrue(noUri.isAbsolute());
+		assertTrue(!noUri.isOpaque());
+		{
+			/* I believe that FileSystemNotFoundException was thrown under Java 11. */
+			assertThrows(NoSuchFileException.class, () -> FileSystems.newFileSystem(noDir));
+		}
+		{
+			assertThrows(IllegalArgumentException.class, () -> FileSystems.newFileSystem(noUri, ImmutableMap.of()));
+		}
+		{
+			@SuppressWarnings("resource")
+			final FileSystem def = FileSystems.getDefault();
+			assertThrows(IllegalArgumentException.class, () -> FileSystems.getFileSystem(noDir.toUri()));
+			assertThrows(IllegalArgumentException.class, () -> def.provider().getFileSystem(noDir.toUri()));
+		}
 	}
 
 }

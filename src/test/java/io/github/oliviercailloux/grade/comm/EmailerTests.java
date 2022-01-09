@@ -126,14 +126,16 @@ public class EmailerTests {
 									"olivier.cailloux@lamsade.dauphine.")))
 					.isEmpty());
 
-			final ImmutableSet<Message> toMyselfAndOthers = emailer.searchIn(folder, ImapSearchPredicate
-					.recipientFullAddressContains(RecipientType.TO, "olivier.cailloux@dauphine.")
-					.orSatisfy(ImapSearchPredicate
-							.recipientFullAddressContains(RecipientType.TO, "olivier.cailloux@lamsade.dauphine.")
-							.orSatisfy(ImapSearchPredicate
-									.recipientFullAddressContains(RecipientType.TO, "olivier.cailloux=dauphine.")
-									.orSatisfy(ImapSearchPredicate.recipientFullAddressContains(RecipientType.TO,
-											"olivier.cailloux=lamsade.dauphine.")))));
+			final ImmutableSet<Message> toMyselfAndOthers = emailer.searchIn(folder,
+					ImapSearchPredicate.recipientFullAddressContains(RecipientType.TO, "olivier.cailloux@dauphine.")
+							.orSatisfy(ImapSearchPredicate.recipientFullAddressContains(RecipientType.TO,
+									"olivier.cailloux@lamsade.dauphine."))
+							.orSatisfy(ImapSearchPredicate.recipientFullAddressContains(RecipientType.TO,
+									"olivier.cailloux=dauphine."))
+							.orSatisfy(ImapSearchPredicate.recipientFullAddressContains(RecipientType.TO,
+									"olivier.cailloux-dauphine."))
+							.orSatisfy(ImapSearchPredicate.recipientFullAddressContains(RecipientType.TO,
+									"olivier.cailloux=lamsade.dauphine.")));
 			assertFalse(toMyselfAndOthers.isEmpty());
 
 			final ImapSearchPredicate containsMyAddress = ImapSearchPredicate
@@ -233,11 +235,15 @@ public class EmailerTests {
 		try (Store store = session.getStore()) {
 			LOGGER.info("Connecting.");
 			store.connect(EmailerDauphineHelper.USERNAME_OTHERS, EmailerDauphineHelper.getGmailToken());
-			try (Folder folder = store.getFolder("Grades")) {
+//			try (Folder folder = store.getFolder("Grades")) {
+			try (Folder folder = store.getFolder("[Gmail]/Tous les messages")) {
+				final int no = 69245;
 				folder.open(Folder.READ_ONLY);
-				final Message[] messages31 = folder.getMessages(31, 31);
-				assertEquals(1, messages31.length);
-				final Message messageToCAILLOUX = messages31[0];
+//				final Message[] messagesFound = folder.search(new SubjectTerm("Test depuis Gmail vers LAMSADE"));
+//				logMessagesRecipients(ImmutableSet.copyOf(messagesFound));
+				final Message[] messagesFound = folder.getMessages(no, no);
+				assertEquals(1, messagesFound.length);
+				final Message messageToCAILLOUX = messagesFound[0];
 
 				final Address[] recipients = messageToCAILLOUX.getRecipients(RecipientType.TO);
 				assertEquals(1, recipients.length);
@@ -250,7 +256,7 @@ public class EmailerTests {
 							.search(new RecipientStringTerm(RecipientType.TO, "olivier.cailloux"));
 					assertNotEquals(0, messagesToPartialRecipientStringTerm.length);
 					assertEquals(1, Arrays.stream(messagesToPartialRecipientStringTerm)
-							.filter(m -> m.getMessageNumber() == 31).count());
+							.filter(m -> m.getMessageNumber() == no).count());
 				}
 				{
 					final Message[] messagesToPartialRecipientStringTerm = folder
@@ -266,22 +272,22 @@ public class EmailerTests {
 					final Message[] messagesToThatRecipientStringTerm = folder.search(
 							new RecipientStringTerm(RecipientType.TO, " <olivier.cailloux@lamsade.dauphine.fr>"));
 					assertEquals(1, Arrays.stream(messagesToThatRecipientStringTerm)
-							.filter(m -> m.getMessageNumber() == 31).count());
+							.filter(m -> m.getMessageNumber() == no).count());
 				}
 				{
 					final Message[] messagesToThatRecipientStringTerm = folder
-							.search(new RecipientStringTerm(RecipientType.TO, "Olivier CAILLOUX <"));
+							.search(new RecipientStringTerm(RecipientType.TO, "Olivier Cailloux <"));
 					assertEquals(1, Arrays.stream(messagesToThatRecipientStringTerm)
-							.filter(m -> m.getMessageNumber() == 31).count());
+							.filter(m -> m.getMessageNumber() == no).count());
 				}
 				{
 					final Message[] messagesToThatRecipientStringTerm = folder
-							.search(new RecipientStringTerm(RecipientType.TO, "Olivier CAILLOUX <o"));
+							.search(new RecipientStringTerm(RecipientType.TO, "Olivier Cailloux <o"));
 					assertEquals(0, messagesToThatRecipientStringTerm.length);
 				}
 				{
 					final Message[] messagesToThatRecipientStringTerm = folder.search(new RecipientStringTerm(
-							RecipientType.TO, "Olivier CAILLOUX <olivier.cailloux@lamsade.dauphine.fr>"));
+							RecipientType.TO, "Olivier Cailloux <olivier.cailloux@lamsade.dauphine.fr>"));
 					/** Should fail! */
 					assertEquals(0, messagesToThatRecipientStringTerm.length);
 				}
@@ -297,13 +303,13 @@ public class EmailerTests {
 					final Message[] messagesToThatRecipientStringTerm = folder
 							.search(new RecipientStringTerm(RecipientType.TO, "olivier.cailloux@lamsade.dauphine.fr"));
 					assertEquals(1, Arrays.stream(messagesToThatRecipientStringTerm)
-							.filter(m -> m.getMessageNumber() == 31).count());
+							.filter(m -> m.getMessageNumber() == no).count());
 				}
 				{
 					final Message[] messagesToThatRecipientStringTerm = folder
-							.search(new RecipientStringTerm(RecipientType.TO, "Olivier CAILLOUX"));
+							.search(new RecipientStringTerm(RecipientType.TO, "Olivier Cailloux"));
 					assertEquals(1, Arrays.stream(messagesToThatRecipientStringTerm)
-							.filter(m -> m.getMessageNumber() == 31).count());
+							.filter(m -> m.getMessageNumber() == no).count());
 				}
 			}
 		}
@@ -358,7 +364,7 @@ public class EmailerTests {
 
 	private void logMessagesRecipients(Set<Message> messages) throws MessagingException {
 		for (Message message : messages) {
-			LOGGER.info("Message recipients: {}.",
+			LOGGER.info("Message {} recipients: {}.", message.getMessageNumber(),
 					ImmutableSet
 							.copyOf(message.getAllRecipients()).stream().map(a -> (InternetAddress) a).map(a -> "Type: "
 									+ a.getType() + "; Personal: " + a.getPersonal() + "; Address: " + a.getAddress())

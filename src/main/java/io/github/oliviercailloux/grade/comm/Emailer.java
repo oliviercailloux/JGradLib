@@ -172,11 +172,14 @@ public class Emailer implements AutoCloseable {
 		}
 	}
 
+	@SuppressWarnings("resource")
 	public ImmutableList<String> getFolderNames() {
 		checkState(store != null);
 
-		try (Folder root = store.getDefaultFolder()) {
-			/**
+		try {
+			/* We should NOT close this folder as it has (rightly) not been opened. */
+			final Folder root = store.getDefaultFolder();
+			/*
 			 * Let’s return strings instead of Folders to avoid tempting the user in opening
 			 * the folder themselves (we want to control this).
 			 */
