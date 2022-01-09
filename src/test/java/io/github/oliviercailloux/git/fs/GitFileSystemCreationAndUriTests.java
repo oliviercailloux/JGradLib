@@ -17,7 +17,6 @@ import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
-import java.nio.file.ProviderNotFoundException;
 import java.time.Instant;
 import javax.ws.rs.core.UriBuilder;
 import org.eclipse.jgit.internal.storage.dfs.DfsRepository;
@@ -61,8 +60,8 @@ class GitFileSystemCreationAndUriTests {
 	@Test
 	void testEmptyRepo() throws Exception {
 		final Path emptyDir = Utils.getTempUniqueDirectory("test empty repo");
-		try (FileRepository repository = (FileRepository) new FileRepositoryBuilder().setGitDir(emptyDir.toFile())
-				.build()) {
+		final Repository built = new FileRepositoryBuilder().setGitDir(emptyDir.toFile()).build();
+		try (FileRepository repository = (FileRepository) built) {
 			assertFalse(repository.getObjectDatabase().exists());
 			assertFalse(repository.getRefDatabase().hasRefs());
 			assertThrows(UnsupportedOperationException.class,
@@ -71,9 +70,10 @@ class GitFileSystemCreationAndUriTests {
 		try (DfsRepository repository = new InMemoryRepository(new DfsRepositoryDescription("myrepo"))) {
 			assertTrue(repository.getObjectDatabase().exists());
 			assertFalse(repository.getRefDatabase().hasRefs());
-			final GitDfsFileSystem gitFs = GitFileSystemProvider.getInstance()
-					.newFileSystemFromDfsRepository(repository);
-			assertEquals(GraphBuilder.directed().build(), gitFs.getCommitsGraph());
+			try (GitDfsFileSystem gitFs = GitFileSystemProvider.getInstance()
+					.newFileSystemFromDfsRepository(repository)) {
+				assertEquals(GraphBuilder.directed().build(), gitFs.getCommitsGraph());
+			}
 		}
 	}
 
@@ -81,10 +81,14 @@ class GitFileSystemCreationAndUriTests {
 	void testFileRepo() throws Exception {
 		try (FileSystem gitFs = FileSystems.newFileSystem(dir, ClassLoader.getSystemClassLoader())) {
 			assertEquals(2, ImmutableList.copyOf(gitFs.getRootDirectories()).size());
-			assertEquals(gitFs, GitFileSystemProvider.getInstance().getFileSystemFromGitDir(dir));
+			@SuppressWarnings("resource")
+			final GitFileFileSystem obtained = GitFileSystemProvider.getInstance().getFileSystemFromGitDir(dir);
+			assertEquals(gitFs, obtained);
 			final URI expectedUri = UriBuilder.fromUri("gitjfs://FILE").path(dir + "/").build();
 			assertEquals(expectedUri, ((GitFileSystem) gitFs).toUri());
-			assertEquals(gitFs, GitFileSystemProvider.getInstance().getFileSystem(expectedUri));
+			@SuppressWarnings("resource")
+			final GitFileSystem obtained2 = GitFileSystemProvider.getInstance().getFileSystem(expectedUri);
+			assertEquals(gitFs, obtained2);
 		}
 		assertThrows(FileSystemNotFoundException.class,
 				() -> GitFileSystemProvider.getInstance().getFileSystemFromGitDir(dir));
@@ -95,9 +99,13 @@ class GitFileSystemCreationAndUriTests {
 		final URI uri = UriBuilder.fromUri("gitjfs://FILE").path(dir + "/").build();
 		try (FileSystem gitFs = FileSystems.newFileSystem(uri, ImmutableMap.of())) {
 			assertEquals(2, ImmutableList.copyOf(gitFs.getRootDirectories()).size());
-			assertEquals(gitFs, GitFileSystemProvider.getInstance().getFileSystemFromGitDir(dir));
+			@SuppressWarnings("resource")
+			final GitFileFileSystem obtained = GitFileSystemProvider.getInstance().getFileSystemFromGitDir(dir);
+			assertEquals(gitFs, obtained);
 			assertEquals(uri, ((GitFileSystem) gitFs).toUri());
-			assertEquals(gitFs, GitFileSystemProvider.getInstance().getFileSystem(uri));
+			@SuppressWarnings("resource")
+			final GitFileSystem obtained2 = GitFileSystemProvider.getInstance().getFileSystem(uri);
+			assertEquals(gitFs, obtained2);
 		}
 		assertThrows(FileSystemNotFoundException.class,
 				() -> GitFileSystemProvider.getInstance().getFileSystemFromGitDir(dir));
@@ -110,10 +118,15 @@ class GitFileSystemCreationAndUriTests {
 			JGit.createBasicRepo(repo);
 			try (FileSystem gitFs = GitFileSystemProvider.getInstance().newFileSystemFromRepository(repo)) {
 				assertEquals(2, ImmutableList.copyOf(gitFs.getRootDirectories()).size());
-				assertEquals(gitFs, GitFileSystemProvider.getInstance().getFileSystemFromRepositoryName(name));
+				@SuppressWarnings("resource")
+				final GitDfsFileSystem obtained = GitFileSystemProvider.getInstance()
+						.getFileSystemFromRepositoryName(name);
+				assertEquals(gitFs, obtained);
 				final URI expectedUri = URI.create("gitjfs://DFS/my/repo,@+%20space");
 				assertEquals(expectedUri, ((GitFileSystem) gitFs).toUri());
-				assertEquals(gitFs, GitFileSystemProvider.getInstance().getFileSystem(expectedUri));
+				@SuppressWarnings("resource")
+				final GitFileSystem obtained2 = GitFileSystemProvider.getInstance().getFileSystem(expectedUri);
+				assertEquals(gitFs, obtained2);
 			}
 			assertThrows(FileSystemNotFoundException.class,
 					() -> GitFileSystemProvider.getInstance().getFileSystemFromRepositoryName(name));
