@@ -1,5 +1,6 @@
 package io.github.oliviercailloux.git.fs;
 
+import static com.google.common.base.Verify.verify;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -455,8 +456,10 @@ public class GitReadTests {
 			MissingObjectException, IncorrectObjectTypeException, CorruptObjectException {
 		final String searched = "non-existing.png";
 
-		final GitPathRoot master = gitFs.getPathRoot("/refs/heads/master/");
-		final ObjectId id = master.getCommit().getId();
+		final GitPathRoot main = gitFs.getPathRoot("/refs/heads/main/");
+		final GitPathRoot relevantBranch = main.exists() ? main : gitFs.getPathRoot("/refs/heads/master/");
+		verify(relevantBranch.exists());
+		final ObjectId id = relevantBranch.getCommit().getId();
 		final GitPathRoot pathId = gitFs.getPathRoot(id);
 
 		LOGGER.info("Searching for file directly.");
