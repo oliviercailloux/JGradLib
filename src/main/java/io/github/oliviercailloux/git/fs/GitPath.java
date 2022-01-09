@@ -91,8 +91,7 @@ import org.slf4j.LoggerFactory;
  * <li>It has no root component. Equivalently, its string form contains no
  * leading slash. Equivalently, its string form contains no two consecutive
  * slashes. Equivalently, it is a relative path. It implies that its sequence of
- * names is not empty. An example of string form is
- * {@code "some/path"}.</li>
+ * names is not empty. An example of string form is {@code "some/path"}.</li>
  * <ul>
  * <li>As a special case, its sequence of names may consist in a unique empty
  * name. Equivalently, it is an empty path. Equivalently, its string form is
@@ -773,7 +772,7 @@ public abstract class GitPath implements Path {
 
 	@SuppressWarnings("resource")
 	DirectoryStream<GitPath> newDirectoryStream(Filter<? super GitPath> filter) throws IOException {
-		final GitPathRootSha sha = getRoot().toSha();
+		final GitPathRootSha sha = toAbsolutePathAsAbsolutePath().getRoot().toSha();
 		/**
 		 * Note: this can’t be moved to GitAbsolutePath: a directory stream on a
 		 * relative path differs by resolving against a relative path.
