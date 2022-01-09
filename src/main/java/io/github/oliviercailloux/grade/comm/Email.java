@@ -4,15 +4,13 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 
+import com.google.common.base.MoreObjects;
+import com.google.common.base.Strings;
+import io.github.oliviercailloux.email.EmailAddressAndPersonal;
+import io.github.oliviercailloux.xml.HtmlDocument;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
-
-import com.google.common.base.MoreObjects;
-import com.google.common.base.Strings;
-
-import io.github.oliviercailloux.email.EmailAddressAndPersonal;
-import io.github.oliviercailloux.xml.HtmlDocument;
 
 public class Email {
 	@SuppressWarnings("unused")

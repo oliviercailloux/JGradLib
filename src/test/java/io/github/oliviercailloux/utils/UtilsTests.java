@@ -4,6 +4,15 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.jimfs.Configuration;
+import com.google.common.jimfs.Jimfs;
+import io.github.oliviercailloux.bytecode.SandboxTests;
+import io.github.oliviercailloux.java_grade.bytecode.Compiler;
+import io.github.oliviercailloux.java_grade.bytecode.Instanciator;
+import io.github.oliviercailloux.java_grade.bytecode.RestrictingClassLoader;
+import io.github.oliviercailloux.java_grade.bytecode.SandboxSecurityPolicy;
 import java.io.FilePermission;
 import java.io.IOException;
 import java.net.URI;
@@ -18,21 +27,9 @@ import java.security.AllPermission;
 import java.security.Permissions;
 import java.util.Map;
 import java.util.function.Function;
-
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.jimfs.Configuration;
-import com.google.common.jimfs.Jimfs;
-
-import io.github.oliviercailloux.bytecode.SandboxTests;
-import io.github.oliviercailloux.java_grade.bytecode.Compiler;
-import io.github.oliviercailloux.java_grade.bytecode.Instanciator;
-import io.github.oliviercailloux.java_grade.bytecode.RestrictingClassLoader;
-import io.github.oliviercailloux.java_grade.bytecode.SandboxSecurityPolicy;
 
 class UtilsTests {
 	@SuppressWarnings("unused")

@@ -2,17 +2,7 @@ package io.github.oliviercailloux.grade.format.json;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
-import javax.json.JsonObject;
-import javax.json.bind.Jsonb;
-import javax.json.bind.JsonbBuilder;
-import javax.json.bind.JsonbConfig;
-import javax.json.bind.JsonbException;
-import javax.json.bind.adapter.JsonbAdapter;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.google.common.math.DoubleMath;
-
 import io.github.oliviercailloux.grade.Criterion;
 import io.github.oliviercailloux.grade.CriterionGradeWeight;
 import io.github.oliviercailloux.grade.IGrade;
@@ -22,6 +12,14 @@ import io.github.oliviercailloux.grade.WeightingGrade;
 import io.github.oliviercailloux.json.JsonbUtils;
 import io.github.oliviercailloux.json.PrintableJsonObject;
 import io.github.oliviercailloux.json.PrintableJsonObjectFactory;
+import javax.json.JsonObject;
+import javax.json.bind.Jsonb;
+import javax.json.bind.JsonbBuilder;
+import javax.json.bind.JsonbConfig;
+import javax.json.bind.JsonbException;
+import javax.json.bind.adapter.JsonbAdapter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class JsonGrade implements JsonbAdapter<IGrade, JsonObject> {
 	private static final JsonGrade INSTANCE = new JsonGrade();

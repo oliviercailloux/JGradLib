@@ -5,10 +5,8 @@ import static com.google.common.base.Preconditions.checkArgument;
 import java.io.IOException;
 import java.nio.file.NoSuchFileException;
 import java.util.Optional;
-
 import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.revwalk.RevCommit;
-import org.eclipse.jgit.revwalk.RevTree;
 
 /**
  *

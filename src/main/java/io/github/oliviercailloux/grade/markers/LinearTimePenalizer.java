@@ -2,13 +2,11 @@ package io.github.oliviercailloux.grade.markers;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
+import com.google.common.math.DoubleMath;
 import java.math.RoundingMode;
 import java.time.Duration;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.math.DoubleMath;
 
 class LinearTimePenalizer implements TimePenalizer {
 	@SuppressWarnings("unused")

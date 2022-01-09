@@ -2,11 +2,9 @@ package io.github.oliviercailloux.git.git_hub.model;
 
 import static java.util.Objects.requireNonNull;
 
-import java.net.URI;
-
-import javax.json.JsonObject;
-
 import io.github.oliviercailloux.git.GitUri;
+import java.net.URI;
+import javax.json.JsonObject;
 
 public class RepositoryCoordinates {
 	public static RepositoryCoordinates from(String owner, String repo) {

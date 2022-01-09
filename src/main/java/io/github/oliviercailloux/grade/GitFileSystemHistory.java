@@ -4,6 +4,18 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static io.github.oliviercailloux.jaris.exceptions.Unchecker.IO_UNCHECKER;
 
+import com.google.common.base.MoreObjects;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.graph.ImmutableGraph;
+import io.github.oliviercailloux.git.GitHistory;
+import io.github.oliviercailloux.git.fs.GitFileFileSystem;
+import io.github.oliviercailloux.git.fs.GitFileSystem;
+import io.github.oliviercailloux.git.fs.GitPath;
+import io.github.oliviercailloux.git.fs.GitPathRoot;
+import io.github.oliviercailloux.git.fs.GitPathRootRef;
+import io.github.oliviercailloux.git.fs.GitPathRootSha;
+import io.github.oliviercailloux.jaris.exceptions.Throwing;
+import io.github.oliviercailloux.utils.Utils;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
@@ -16,7 +28,6 @@ import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
-
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.diff.DiffEntry;
@@ -28,20 +39,6 @@ import org.eclipse.jgit.revwalk.RevWalk;
 import org.eclipse.jgit.treewalk.CanonicalTreeParser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.base.MoreObjects;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.graph.ImmutableGraph;
-
-import io.github.oliviercailloux.git.GitHistory;
-import io.github.oliviercailloux.git.fs.GitFileFileSystem;
-import io.github.oliviercailloux.git.fs.GitFileSystem;
-import io.github.oliviercailloux.git.fs.GitPath;
-import io.github.oliviercailloux.git.fs.GitPathRoot;
-import io.github.oliviercailloux.git.fs.GitPathRootRef;
-import io.github.oliviercailloux.git.fs.GitPathRootSha;
-import io.github.oliviercailloux.jaris.exceptions.Throwing;
-import io.github.oliviercailloux.utils.Utils;
 
 /**
  *

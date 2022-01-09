@@ -1,8 +1,7 @@
 package io.github.oliviercailloux.email;
 
-import javax.mail.MessagingException;
-
 import io.github.oliviercailloux.jaris.exceptions.Unchecker;
+import javax.mail.MessagingException;
 
 @SuppressWarnings("serial")
 public class UncheckedMessagingException extends RuntimeException {

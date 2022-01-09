@@ -3,23 +3,9 @@ package io.github.oliviercailloux.grade.format.json;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import java.lang.reflect.Type;
-import java.nio.charset.StandardCharsets;
-import java.util.LinkedHashMap;
-import java.util.Map;
-
-import javax.json.Json;
-import javax.json.JsonObject;
-import javax.json.bind.JsonbException;
-
-import org.junit.jupiter.api.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.Resources;
-
 import io.github.oliviercailloux.grade.Criterion;
 import io.github.oliviercailloux.grade.CriterionGradeWeight;
 import io.github.oliviercailloux.grade.GradeTestsHelper;
@@ -31,6 +17,16 @@ import io.github.oliviercailloux.java_grade.JavaCriterion;
 import io.github.oliviercailloux.json.JsonbUtils;
 import io.github.oliviercailloux.json.PrintableJsonObject;
 import io.github.oliviercailloux.json.PrintableJsonObjectFactory;
+import java.lang.reflect.Type;
+import java.nio.charset.StandardCharsets;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import javax.json.Json;
+import javax.json.JsonObject;
+import javax.json.bind.JsonbException;
+import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class JsonGradeTests {
 	@SuppressWarnings("unused")

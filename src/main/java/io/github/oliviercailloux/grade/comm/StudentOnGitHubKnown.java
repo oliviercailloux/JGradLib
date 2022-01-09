@@ -2,15 +2,12 @@ package io.github.oliviercailloux.grade.comm;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
-import java.util.Objects;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.google.common.base.MoreObjects;
-
 import io.github.oliviercailloux.email.EmailAddressAndPersonal;
 import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
+import java.util.Objects;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class StudentOnGitHubKnown {
 	@SuppressWarnings("unused")

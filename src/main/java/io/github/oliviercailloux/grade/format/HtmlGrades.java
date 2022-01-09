@@ -3,22 +3,19 @@ package io.github.oliviercailloux.grade.format;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 
-import java.net.URI;
-import java.text.NumberFormat;
-import java.util.Locale;
-import java.util.Map;
-
-import org.w3c.dom.Document;
-import org.w3c.dom.DocumentFragment;
-import org.w3c.dom.Element;
-
 import com.google.common.collect.ImmutableMap;
 import com.google.common.math.Stats;
-
 import io.github.oliviercailloux.grade.Criterion;
 import io.github.oliviercailloux.grade.IGrade;
 import io.github.oliviercailloux.grade.WeightingGrade;
 import io.github.oliviercailloux.xml.HtmlDocument;
+import java.net.URI;
+import java.text.NumberFormat;
+import java.util.Locale;
+import java.util.Map;
+import org.w3c.dom.Document;
+import org.w3c.dom.DocumentFragment;
+import org.w3c.dom.Element;
 
 public class HtmlGrades {
 	private static final double DEFAULT_DENOMINATOR = 20d;

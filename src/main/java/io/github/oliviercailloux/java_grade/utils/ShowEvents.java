@@ -1,14 +1,12 @@
 package io.github.oliviercailloux.java_grade.utils;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.google.common.collect.ImmutableList;
-
 import io.github.oliviercailloux.git.git_hub.model.GitHubToken;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.git.git_hub.model.v3.Event;
 import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherV3;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class ShowEvents {
 	@SuppressWarnings("unused")

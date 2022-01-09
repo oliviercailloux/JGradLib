@@ -4,7 +4,6 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.List;
 import java.util.stream.Collectors;
-
 import javax.json.JsonObject;
 import javax.json.JsonValue;
 

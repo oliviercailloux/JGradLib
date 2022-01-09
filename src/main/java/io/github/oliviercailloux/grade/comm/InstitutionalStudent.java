@@ -3,21 +3,17 @@ package io.github.oliviercailloux.grade.comm;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
-import java.util.Objects;
-
-import javax.json.bind.annotation.JsonbCreator;
-import javax.json.bind.annotation.JsonbProperty;
-import javax.json.bind.annotation.JsonbPropertyOrder;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.google.common.base.Joiner;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Strings;
-
 import io.github.oliviercailloux.email.EmailAddress;
 import io.github.oliviercailloux.email.EmailAddressAndPersonal;
+import java.util.Objects;
+import javax.json.bind.annotation.JsonbCreator;
+import javax.json.bind.annotation.JsonbProperty;
+import javax.json.bind.annotation.JsonbPropertyOrder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @JsonbPropertyOrder({ "id", "username", "firstName", "lastName", "email" })
 public class InstitutionalStudent {

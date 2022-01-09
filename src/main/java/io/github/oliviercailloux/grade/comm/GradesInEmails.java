@@ -6,6 +6,23 @@ import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.base.Verify.verify;
 import static io.github.oliviercailloux.email.UncheckedMessagingException.MESSAGING_UNCHECKER;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ImmutableTable;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.MoreCollectors;
+import com.google.common.collect.Range;
+import com.google.common.collect.Table;
+import com.google.common.collect.Tables;
+import com.google.common.io.CharStreams;
+import com.google.common.math.Stats;
+import io.github.oliviercailloux.email.EmailAddress;
+import io.github.oliviercailloux.email.EmailAddressAndPersonal;
+import io.github.oliviercailloux.email.ImapSearchPredicate;
+import io.github.oliviercailloux.grade.IGrade;
+import io.github.oliviercailloux.grade.format.HtmlGrades;
+import io.github.oliviercailloux.grade.format.json.JsonGrade;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.UncheckedIOException;
@@ -16,7 +33,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Stream;
-
 import javax.json.JsonObject;
 import javax.json.bind.Jsonb;
 import javax.json.bind.JsonbBuilder;
@@ -31,29 +47,9 @@ import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeBodyPart;
 import javax.mail.internet.MimeMessage;
 import javax.mail.internet.MimeMultipart;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
-
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.ImmutableTable;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.MoreCollectors;
-import com.google.common.collect.Range;
-import com.google.common.collect.Table;
-import com.google.common.collect.Tables;
-import com.google.common.io.CharStreams;
-import com.google.common.math.Stats;
-
-import io.github.oliviercailloux.email.EmailAddress;
-import io.github.oliviercailloux.email.EmailAddressAndPersonal;
-import io.github.oliviercailloux.email.ImapSearchPredicate;
-import io.github.oliviercailloux.grade.IGrade;
-import io.github.oliviercailloux.grade.format.HtmlGrades;
-import io.github.oliviercailloux.grade.format.json.JsonGrade;
 
 public class GradesInEmails implements AutoCloseable {
 	@SuppressWarnings("unused")

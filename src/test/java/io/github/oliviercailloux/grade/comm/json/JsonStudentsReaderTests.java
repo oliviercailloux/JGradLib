@@ -2,19 +2,16 @@ package io.github.oliviercailloux.grade.comm.json;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
-
-import org.junit.jupiter.api.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.google.common.collect.ImmutableMap;
-
 import io.github.oliviercailloux.email.EmailAddress;
 import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
 import io.github.oliviercailloux.grade.comm.InstitutionalStudent;
 import io.github.oliviercailloux.grade.comm.StudentOnGitHub;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 class JsonStudentsReaderTests {
 	@SuppressWarnings("unused")

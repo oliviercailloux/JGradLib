@@ -3,15 +3,13 @@ package io.github.oliviercailloux.git.git_hub.services;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
+import io.github.oliviercailloux.json.PrintableJsonObjectFactory;
 import java.time.Instant;
 import java.time.ZonedDateTime;
 import java.util.stream.Stream;
-
 import javax.json.JsonArray;
 import javax.json.JsonObject;
 import javax.json.JsonValue;
-
-import io.github.oliviercailloux.json.PrintableJsonObjectFactory;
 
 public class GitHubJsonParser {
 

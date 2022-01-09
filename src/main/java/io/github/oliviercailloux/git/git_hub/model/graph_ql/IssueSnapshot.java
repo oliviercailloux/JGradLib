@@ -2,10 +2,9 @@ package io.github.oliviercailloux.git.git_hub.model.graph_ql;
 
 import static java.util.Objects.requireNonNull;
 
+import com.google.common.collect.ImmutableSet;
 import java.time.Instant;
 import java.util.Set;
-
-import com.google.common.collect.ImmutableSet;
 
 /**
  * An issue as it was at some specific time of its life.

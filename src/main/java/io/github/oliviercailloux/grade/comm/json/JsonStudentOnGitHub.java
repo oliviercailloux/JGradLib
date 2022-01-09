@@ -1,17 +1,15 @@
 package io.github.oliviercailloux.grade.comm.json;
 
-import javax.json.Json;
-import javax.json.JsonObject;
-import javax.json.bind.adapter.JsonbAdapter;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
 import io.github.oliviercailloux.grade.comm.StudentOnGitHub;
 import io.github.oliviercailloux.grade.comm.StudentOnGitHubKnown;
 import io.github.oliviercailloux.json.PrintableJsonObject;
 import io.github.oliviercailloux.json.PrintableJsonObjectFactory;
+import javax.json.Json;
+import javax.json.JsonObject;
+import javax.json.bind.adapter.JsonbAdapter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class JsonStudentOnGitHub {
 	@SuppressWarnings("unused")

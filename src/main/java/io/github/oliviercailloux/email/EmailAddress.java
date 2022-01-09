@@ -3,13 +3,11 @@ package io.github.oliviercailloux.email;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 
-import java.util.Objects;
-
-import javax.mail.internet.AddressException;
-import javax.mail.internet.InternetAddress;
-
 import com.google.common.base.MoreObjects;
 import com.google.common.base.VerifyException;
+import java.util.Objects;
+import javax.mail.internet.AddressException;
+import javax.mail.internet.InternetAddress;
 
 public class EmailAddress {
 	public static EmailAddress given(String address) {

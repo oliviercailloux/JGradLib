@@ -4,12 +4,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import io.github.oliviercailloux.jaris.exceptions.Throwing;
+import io.github.oliviercailloux.jaris.exceptions.Unchecker;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.api.errors.InvalidRemoteException;
 import org.junit.jupiter.api.Test;
-
-import io.github.oliviercailloux.jaris.exceptions.Throwing;
-import io.github.oliviercailloux.jaris.exceptions.Unchecker;
 
 class UncheckerTests {
 

@@ -1,5 +1,9 @@
 package io.github.oliviercailloux.git.fs;
 
+import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterables;
+import com.google.common.net.PercentEscaper;
 import java.net.URI;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
@@ -10,11 +14,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-
-import com.google.common.base.Strings;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Iterables;
-import com.google.common.net.PercentEscaper;
 
 class QueryUtils {
 	final static public PercentEscaper QUERY_ENTRY_ESCAPER = new PercentEscaper("-_.*~!$'(),;@:/+?", false);

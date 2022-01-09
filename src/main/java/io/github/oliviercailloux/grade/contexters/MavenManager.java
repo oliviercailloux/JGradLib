@@ -5,6 +5,9 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.base.Verify.verify;
 
+import com.google.common.base.Splitter;
+import com.google.common.collect.ImmutableList;
+import io.github.oliviercailloux.grade.GradingException;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
@@ -12,7 +15,6 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
 import org.apache.maven.shared.invoker.DefaultInvocationRequest;
 import org.apache.maven.shared.invoker.DefaultInvoker;
 import org.apache.maven.shared.invoker.InvocationRequest;
@@ -22,11 +24,6 @@ import org.apache.maven.shared.invoker.MavenInvocationException;
 import org.apache.maven.shared.invoker.PrintStreamHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.base.Splitter;
-import com.google.common.collect.ImmutableList;
-
-import io.github.oliviercailloux.grade.GradingException;
 
 public class MavenManager {
 

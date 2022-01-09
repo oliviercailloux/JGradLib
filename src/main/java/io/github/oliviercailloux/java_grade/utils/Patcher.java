@@ -1,5 +1,12 @@
 package io.github.oliviercailloux.java_grade.utils;
 
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import io.github.oliviercailloux.grade.IGrade;
+import io.github.oliviercailloux.grade.Patch;
+import io.github.oliviercailloux.grade.format.json.JsonCriterion;
+import io.github.oliviercailloux.grade.format.json.JsonGrade;
+import io.github.oliviercailloux.json.JsonbUtils;
 import java.lang.reflect.Type;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -7,15 +14,6 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
-
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
-
-import io.github.oliviercailloux.grade.IGrade;
-import io.github.oliviercailloux.grade.Patch;
-import io.github.oliviercailloux.grade.format.json.JsonCriterion;
-import io.github.oliviercailloux.grade.format.json.JsonGrade;
-import io.github.oliviercailloux.json.JsonbUtils;
 
 public class Patcher {
 	public static void main(String[] args) throws Exception {

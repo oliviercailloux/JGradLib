@@ -3,6 +3,14 @@ package io.github.oliviercailloux.grade.markers;
 import static com.google.common.base.Preconditions.checkArgument;
 import static io.github.oliviercailloux.jaris.exceptions.Unchecker.IO_UNCHECKER;
 
+import com.google.common.base.Predicates;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
+import io.github.oliviercailloux.grade.Criterion;
+import io.github.oliviercailloux.grade.CriterionGradeWeight;
+import io.github.oliviercailloux.grade.IGrade;
+import io.github.oliviercailloux.grade.Mark;
+import io.github.oliviercailloux.grade.WeightingGrade;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -13,19 +21,8 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.base.Predicates;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
-
-import io.github.oliviercailloux.grade.Criterion;
-import io.github.oliviercailloux.grade.CriterionGradeWeight;
-import io.github.oliviercailloux.grade.IGrade;
-import io.github.oliviercailloux.grade.Mark;
-import io.github.oliviercailloux.grade.WeightingGrade;
 
 /**
  *

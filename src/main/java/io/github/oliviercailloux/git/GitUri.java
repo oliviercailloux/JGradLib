@@ -4,19 +4,17 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Verify.verify;
 import static io.github.oliviercailloux.jaris.exceptions.Unchecker.URI_UNCHECKER;
 
+import com.google.common.base.MoreObjects;
+import com.google.common.base.Strings;
+import com.google.common.base.VerifyException;
 import java.net.URI;
 import java.nio.file.Path;
 import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
 import org.eclipse.jgit.transport.URIish;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.base.MoreObjects;
-import com.google.common.base.Strings;
-import com.google.common.base.VerifyException;
 
 /**
  * An immutable location of a (local or remote) git repository.

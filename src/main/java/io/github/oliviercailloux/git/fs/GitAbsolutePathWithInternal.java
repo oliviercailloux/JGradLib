@@ -4,24 +4,21 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Verify.verify;
 
+import com.google.common.base.VerifyException;
+import com.google.common.collect.Streams;
+import com.google.common.jimfs.Jimfs;
+import io.github.oliviercailloux.git.fs.GitFileSystem.FollowLinksBehavior;
+import io.github.oliviercailloux.git.fs.GitFileSystem.GitObject;
+import io.github.oliviercailloux.git.fs.GitFileSystem.NoContextNoSuchFileException;
 import java.io.IOException;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.NotDirectoryException;
 import java.nio.file.Path;
-
 import org.eclipse.jgit.lib.FileMode;
 import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.revwalk.RevTree;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.base.VerifyException;
-import com.google.common.collect.Streams;
-import com.google.common.jimfs.Jimfs;
-
-import io.github.oliviercailloux.git.fs.GitFileSystem.FollowLinksBehavior;
-import io.github.oliviercailloux.git.fs.GitFileSystem.GitObject;
-import io.github.oliviercailloux.git.fs.GitFileSystem.NoContextNoSuchFileException;
 
 /**
  * A git path with a root component and a non empty sequence of non-empty names.

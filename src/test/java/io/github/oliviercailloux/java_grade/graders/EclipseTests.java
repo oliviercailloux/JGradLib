@@ -3,25 +3,11 @@ package io.github.oliviercailloux.java_grade.graders;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 
-import java.time.Instant;
-import java.util.Map;
-import java.util.Set;
-
-import org.eclipse.jgit.internal.storage.dfs.DfsRepositoryDescription;
-import org.eclipse.jgit.internal.storage.dfs.InMemoryRepository;
-import org.eclipse.jgit.internal.storage.file.FileRepository;
-import org.eclipse.jgit.lib.ObjectId;
-import org.eclipse.jgit.lib.Repository;
-import org.junit.jupiter.api.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.common.graph.GraphBuilder;
 import com.google.common.graph.Graphs;
 import com.google.common.graph.ImmutableGraph;
-
 import io.github.oliviercailloux.git.GitCloner;
 import io.github.oliviercailloux.git.GitHistory;
 import io.github.oliviercailloux.git.GitUtils;
@@ -35,6 +21,17 @@ import io.github.oliviercailloux.grade.GitWork;
 import io.github.oliviercailloux.grade.IGrade;
 import io.github.oliviercailloux.grade.format.json.JsonGrade;
 import io.github.oliviercailloux.utils.Utils;
+import java.time.Instant;
+import java.util.Map;
+import java.util.Set;
+import org.eclipse.jgit.internal.storage.dfs.DfsRepositoryDescription;
+import org.eclipse.jgit.internal.storage.dfs.InMemoryRepository;
+import org.eclipse.jgit.internal.storage.file.FileRepository;
+import org.eclipse.jgit.lib.ObjectId;
+import org.eclipse.jgit.lib.Repository;
+import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class EclipseTests {
 

@@ -5,6 +5,13 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.jimfs.Configuration;
+import com.google.common.jimfs.Jimfs;
+import io.github.oliviercailloux.java_grade.bytecode.Compiler;
+import io.github.oliviercailloux.java_grade.bytecode.Instanciator;
+import io.github.oliviercailloux.java_grade.bytecode.RestrictingClassLoader;
+import io.github.oliviercailloux.java_grade.bytecode.SandboxSecurityPolicy;
 import java.io.FilePermission;
 import java.net.URL;
 import java.net.URLClassLoader;
@@ -17,19 +24,9 @@ import java.security.Permissions;
 import java.security.Policy;
 import java.security.SecurityPermission;
 import java.util.function.Function;
-
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.collect.ImmutableList;
-import com.google.common.jimfs.Configuration;
-import com.google.common.jimfs.Jimfs;
-
-import io.github.oliviercailloux.java_grade.bytecode.Compiler;
-import io.github.oliviercailloux.java_grade.bytecode.Instanciator;
-import io.github.oliviercailloux.java_grade.bytecode.RestrictingClassLoader;
-import io.github.oliviercailloux.java_grade.bytecode.SandboxSecurityPolicy;
 
 public class SandboxTests {
 	@SuppressWarnings("unused")

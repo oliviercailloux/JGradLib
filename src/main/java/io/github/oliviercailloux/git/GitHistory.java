@@ -2,15 +2,6 @@ package io.github.oliviercailloux.git;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
-import java.time.Instant;
-import java.util.Map;
-import java.util.Objects;
-import java.util.function.Predicate;
-
-import org.eclipse.jgit.lib.ObjectId;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -19,6 +10,13 @@ import com.google.common.graph.Graph;
 import com.google.common.graph.Graphs;
 import com.google.common.graph.ImmutableGraph;
 import com.google.common.graph.MutableGraph;
+import java.time.Instant;
+import java.util.Map;
+import java.util.Objects;
+import java.util.function.Predicate;
+import org.eclipse.jgit.lib.ObjectId;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A history of commits. It can use the author dates, the commit dates, or dates

@@ -2,19 +2,16 @@ package io.github.oliviercailloux.grade.format;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import java.nio.charset.StandardCharsets;
-
-import org.junit.jupiter.api.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.w3c.dom.Document;
-
 import com.google.common.io.Resources;
-
 import io.github.oliviercailloux.grade.GradeTestsHelper;
 import io.github.oliviercailloux.grade.IGrade;
 import io.github.oliviercailloux.grade.WeightingGrade;
 import io.github.oliviercailloux.xml.XmlUtils;
+import java.nio.charset.StandardCharsets;
+import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.w3c.dom.Document;
 
 class HtmlGradeTests {
 	@SuppressWarnings("unused")

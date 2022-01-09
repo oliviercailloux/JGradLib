@@ -5,13 +5,19 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Verify.verify;
 import static io.github.oliviercailloux.email.UncheckedMessagingException.MESSAGING_UNCHECKER;
 
+import com.google.common.base.Predicates;
+import com.google.common.base.VerifyException;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Range;
+import com.google.common.collect.Sets;
+import com.google.common.collect.Streams;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.Locale;
 import java.util.function.Predicate;
-
 import javax.mail.Message;
 import javax.mail.Message.RecipientType;
 import javax.mail.internet.InternetAddress;
@@ -25,14 +31,6 @@ import javax.mail.search.RecipientTerm;
 import javax.mail.search.SearchTerm;
 import javax.mail.search.SentDateTerm;
 import javax.mail.search.SubjectTerm;
-
-import com.google.common.base.Predicates;
-import com.google.common.base.VerifyException;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Range;
-import com.google.common.collect.Sets;
-import com.google.common.collect.Streams;
 
 /**
  *

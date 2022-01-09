@@ -6,7 +6,6 @@ import static com.google.common.base.Preconditions.checkState;
 import java.nio.file.InvalidPathException;
 import java.util.Comparator;
 import java.util.Objects;
-
 import org.eclipse.jgit.errors.InvalidObjectIdException;
 import org.eclipse.jgit.lib.ObjectId;
 

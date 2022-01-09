@@ -1,10 +1,9 @@
 package io.github.oliviercailloux.grade;
 
-import java.util.Map.Entry;
-
 import com.google.common.base.Verify;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.math.DoubleMath;
+import java.util.Map.Entry;
 
 public class GradeTestsHelper {
 

@@ -5,22 +5,9 @@ import static io.github.oliviercailloux.grade.GitGrader.Predicates.compose;
 import static io.github.oliviercailloux.grade.GitGrader.Predicates.contentMatches;
 import static io.github.oliviercailloux.grade.GitGrader.Predicates.isBranch;
 
-import java.io.IOException;
-import java.nio.file.NoSuchFileException;
-import java.nio.file.Path;
-import java.time.ZonedDateTime;
-import java.util.Optional;
-import java.util.Set;
-import java.util.function.Function;
-import java.util.regex.Pattern;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
-
 import io.github.oliviercailloux.git.fs.GitPathRoot;
 import io.github.oliviercailloux.git.fs.GitPathRootSha;
 import io.github.oliviercailloux.grade.Criterion;
@@ -39,6 +26,16 @@ import io.github.oliviercailloux.grade.WeightingGrader.CriterionGraderWeight;
 import io.github.oliviercailloux.grade.markers.Marks;
 import io.github.oliviercailloux.jaris.exceptions.Throwing;
 import io.github.oliviercailloux.jaris.exceptions.Throwing.Predicate;
+import java.io.IOException;
+import java.nio.file.NoSuchFileException;
+import java.nio.file.Path;
+import java.time.ZonedDateTime;
+import java.util.Optional;
+import java.util.Set;
+import java.util.function.Function;
+import java.util.regex.Pattern;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class GitBranching implements GitGrader {
 	@SuppressWarnings("unused")

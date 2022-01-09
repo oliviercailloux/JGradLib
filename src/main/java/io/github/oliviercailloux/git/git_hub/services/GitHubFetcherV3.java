@@ -5,6 +5,23 @@ import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.base.Verify.verify;
 import static java.util.Objects.requireNonNull;
 
+import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ImmutableSortedSet;
+import com.google.common.collect.MoreCollectors;
+import io.github.oliviercailloux.git.git_hub.model.GitHubToken;
+import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
+import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinatesWithPrefix;
+import io.github.oliviercailloux.git.git_hub.model.v3.CommitGitHubDescription;
+import io.github.oliviercailloux.git.git_hub.model.v3.Event;
+import io.github.oliviercailloux.git.git_hub.model.v3.EventType;
+import io.github.oliviercailloux.git.git_hub.model.v3.PushEvent;
+import io.github.oliviercailloux.git.git_hub.model.v3.SearchResult;
+import io.github.oliviercailloux.git.git_hub.model.v3.SearchResults;
+import io.github.oliviercailloux.json.PrintableJsonObjectFactory;
+import io.github.oliviercailloux.json.PrintableJsonValueFactory;
 import java.io.IOException;
 import java.io.StringReader;
 import java.net.URI;
@@ -25,7 +42,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
 import javax.json.Json;
 import javax.json.JsonArray;
 import javax.json.JsonObject;
@@ -40,29 +56,9 @@ import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.Link;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-
 import org.eclipse.jgit.lib.ObjectId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.base.Strings;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.ImmutableSortedSet;
-import com.google.common.collect.MoreCollectors;
-
-import io.github.oliviercailloux.git.git_hub.model.GitHubToken;
-import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
-import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinatesWithPrefix;
-import io.github.oliviercailloux.git.git_hub.model.v3.CommitGitHubDescription;
-import io.github.oliviercailloux.git.git_hub.model.v3.Event;
-import io.github.oliviercailloux.git.git_hub.model.v3.EventType;
-import io.github.oliviercailloux.git.git_hub.model.v3.PushEvent;
-import io.github.oliviercailloux.git.git_hub.model.v3.SearchResult;
-import io.github.oliviercailloux.git.git_hub.model.v3.SearchResults;
-import io.github.oliviercailloux.json.PrintableJsonObjectFactory;
-import io.github.oliviercailloux.json.PrintableJsonValueFactory;
 
 public class GitHubFetcherV3 implements AutoCloseable {
 	public static final Set<String> FORBIDDEN_IN_SEARCH = ImmutableSet.of(".", ",", ":", ";", "/", "\\", "`", "'", "\"",

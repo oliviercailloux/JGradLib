@@ -1,15 +1,13 @@
 package io.github.oliviercailloux.grade.markers;
 
+import io.github.oliviercailloux.java_grade.testers.JavaMarkHelper;
 import java.nio.file.Path;
 import java.util.Optional;
 import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import io.github.oliviercailloux.java_grade.testers.JavaMarkHelper;
 
 public class MarkingPredicates {
 	@SuppressWarnings("unused")

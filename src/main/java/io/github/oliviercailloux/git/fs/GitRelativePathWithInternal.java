@@ -4,9 +4,8 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Verify.verify;
 
-import java.nio.file.Path;
-
 import com.google.common.collect.Streams;
+import java.nio.file.Path;
 
 class GitRelativePathWithInternal extends GitRelativePath {
 	private final GitAbsolutePathWithInternal absoluteEquivalent;

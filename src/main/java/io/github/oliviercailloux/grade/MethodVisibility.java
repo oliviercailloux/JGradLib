@@ -2,7 +2,6 @@ package io.github.oliviercailloux.grade;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-
 import javax.json.bind.config.PropertyVisibilityStrategy;
 
 public class MethodVisibility implements PropertyVisibilityStrategy {

@@ -2,10 +2,9 @@ package io.github.oliviercailloux.grade.comm;
 
 import static io.github.oliviercailloux.jaris.exceptions.Unchecker.IO_UNCHECKER;
 
+import io.github.oliviercailloux.email.EmailAddressAndPersonal;
 import java.nio.file.Files;
 import java.nio.file.Path;
-
-import io.github.oliviercailloux.email.EmailAddressAndPersonal;
 
 public class EmailerDauphineHelper {
 

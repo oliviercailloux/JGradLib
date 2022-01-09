@@ -2,18 +2,15 @@ package io.github.oliviercailloux.grade;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
-
-import org.junit.jupiter.api.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.google.common.collect.ImmutableMap;
 import com.google.common.graph.ImmutableValueGraph;
 import com.google.common.graph.ValueGraphBuilder;
-
 import io.github.oliviercailloux.grade.format.json.JsonGrade;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class GradeUtilsTests {
 	@SuppressWarnings("unused")

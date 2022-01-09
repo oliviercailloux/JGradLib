@@ -3,23 +3,20 @@ package io.github.oliviercailloux.git.git_hub.model.graph_ql;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
+import com.google.common.base.MoreObjects;
+import com.google.common.base.MoreObjects.ToStringHelper;
+import com.google.common.collect.ImmutableMap;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.Path;
 import java.util.AbstractMap;
 import java.util.AbstractMap.SimpleEntry;
 import java.util.Optional;
-
 import javax.json.JsonObject;
 import javax.json.JsonValue;
 import javax.json.JsonValue.ValueType;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.base.MoreObjects;
-import com.google.common.base.MoreObjects.ToStringHelper;
-import com.google.common.collect.ImmutableMap;
 
 public class RepositoryWithFiles {
 	@SuppressWarnings("unused")

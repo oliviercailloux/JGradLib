@@ -2,11 +2,10 @@ package io.github.oliviercailloux.grade.contexters;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import com.google.common.collect.ImmutableList;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.collect.ImmutableList;
 
 class GradingTests {
 

@@ -2,24 +2,10 @@ package io.github.oliviercailloux.java_grade.utils;
 
 import static io.github.oliviercailloux.jaris.exceptions.Unchecker.IO_UNCHECKER;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.Map.Entry;
-import java.util.Optional;
-import java.util.function.Function;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
-import org.eclipse.jgit.internal.storage.file.FileRepository;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.MoreCollectors;
-
 import io.github.oliviercailloux.git.GitCloner;
 import io.github.oliviercailloux.git.fs.GitFileSystem;
 import io.github.oliviercailloux.git.fs.GitFileSystemProvider;
@@ -32,6 +18,17 @@ import io.github.oliviercailloux.grade.markers.Marks;
 import io.github.oliviercailloux.json.JsonbUtils;
 import io.github.oliviercailloux.json.PrintableJsonObject;
 import io.github.oliviercailloux.utils.Utils;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Map.Entry;
+import java.util.Optional;
+import java.util.function.Function;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import org.eclipse.jgit.internal.storage.file.FileRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class HarvestIds {
 	@SuppressWarnings("unused")

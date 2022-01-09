@@ -3,6 +3,18 @@ package io.github.oliviercailloux.java_grade.ex_extractor;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.jimfs.Configuration;
+import com.google.common.jimfs.Jimfs;
+import com.google.common.primitives.Booleans;
+import io.github.classgraph.ClassGraph;
+import io.github.classgraph.ClassInfo;
+import io.github.classgraph.ClassInfoList;
+import io.github.classgraph.ScanResult;
+import io.github.oliviercailloux.grade.GradingException;
+import io.github.oliviercailloux.grade.Mark;
+import io.github.oliviercailloux.java_grade.testers.JavaMarkHelper;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringWriter;
@@ -18,26 +30,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Optional;
 import java.util.stream.Stream;
-
 import org.apache.pdfbox.cos.COSArray;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.jimfs.Configuration;
-import com.google.common.jimfs.Jimfs;
-import com.google.common.primitives.Booleans;
-
-import io.github.classgraph.ClassGraph;
-import io.github.classgraph.ClassInfo;
-import io.github.classgraph.ClassInfoList;
-import io.github.classgraph.ScanResult;
-import io.github.oliviercailloux.grade.GradingException;
-import io.github.oliviercailloux.grade.Mark;
-import io.github.oliviercailloux.java_grade.testers.JavaMarkHelper;
 
 public class ExExtractorGrader {
 

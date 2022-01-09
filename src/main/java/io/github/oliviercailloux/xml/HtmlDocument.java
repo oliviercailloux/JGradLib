@@ -2,13 +2,12 @@ package io.github.oliviercailloux.xml;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import com.google.common.base.Verify;
 import java.net.URI;
-
 import javax.xml.XMLConstants;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.w3c.dom.Attr;
@@ -17,8 +16,6 @@ import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.w3c.dom.Text;
-
-import com.google.common.base.Verify;
 
 public class HtmlDocument {
 	@SuppressWarnings("unused")

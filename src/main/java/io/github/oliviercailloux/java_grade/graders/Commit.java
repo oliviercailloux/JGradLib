@@ -7,16 +7,7 @@ import static io.github.oliviercailloux.grade.GitGrader.Predicates.contentMatche
 import static io.github.oliviercailloux.grade.GitGrader.Predicates.isBranch;
 import static io.github.oliviercailloux.grade.GitGrader.Predicates.isFileNamed;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.time.ZonedDateTime;
-import java.util.regex.Pattern;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.google.common.collect.ImmutableSet;
-
 import io.github.oliviercailloux.git.fs.GitPathRoot;
 import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
 import io.github.oliviercailloux.grade.Criterion;
@@ -32,6 +23,12 @@ import io.github.oliviercailloux.grade.markers.Marks;
 import io.github.oliviercailloux.jaris.exceptions.Throwing;
 import io.github.oliviercailloux.jaris.exceptions.Throwing.Predicate;
 import io.github.oliviercailloux.java_grade.testers.JavaMarkHelper;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.time.ZonedDateTime;
+import java.util.regex.Pattern;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class Commit {
 	@SuppressWarnings("unused")

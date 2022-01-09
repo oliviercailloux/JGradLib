@@ -2,11 +2,9 @@ package io.github.oliviercailloux.grade;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
-import java.util.Objects;
-
 import com.google.common.base.MoreObjects;
-
 import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
+import java.util.Objects;
 
 public class GitWork {
 	public static GitWork given(GitHubUsername author, GitFileSystemHistory history) {

@@ -2,17 +2,8 @@ package io.github.oliviercailloux.grade.format;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-
-import org.junit.jupiter.api.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.Resources;
-
 import io.github.oliviercailloux.email.EmailAddress;
 import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
 import io.github.oliviercailloux.grade.GradeTestsHelper;
@@ -22,7 +13,10 @@ import io.github.oliviercailloux.grade.comm.InstitutionalStudent;
 import io.github.oliviercailloux.grade.comm.StudentOnGitHub;
 import io.github.oliviercailloux.grade.format.json.JsonGrade;
 import io.github.oliviercailloux.grade.format.json.JsonGradeTests;
-import io.github.oliviercailloux.java_grade.utils.Summarizer;
+import java.nio.charset.StandardCharsets;
+import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 class CsvGradesTests {
 	@SuppressWarnings("unused")

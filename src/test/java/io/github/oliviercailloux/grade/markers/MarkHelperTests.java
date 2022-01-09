@@ -2,12 +2,11 @@ package io.github.oliviercailloux.grade.markers;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 
 public class MarkHelperTests {
 	@SuppressWarnings("unused")

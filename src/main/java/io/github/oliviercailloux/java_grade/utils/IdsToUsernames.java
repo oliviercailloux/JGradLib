@@ -3,16 +3,7 @@ package io.github.oliviercailloux.java_grade.utils;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 
-import java.lang.reflect.Type;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.HashMap;
-import java.util.Map;
-
-import javax.xml.bind.JAXBElement;
-
 import com.google.common.collect.ImmutableSet;
-
 import ebx.ebx_dataservices.StandardException;
 import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
 import io.github.oliviercailloux.grade.comm.InstitutionalStudent;
@@ -23,6 +14,12 @@ import io.github.oliviercailloux.json.JsonbUtils;
 import io.github.oliviercailloux.json.PrintableJsonObject;
 import io.github.oliviercailloux.supann.QueriesHelper;
 import io.github.oliviercailloux.supann.SupannQuerier;
+import java.lang.reflect.Type;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.HashMap;
+import java.util.Map;
+import javax.xml.bind.JAXBElement;
 import schemas.ebx.dataservices_1.StudentType.Root.Student;
 
 public class IdsToUsernames {

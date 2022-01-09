@@ -2,13 +2,12 @@ package io.github.oliviercailloux.grade.markers;
 
 import static com.google.common.base.Verify.verify;
 
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ImmutableSetMultimap;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Predicate;
-
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.ImmutableSetMultimap;
 
 public class MarkHelper {
 

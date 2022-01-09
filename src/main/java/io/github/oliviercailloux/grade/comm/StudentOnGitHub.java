@@ -2,13 +2,11 @@ package io.github.oliviercailloux.grade.comm;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
-import java.util.Objects;
-import java.util.Optional;
-
 import com.google.common.base.MoreObjects;
-
 import io.github.oliviercailloux.email.EmailAddressAndPersonal;
 import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
+import java.util.Objects;
+import java.util.Optional;
 
 public class StudentOnGitHub {
 	public static StudentOnGitHub with(String gitHubUsername) {

@@ -2,15 +2,12 @@ package io.github.oliviercailloux.git.git_hub.model.graph_ql;
 
 import static java.util.Objects.requireNonNull;
 
+import io.github.oliviercailloux.git.git_hub.services.GitHubJsonParser;
 import java.time.Instant;
 import java.util.Optional;
-
 import javax.json.JsonObject;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import io.github.oliviercailloux.git.git_hub.services.GitHubJsonParser;
 
 public abstract class IssueEvent {
 

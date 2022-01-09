@@ -2,9 +2,8 @@ package io.github.oliviercailloux.grade.comm;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
-import javax.mail.Message;
-
 import io.github.oliviercailloux.grade.IGrade;
+import javax.mail.Message;
 
 class GradeMessage {
 	public static GradeMessage given(IGrade grade, Message message) {

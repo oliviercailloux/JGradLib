@@ -5,7 +5,6 @@ import static java.util.Objects.requireNonNull;
 import java.net.URI;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-
 import javax.json.JsonObject;
 
 /**

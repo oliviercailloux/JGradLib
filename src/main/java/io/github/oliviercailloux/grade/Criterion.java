@@ -2,9 +2,8 @@ package io.github.oliviercailloux.grade;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
-import java.util.Objects;
-
 import com.google.common.base.MoreObjects;
+import java.util.Objects;
 
 public class Criterion {
 

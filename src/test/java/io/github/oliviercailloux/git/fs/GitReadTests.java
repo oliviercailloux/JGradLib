@@ -6,6 +6,15 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.PeekingIterator;
+import io.github.oliviercailloux.git.GitCloner;
+import io.github.oliviercailloux.git.JGit;
+import io.github.oliviercailloux.git.fs.GitFileSystem.GitStringObject;
+import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
+import io.github.oliviercailloux.utils.Utils;
 import java.io.IOException;
 import java.nio.channels.SeekableByteChannel;
 import java.nio.file.Files;
@@ -16,7 +25,6 @@ import java.nio.file.NotDirectoryException;
 import java.nio.file.NotLinkException;
 import java.nio.file.Path;
 import java.util.stream.Stream;
-
 import org.eclipse.jgit.errors.CorruptObjectException;
 import org.eclipse.jgit.errors.IncorrectObjectTypeException;
 import org.eclipse.jgit.errors.MissingObjectException;
@@ -36,17 +44,6 @@ import org.eclipse.jgit.treewalk.filter.PathFilter;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.PeekingIterator;
-
-import io.github.oliviercailloux.git.GitCloner;
-import io.github.oliviercailloux.git.JGit;
-import io.github.oliviercailloux.git.fs.GitFileSystem.GitStringObject;
-import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
-import io.github.oliviercailloux.utils.Utils;
 
 /**
  * Tests about actual reading from a repo, using the Files API.

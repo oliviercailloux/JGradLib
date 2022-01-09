@@ -1,12 +1,11 @@
 package io.github.oliviercailloux.xml;
 
+import com.google.common.base.Verify;
 import java.io.IOException;
 import java.io.StringWriter;
-
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.validation.Schema;
 import javax.xml.validation.SchemaFactory;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
@@ -15,8 +14,6 @@ import org.w3c.dom.ls.DOMImplementationLS;
 import org.w3c.dom.ls.LSOutput;
 import org.w3c.dom.ls.LSSerializer;
 import org.xml.sax.SAXException;
-
-import com.google.common.base.Verify;
 
 public class XmlUtils {
 	@SuppressWarnings("unused")

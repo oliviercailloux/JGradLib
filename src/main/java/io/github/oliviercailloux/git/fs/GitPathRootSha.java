@@ -5,11 +5,9 @@ import static com.google.common.base.Preconditions.checkArgument;
 import java.io.IOException;
 import java.nio.file.NoSuchFileException;
 import java.util.Optional;
-
 import org.eclipse.jgit.errors.IncorrectObjectTypeException;
 import org.eclipse.jgit.errors.MissingObjectException;
 import org.eclipse.jgit.revwalk.RevCommit;
-import org.eclipse.jgit.revwalk.RevTree;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

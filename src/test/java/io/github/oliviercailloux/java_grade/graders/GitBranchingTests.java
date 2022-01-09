@@ -2,22 +2,6 @@ package io.github.oliviercailloux.java_grade.graders;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import java.nio.file.FileSystem;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.time.Instant;
-import java.util.Map;
-
-import org.eclipse.jgit.internal.storage.dfs.DfsRepositoryDescription;
-import org.eclipse.jgit.internal.storage.dfs.InMemoryRepository;
-import org.eclipse.jgit.lib.Constants;
-import org.eclipse.jgit.lib.ObjectId;
-import org.eclipse.jgit.lib.PersonIdent;
-import org.eclipse.jgit.lib.Repository;
-import org.junit.jupiter.api.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.common.graph.GraphBuilder;
@@ -25,7 +9,6 @@ import com.google.common.graph.ImmutableGraph;
 import com.google.common.graph.MutableGraph;
 import com.google.common.jimfs.Configuration;
 import com.google.common.jimfs.Jimfs;
-
 import io.github.oliviercailloux.git.GitHistory;
 import io.github.oliviercailloux.git.GitUtils;
 import io.github.oliviercailloux.git.JGit;
@@ -36,6 +19,20 @@ import io.github.oliviercailloux.grade.GitFileSystemHistory;
 import io.github.oliviercailloux.grade.GitWork;
 import io.github.oliviercailloux.grade.IGrade;
 import io.github.oliviercailloux.grade.format.json.JsonGrade;
+import java.nio.file.FileSystem;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.time.Instant;
+import java.util.Map;
+import org.eclipse.jgit.internal.storage.dfs.DfsRepositoryDescription;
+import org.eclipse.jgit.internal.storage.dfs.InMemoryRepository;
+import org.eclipse.jgit.lib.Constants;
+import org.eclipse.jgit.lib.ObjectId;
+import org.eclipse.jgit.lib.PersonIdent;
+import org.eclipse.jgit.lib.Repository;
+import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class GitBranchingTests {
 

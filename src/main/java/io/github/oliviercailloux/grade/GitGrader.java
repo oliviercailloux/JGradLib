@@ -3,6 +3,12 @@ package io.github.oliviercailloux.grade;
 import static com.google.common.base.Preconditions.checkArgument;
 import static io.github.oliviercailloux.jaris.exceptions.Unchecker.IO_UNCHECKER;
 
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
+import com.google.common.primitives.Ints;
+import io.github.oliviercailloux.git.fs.GitPath;
+import io.github.oliviercailloux.git.fs.GitPathRoot;
+import io.github.oliviercailloux.jaris.exceptions.Throwing;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
@@ -11,17 +17,8 @@ import java.util.Set;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterables;
-import com.google.common.primitives.Ints;
-
-import io.github.oliviercailloux.git.fs.GitPath;
-import io.github.oliviercailloux.git.fs.GitPathRoot;
-import io.github.oliviercailloux.jaris.exceptions.Throwing;
 
 public interface GitGrader {
 	public static class Predicates {

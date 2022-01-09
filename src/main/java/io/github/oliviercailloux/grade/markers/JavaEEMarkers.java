@@ -1,15 +1,13 @@
 package io.github.oliviercailloux.grade.markers;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.Optional;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import io.github.oliviercailloux.grade.IGrade;
 import io.github.oliviercailloux.grade.Mark;
 import io.github.oliviercailloux.jaris.exceptions.Unchecker;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Optional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class JavaEEMarkers {
 	@SuppressWarnings("unused")

@@ -1,13 +1,11 @@
 package io.github.oliviercailloux.grade.markers;
 
-import java.nio.file.Path;
-import java.util.List;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Streams;
+import java.nio.file.Path;
+import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 class PackageGroupIdMarker {
 	public static boolean hasPrefix(Path relativizedPath, List<String> groupIdElements) {

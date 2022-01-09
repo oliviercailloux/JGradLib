@@ -3,17 +3,14 @@ package io.github.oliviercailloux.git.git_hub.model.graph_ql;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
+import com.google.common.base.MoreObjects;
+import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
+import io.github.oliviercailloux.git.git_hub.services.GitHubJsonParser;
 import java.net.URI;
 import java.time.Instant;
-
 import javax.json.JsonObject;
 import javax.json.bind.annotation.JsonbPropertyOrder;
 import javax.json.bind.annotation.JsonbTransient;
-
-import com.google.common.base.MoreObjects;
-
-import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
-import io.github.oliviercailloux.git.git_hub.services.GitHubJsonParser;
 
 @JsonbPropertyOrder({ "name", "ownerLogin", "htmlURL", "sshURL", "createdAt" })
 public class Repository {

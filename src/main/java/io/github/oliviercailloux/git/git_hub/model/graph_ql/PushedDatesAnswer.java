@@ -4,21 +4,6 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Verify.verify;
 
-import java.time.Instant;
-import java.util.List;
-import java.util.Map.Entry;
-import java.util.Objects;
-import java.util.Optional;
-
-import javax.json.JsonArray;
-import javax.json.JsonObject;
-import javax.json.JsonString;
-import javax.json.JsonValue;
-
-import org.eclipse.jgit.lib.ObjectId;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -26,9 +11,20 @@ import com.google.common.collect.ImmutableSetMultimap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.google.common.graph.ImmutableGraph;
-
 import io.github.oliviercailloux.json.PrintableJsonObjectFactory;
 import io.github.oliviercailloux.utils.Utils;
+import java.time.Instant;
+import java.util.List;
+import java.util.Map.Entry;
+import java.util.Objects;
+import java.util.Optional;
+import javax.json.JsonArray;
+import javax.json.JsonObject;
+import javax.json.JsonString;
+import javax.json.JsonValue;
+import org.eclipse.jgit.lib.ObjectId;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class PushedDatesAnswer {
 	@SuppressWarnings("unused")

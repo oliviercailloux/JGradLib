@@ -3,7 +3,6 @@ package io.github.oliviercailloux.java_grade.bytecode;
 import java.security.Permission;
 import java.security.Policy;
 import java.security.ProtectionDomain;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

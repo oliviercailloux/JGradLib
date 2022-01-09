@@ -6,7 +6,6 @@ import java.io.Writer;
 import java.nio.file.Path;
 import java.util.Collection;
 import java.util.List;
-
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.encryption.InvalidPasswordException;
 import org.apache.pdfbox.text.PDFTextStripper;

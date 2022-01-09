@@ -3,19 +3,6 @@ package io.github.oliviercailloux.grade.format;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 
-import java.io.StringWriter;
-import java.text.NumberFormat;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-import java.util.function.Function;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.google.common.base.Verify;
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
@@ -28,12 +15,22 @@ import com.google.common.collect.Range;
 import com.google.common.collect.Streams;
 import com.univocity.parsers.csv.CsvWriter;
 import com.univocity.parsers.csv.CsvWriterSettings;
-
 import io.github.oliviercailloux.grade.Criterion;
 import io.github.oliviercailloux.grade.CriterionGradeWeight;
 import io.github.oliviercailloux.grade.IGrade;
 import io.github.oliviercailloux.grade.WeightingGrade;
 import io.github.oliviercailloux.grade.comm.StudentOnGitHub;
+import java.io.StringWriter;
+import java.text.NumberFormat;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class CsvGrades<K> {
 	@SuppressWarnings("unused")

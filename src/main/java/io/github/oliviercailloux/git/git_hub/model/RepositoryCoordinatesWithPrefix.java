@@ -5,7 +5,6 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
 import javax.json.JsonObject;
 
 /**

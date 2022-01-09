@@ -3,20 +3,6 @@ package io.github.oliviercailloux.git.git_hub.model.graph_ql;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.stream.Collector;
-import java.util.stream.Collectors;
-
-import javax.json.JsonObject;
-import javax.json.JsonValue;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
 import com.google.common.collect.ImmutableList;
@@ -24,9 +10,19 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSetMultimap;
 import com.google.common.collect.ImmutableSetMultimap.Builder;
 import com.google.common.collect.ImmutableSortedSet;
-
 import io.github.oliviercailloux.git.git_hub.services.GitHubJsonParser;
 import io.github.oliviercailloux.json.PrintableJsonObjectFactory;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Collector;
+import java.util.stream.Collectors;
+import javax.json.JsonObject;
+import javax.json.JsonValue;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class RepositoryWithIssuesWithHistory {
 	@SuppressWarnings("unused")

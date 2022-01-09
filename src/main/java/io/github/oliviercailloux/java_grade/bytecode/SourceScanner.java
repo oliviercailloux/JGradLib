@@ -5,14 +5,13 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Verify.verify;
 import static io.github.oliviercailloux.jaris.exceptions.Unchecker.IO_UNCHECKER;
 
+import com.google.common.collect.ImmutableSet;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
-
-import com.google.common.collect.ImmutableSet;
 
 public class SourceScanner {
 	private static final Pattern PACKAGE_PATTERN = Pattern.compile("^\\h*package\\h+(?<packageName>[^\\h]*)\\h*;");

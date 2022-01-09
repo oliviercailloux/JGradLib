@@ -6,23 +6,9 @@ import static io.github.oliviercailloux.grade.GitGrader.Predicates.contentMatche
 import static io.github.oliviercailloux.grade.GitGrader.Predicates.isFileNamed;
 import static io.github.oliviercailloux.jaris.exceptions.Unchecker.IO_UNCHECKER;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.time.ZonedDateTime;
-import java.util.Optional;
-import java.util.Set;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
-import org.eclipse.jgit.diff.DiffEntry;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
-
 import io.github.oliviercailloux.git.fs.GitPath;
 import io.github.oliviercailloux.git.fs.GitPathRoot;
 import io.github.oliviercailloux.grade.Criterion;
@@ -39,6 +25,17 @@ import io.github.oliviercailloux.grade.WeightingGrade;
 import io.github.oliviercailloux.grade.markers.Marks;
 import io.github.oliviercailloux.jaris.exceptions.Throwing.Function;
 import io.github.oliviercailloux.jaris.exceptions.Throwing.Predicate;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.time.ZonedDateTime;
+import java.util.Optional;
+import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import org.eclipse.jgit.diff.DiffEntry;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 // /minimax-ex/src/main/java/io/github/oliviercailloux/minimax/utils/ForwardingMutableGraph.java for unused import statement
 public class Eclipse implements GitGrader {

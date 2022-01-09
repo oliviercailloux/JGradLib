@@ -4,21 +4,18 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
+import com.google.common.base.MoreObjects;
+import com.google.common.base.MoreObjects.ToStringHelper;
+import com.google.common.collect.Streams;
+import io.github.oliviercailloux.git.git_hub.model.IssueCoordinates;
+import io.github.oliviercailloux.git.git_hub.services.GitHubJsonParser;
 import java.net.URI;
 import java.time.Instant;
 import java.util.List;
 import java.util.stream.Collectors;
-
 import javax.json.JsonArray;
 import javax.json.JsonObject;
 import javax.json.JsonValue;
-
-import com.google.common.base.MoreObjects;
-import com.google.common.base.MoreObjects.ToStringHelper;
-import com.google.common.collect.Streams;
-
-import io.github.oliviercailloux.git.git_hub.model.IssueCoordinates;
-import io.github.oliviercailloux.git.git_hub.services.GitHubJsonParser;
 
 public class IssueBare {
 	public static IssueBare from(JsonObject json) {

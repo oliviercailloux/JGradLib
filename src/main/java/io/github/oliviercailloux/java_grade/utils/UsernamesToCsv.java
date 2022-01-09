@@ -1,17 +1,15 @@
 package io.github.oliviercailloux.java_grade.utils;
 
+import com.google.common.collect.ImmutableMap;
+import com.univocity.parsers.csv.CsvWriter;
+import com.univocity.parsers.csv.CsvWriterSettings;
+import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
+import io.github.oliviercailloux.grade.comm.StudentOnGitHubKnown;
+import io.github.oliviercailloux.grade.comm.json.JsonStudentsReader;
 import java.io.StringWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-
-import com.google.common.collect.ImmutableMap;
-import com.univocity.parsers.csv.CsvWriter;
-import com.univocity.parsers.csv.CsvWriterSettings;
-
-import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
-import io.github.oliviercailloux.grade.comm.StudentOnGitHubKnown;
-import io.github.oliviercailloux.grade.comm.json.JsonStudentsReader;
 
 public class UsernamesToCsv {
 	private static final Path WORK_DIR = Paths.get("../../Java L3/");

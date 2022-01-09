@@ -2,17 +2,14 @@ package io.github.oliviercailloux.grade.contexters;
 
 import static java.util.Objects.requireNonNull;
 
+import com.google.common.collect.ImmutableList;
+import io.github.oliviercailloux.grade.GradingException;
 import java.util.List;
 import java.util.regex.MatchResult;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.collect.ImmutableList;
-
-import io.github.oliviercailloux.grade.GradingException;
 
 public class PomContexter {
 	@SuppressWarnings("unused")

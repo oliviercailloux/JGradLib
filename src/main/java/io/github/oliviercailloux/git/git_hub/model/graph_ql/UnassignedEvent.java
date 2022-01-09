@@ -2,11 +2,9 @@ package io.github.oliviercailloux.git.git_hub.model.graph_ql;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
-import java.util.function.Predicate;
-
-import javax.json.JsonObject;
-
 import com.google.common.collect.ImmutableSet;
+import java.util.function.Predicate;
+import javax.json.JsonObject;
 
 public class UnassignedEvent extends IssueEvent {
 

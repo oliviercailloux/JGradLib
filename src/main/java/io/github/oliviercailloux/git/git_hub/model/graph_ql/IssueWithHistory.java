@@ -3,6 +3,12 @@ package io.github.oliviercailloux.git.git_hub.model.graph_ql;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
+import com.google.common.base.MoreObjects;
+import com.google.common.base.MoreObjects.ToStringHelper;
+import com.google.common.base.Predicates;
+import com.google.common.collect.Comparators;
+import com.google.common.collect.Iterators;
+import com.google.common.collect.PeekingIterator;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Comparator;
@@ -11,16 +17,8 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.base.MoreObjects;
-import com.google.common.base.MoreObjects.ToStringHelper;
-import com.google.common.base.Predicates;
-import com.google.common.collect.Comparators;
-import com.google.common.collect.Iterators;
-import com.google.common.collect.PeekingIterator;
 
 /**
  * An intemporal issue, that also contains a description of its current state.

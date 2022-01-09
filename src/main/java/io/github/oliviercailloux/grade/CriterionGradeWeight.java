@@ -2,18 +2,14 @@ package io.github.oliviercailloux.grade;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import com.google.common.base.MoreObjects;
+import io.github.oliviercailloux.grade.WeightingGrade.WeightedGrade;
 import java.util.Objects;
-
 import javax.json.bind.annotation.JsonbCreator;
 import javax.json.bind.annotation.JsonbProperty;
 import javax.json.bind.annotation.JsonbPropertyOrder;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.base.MoreObjects;
-
-import io.github.oliviercailloux.grade.WeightingGrade.WeightedGrade;
 
 @JsonbPropertyOrder({ "criterion", "grade", "weight" })
 public class CriterionGradeWeight {

@@ -5,6 +5,23 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 import static io.github.oliviercailloux.jaris.exceptions.Unchecker.IO_UNCHECKER;
 
+import com.google.common.base.Strings;
+import com.google.common.base.Verify;
+import com.google.common.collect.AbstractIterator;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterators;
+import com.google.common.collect.PeekingIterator;
+import com.google.common.collect.Streams;
+import com.google.common.collect.UnmodifiableIterator;
+import com.google.common.graph.EndpointPair;
+import com.google.common.graph.Graph;
+import com.google.common.graph.GraphBuilder;
+import com.google.common.graph.ImmutableGraph;
+import com.google.common.graph.MutableGraph;
+import com.google.common.graph.SuccessorsFunction;
+import io.github.oliviercailloux.jaris.exceptions.CheckedStream;
+import io.github.oliviercailloux.jaris.exceptions.Throwing;
 import java.io.FilePermission;
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -39,28 +56,8 @@ import java.util.function.Predicate;
 import java.util.stream.Collector;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.base.Strings;
-import com.google.common.base.Verify;
-import com.google.common.collect.AbstractIterator;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterators;
-import com.google.common.collect.PeekingIterator;
-import com.google.common.collect.Streams;
-import com.google.common.collect.UnmodifiableIterator;
-import com.google.common.graph.EndpointPair;
-import com.google.common.graph.Graph;
-import com.google.common.graph.GraphBuilder;
-import com.google.common.graph.ImmutableGraph;
-import com.google.common.graph.MutableGraph;
-import com.google.common.graph.SuccessorsFunction;
-
-import io.github.oliviercailloux.jaris.exceptions.CheckedStream;
-import io.github.oliviercailloux.jaris.exceptions.Throwing;
 
 public class Utils {
 	@SuppressWarnings("unused")

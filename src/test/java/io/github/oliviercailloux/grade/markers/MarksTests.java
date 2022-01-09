@@ -2,14 +2,12 @@ package io.github.oliviercailloux.grade.markers;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import com.google.common.jimfs.Jimfs;
 import java.nio.file.FileSystem;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.regex.Pattern;
-
 import org.junit.jupiter.api.Test;
-
-import com.google.common.jimfs.Jimfs;
 
 class MarksTests {
 

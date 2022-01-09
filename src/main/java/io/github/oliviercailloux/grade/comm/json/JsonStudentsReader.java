@@ -2,29 +2,26 @@ package io.github.oliviercailloux.grade.comm.json;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
-import java.util.LinkedHashSet;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
-
-import javax.json.Json;
-import javax.json.JsonObject;
-import javax.json.JsonObjectBuilder;
-import javax.json.bind.JsonbException;
-import javax.json.bind.adapter.JsonbAdapter;
-import javax.json.bind.annotation.JsonbTypeAdapter;
-
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.ImmutableSet;
-
 import io.github.oliviercailloux.email.EmailAddress;
 import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
 import io.github.oliviercailloux.grade.comm.InstitutionalStudent;
 import io.github.oliviercailloux.grade.comm.StudentOnGitHub;
 import io.github.oliviercailloux.grade.comm.StudentOnGitHubKnown;
 import io.github.oliviercailloux.json.JsonbUtils;
+import java.util.LinkedHashSet;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import javax.json.Json;
+import javax.json.JsonObject;
+import javax.json.JsonObjectBuilder;
+import javax.json.bind.JsonbException;
+import javax.json.bind.adapter.JsonbAdapter;
+import javax.json.bind.annotation.JsonbTypeAdapter;
 
 public class JsonStudentsReader {
 	@JsonbTypeAdapter(JsonStudentAdapter.class)

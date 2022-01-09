@@ -3,9 +3,8 @@ package io.github.oliviercailloux.git;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Verify.verify;
 
-import java.util.regex.Pattern;
-
 import com.google.common.primitives.Booleans;
+import java.util.regex.Pattern;
 
 public enum GitUrlKind {
 	SCHEME, SCP, ABSOLUTE_PATH, RELATIVE_PATH;

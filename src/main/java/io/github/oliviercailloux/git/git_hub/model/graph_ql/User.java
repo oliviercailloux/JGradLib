@@ -3,12 +3,10 @@ package io.github.oliviercailloux.git.git_hub.model.graph_ql;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
+import com.google.common.base.MoreObjects;
 import java.net.URI;
 import java.util.Objects;
-
 import javax.json.JsonObject;
-
-import com.google.common.base.MoreObjects;
 
 public class User {
 	public static User from(JsonObject json) {

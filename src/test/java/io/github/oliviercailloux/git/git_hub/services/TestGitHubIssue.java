@@ -3,6 +3,14 @@ package io.github.oliviercailloux.git.git_hub.services;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
+import io.github.oliviercailloux.git.git_hub.model.GitHubToken;
+import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
+import io.github.oliviercailloux.git.git_hub.model.graph_ql.IssueSnapshot;
+import io.github.oliviercailloux.git.git_hub.model.graph_ql.IssueWithHistory;
+import io.github.oliviercailloux.git.git_hub.model.graph_ql.RepositoryWithIssuesWithHistory;
+import io.github.oliviercailloux.git.git_hub.model.graph_ql.User;
 import java.net.URI;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
@@ -11,20 +19,9 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterables;
-
-import io.github.oliviercailloux.git.git_hub.model.GitHubToken;
-import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
-import io.github.oliviercailloux.git.git_hub.model.graph_ql.IssueSnapshot;
-import io.github.oliviercailloux.git.git_hub.model.graph_ql.IssueWithHistory;
-import io.github.oliviercailloux.git.git_hub.model.graph_ql.RepositoryWithIssuesWithHistory;
-import io.github.oliviercailloux.git.git_hub.model.graph_ql.User;
 
 public class TestGitHubIssue {
 

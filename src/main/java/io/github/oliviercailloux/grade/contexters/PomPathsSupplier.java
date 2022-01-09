@@ -1,5 +1,9 @@
 package io.github.oliviercailloux.grade.contexters;
 
+import com.google.common.collect.ImmutableSet;
+import io.github.oliviercailloux.grade.markers.MarkingPredicates;
+import io.github.oliviercailloux.java_grade.testers.JavaMarkHelper;
+import io.github.oliviercailloux.utils.Utils;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -9,15 +13,8 @@ import java.util.Set;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.collect.ImmutableSet;
-
-import io.github.oliviercailloux.grade.markers.MarkingPredicates;
-import io.github.oliviercailloux.java_grade.testers.JavaMarkHelper;
-import io.github.oliviercailloux.utils.Utils;
 
 public class PomPathsSupplier {
 

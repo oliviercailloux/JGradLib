@@ -3,15 +3,13 @@ package io.github.oliviercailloux.grade;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import com.google.common.collect.ImmutableSet;
+import io.github.oliviercailloux.jaris.exceptions.Throwing;
+import io.github.oliviercailloux.jaris.exceptions.Throwing.Function;
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-
-import com.google.common.collect.ImmutableSet;
-
-import io.github.oliviercailloux.jaris.exceptions.Throwing;
-import io.github.oliviercailloux.jaris.exceptions.Throwing.Function;
 
 /**
  * Could consider a WeightingGraderBuilder.

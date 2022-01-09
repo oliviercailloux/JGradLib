@@ -2,13 +2,11 @@ package io.github.oliviercailloux.grade;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
-import java.util.function.Predicate;
-
 import com.google.common.collect.ImmutableSet;
-
 import io.github.oliviercailloux.git.git_hub.model.GitHubToken;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinatesWithPrefix;
 import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherV3;
+import java.util.function.Predicate;
 
 public class RepositoryFetcher {
 	public static RepositoryFetcher withPrefix(String prefix) {
