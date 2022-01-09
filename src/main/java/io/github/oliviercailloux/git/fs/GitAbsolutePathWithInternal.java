@@ -36,13 +36,13 @@ class GitAbsolutePathWithInternal extends GitAbsolutePath {
 
 	/**
 	 * A cache. This is good value for money (price is just a bit of memory) : about
-	 * every operation on such file requires its git object (generally its o bject
-	 * id and sometimes its file mode as well), and retrieving it is costly as it
+	 * every operation on such file requires its git object (generally its object id
+	 * and sometimes its file mode as well), and retrieving it is costly as it
 	 * requires to navigate the whole path from tree to tree.
 	 *
-	 * For example, when listing files in a directory (using Files.find), th e
+	 * For example, when listing files in a directory (using Files.find), the
 	 * algorithm navigates to a folder, gets a sub-folder, at which time the git
-	 * object corresponding to the sub-folder is known, but if not cached, w hen the
+	 * object corresponding to the sub-folder is known, but if not cached, when the
 	 * algorithm then asks for the file attributes, and then for the listing the
 	 * sub-directory, it has to navigate to it again, twice.
 	 *
