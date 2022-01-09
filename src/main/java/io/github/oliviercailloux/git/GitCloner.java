@@ -102,6 +102,9 @@ public class GitCloner {
 	 * repository: repository.getObjectDatabase().exists() is true;
 	 * repository.getRefDatabase().hasRefs() is false.
 	 *
+	 * TODO I should probably not attempt to create a bare repository where a
+	 * non-bare repository currently lives!
+	 *
 	 * @param repositoryDirectory GIT_DIR (replacing .git dir) if bare (see
 	 *                            {@link FileRepository}), otherwise, work tree dir,
 	 *                            in which a .git dir will be created (or exists).
@@ -145,9 +148,14 @@ public class GitCloner {
 				final Optional<RemoteConfig> origin = remoteList.stream().filter((r) -> r.getName().equals("origin"))
 						.collect(MoreCollectors.toOptional());
 				final Status status = git.status().call();
-				/**
+				/*
 				 * Creates a problem probably related to https://stackoverflow.com/a/4162672
-				 * (oliviercailloux-org/eclipse-LucasLePort)
+				 * (oliviercailloux-org/eclipse-LucasLePort).
+				 *
+				 * Also, if a non-bare repository is there and the caller tries to download bare
+				 * by handing the .git folder, this reports an unclean status because it thinks
+				 * that I want to version the files in the .git folder (objects/pack/*, refs/*,
+				 * …).
 				 */
 				if (!git.getRepository().isBare() && !status.isClean()) {
 					throw new IllegalStateException("Can’t update " + uri + ": not clean (" + toString(status) + ").");
@@ -204,7 +212,8 @@ public class GitCloner {
 
 			final Ref head = IO_UNCHECKER.getUsing(() -> git.getRepository().findRef(Constants.HEAD));
 			checkArgument(head != null, "Did you forget to create the repository?");
-			checkArgument(head.getTarget().getName().equals("refs/heads/master"));
+			final String headRef = head.getTarget().getName();
+			checkArgument(headRef.equals("refs/heads/master") || headRef.equals("refs/heads/main"));
 
 			final ImmutableMap<String, ObjectId> originRefs = remoteRefs.row("origin");
 			final SetView<String> commonRefShortNames = Sets.intersection(originRefs.keySet(), localRefs.keySet());

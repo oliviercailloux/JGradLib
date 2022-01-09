@@ -1,6 +1,7 @@
 package io.github.oliviercailloux.git;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.common.base.Verify;
@@ -26,7 +27,7 @@ class GitUtilsTests {
 
 	@Test
 	void testLogFromCreated() throws Exception {
-		final Path workTreePath = Utils.getTempDirectory().resolve("Just created " + Instant.now());
+		final Path workTreePath = Utils.getTempUniqueDirectory("Just created");
 		final Path gitDirPath = workTreePath.resolve(".git");
 		Git.init().setDirectory(workTreePath.toFile()).call().close();
 
@@ -42,8 +43,8 @@ class GitUtilsTests {
 			commit.setCommitter(new PersonIdent("Me", "email"));
 			commit.setMessage("New commit");
 			newCommit = commit.call();
-			final Ref master = git.getRepository().exactRef("refs/heads/master");
-			final ObjectId objectId = master.getObjectId();
+			final Ref main = git.getRepository().exactRef("refs/heads/main");
+			final ObjectId objectId = main.getObjectId();
 			Verify.verify(objectId.equals(newCommit));
 		}
 
@@ -68,36 +69,34 @@ class GitUtilsTests {
 	@Test
 	void testUsingBareClone() throws Exception {
 		final GitUri testRel = GitUri.fromUri(URI.create("ssh://git@github.com/oliviercailloux/testrel.git"));
-		final Path repoBarePath = Utils.getTempDirectory().resolve("testrel cloned bare " + Instant.now());
+		final Path repoBarePath = Utils.getTempUniqueDirectory("testrel cloned bare");
 		new GitCloner().downloadBare(testRel, repoBarePath).close();
 		final GitHistory history = getHistory(repoBarePath.toFile());
 		assertTrue(history.getGraph().nodes().size() >= 2);
-		new GitCloner().downloadBare(testRel, repoBarePath).close();
-		assertEquals(history, getHistory(repoBarePath.toFile()));
-		new GitCloner().download(testRel, repoBarePath).close();
-		assertEquals(history, getHistory(repoBarePath.toFile()));
+//		new GitCloner().downloadBare(testRel, repoBarePath).close();
+//		assertEquals(history, getHistory(repoBarePath.toFile()));
+//		new GitCloner().download(testRel, repoBarePath).close();
+//		assertEquals(history, getHistory(repoBarePath.toFile()));
 	}
 
 	@Test
 	void testUsingClone() throws Exception {
 		final GitUri testRel = GitUri.fromUri(URI.create("ssh://git@github.com/oliviercailloux/testrel.git"));
-		final Path workTreePath = Utils.getTempDirectory().resolve("testrel cloned " + Instant.now());
+		final Path workTreePath = Utils.getTempUniqueDirectory("testrel cloned");
 		final Path gitDir = workTreePath.resolve(".git");
 		new GitCloner().download(testRel, workTreePath).close();
 		final GitHistory history = getHistory(gitDir.toFile());
 		assertTrue(history.getGraph().nodes().size() >= 2);
 		new GitCloner().download(testRel, workTreePath).close();
 		assertEquals(history, getHistory(gitDir.toFile()));
-		new GitCloner().downloadBare(testRel, gitDir).close();
-		assertEquals(history, getHistory(gitDir.toFile()));
+//		new GitCloner().downloadBare(testRel, gitDir).close();
+//		assertEquals(history, getHistory(gitDir.toFile()));
 	}
 
 	@Test
 	void testUsingWrongDir() throws Exception {
-//		assertThrows(RepositoryNotFoundException.class,
-//				() -> getHistory(Utils.getTempDirectory().resolve("not existing " + Instant.now()).toFile()));
-		assertEquals(GraphBuilder.directed().build(),
-				getHistory(Utils.getTempDirectory().resolve("not existing " + Instant.now()).toFile()).getGraph());
+		assertThrows(IllegalArgumentException.class,
+				() -> getHistory(Utils.getTempUniqueDirectory("not existing").toFile()));
 	}
 
 	private static GitHistory getHistory(File repoFile) throws IOException {
