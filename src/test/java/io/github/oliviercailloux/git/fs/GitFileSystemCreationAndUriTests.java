@@ -59,14 +59,6 @@ class GitFileSystemCreationAndUriTests {
 	}
 
 	@Test
-	void testEmptyPath() throws Exception {
-		final Path emptyDir = Utils.getTempUniqueDirectory("testEmpty");
-		Files.createDirectories(emptyDir);
-		assertTrue(Files.exists(emptyDir));
-		assertThrows(ProviderNotFoundException.class, () -> FileSystems.newFileSystem(emptyDir));
-	}
-
-	@Test
 	void testEmptyRepo() throws Exception {
 		final Path emptyDir = Utils.getTempUniqueDirectory("test empty repo");
 		try (FileRepository repository = (FileRepository) new FileRepositoryBuilder().setGitDir(emptyDir.toFile())
