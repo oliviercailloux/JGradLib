@@ -114,6 +114,7 @@ public class JGit {
 	}
 
 	public static ImmutableList<ObjectId> createBasicRepo(Repository repository) throws IOException {
+//		repository.getConfig().setString("init", null, "defaultBranch", "main");
 		repository.create(true);
 		final ObjectDatabase objectDatabase = repository.getObjectDatabase();
 
@@ -302,7 +303,7 @@ public class JGit {
 
 	public static void setMain(Repository repository, ObjectId newId) {
 		try {
-			final RefUpdate updateRef = repository.updateRef("refs/heads/master");
+			final RefUpdate updateRef = repository.updateRef("refs/heads/main");
 			updateRef.setNewObjectId(newId);
 			final Result updateResult = updateRef.update();
 			Verify.verify(updateResult == Result.NEW, updateResult.toString());
