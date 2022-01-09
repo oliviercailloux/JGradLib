@@ -1,7 +1,6 @@
 package io.github.oliviercailloux.java_grade.graders;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.github.oliviercailloux.grade.IGrade;
 import io.github.oliviercailloux.java_grade.JavaGradeUtils;
@@ -53,7 +52,6 @@ public class WorkersTests {
 
 		final IGrade codeGrade = JavaGradeUtils.gradeSecurely(compiledDir, WorkersGrader::grade);
 //		Files.writeString(Path.of("out.html"), XmlUtils.toString(HtmlGrades.asHtml(codeGrade, "Perfectnl", 19.5d)));
-//		assertEquals(7.5d / 9.5d, codeGrade.getPoints(), 1e-6d);
-		assertTrue(codeGrade.getPoints() > 0.9d);
+		assertEquals(16.5d / 19.5d, codeGrade.getPoints(), 1e-6d);
 	}
 }

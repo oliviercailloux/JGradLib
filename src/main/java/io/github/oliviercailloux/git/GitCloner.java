@@ -213,7 +213,7 @@ public class GitCloner {
 			final Ref head = IO_UNCHECKER.getUsing(() -> git.getRepository().findRef(Constants.HEAD));
 			checkArgument(head != null, "Did you forget to create the repository?");
 			final String headRef = head.getTarget().getName();
-			checkArgument(headRef.equals("refs/heads/master") || headRef.equals("refs/heads/main"));
+			checkArgument(headRef.equals("refs/heads/master") || headRef.equals("refs/heads/main"), headRef);
 
 			final ImmutableMap<String, ObjectId> originRefs = remoteRefs.row("origin");
 			final SetView<String> commonRefShortNames = Sets.intersection(originRefs.keySet(), localRefs.keySet());

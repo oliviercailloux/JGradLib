@@ -132,7 +132,7 @@ public class NewCompiler {
 				ImmutableList.of(), null, fileManager.getJavaFileObjectsFromPaths(sourcePaths)).call();
 		final String compilationOutput = compilationOutputReceiver.toString();
 		if (!compilationOutput.isEmpty()) {
-			throw new UnsupportedOperationException(getDiagnostics().toString());
+			throw new UnsupportedOperationException(getDiagnostics().toString() + ";;" + compilationOutput);
 		}
 		return compiled;
 	}

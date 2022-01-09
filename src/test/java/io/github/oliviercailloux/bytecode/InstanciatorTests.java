@@ -27,6 +27,7 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -125,6 +126,7 @@ public class InstanciatorTests {
 	 * Just to test what is allowed.
 	 */
 	@Test
+	@Disabled("No more implementation of this interface in the class path")
 	void testLoadManually() throws Exception {
 		final ClassGraph classGraph = new ClassGraph();
 		final ClassGraph graph = classGraph.enableAllInfo();
@@ -150,6 +152,7 @@ public class InstanciatorTests {
 	 * Just to test what is allowed.
 	 */
 	@Test
+	@Disabled("No more implementation of this interface in the class path")
 	void testLoadManuallyThis() throws Exception {
 		final ClassGraph classGraph = new ClassGraph();
 		final ClassGraph graph = classGraph.enableAllInfo();

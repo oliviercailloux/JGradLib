@@ -24,10 +24,12 @@ import java.security.Permissions;
 import java.security.Policy;
 import java.security.SecurityPermission;
 import java.util.function.Function;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+@Disabled("Compilation warns about deprecated security API.")
 public class SandboxTests {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(SandboxTests.class);

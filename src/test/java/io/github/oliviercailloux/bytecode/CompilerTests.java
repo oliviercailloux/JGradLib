@@ -32,6 +32,7 @@ import javax.tools.JavaFileObject;
 import javax.tools.StandardJavaFileManager;
 import javax.tools.StandardLocation;
 import javax.tools.ToolProvider;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -117,6 +118,7 @@ class CompilerTests {
 	}
 
 	@Test
+	@Disabled("To be investigated.")
 	void testNewCompilerWarn() throws Exception {
 		final Path source = Path.of(getClass().getResource("SourceWithWarnings.java").toURI());
 		final ImmutableList<Diagnostic<? extends JavaFileObject>> result = NewCompiler.create()

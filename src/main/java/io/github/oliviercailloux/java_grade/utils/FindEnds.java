@@ -12,8 +12,8 @@ import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinatesWithPrefix;
 import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherV3;
 import io.github.oliviercailloux.jaris.exceptions.Unchecker;
+import io.github.oliviercailloux.utils.Utils;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.List;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.ListBranchCommand.ListMode;
@@ -34,7 +34,7 @@ public class FindEnds {
 		LOGGER.info("Ended: {}.", ended);
 	}
 
-	private static final Path WORK_DIR = Paths.get("../../Java L3/En cours");
+	private static final Path WORK_DIR = Utils.getTempDirectory();
 	private final String prefix;
 
 	private FindEnds(String prefix) {
@@ -54,7 +54,8 @@ public class FindEnds {
 	public boolean hasEnd(RepositoryCoordinates coord) {
 		final Path projectsBaseDir = WORK_DIR.resolve(prefix);
 		final Path projectDir = projectsBaseDir.resolve(coord.getRepositoryName());
-		new GitCloner().download(GitUri.fromUri(coord.asURI()), projectDir).close();
+		/* False because sometimes the main branch has a strange name. */
+		new GitCloner().setCheckCommonRefsAgree(false).download(GitUri.fromUri(coord.asURI()), projectDir).close();
 
 		try (Git git = IO_UNCHECKER.getUsing(() -> Git.open(projectDir.resolve(".git").toFile()))) {
 			final List<Ref> remoteRefs = Unchecker.wrappingWith(IllegalStateException::new)
