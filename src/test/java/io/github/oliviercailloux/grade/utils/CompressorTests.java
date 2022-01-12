@@ -46,6 +46,7 @@ public class CompressorTests {
 				.from(ImmutableMap.of(GradePath.from("user.name"), one, GradePath.from("main/Impl/Class1"), one,
 						GradePath.from("main/Impl/Class2"), one, GradePath.from("main/Warnings"), one));
 		final IGrade obtained = Compressor.compress(grade, model);
+		/* Fails currently, not sure whether it’s a bug or a feature. */
 		assertEquals(model, obtained.toTree());
 	}
 }

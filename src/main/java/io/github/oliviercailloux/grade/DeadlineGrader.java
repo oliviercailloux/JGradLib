@@ -392,13 +392,13 @@ public class DeadlineGrader {
 	private ImmutableSortedSet<Instant> fromJustBeforeDeadline(GitFileSystemHistory history) throws IOException {
 		final ImmutableSortedSet<Instant> toConsider;
 		{
-			final ImmutableSortedSet<Instant> timestamps = history.asGitHistory().getCommitDates().values().stream()
+			final ImmutableSortedSet<Instant> timestamps = history.asGitHistory().getTimeStamps().values().stream()
 					.collect(ImmutableSortedSet.toImmutableSortedSet(Comparator.naturalOrder()));
 			final Instant latestAll = getLatestBefore(timestamps, deadline.toInstant());
 			final ImmutableSortedSet<Instant> fromJustBefore = timestamps.tailSet(latestAll);
 
 			final ImmutableSortedSet<Instant> timestampsNonGitHub = history
-					.filter(p -> !JavaMarkHelper.committerIsGitHub(p)).asGitHistory().getCommitDates().values().stream()
+					.filter(p -> !JavaMarkHelper.committerIsGitHub(p)).asGitHistory().getTimeStamps().values().stream()
 					.collect(ImmutableSortedSet.toImmutableSortedSet(Comparator.naturalOrder()));
 			final Instant latestNonGitHub = getLatestBefore(timestampsNonGitHub, deadline.toInstant());
 			final ImmutableSortedSet.Builder<Instant> builder = ImmutableSortedSet.naturalOrder();

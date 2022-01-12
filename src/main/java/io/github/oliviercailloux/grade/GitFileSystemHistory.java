@@ -220,7 +220,7 @@ public class GitFileSystemHistory {
 		if (!history.getGraph().nodes().contains(id)) {
 			throw new NoSuchFileException(commit.toString());
 		}
-		return history.getCommitDate(id);
+		return history.getTimeStamp(id);
 	}
 
 	public boolean isEmpty() {

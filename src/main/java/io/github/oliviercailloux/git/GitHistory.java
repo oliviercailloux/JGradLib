@@ -61,23 +61,25 @@ public class GitHistory {
 	 * Returns a graph representing the has-as-child relation: the successors of a
 	 * node are its children; following the successors (children) relation goes
 	 * forward in time; following the predecessors (parents) relation goes back in
-	 * time; a pair (a, b) in the graph represents a parent a and its child b.
+	 * time; a pair (a, b) in the graph represents a parent commit a and its child
+	 * commit b.
 	 * <p>
 	 * This contradicts the usual git vision, where the edge represents the parent
-	 * relation; but it is more intuitive that the “successors” relation goes
-	 * forward in time, in other words, that the vertices flow in the direction of
-	 * time. Furthermore, in graph theory, the usual convention is that the roots
-	 * are the node without predecessors, and that the DAG flows outwards from the
-	 * root (if the DAG is a tree, this is then called an out-tree or arborescence,
-	 * in Wikipedia terminology). With the convention adopted here, the roots, in
-	 * that sense, are also the first nodes in time, which makes sense intuitively.
-	 * With the git convention (where the edges flow from parent to children), you
-	 * have to choose between calling a “root” a node which has no successors but
-	 * possibly predecessors, or calling a “root” a node which is at the end of
-	 * time, which both feel intuitively awkward. I suppose this discrepancy between
-	 * the common edge orientation and the time-flow is a usual problem with VCSes
-	 * more generally (but I am not sure).
-	 * https://math.stackexchange.com/questions/1374802
+	 * relation, thus, flow from child commits to their parents (which reflects the
+	 * actual pointer locations, I suppose); but it is more intuitive that the
+	 * “successors” relation goes forward in time, in other words, that the edges
+	 * flow in the direction of time. Furthermore, in graph theory, the usual
+	 * convention is that the roots are the node without predecessors, and that the
+	 * DAG flows outwards from the roots (if the DAG is a tree, this is then called
+	 * an out-tree or arborescence, in Wikipedia terminology). With the convention
+	 * adopted here, the roots, in that sense, are also the first nodes in time,
+	 * which makes sense intuitively. With the git convention (where the edges flow
+	 * from child commits to their parents), you have to choose between calling a
+	 * “root” a node which has no successors but possibly predecessors, or calling a
+	 * “root” a node which is at the end of time, which both feel intuitively
+	 * awkward. I suppose this discrepancy between the common edge orientation and
+	 * the time-flow is a usual problem with VCSes more generally (but I am not
+	 * sure). https://math.stackexchange.com/questions/1374802
 	 *
 	 * @return a DAG (thus, irreflexive)
 	 */
@@ -86,9 +88,10 @@ public class GitHistory {
 	}
 
 	/**
-	 * The children from which everything starts; the starting points in time of the
-	 * git history; equivalently, the smallest set of nodes from which all nodes are
-	 * reachable by following the “successors” (children) relation.
+	 * The parents from which everything starts, that is, the smallest set of nodes
+	 * from which all nodes are reachable by following the “successors” (children)
+	 * relation; equivalently, the starting points in time of the git history, that
+	 * is, the nodes that have no predecessor.
 	 * <p>
 	 * Usually there’s a single root, but git allows for <a href=
 	 * "https://git-scm.com/docs/git-checkout#Documentation/git-checkout.txt---orphanltnewbranchgt">multiple
@@ -128,7 +131,7 @@ public class GitHistory {
 	 * @throws IllegalArgumentException iff the given commit id is not a node of the
 	 *                                  {@link #getGraph() graph}.
 	 */
-	public Instant getCommitDate(ObjectId commitId) {
+	public Instant getTimeStamp(ObjectId commitId) {
 		checkArgument(dates.containsKey(commitId));
 		return dates.get(commitId);
 	}
@@ -136,7 +139,7 @@ public class GitHistory {
 	/**
 	 * @return a map whose key set equals the nodes of the {@link #getGraph() graph}
 	 */
-	public ImmutableMap<ObjectId, Instant> getCommitDates() {
+	public ImmutableMap<ObjectId, Instant> getTimeStamps() {
 		return dates;
 	}
 
@@ -144,14 +147,14 @@ public class GitHistory {
 		/**
 		 * Two choices are reasonable here. Either I just compute the induced subgraph,
 		 * or I try not to disconnect the graph. E.g., with a ← b ← c, filtering out b
-		 * will disconnect the graph, whereas I could instead return a ← b. The drawback
+		 * will disconnect the graph, whereas I could instead return a ← c. The drawback
 		 * of this last solution is that it is difficult to implement, and it changes
 		 * the parent relation.
 		 */
 		final ImmutableSet<ObjectId> kept = graph.nodes().stream().filter(predicate)
 				.collect(ImmutableSet.toImmutableSet());
 		final MutableGraph<ObjectId> outGraph = Graphs.inducedSubgraph(graph, kept);
-		return create(outGraph, Maps.filterKeys(dates, predicate::test));
+		return create(outGraph, dates);
 //		final ImmutableGraph.Builder<E> builder = GraphBuilder.directed().immutable();
 //		kept.stream().forEach(builder::addNode);
 //		LOGGER.info("Kept {}.", kept);
