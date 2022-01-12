@@ -54,13 +54,6 @@ public class DeadlineGrader {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(DeadlineGrader.class);
 
-	public static Instant getLatestCommit(GitFileSystemHistory history) {
-		checkArgument(!history.isEmpty());
-		final GitHistory asGitHistory = history.asGitHistory();
-		return asGitHistory.getLeaves().stream().map(asGitHistory::getTimestamp).max(Comparator.naturalOrder())
-				.orElseThrow();
-	}
-
 	private static class PathToGitGrader {
 
 		private static final double USER_GRADE_WEIGHT = 0.5d / 20d;
@@ -296,6 +289,68 @@ public class DeadlineGrader {
 		this.penalizer = checkNotNull(penalizer);
 	}
 
+	private static Instant getLatestCommit(GitFileSystemHistory history) {
+		checkArgument(!history.isEmpty());
+		final GitHistory asGitHistory = history.asGitHistory();
+		return asGitHistory.getLeaves().stream().map(asGitHistory::getTimestamp).max(Comparator.naturalOrder())
+				.orElseThrow();
+	}
+
+	/**
+	 * @return the latest instant weakly before the cap, or the cap itself if there
+	 *         are none such instants.
+	 */
+	private static Instant getLatestBefore(ImmutableSortedSet<Instant> timestamps, Instant cap) {
+		final ImmutableSortedSet<Instant> toCap = timestamps.headSet(cap, true);
+		LOGGER.debug("All timestamps: {}, picking those before {} results in: {}.", timestamps, cap, toCap);
+		final Instant considerFrom;
+		if (toCap.isEmpty()) {
+			considerFrom = cap;
+		} else {
+			considerFrom = toCap.last();
+		}
+		return considerFrom;
+	}
+
+	private static ImmutableSet<GitFileSystemHistory> fromJustBeforeDeadline(GitFileSystemHistory history,
+			ZonedDateTime deadline) throws IOException {
+		final ImmutableSortedSet<Instant> toConsider;
+		final ImmutableSortedSet<Instant> timestamps = history.asGitHistory().getTimestamps().values().stream()
+				.collect(ImmutableSortedSet.toImmutableSortedSet(Comparator.naturalOrder()));
+		{
+			final Instant latestAll = getLatestBefore(timestamps, deadline.toInstant());
+			final ImmutableSortedSet<Instant> fromJustBefore = timestamps.tailSet(latestAll);
+
+			final ImmutableSortedSet<Instant> timestampsNonGitHub = history
+					.filter(p -> !JavaMarkHelper.committerIsGitHub(p)).asGitHistory().getTimestamps().values().stream()
+					.collect(ImmutableSortedSet.toImmutableSortedSet(Comparator.naturalOrder()));
+			final Instant latestNonGitHub = getLatestBefore(timestampsNonGitHub, deadline.toInstant());
+			final ImmutableSortedSet.Builder<Instant> builder = ImmutableSortedSet.naturalOrder();
+			if (!timestamps.headSet(latestNonGitHub, true).isEmpty()) {
+				builder.add(latestNonGitHub);
+			}
+			toConsider = builder.addAll(fromJustBefore).build();
+		}
+		/** Temporary patch in wait for a better adjustment of GitHub push dates. */
+		final ImmutableSortedSet<Instant> adjustedConsider;
+		if (!toConsider.isEmpty() && toConsider.first().equals(Instant.MIN)) {
+			verify(toConsider.size() >= 2);
+			LOGGER.warn("Ignoring MIN.");
+			adjustedConsider = toConsider.tailSet(Instant.MIN, false);
+		} else {
+			adjustedConsider = toConsider;
+		}
+		LOGGER.debug("Given {}, to consider: {}, adjusted: {}.", history, toConsider, adjustedConsider);
+		verify(toConsider.isEmpty() == history.getGraph().nodes().isEmpty(),
+				toConsider.toString() + history.getGraph().nodes());
+
+		verify(timestamps.containsAll(adjustedConsider));
+
+		return CheckedStream.<Instant, IOException>from(adjustedConsider)
+				.map(timeCap -> history.filter(r -> !history.getCommitDate(r).isAfter(timeCap)))
+				.collect(ImmutableSet.toImmutableSet());
+	}
+
 	public Penalizer getPenalizer() {
 		return penalizer;
 	}
@@ -375,61 +430,6 @@ public class DeadlineGrader {
 		return WeightingGrade.from(ImmutableSet.of(
 				CriterionGradeWeight.from(Criterion.given("grade"), grade, 1d - fractionPenalty),
 				CriterionGradeWeight.from(Criterion.given("Penalty: commit by GitHub"), Mark.zero(), fractionPenalty)));
-	}
-
-	/**
-	 * @return the latest instant weakly before the cap, or the cap itself if there
-	 *         are none such instants.
-	 */
-	private static Instant getLatestBefore(ImmutableSortedSet<Instant> timestamps, Instant cap) {
-		final ImmutableSortedSet<Instant> toCap = timestamps.headSet(cap, true);
-		LOGGER.debug("All timestamps: {}, picking those before {} results in: {}.", timestamps, cap, toCap);
-		final Instant considerFrom;
-		if (toCap.isEmpty()) {
-			considerFrom = cap;
-		} else {
-			considerFrom = toCap.last();
-		}
-		return considerFrom;
-	}
-
-	private static ImmutableSet<GitFileSystemHistory> fromJustBeforeDeadline(GitFileSystemHistory history,
-			ZonedDateTime deadline) throws IOException {
-		final ImmutableSortedSet<Instant> toConsider;
-		final ImmutableSortedSet<Instant> timestamps = history.asGitHistory().getTimestamps().values().stream()
-				.collect(ImmutableSortedSet.toImmutableSortedSet(Comparator.naturalOrder()));
-		{
-			final Instant latestAll = getLatestBefore(timestamps, deadline.toInstant());
-			final ImmutableSortedSet<Instant> fromJustBefore = timestamps.tailSet(latestAll);
-
-			final ImmutableSortedSet<Instant> timestampsNonGitHub = history
-					.filter(p -> !JavaMarkHelper.committerIsGitHub(p)).asGitHistory().getTimestamps().values().stream()
-					.collect(ImmutableSortedSet.toImmutableSortedSet(Comparator.naturalOrder()));
-			final Instant latestNonGitHub = getLatestBefore(timestampsNonGitHub, deadline.toInstant());
-			final ImmutableSortedSet.Builder<Instant> builder = ImmutableSortedSet.naturalOrder();
-			if (!timestamps.headSet(latestNonGitHub, true).isEmpty()) {
-				builder.add(latestNonGitHub);
-			}
-			toConsider = builder.addAll(fromJustBefore).build();
-		}
-		/** Temporary patch in wait for a better adjustment of GitHub push dates. */
-		final ImmutableSortedSet<Instant> adjustedConsider;
-		if (!toConsider.isEmpty() && toConsider.first().equals(Instant.MIN)) {
-			verify(toConsider.size() >= 2);
-			LOGGER.warn("Ignoring MIN.");
-			adjustedConsider = toConsider.tailSet(Instant.MIN, false);
-		} else {
-			adjustedConsider = toConsider;
-		}
-		LOGGER.debug("Given {}, to consider: {}, adjusted: {}.", history, toConsider, adjustedConsider);
-		verify(toConsider.isEmpty() == history.getGraph().nodes().isEmpty(),
-				toConsider.toString() + history.getGraph().nodes());
-
-		verify(timestamps.containsAll(adjustedConsider));
-
-		return CheckedStream.<Instant, IOException>from(adjustedConsider)
-				.map(timeCap -> history.filter(r -> !history.getCommitDate(r).isAfter(timeCap)))
-				.collect(ImmutableSet.toImmutableSet());
 	}
 
 	@Override
