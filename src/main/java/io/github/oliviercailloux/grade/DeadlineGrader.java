@@ -57,7 +57,7 @@ public class DeadlineGrader {
 	public static Instant getLatestCommit(GitFileSystemHistory history) {
 		checkArgument(!history.isEmpty());
 		final GitHistory asGitHistory = history.asGitHistory();
-		return asGitHistory.getLeaves().stream().map(asGitHistory::getTimeStamp).max(Comparator.naturalOrder())
+		return asGitHistory.getLeaves().stream().map(asGitHistory::getTimestamp).max(Comparator.naturalOrder())
 				.orElseThrow();
 	}
 
@@ -396,14 +396,14 @@ public class DeadlineGrader {
 	private static ImmutableSet<GitFileSystemHistory> fromJustBeforeDeadline(GitFileSystemHistory history,
 			ZonedDateTime deadline) throws IOException {
 		final ImmutableSortedSet<Instant> toConsider;
-		final ImmutableSortedSet<Instant> timestamps = history.asGitHistory().getTimeStamps().values().stream()
+		final ImmutableSortedSet<Instant> timestamps = history.asGitHistory().getTimestamps().values().stream()
 				.collect(ImmutableSortedSet.toImmutableSortedSet(Comparator.naturalOrder()));
 		{
 			final Instant latestAll = getLatestBefore(timestamps, deadline.toInstant());
 			final ImmutableSortedSet<Instant> fromJustBefore = timestamps.tailSet(latestAll);
 
 			final ImmutableSortedSet<Instant> timestampsNonGitHub = history
-					.filter(p -> !JavaMarkHelper.committerIsGitHub(p)).asGitHistory().getTimeStamps().values().stream()
+					.filter(p -> !JavaMarkHelper.committerIsGitHub(p)).asGitHistory().getTimestamps().values().stream()
 					.collect(ImmutableSortedSet.toImmutableSortedSet(Comparator.naturalOrder()));
 			final Instant latestNonGitHub = getLatestBefore(timestampsNonGitHub, deadline.toInstant());
 			final ImmutableSortedSet.Builder<Instant> builder = ImmutableSortedSet.naturalOrder();

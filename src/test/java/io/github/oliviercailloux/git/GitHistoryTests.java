@@ -38,7 +38,7 @@ class GitHistoryTests {
 				ImmutableMap.<ObjectId, Instant>of());
 		assertEquals(ImmutableSet.of(), history.getRoots());
 		assertEquals(ImmutableSet.of(), history.getLeaves());
-		assertEquals(ImmutableMap.of(), history.getTimeStamps());
+		assertEquals(ImmutableMap.of(), history.getTimestamps());
 		assertEquals(GraphBuilder.directed().build(), history.getGraph());
 	}
 
@@ -51,7 +51,7 @@ class GitHistoryTests {
 			final GitHistory history = GitUtils.getHistory(repository);
 			assertEquals(ImmutableSet.of(), history.getRoots());
 			assertEquals(ImmutableSet.of(), history.getLeaves());
-			assertEquals(ImmutableMap.of(), history.getTimeStamps());
+			assertEquals(ImmutableMap.of(), history.getTimestamps());
 			assertEquals(GraphBuilder.directed().build(), history.getGraph());
 		}
 		assertThrows(RepositoryNotFoundException.class, () -> Git.open(Path.of("inexistent").toFile()));
@@ -88,7 +88,7 @@ class GitHistoryTests {
 
 		final ImmutableGraph.Builder<ObjectId> expectedBuilder = GraphBuilder.directed().immutable();
 		assertEquals(expectedBuilder.putEdge(a, b).putEdge(b, c).build(), filtered.getGraph());
-		assertEquals(ImmutableMap.of(a, Instant.MAX, b, Instant.MAX, c, Instant.MAX), filtered.getTimeStamps());
+		assertEquals(ImmutableMap.of(a, Instant.MAX, b, Instant.MAX, c, Instant.MAX), filtered.getTimestamps());
 	}
 
 	@Test
@@ -112,9 +112,9 @@ class GitHistoryTests {
 			final ObjectId parent = ObjectId.fromString("21af8bffc747eaee04217b9c8bb9e3e4a3a6293d");
 			final ObjectId child = ObjectId.fromString("c145866575e55309f943ad2c2b4d547b926f38d0");
 			final ObjectId childChild = ObjectId.fromString("4016d7b1b09e2a188fb99d30d1ca5b0f726a4a3d");
-			assertEquals(Instant.parse("2018-08-21T14:35:14Z"), history.getTimeStamp(parent));
-			assertEquals(Instant.parse("2018-08-21T18:25:52Z"), history.getTimeStamp(child));
-			assertEquals(Instant.parse("2018-08-21T18:28:49Z"), history.getTimeStamp(childChild));
+			assertEquals(Instant.parse("2018-08-21T14:35:14Z"), history.getTimestamp(parent));
+			assertEquals(Instant.parse("2018-08-21T18:25:52Z"), history.getTimestamp(child));
+			assertEquals(Instant.parse("2018-08-21T18:28:49Z"), history.getTimestamp(childChild));
 			final ImmutableGraph<ObjectId> graph = history.getGraph();
 			assertTrue(graph.successors(parent).contains(child));
 			assertTrue(graph.successors(child).contains(childChild));

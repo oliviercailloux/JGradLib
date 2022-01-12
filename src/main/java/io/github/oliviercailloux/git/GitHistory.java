@@ -131,7 +131,7 @@ public class GitHistory {
 	 * @throws IllegalArgumentException iff the given commit id is not a node of the
 	 *                                  {@link #getGraph() graph}.
 	 */
-	public Instant getTimeStamp(ObjectId commitId) {
+	public Instant getTimestamp(ObjectId commitId) {
 		checkArgument(dates.containsKey(commitId));
 		return dates.get(commitId);
 	}
@@ -139,7 +139,7 @@ public class GitHistory {
 	/**
 	 * @return a map whose key set equals the nodes of the {@link #getGraph() graph}
 	 */
-	public ImmutableMap<ObjectId, Instant> getTimeStamps() {
+	public ImmutableMap<ObjectId, Instant> getTimestamps() {
 		return dates;
 	}
 

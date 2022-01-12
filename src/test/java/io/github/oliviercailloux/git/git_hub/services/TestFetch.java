@@ -199,7 +199,7 @@ public class TestFetch {
 			final GitHubHistory gHH = fetcher.getReversedGitHubHistory(coord);
 			final ImmutableMap<ObjectId, Instant> pushDates = gHH.getPushDates();
 			final GitHistory consistentHistory = gHH.getConsistentPushHistory();
-			final ImmutableMap<ObjectId, Instant> compPushedDates = consistentHistory.getTimeStamps();
+			final ImmutableMap<ObjectId, Instant> compPushedDates = consistentHistory.getTimestamps();
 
 			assertEquals(ImmutableSet.of(ObjectId.fromString("f96c728044e885fceaf4a3ae926f1a13dd329758")),
 					consistentHistory.getRoots());
@@ -232,7 +232,7 @@ public class TestFetch {
 			final GitHubHistory gHH = fetcher.getReversedGitHubHistory(coord);
 			final ImmutableMap<ObjectId, Instant> pushDates = gHH.getPushDates();
 			final GitHistory consistentHistory = gHH.getConsistentPushHistory();
-			final ImmutableMap<ObjectId, Instant> compPushedDates = consistentHistory.getTimeStamps();
+			final ImmutableMap<ObjectId, Instant> compPushedDates = consistentHistory.getTimestamps();
 
 			final ObjectId c50 = ObjectId.fromString("50241f2a198f0eec686b19d235cd50c90614ac03");
 			assertEquals(Instant.parse("2016-09-23T13:00:33Z"), pushDates.get(c50));
@@ -268,7 +268,7 @@ public class TestFetch {
 			final GitHubHistory gHH = fetcher.getReversedGitHubHistory(coord);
 			final ImmutableMap<ObjectId, Instant> pushDates = gHH.getPushDates();
 			final GitHistory consistentHistory = gHH.getConsistentPushHistory();
-			final ImmutableMap<ObjectId, Instant> compPushedDates = consistentHistory.getTimeStamps();
+			final ImmutableMap<ObjectId, Instant> compPushedDates = consistentHistory.getTimestamps();
 
 			assertEquals(ImmutableMap.of(), pushDates);
 			assertEquals(ImmutableSet.of(Instant.MIN), ImmutableSet.copyOf(compPushedDates.values()));
