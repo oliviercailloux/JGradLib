@@ -339,7 +339,7 @@ public class DeadlineGrader {
 	 *
 	 */
 	private ImmutableBiMap<Instant, IGrade> getPenalizedGradesByCap(GitWork work) throws IOException {
-		final ImmutableSortedSet<Instant> toConsider = fromJustBeforeDeadline(work.getHistory());
+		final ImmutableSortedSet<Instant> toConsider = fromJustBeforeDeadline(work.getHistory(), deadline);
 
 		final ImmutableBiMap.Builder<Instant, IGrade> byTimeBuilder = ImmutableBiMap.builder();
 		for (Instant timeCap : toConsider) {
@@ -377,7 +377,7 @@ public class DeadlineGrader {
 	 * @return the latest instant weakly before the cap, or the cap itself if there
 	 *         are none such instants.
 	 */
-	private Instant getLatestBefore(ImmutableSortedSet<Instant> timestamps, Instant cap) {
+	private static Instant getLatestBefore(ImmutableSortedSet<Instant> timestamps, Instant cap) {
 		final ImmutableSortedSet<Instant> toCap = timestamps.headSet(cap, true);
 		LOGGER.debug("All timestamps: {}, picking those before {} results in: {}.", timestamps, cap, toCap);
 		final Instant considerFrom;
@@ -389,7 +389,8 @@ public class DeadlineGrader {
 		return considerFrom;
 	}
 
-	private ImmutableSortedSet<Instant> fromJustBeforeDeadline(GitFileSystemHistory history) throws IOException {
+	private static ImmutableSortedSet<Instant> fromJustBeforeDeadline(GitFileSystemHistory history,
+			ZonedDateTime deadline) throws IOException {
 		final ImmutableSortedSet<Instant> toConsider;
 		{
 			final ImmutableSortedSet<Instant> timestamps = history.asGitHistory().getTimeStamps().values().stream()
