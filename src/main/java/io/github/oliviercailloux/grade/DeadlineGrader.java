@@ -54,6 +54,13 @@ public class DeadlineGrader {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(DeadlineGrader.class);
 
+	public static Instant getLatestCommit(GitFileSystemHistory history) {
+		checkArgument(!history.isEmpty());
+		final GitHistory asGitHistory = history.asGitHistory();
+		return asGitHistory.getLeaves().stream().map(asGitHistory::getTimeStamp).max(Comparator.naturalOrder())
+				.orElseThrow();
+	}
+
 	private static class PathToGitGrader {
 
 		private static final double USER_GRADE_WEIGHT = 0.5d / 20d;
@@ -340,30 +347,24 @@ public class DeadlineGrader {
 	 *
 	 */
 	private ImmutableBiMap<Instant, IGrade> getPenalizedGradesByCap(GitWork work) throws IOException {
-		final ImmutableSortedSet<Instant> toConsider = fromJustBeforeDeadline(work.getHistory(), deadline);
+		final ImmutableSet<GitFileSystemHistory> toConsider = fromJustBeforeDeadline(work.getHistory(), deadline);
 
 		final ImmutableBiMap.Builder<Instant, IGrade> byTimeBuilder = ImmutableBiMap.builder();
-		for (Instant timeCap : toConsider) {
-			final IGrade penalizedGrade = getPenalized(work, timeCap);
-			byTimeBuilder.put(timeCap, penalizedGrade);
+		for (GitFileSystemHistory timeCapped : toConsider) {
+			final IGrade penalizedGrade = getPenalized(work.getAuthor(), timeCapped);
+			byTimeBuilder.put(getLatestCommit(timeCapped), penalizedGrade);
 		}
 		final ImmutableBiMap<Instant, IGrade> byTime = byTimeBuilder.build();
 		verify(toConsider.isEmpty() == work.getHistory().getGraph().nodes().isEmpty());
 		return byTime;
 	}
 
-	private IGrade getPenalized(GitWork work, Instant timeCap) throws IOException {
-		final GitHubUsername author = work.getAuthor();
-		final GitFileSystemHistory history = work.getHistory();
-		checkArgument(!history.isEmpty());
-		final GitFileSystemHistory withinCap = history.filter(r -> !history.getCommitDate(r).isAfter(timeCap));
-		checkArgument(!withinCap.isEmpty(), timeCap);
-		final IGrade grade = grader.apply(GitWork.given(author, withinCap));
-		final GitHistory asGitHistory = withinCap.asGitHistory();
-		final Duration lateness = Duration.between(deadline.toInstant(), asGitHistory.getLeaves().stream()
-				.map(asGitHistory::getTimeStamp).max(Comparator.naturalOrder()).orElseThrow());
+	private IGrade getPenalized(GitHubUsername author, GitFileSystemHistory capped) throws IOException {
+		final IGrade grade = grader.apply(GitWork.given(author, capped));
+		final Instant latest = getLatestCommit(capped);
+		final Duration lateness = Duration.between(deadline.toInstant(), latest);
 		final IGrade penalizedForTimeGrade = penalizer.penalize(lateness, grade);
-		if (!withinCap.filter(r -> JavaMarkHelper.committerIsGitHub(r)).isEmpty()) {
+		if (!capped.filter(r -> JavaMarkHelper.committerIsGitHub(r)).isEmpty()) {
 			return penalizeForGitHub(penalizedForTimeGrade);
 		}
 		return penalizedForTimeGrade;
@@ -392,12 +393,12 @@ public class DeadlineGrader {
 		return considerFrom;
 	}
 
-	private static ImmutableSortedSet<Instant> fromJustBeforeDeadline(GitFileSystemHistory history,
+	private static ImmutableSet<GitFileSystemHistory> fromJustBeforeDeadline(GitFileSystemHistory history,
 			ZonedDateTime deadline) throws IOException {
 		final ImmutableSortedSet<Instant> toConsider;
+		final ImmutableSortedSet<Instant> timestamps = history.asGitHistory().getTimeStamps().values().stream()
+				.collect(ImmutableSortedSet.toImmutableSortedSet(Comparator.naturalOrder()));
 		{
-			final ImmutableSortedSet<Instant> timestamps = history.asGitHistory().getTimeStamps().values().stream()
-					.collect(ImmutableSortedSet.toImmutableSortedSet(Comparator.naturalOrder()));
 			final Instant latestAll = getLatestBefore(timestamps, deadline.toInstant());
 			final ImmutableSortedSet<Instant> fromJustBefore = timestamps.tailSet(latestAll);
 
@@ -423,7 +424,12 @@ public class DeadlineGrader {
 		LOGGER.debug("Given {}, to consider: {}, adjusted: {}.", history, toConsider, adjustedConsider);
 		verify(toConsider.isEmpty() == history.getGraph().nodes().isEmpty(),
 				toConsider.toString() + history.getGraph().nodes());
-		return adjustedConsider;
+
+		verify(timestamps.containsAll(adjustedConsider));
+
+		return CheckedStream.<Instant, IOException>from(adjustedConsider)
+				.map(timeCap -> history.filter(r -> !history.getCommitDate(r).isAfter(timeCap)))
+				.collect(ImmutableSet.toImmutableSet());
 	}
 
 	@Override
