@@ -11,6 +11,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Iterables;
+import io.github.oliviercailloux.git.GitHistory;
 import io.github.oliviercailloux.git.fs.Commit;
 import io.github.oliviercailloux.git.fs.GitPathRoot;
 import io.github.oliviercailloux.git.fs.GitPathRootSha;
@@ -358,7 +359,9 @@ public class DeadlineGrader {
 		final GitFileSystemHistory withinCap = history.filter(r -> !history.getCommitDate(r).isAfter(timeCap));
 		checkArgument(!withinCap.isEmpty(), timeCap);
 		final IGrade grade = grader.apply(GitWork.given(author, withinCap));
-		final Duration lateness = Duration.between(deadline.toInstant(), timeCap);
+		final GitHistory asGitHistory = withinCap.asGitHistory();
+		final Duration lateness = Duration.between(deadline.toInstant(), asGitHistory.getLeaves().stream()
+				.map(asGitHistory::getTimeStamp).max(Comparator.naturalOrder()).orElseThrow());
 		final IGrade penalizedForTimeGrade = penalizer.penalize(lateness, grade);
 		if (!withinCap.filter(r -> JavaMarkHelper.committerIsGitHub(r)).isEmpty()) {
 			return penalizeForGitHub(penalizedForTimeGrade);
