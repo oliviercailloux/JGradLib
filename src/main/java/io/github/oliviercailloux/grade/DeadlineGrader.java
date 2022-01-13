@@ -278,6 +278,24 @@ public class DeadlineGrader {
 				LinearPenalizer.DEFAULT_PENALIZER);
 	}
 
+	/**
+	 * @return a weighting grade that shows the best grade with weight 1, and the
+	 *         other grades with weight 0, and indicates for each of them where they
+	 *         have been capped.
+	 */
+	public static IGrade getBestAndSub(IGrade best, ImmutableBiMap<Instant, IGrade> byTime, ZonedDateTime deadline) {
+		final IGrade finalGrade;
+		final Instant mainInstant = byTime.inverse().get(best);
+		final ImmutableSet<CriterionGradeWeight> grades = byTime.entrySet().stream()
+				.map(e -> CriterionGradeWeight.from(
+						Criterion.given("Cap at " + e.getKey().atZone(deadline.getZone()).toString()), e.getValue(),
+						e.getKey().equals(mainInstant) ? 1d : 0d))
+				.collect(ImmutableSet.toImmutableSet());
+		finalGrade = WeightingGrade.from(grades,
+				"Using best grade, from " + mainInstant.atZone(deadline.getZone()).toString());
+		return finalGrade;
+	}
+
 	private final Throwing.Function<GitWork, IGrade, IOException> grader;
 	private final ZonedDateTime deadline;
 	private Penalizer penalizer;
@@ -371,26 +389,8 @@ public class DeadlineGrader {
 		} else if (byTime.size() == 1) {
 			finalGrade = bestGrade.get();
 		} else {
-			finalGrade = getBestAndSub(bestGrade.get(), byTime);
+			finalGrade = getBestAndSub(bestGrade.get(), byTime, deadline);
 		}
-		return finalGrade;
-	}
-
-	/**
-	 * @return a weighting grade that shows the best grade with weight 1, and the
-	 *         other grades with weight 0, and indicates for each of them where they
-	 *         have been capped.
-	 */
-	private IGrade getBestAndSub(IGrade best, ImmutableBiMap<Instant, IGrade> byTime) {
-		final IGrade finalGrade;
-		final Instant mainInstant = byTime.inverse().get(best);
-		final ImmutableSet<CriterionGradeWeight> grades = byTime.entrySet().stream()
-				.map(e -> CriterionGradeWeight.from(
-						Criterion.given("Cap at " + e.getKey().atZone(deadline.getZone()).toString()), e.getValue(),
-						e.getKey().equals(mainInstant) ? 1d : 0d))
-				.collect(ImmutableSet.toImmutableSet());
-		finalGrade = WeightingGrade.from(grades,
-				"Using best grade, from " + mainInstant.atZone(deadline.getZone()).toString());
 		return finalGrade;
 	}
 
