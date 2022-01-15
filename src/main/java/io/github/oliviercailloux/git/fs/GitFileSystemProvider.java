@@ -323,7 +323,6 @@ public class GitFileSystemProvider extends FileSystemProvider {
 	 * @throws IOException                      if an exception occurred during
 	 *                                          access to the underlying data.
 	 */
-	@SuppressWarnings("unused")
 	public GitFileFileSystem newFileSystemFromFileRepository(FileRepository repository)
 			throws FileSystemAlreadyExistsException, UnsupportedOperationException, IOException {
 		final Path gitDir = repository.getDirectory().toPath();
@@ -356,12 +355,9 @@ public class GitFileSystemProvider extends FileSystemProvider {
 	 *                                          already for that repository.
 	 * @throws UnsupportedOperationException    if the repository contains no git
 	 *                                          data.
-	 * @throws IOException                      if an exception occurred during
-	 *                                          access to the underlying data.
 	 */
-	@SuppressWarnings("unused")
 	public GitDfsFileSystem newFileSystemFromDfsRepository(DfsRepository repository)
-			throws FileSystemAlreadyExistsException, UnsupportedOperationException, IOException {
+			throws FileSystemAlreadyExistsException, UnsupportedOperationException {
 		fses.verifyCanCreateFileSystemCorrespondingTo(repository);
 
 		if (!repository.getObjectDatabase().exists()) {
