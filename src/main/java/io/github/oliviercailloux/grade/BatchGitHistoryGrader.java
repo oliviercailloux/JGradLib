@@ -34,6 +34,7 @@ import org.slf4j.LoggerFactory;
 public class BatchGitHistoryGrader<X extends Exception> {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(BatchGitHistoryGrader.class);
+	private static final double USER_GRADE_WEIGHT = 0.5d / 20d;
 	private final String prefix;
 	private final ZonedDateTime deadline;
 	private final Function<GitFileSystemHistory, IGrade, X> grader;
@@ -61,23 +62,45 @@ public class BatchGitHistoryGrader<X extends Exception> {
 				final GitHubHistory gitHubHistory = fetcherQl.getReversedGitHubHistory(coordinates);
 				final GitHistory pushHistory = gitHubHistory.getConsistentPushHistory();
 
-//		final GitWork work = GitWork.given(author, history);
-				final GitFileSystemHistory history = GitFileSystemHistory.create(gitFs, pushHistory);
+				final GitFileSystemHistory beforeCommitByGitHub;
+				final String commentGeneralCapped;
+				{
+					final GitFileSystemHistory history = GitFileSystemHistory.create(gitFs, pushHistory);
 
-				final Optional<Instant> earliestTimeCommitByGitHub = history.filter(JavaMarkHelper::committerIsGitHub)
-						.asGitHistory().getTimestamps().values().stream().min(Comparator.naturalOrder());
-				final GitFileSystemHistory filtered;
-				if (earliestTimeCommitByGitHub.isPresent()) {
-					filtered = history.filter(c -> history.asGitHistory().getTimestamp(c.getCommit().getId())
-							.isBefore(earliestTimeCommitByGitHub.orElseThrow()));
-				} else {
-					filtered = history;
+					final Optional<Instant> earliestTimeCommitByGitHub = history
+							.filter(JavaMarkHelper::committerIsGitHub).asGitHistory().getTimestamps().values().stream()
+							.min(Comparator.naturalOrder());
+					if (earliestTimeCommitByGitHub.isPresent()) {
+						beforeCommitByGitHub = history
+								.filter(c -> history.asGitHistory().getTimestamp(c.getCommit().getId())
+										.isBefore(earliestTimeCommitByGitHub.orElseThrow()));
+					} else {
+						beforeCommitByGitHub = history;
+					}
+
+					commentGeneralCapped = earliestTimeCommitByGitHub
+							.map(t -> "Ignored commits after " + t.toString() + ", sent by GitHub.").orElse("");
 				}
 
-				final String commentGeneralCapped = earliestTimeCommitByGitHub
-						.map(t -> "Ignored commits after " + t.toString() + ", sent by GitHub.").orElse("");
+				final ImmutableSortedSet<Instant> consideredTimestamps = getTimestamps(beforeCommitByGitHub);
 
-				final ImmutableBiMap<Instant, IGrade> byTime = getGradesByTime(filtered, penalizer);
+				final ImmutableBiMap.Builder<Instant, IGrade> byTimeBuilder = ImmutableBiMap.builder();
+				for (Instant timeCap : consideredTimestamps) {
+					final GitFileSystemHistory capped = beforeCommitByGitHub
+							.filter(r -> !beforeCommitByGitHub.getCommitDate(r).isAfter(timeCap));
+
+					final IGrade grade = grader.apply(capped);
+
+					final Mark userGrade = DeadlineGrader.getUsernameGrade(beforeCommitByGitHub, author);
+					final WeightingGrade gradeWithUser = WeightingGrade.from(ImmutableSet.of(
+							CriterionGradeWeight.from(Criterion.given("user.name"), userGrade, USER_GRADE_WEIGHT),
+							CriterionGradeWeight.from(Criterion.given("main"), grade, 1d - USER_GRADE_WEIGHT)));
+
+					final Duration lateness = Duration.between(deadline.toInstant(), timeCap);
+					final IGrade penalizedForTimeGrade = penalizer.penalize(lateness, gradeWithUser);
+					byTimeBuilder.put(timeCap, penalizedForTimeGrade);
+				}
+				final ImmutableBiMap<Instant, IGrade> byTime = byTimeBuilder.build();
 
 				final Optional<IGrade> bestGrade = byTime.values().stream()
 						.max(Comparator.comparing(IGrade::getPoints));
@@ -98,29 +121,20 @@ public class BatchGitHistoryGrader<X extends Exception> {
 		}
 	}
 
-	public ImmutableBiMap<Instant, IGrade> getGradesByTime(GitFileSystemHistory history, LinearPenalizer penalizer)
-			throws IOException, X {
+	/**
+	 * @param history
+	 * @return the latest commit time that is on time, that is, the latest commit
+	 *         time within [MIN, deadline], if it exists, and the late commit times,
+	 *         that is, every times of commits falling in the range (deadline, MAX].
+	 */
+	ImmutableSortedSet<Instant> getTimestamps(GitFileSystemHistory history) {
 		final ImmutableSortedSet<Instant> timestamps = history.asGitHistory().getTimestamps().values().stream()
 				.collect(ImmutableSortedSet.toImmutableSortedSet(Comparator.naturalOrder()));
-		/*
-		 * Consider the latest commit time that is on time, that is, the latest commit
-		 * time within [MIN, deadline], if it exists. Also consider the late commit
-		 * times, that is, every times of commits falling in the range (deadline, MAX].
-		 */
 		final Instant latestCommitTimeOnTime = Optional.ofNullable(timestamps.floor(deadline.toInstant()))
 				.orElse(Instant.MIN);
 		final ImmutableSortedSet<Instant> consideredTimestamps = timestamps.subSet(latestCommitTimeOnTime, true,
 				Instant.MAX, true);
 		verify(consideredTimestamps.isEmpty() == history.getGraph().nodes().isEmpty());
-
-		final ImmutableBiMap.Builder<Instant, IGrade> byTimeBuilder = ImmutableBiMap.builder();
-		for (Instant timeCap : consideredTimestamps) {
-			final GitFileSystemHistory capped = history.filter(r -> !history.getCommitDate(r).isAfter(timeCap));
-			final IGrade grade = grader.apply(capped);
-			final Duration lateness = Duration.between(deadline.toInstant(), timeCap);
-			final IGrade penalizedForTimeGrade = penalizer.penalize(lateness, grade);
-			byTimeBuilder.put(timeCap, penalizedForTimeGrade);
-		}
-		return byTimeBuilder.build();
+		return consideredTimestamps;
 	}
 }

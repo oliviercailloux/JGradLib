@@ -65,15 +65,7 @@ public class DeadlineGrader {
 
 		public IGrade grade(GitWork work) throws IOException {
 			final GitFileSystemHistory history = work.getHistory();
-			final CheckedStream<GitPathRoot, IOException> checkedCommits = CheckedStream
-					.wrapping(history.getGraph().nodes().stream());
-			final ImmutableSet<String> authors = checkedCommits.map(GitPathRoot::getCommit).map(Commit::getAuthorName)
-					.collect(ImmutableSet.toImmutableSet());
-			LOGGER.debug("Authors: {}.", authors);
-			final String authorExpected = work.getAuthor().getUsername();
-			verify(!authorExpected.isEmpty());
-			final Mark userGrade = Mark.binary(authors.equals(ImmutableSet.of(authorExpected)), "",
-					"Expected " + authorExpected + ", seen " + authors);
+			final Mark userGrade = getUsernameGrade(history, work.getAuthor());
 			final ImmutableSet<GitPathRootSha> latestTiedPathsOnTime = PathToGitGrader.getLatest(history);
 			checkArgument(!latestTiedPathsOnTime.isEmpty());
 			LOGGER.debug("Considering {}.", latestTiedPathsOnTime);
@@ -294,6 +286,18 @@ public class DeadlineGrader {
 		finalGrade = WeightingGrade.from(grades,
 				"Using best grade, from " + mainInstant.atZone(deadline.getZone()).toString());
 		return finalGrade;
+	}
+
+	public static Mark getUsernameGrade(GitFileSystemHistory history, GitHubUsername expectedUsername)
+			throws IOException {
+		final CheckedStream<GitPathRoot, IOException> checkedCommits = CheckedStream
+				.wrapping(history.getGraph().nodes().stream());
+		final ImmutableSet<String> authors = checkedCommits.map(GitPathRoot::getCommit).map(Commit::getAuthorName)
+				.collect(ImmutableSet.toImmutableSet());
+		LOGGER.debug("Authors: {}.", authors);
+		final String authorExpected = expectedUsername.getUsername();
+		return Mark.binary(authors.equals(ImmutableSet.of(authorExpected)), "",
+				"Expected " + authorExpected + ", seen " + authors);
 	}
 
 	private final Throwing.Function<GitWork, IGrade, IOException> grader;
