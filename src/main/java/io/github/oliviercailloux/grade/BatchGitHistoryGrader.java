@@ -45,7 +45,7 @@ public class BatchGitHistoryGrader<X extends Exception> {
 		this.grader = checkNotNull(grader);
 	}
 
-	public void proceed() throws X {
+	public void proceed() throws X, IOException {
 		final RepositoryFetcher fetcher = RepositoryFetcher.withPrefix(prefix);
 		final ImmutableSet<RepositoryCoordinatesWithPrefix> coordinatess = fetcher.fetch();
 		final LinearPenalizer penalizer = LinearPenalizer.DEFAULT_PENALIZER;
@@ -64,19 +64,35 @@ public class BatchGitHistoryGrader<X extends Exception> {
 //		final GitWork work = GitWork.given(author, history);
 				final GitFileSystemHistory history = GitFileSystemHistory.create(gitFs, pushHistory);
 
-				final ImmutableBiMap<Instant, IGrade> byTime = getGradesByTime(history, penalizer);
+				final Optional<Instant> earliestTimeCommitByGitHub = history.filter(JavaMarkHelper::committerIsGitHub)
+						.asGitHistory().getTimestamps().values().stream().min(Comparator.naturalOrder());
+				final GitFileSystemHistory filtered;
+				if (earliestTimeCommitByGitHub.isPresent()) {
+					filtered = history.filter(c -> history.asGitHistory().getTimestamp(c.getCommit().getId())
+							.isBefore(earliestTimeCommitByGitHub.orElseThrow()));
+				} else {
+					filtered = history;
+				}
+
+				final String commentGeneralCapped = earliestTimeCommitByGitHub
+						.map(t -> "Ignored commits after " + t.toString() + ", sent by GitHub.").orElse("");
+
+				final ImmutableBiMap<Instant, IGrade> byTime = getGradesByTime(filtered, penalizer);
 
 				final Optional<IGrade> bestGrade = byTime.values().stream()
 						.max(Comparator.comparing(IGrade::getPoints));
-				final IGrade finalGrade;
+				final IGrade integratedGrade;
 				if (bestGrade.isEmpty()) {
-					finalGrade = Mark.zero("No commit found.");
+					integratedGrade = Mark.zero("No commit found.");
 				} else if (byTime.size() == 1) {
-					finalGrade = bestGrade.get();
+					integratedGrade = bestGrade.get();
 				} else {
-					finalGrade = DeadlineGrader.getBestAndSub(bestGrade.get(), byTime, deadline);
+					integratedGrade = DeadlineGrader.getBestAndSub(bestGrade.get(), byTime, deadline);
 				}
-				return finalGrade;
+
+				final String separator = integratedGrade.getComment().isEmpty() || commentGeneralCapped.isEmpty() ? ""
+						: "; ";
+				integratedGrade.withComment(integratedGrade.getComment() + separator + commentGeneralCapped);
 
 			}
 		}
@@ -84,17 +100,8 @@ public class BatchGitHistoryGrader<X extends Exception> {
 
 	public ImmutableBiMap<Instant, IGrade> getGradesByTime(GitFileSystemHistory history, LinearPenalizer penalizer)
 			throws IOException, X {
-		final Optional<Instant> earliestTimeCommitByGitHub = history.filter(JavaMarkHelper::committerIsGitHub)
-				.asGitHistory().getTimestamps().values().stream().min(Comparator.naturalOrder());
-		final ImmutableSortedSet<Instant> timestampsAll = history.asGitHistory().getTimestamps().values().stream()
+		final ImmutableSortedSet<Instant> timestamps = history.asGitHistory().getTimestamps().values().stream()
 				.collect(ImmutableSortedSet.toImmutableSortedSet(Comparator.naturalOrder()));
-		final ImmutableSortedSet<Instant> timestamps;
-		if (earliestTimeCommitByGitHub.isPresent()) {
-//			history.filter(c -> history.asGitHistory().getTimestamp(c.getCommit().getId()).isBefore(earliestTimeCommitByGitHub.orElseThrow()));
-			timestamps = timestampsAll.headSet(earliestTimeCommitByGitHub.orElseThrow());
-		} else {
-			timestamps = timestampsAll;
-		}
 		/*
 		 * Consider the latest commit time that is on time, that is, the latest commit
 		 * time within [MIN, deadline], if it exists. Also consider the late commit
