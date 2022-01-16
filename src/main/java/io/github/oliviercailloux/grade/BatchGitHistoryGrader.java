@@ -4,6 +4,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Verify.verify;
 
 import com.google.common.collect.ImmutableBiMap;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedSet;
 import io.github.oliviercailloux.git.GitCloner;
@@ -16,16 +17,23 @@ import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinatesWithPrefix;
 import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherQL;
 import io.github.oliviercailloux.grade.DeadlineGrader.LinearPenalizer;
+import io.github.oliviercailloux.grade.format.HtmlGrades;
+import io.github.oliviercailloux.grade.format.json.JsonGrade;
 import io.github.oliviercailloux.jaris.exceptions.Throwing;
 import io.github.oliviercailloux.jaris.exceptions.Throwing.Function;
 import io.github.oliviercailloux.java_grade.testers.JavaMarkHelper;
+import io.github.oliviercailloux.json.JsonbUtils;
 import io.github.oliviercailloux.utils.Utils;
+import io.github.oliviercailloux.xml.XmlUtils;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZonedDateTime;
 import java.util.Comparator;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Optional;
 import org.eclipse.jgit.internal.storage.file.FileRepository;
 import org.slf4j.Logger;
@@ -46,15 +54,18 @@ public class BatchGitHistoryGrader<X extends Exception> {
 		this.grader = checkNotNull(grader);
 	}
 
-	public void proceed() throws X, IOException {
+	public ImmutableMap<GitHubUsername, IGrade> getGrades() throws X, IOException {
 		final RepositoryFetcher fetcher = RepositoryFetcher.withPrefix(prefix);
 		final ImmutableSet<RepositoryCoordinatesWithPrefix> coordinatess = fetcher.fetch();
 		final LinearPenalizer penalizer = LinearPenalizer.DEFAULT_PENALIZER;
 		final GitCloner cloner = GitCloner.create().setCheckCommonRefsAgree(false);
 
+		final ImmutableMap.Builder<GitHubUsername, IGrade> builder = ImmutableMap.builder();
 		for (RepositoryCoordinatesWithPrefix coordinates : coordinatess) {
 			final Path dir = Utils.getTempDirectory().resolve(coordinates.getRepositoryName());
 			final GitHubUsername author = GitHubUsername.given(coordinates.getUsername());
+			final ImmutableBiMap<Instant, IGrade> byTime;
+			final String commentGeneralCapped;
 			try (FileRepository repository = cloner.download(coordinates.asGitUri(), dir);
 					GitFileSystem gitFs = GitFileSystemProvider.getInstance().newFileSystemFromRepository(repository);
 					GitHubFetcherQL fetcherQl = GitHubFetcherQL.using(GitHubToken.getRealInstance())) {
@@ -63,7 +74,6 @@ public class BatchGitHistoryGrader<X extends Exception> {
 				final GitHistory pushHistory = gitHubHistory.getConsistentPushHistory();
 
 				final GitFileSystemHistory beforeCommitByGitHub;
-				final String commentGeneralCapped;
 				{
 					final GitFileSystemHistory history = GitFileSystemHistory.create(gitFs, pushHistory);
 
@@ -100,25 +110,25 @@ public class BatchGitHistoryGrader<X extends Exception> {
 					final IGrade penalizedForTimeGrade = penalizer.penalize(lateness, gradeWithUser);
 					byTimeBuilder.put(timeCap, penalizedForTimeGrade);
 				}
-				final ImmutableBiMap<Instant, IGrade> byTime = byTimeBuilder.build();
-
-				final Optional<IGrade> bestGrade = byTime.values().stream()
-						.max(Comparator.comparing(IGrade::getPoints));
-				final IGrade integratedGrade;
-				if (bestGrade.isEmpty()) {
-					integratedGrade = Mark.zero("No commit found.");
-				} else if (byTime.size() == 1) {
-					integratedGrade = bestGrade.get();
-				} else {
-					integratedGrade = DeadlineGrader.getBestAndSub(bestGrade.get(), byTime, deadline);
-				}
-
-				final String separator = integratedGrade.getComment().isEmpty() || commentGeneralCapped.isEmpty() ? ""
-						: "; ";
-				integratedGrade.withComment(integratedGrade.getComment() + separator + commentGeneralCapped);
-
+				byTime = byTimeBuilder.build();
 			}
+
+			final IGrade bestGrade = byTime.values().stream().max(Comparator.comparing(IGrade::getPoints))
+					.orElse(Mark.zero("No commit found."));
+			final String separator = bestGrade.getComment().isEmpty() || commentGeneralCapped.isEmpty() ? "" : "; ";
+			final IGrade bestGradeCommented = bestGrade
+					.withComment(bestGrade.getComment() + separator + commentGeneralCapped);
+
+			final IGrade integratedGrade;
+			if (byTime.size() <= 1) {
+				integratedGrade = bestGradeCommented;
+			} else {
+				integratedGrade = DeadlineGrader.getBestAndSub(bestGradeCommented, byTime, deadline);
+			}
+			builder.put(author, integratedGrade);
 		}
+
+		return builder.build();
 	}
 
 	/**
@@ -137,4 +147,16 @@ public class BatchGitHistoryGrader<X extends Exception> {
 		verify(consideredTimestamps.isEmpty() == history.getGraph().nodes().isEmpty());
 		return consideredTimestamps;
 	}
+
+	public void write(Map<GitHubUsername, IGrade> grades, Path out) throws X, IOException {
+			final ImmutableMap<String, IGrade> gradesString = grades.entrySet().stream()
+					.collect(ImmutableMap.toImmutableMap(e -> e.getKey().toString(), Entry::getValue));
+			Files.writeString(out, JsonbUtils.toJsonObject(gradesString, JsonGrade.asAdapter()).toString());
+			Files.writeString(Path.of("grades.html"), XmlUtils.asString(HtmlGrades.asHtml(gradesString, "Grades", 20d)));
+	//			final ImmutableSet<String> unames = grades.keySet();
+	//			final Set<StudentOnGitHub> stds = unames.stream().map((String u) -> StudentOnGitHub.with(u))
+	//					.collect(ImmutableSet.toImmutableSet());
+	//			Files.writeString(Path.of("grades.csv"),
+	//					CsvGrades.asCsv(Maps.asMap(stds, s -> grades.get(s.getGitHubUsername().getUsername()))));
+		}
 }
