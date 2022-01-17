@@ -23,8 +23,14 @@ import java.nio.file.FileSystem;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.temporal.ChronoUnit;
+import java.util.Date;
 import java.util.List;
 import java.util.Set;
+import java.util.TimeZone;
 import java.util.stream.Stream;
 import org.eclipse.jgit.internal.storage.dfs.DfsRepositoryDescription;
 import org.eclipse.jgit.internal.storage.dfs.InMemoryRepository;
@@ -191,20 +197,33 @@ public class JGit {
 	}
 
 	public static ImmutableList<ObjectId> createRepoWithSubDir(Repository repository) throws IOException {
+		return createRepoWithSubDir(repository, ZonedDateTime.now(ZoneId.of("Europe/Paris")));
+	}
+
+	public static ImmutableList<ObjectId> createRepoWithSubDir(Repository repository, ZonedDateTime created)
+			throws IOException {
 		repository.create(true);
 		final ObjectDatabase objectDatabase = repository.getObjectDatabase();
 		try (FileSystem jimFs = Jimfs.newFileSystem(Configuration.unix());
 				ObjectInserter inserter = objectDatabase.newInserter()) {
 			final Path workDir = jimFs.getPath("");
-			final PersonIdent personIdent = new PersonIdent("Me", "email");
+
+			final Instant created1 = created.toInstant();
+			final Instant created2 = created1.plus(1, ChronoUnit.HOURS);
+			final Instant created3 = created2.plus(2, ChronoUnit.HOURS);
+			final PersonIdent personIdent1 = new PersonIdent("Me", "email", Date.from(created1),
+					TimeZone.getTimeZone(created.getZone()));
+			final PersonIdent personIdent2 = new PersonIdent(personIdent1, Date.from(created2));
+			final PersonIdent personIdent3 = new PersonIdent(personIdent1, Date.from(created3));
+
 			final ImmutableList.Builder<ObjectId> builder = ImmutableList.builder();
 
 			Files.writeString(workDir.resolve("file1.txt"), "Hello, world");
-			final ObjectId commit1 = insertCommit(inserter, personIdent, workDir, ImmutableList.of(), "First commit");
+			final ObjectId commit1 = insertCommit(inserter, personIdent1, workDir, ImmutableList.of(), "First commit");
 			builder.add(commit1);
 
 			Files.writeString(workDir.resolve("file2.txt"), "Hello again");
-			final ObjectId commit2 = insertCommit(inserter, personIdent, workDir, ImmutableList.of(commit1),
+			final ObjectId commit2 = insertCommit(inserter, personIdent2, workDir, ImmutableList.of(commit1),
 					"Second commit");
 			builder.add(commit2);
 
@@ -212,7 +231,7 @@ public class JGit {
 			final Path subDirectory = workDir.resolve("dir");
 			Files.createDirectory(subDirectory);
 			Files.writeString(subDirectory.resolve("file.txt"), "Hello from sub dir");
-			final ObjectId commit3 = insertCommit(inserter, personIdent, workDir, ImmutableList.of(commit2),
+			final ObjectId commit3 = insertCommit(inserter, personIdent3, workDir, ImmutableList.of(commit2),
 					"Third commit");
 			builder.add(commit3);
 
