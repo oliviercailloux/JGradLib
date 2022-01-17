@@ -323,6 +323,7 @@ public class GitFileSystemProvider extends FileSystemProvider {
 	 * @throws IOException                      if an exception occurred during
 	 *                                          access to the underlying data.
 	 */
+	@SuppressWarnings("unused")
 	public GitFileFileSystem newFileSystemFromFileRepository(FileRepository repository)
 			throws FileSystemAlreadyExistsException, UnsupportedOperationException, IOException {
 		final Path gitDir = repository.getDirectory().toPath();

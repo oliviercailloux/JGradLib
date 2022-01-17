@@ -30,6 +30,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @Disabled("Compilation warns about deprecated security API.")
+@SuppressWarnings({ "removal", "deprecation" })
 public class SandboxTests {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(SandboxTests.class);

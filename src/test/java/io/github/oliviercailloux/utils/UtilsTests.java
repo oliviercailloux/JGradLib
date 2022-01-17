@@ -31,6 +31,7 @@ import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+@SuppressWarnings({ "removal" })
 class UtilsTests {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(UtilsTests.class);
@@ -82,6 +83,7 @@ class UtilsTests {
 	}
 
 	@Test
+	@SuppressWarnings("deprecation")
 	void testCopyUnderPolicyFails() throws Exception {
 		SandboxSecurityPolicy.setSecurity();
 		assertDoesNotThrow(() -> AccessController.checkPermission(new FilePermission("/-", "read")));

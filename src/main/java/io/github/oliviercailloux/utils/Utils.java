@@ -155,6 +155,7 @@ public class Utils {
 	/**
 	 * Thx https://stackoverflow.com/a/60621544.
 	 */
+	@SuppressWarnings({ "deprecation", "removal" })
 	public static void copyRecursively(Path source, Path target, CopyOption... options) throws IOException {
 		if (Files.exists(target)) {
 			checkArgument(!target.toRealPath().startsWith(source.toRealPath()));

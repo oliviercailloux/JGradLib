@@ -11,6 +11,7 @@ import org.slf4j.LoggerFactory;
  * Inspired by https://blog.jayway.com/2014/06/13/sandboxing-plugins-in-java/
  *
  */
+@SuppressWarnings({ "removal", "deprecation" })
 public class SandboxSecurityPolicy extends Policy {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(SandboxSecurityPolicy.class);
