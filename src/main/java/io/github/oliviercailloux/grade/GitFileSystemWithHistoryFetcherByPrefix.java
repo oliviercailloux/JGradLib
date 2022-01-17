@@ -20,28 +20,28 @@ import org.eclipse.jgit.lib.Repository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class GitFileSystemWithHistoryFactoryByPrefix implements GitFileSystemWithHistoryFetcher {
+public class GitFileSystemWithHistoryFetcherByPrefix implements GitFileSystemWithHistoryFetcher {
 	@SuppressWarnings("unused")
-	private static final Logger LOGGER = LoggerFactory.getLogger(GitFileSystemWithHistoryFactoryByPrefix.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(GitFileSystemWithHistoryFetcherByPrefix.class);
 
 	public static GitFileSystemWithHistoryFetcher getRetrievingByPrefix(String prefix) {
-		return new GitFileSystemWithHistoryFactoryByPrefix(prefix);
+		return new GitFileSystemWithHistoryFetcherByPrefix(prefix);
 	}
 
 	private final String prefix;
 	private final GitCloner cloner;
+	private final GitHubFetcherQL fetcherQl;
 	private GitFileSystem lastGitFs;
 	private Repository lastRepository;
 	private GitFileSystemHistory lastHistory;
-	private final GitHubFetcherQL fetcherQl;
 
-	GitFileSystemWithHistoryFactoryByPrefix(String prefix) {
+	GitFileSystemWithHistoryFetcherByPrefix(String prefix) {
 		this.prefix = checkNotNull(prefix);
 		cloner = GitCloner.create().setCheckCommonRefsAgree(false);
+		fetcherQl = GitHubFetcherQL.using(GitHubToken.getRealInstance());
 		lastGitFs = null;
 		lastRepository = null;
 		lastHistory = null;
-		fetcherQl = GitHubFetcherQL.using(GitHubToken.getRealInstance());
 	}
 
 	@Override
