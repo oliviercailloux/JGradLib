@@ -17,15 +17,14 @@ import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinatesWithPrefix;
 import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherQL;
 import io.github.oliviercailloux.grade.DeadlineGrader.LinearPenalizer;
-import io.github.oliviercailloux.grade.format.HtmlGrades;
 import io.github.oliviercailloux.grade.format.json.JsonGrade;
 import io.github.oliviercailloux.jaris.exceptions.Throwing;
 import io.github.oliviercailloux.jaris.exceptions.Throwing.Function;
 import io.github.oliviercailloux.jaris.throwing.TOptional;
 import io.github.oliviercailloux.java_grade.testers.JavaMarkHelper;
+import io.github.oliviercailloux.java_grade.utils.Summarizer;
 import io.github.oliviercailloux.json.JsonbUtils;
 import io.github.oliviercailloux.utils.Utils;
-import io.github.oliviercailloux.xml.XmlUtils;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -133,6 +132,7 @@ public class BatchGitHistoryGrader<X extends Exception> {
 				integratedGrade = DeadlineGrader.getBestAndSub(bestGradeCommented, byTime, deadline);
 			}
 			builder.put(author, integratedGrade);
+
 			outOpt.ifPresent(o -> write(builder, o));
 		}
 
@@ -160,13 +160,9 @@ public class BatchGitHistoryGrader<X extends Exception> {
 		final ImmutableMap<String, IGrade> gradesString = grades.entrySet().stream()
 				.collect(ImmutableMap.toImmutableMap(e -> e.getKey().toString(), Entry::getValue));
 		Files.writeString(out, JsonbUtils.toJsonObject(gradesString, JsonGrade.asAdapter()).toString());
-		Files.writeString(Path.of("grades.html"), XmlUtils.asString(HtmlGrades.asHtml(gradesString, "Grades", 20d)));
-		// final ImmutableSet<String> unames = grades.keySet();
-		// final Set<StudentOnGitHub> stds = unames.stream().map((String u) ->
-		// StudentOnGitHub.with(u))
-		// .collect(ImmutableSet.toImmutableSet());
-		// Files.writeString(Path.of("grades.csv"),
-		// CsvGrades.asCsv(Maps.asMap(stds, s ->
-		// grades.get(s.getGitHubUsername().getUsername()))));
+		final Summarizer summarizer = Summarizer.create().setInputPath(out)
+				.setCsvOutputPath(Path.of("grades " + prefix + ".csv"))
+				.setHtmlOutputPath(Path.of("grades " + prefix + ".html"));
+		summarizer.summarize();
 	}
 }

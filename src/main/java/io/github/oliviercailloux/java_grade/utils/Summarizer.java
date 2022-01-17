@@ -82,8 +82,13 @@ public class Summarizer {
 		dissolve = g -> false;
 	}
 
-	public GradesByGitHubReader getReader() {
-		return reader;
+	public Path getInputPath() {
+		return reader.getGradesInputPath();
+	}
+
+	public Summarizer setInputPath(Path inputPath) {
+		reader.setInputPath(checkNotNull(inputPath));
+		return this;
 	}
 
 	public Path getCsvOutputPath() {
