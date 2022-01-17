@@ -18,6 +18,7 @@ import io.github.oliviercailloux.grade.RepositoryFetcher;
 import io.github.oliviercailloux.grade.WeightingGrade;
 import io.github.oliviercailloux.grade.markers.Marks;
 import io.github.oliviercailloux.jaris.xml.XmlUtils;
+import io.github.oliviercailloux.jaris.xml.XmlUtils.DomHelper;
 import io.github.oliviercailloux.utils.Utils;
 import java.io.IOException;
 import java.io.InputStream;
@@ -55,6 +56,8 @@ public class AdminManagesUsers {
 	public static final ZonedDateTime DEADLINE = ZonedDateTime.parse("2021-01-25T14:11:00+01:00[Europe/Paris]");
 
 	private static DocumentBuilder builder;
+
+	private static final DomHelper domHelper = XmlUtils.loadAndSave();
 
 	public static void main(String[] args) throws Exception {
 		final RepositoryFetcher fetcher = RepositoryFetcher.withPrefix(PREFIX);
@@ -112,14 +115,16 @@ public class AdminManagesUsers {
 	}
 
 	private static IGrade gradeSortedOut(Document uml) {
-		final ImmutableList<Node> children = XmlUtils.toList(uml.getDocumentElement().getChildNodes());
+		final ImmutableList<Node> children = XmlUtils.DomHelper.toList(uml.getDocumentElement().getChildNodes());
 		final ImmutableList<Node> nonTextChildren = children.stream().filter(n -> n.getNodeType() != Node.TEXT_NODE)
 				.collect(ImmutableList.toImmutableList());
 		final boolean justOneSubject = nonTextChildren.size() == 1;
 
-		final ImmutableList<Element> pckgEls = XmlUtils.toElements(uml.getElementsByTagName("packagedElement"));
-		final ImmutableList<Element> ownedEls = XmlUtils.toElements(uml.getElementsByTagName("ownedUseCase"));
-		final ImmutableList<Element> nestedEls = XmlUtils.toElements(uml.getElementsByTagName("nestedClassifier"));
+		final ImmutableList<Element> pckgEls = XmlUtils.DomHelper
+				.toElements(uml.getElementsByTagName("packagedElement"));
+		final ImmutableList<Element> ownedEls = XmlUtils.DomHelper.toElements(uml.getElementsByTagName("ownedUseCase"));
+		final ImmutableList<Element> nestedEls = XmlUtils.DomHelper
+				.toElements(uml.getElementsByTagName("nestedClassifier"));
 		final ImmutableList<Element> mainElements = Streams
 				.concat(pckgEls.stream(), ownedEls.stream(), nestedEls.stream())
 				.collect(ImmutableList.toImmutableList());
@@ -190,9 +195,10 @@ public class AdminManagesUsers {
 	}
 
 	private static ImmutableSet<Element> getLeaves(Document uml) {
-		final Graph<Element> graph = Utils.<Element, Element>asGraph((Element e) -> XmlUtils.toList(e.getChildNodes())
-				.stream().filter(n -> n.getNodeType() == Node.ELEMENT_NODE).map(n -> (Element) n)
-				.collect(ImmutableList.toImmutableList()), ImmutableSet.of(uml.getDocumentElement()));
+		final Graph<Element> graph = Utils.<Element, Element>asGraph((Element e) -> XmlUtils.DomHelper
+				.toList(e.getChildNodes()).stream().filter(n -> n.getNodeType() == Node.ELEMENT_NODE)
+				.map(n -> (Element) n).collect(ImmutableList.toImmutableList()),
+				ImmutableSet.of(uml.getDocumentElement()));
 		return graph.nodes().stream().filter(e -> graph.successors(e).isEmpty()).collect(ImmutableSet.toImmutableSet());
 	}
 
@@ -202,9 +208,11 @@ public class AdminManagesUsers {
 		gradeBuilder.add(CriterionGradeWeight.from(Criterion.given("Model"),
 				Mark.binary(uml.getDocumentElement().getNamespaceURI().equals(UML_NS)), 1d));
 
-		final ImmutableList<Element> pckgEls = XmlUtils.toElements(uml.getElementsByTagName("packagedElement"));
-		final ImmutableList<Element> ownedEls = XmlUtils.toElements(uml.getElementsByTagName("ownedUseCase"));
-		final ImmutableList<Element> nestedEls = XmlUtils.toElements(uml.getElementsByTagName("nestedClassifier"));
+		final ImmutableList<Element> pckgEls = XmlUtils.DomHelper
+				.toElements(uml.getElementsByTagName("packagedElement"));
+		final ImmutableList<Element> ownedEls = XmlUtils.DomHelper.toElements(uml.getElementsByTagName("ownedUseCase"));
+		final ImmutableList<Element> nestedEls = XmlUtils.DomHelper
+				.toElements(uml.getElementsByTagName("nestedClassifier"));
 
 		final Optional<Element> subject = pckgEls.stream()
 				.filter(e -> Marks.extendAll("System").matcher(e.getAttribute("name")).matches())
@@ -286,7 +294,7 @@ public class AdminManagesUsers {
 	}
 
 	static ImmutableSet<String> toString(Collection<? extends Node> elements) {
-		return elements.stream().map(XmlUtils::toString).collect(ImmutableSet.toImmutableSet());
+		return elements.stream().map(domHelper::toString).collect(ImmutableSet.toImmutableSet());
 	}
 
 	static ImmutableSet<String> toNameAndId(Set<Element> elements) {
@@ -309,9 +317,10 @@ public class AdminManagesUsers {
 		final CriterionGradeWeight associationGrade = CriterionGradeWeight.from(Criterion.given("Actor"),
 				Mark.binary(association.isPresent()), 1d);
 		final ImmutableList<Element> ownedAttributes = association
-				.map(a -> XmlUtils.toElements(a.getElementsByTagName("ownedAttribute"))).orElse(ImmutableList.of());
+				.map(a -> XmlUtils.DomHelper.toElements(a.getElementsByTagName("ownedAttribute")))
+				.orElse(ImmutableList.of());
 		final ImmutableList<Element> ownedEnds = association
-				.map(a -> XmlUtils.toElements(a.getElementsByTagName("ownedEnd"))).orElse(ImmutableList.of());
+				.map(a -> XmlUtils.DomHelper.toElements(a.getElementsByTagName("ownedEnd"))).orElse(ImmutableList.of());
 		final ImmutableList<Element> owned = ImmutableList.<Element>builder().addAll(ownedAttributes).addAll(ownedEnds)
 				.build();
 		final ImmutableList<Element> properties = owned.stream()
@@ -331,8 +340,8 @@ public class AdminManagesUsers {
 	}
 
 	private static Optional<Element> getTargetOfUniqueGeneralization(Element useCaseEl, List<Element> useCaseEls) {
-		final Optional<Element> generalizationEl = XmlUtils.toElements(useCaseEl.getElementsByTagName("generalization"))
-				.stream().collect(Utils.singleOrEmpty());
+		final Optional<Element> generalizationEl = XmlUtils.DomHelper
+				.toElements(useCaseEl.getElementsByTagName("generalization")).stream().collect(Utils.singleOrEmpty());
 		final Optional<String> targetId = generalizationEl.map(g -> g.getAttribute("general"));
 		final Optional<Element> useCase = targetId.flatMap(g -> getElementById(useCaseEls, g));
 		return useCase;
