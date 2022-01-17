@@ -310,6 +310,17 @@ public class JGit {
 		} catch (IOException e) {
 			throw new UncheckedIOException(e);
 		}
+		try {
+			final RefUpdate updateRef = repository.updateRef(Constants.HEAD);
+			final Result updateResult = updateRef.link("refs/heads/main");
+			/*
+			 * Not sure this is best practice. But if HEAD is not set here, then log()
+			 * commands fail on repositories created with the above methods.
+			 */
+			Verify.verify(updateResult == Result.FORCED, updateResult.toString());
+		} catch (IOException e) {
+			throw new UncheckedIOException(e);
+		}
 	}
 
 }
