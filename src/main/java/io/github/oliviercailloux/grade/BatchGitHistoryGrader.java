@@ -32,6 +32,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.ZonedDateTime;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
@@ -55,12 +56,20 @@ public class BatchGitHistoryGrader<X extends Exception> {
 	}
 
 	public ImmutableMap<GitHubUsername, IGrade> getGrades() throws X, IOException {
+		return getGrades(Optional.empty());
+	}
+
+	public ImmutableMap<GitHubUsername, IGrade> getAndWriteGrades(Path out) throws X, IOException {
+		return getGrades(Optional.of(out));
+	}
+
+	private ImmutableMap<GitHubUsername, IGrade> getGrades(Optional<Path> outOpt) throws X, IOException {
 		final RepositoryFetcher fetcher = RepositoryFetcher.withPrefix(prefix);
 		final ImmutableSet<RepositoryCoordinatesWithPrefix> coordinatess = fetcher.fetch();
 		final LinearPenalizer penalizer = LinearPenalizer.DEFAULT_PENALIZER;
 		final GitCloner cloner = GitCloner.create().setCheckCommonRefsAgree(false);
 
-		final ImmutableMap.Builder<GitHubUsername, IGrade> builder = ImmutableMap.builder();
+		final LinkedHashMap<GitHubUsername, IGrade> builder = new LinkedHashMap<>();
 		for (RepositoryCoordinatesWithPrefix coordinates : coordinatess) {
 			final Path dir = Utils.getTempDirectory().resolve(coordinates.getRepositoryName());
 			final GitHubUsername author = GitHubUsername.given(coordinates.getUsername());
@@ -126,9 +135,10 @@ public class BatchGitHistoryGrader<X extends Exception> {
 				integratedGrade = DeadlineGrader.getBestAndSub(bestGradeCommented, byTime, deadline);
 			}
 			builder.put(author, integratedGrade);
+//			TODO outOpt.ifPresent(o -> write(builder, o));
 		}
 
-		return builder.build();
+		return ImmutableMap.copyOf(builder);
 	}
 
 	/**
@@ -148,15 +158,17 @@ public class BatchGitHistoryGrader<X extends Exception> {
 		return consideredTimestamps;
 	}
 
-	public void write(Map<GitHubUsername, IGrade> grades, Path out) throws X, IOException {
-			final ImmutableMap<String, IGrade> gradesString = grades.entrySet().stream()
-					.collect(ImmutableMap.toImmutableMap(e -> e.getKey().toString(), Entry::getValue));
-			Files.writeString(out, JsonbUtils.toJsonObject(gradesString, JsonGrade.asAdapter()).toString());
-			Files.writeString(Path.of("grades.html"), XmlUtils.asString(HtmlGrades.asHtml(gradesString, "Grades", 20d)));
-	//			final ImmutableSet<String> unames = grades.keySet();
-	//			final Set<StudentOnGitHub> stds = unames.stream().map((String u) -> StudentOnGitHub.with(u))
-	//					.collect(ImmutableSet.toImmutableSet());
-	//			Files.writeString(Path.of("grades.csv"),
-	//					CsvGrades.asCsv(Maps.asMap(stds, s -> grades.get(s.getGitHubUsername().getUsername()))));
-		}
+	private void write(Map<GitHubUsername, IGrade> grades, Path out) throws X, IOException {
+		final ImmutableMap<String, IGrade> gradesString = grades.entrySet().stream()
+				.collect(ImmutableMap.toImmutableMap(e -> e.getKey().toString(), Entry::getValue));
+		Files.writeString(out, JsonbUtils.toJsonObject(gradesString, JsonGrade.asAdapter()).toString());
+		Files.writeString(Path.of("grades.html"), XmlUtils.asString(HtmlGrades.asHtml(gradesString, "Grades", 20d)));
+		// final ImmutableSet<String> unames = grades.keySet();
+		// final Set<StudentOnGitHub> stds = unames.stream().map((String u) ->
+		// StudentOnGitHub.with(u))
+		// .collect(ImmutableSet.toImmutableSet());
+		// Files.writeString(Path.of("grades.csv"),
+		// CsvGrades.asCsv(Maps.asMap(stds, s ->
+		// grades.get(s.getGitHubUsername().getUsername()))));
+	}
 }
