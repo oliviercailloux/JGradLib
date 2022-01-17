@@ -9,6 +9,8 @@ import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherV3;
 import java.util.function.Predicate;
 
 public class RepositoryFetcher {
+	public static final String DEFAULT_ORG = "oliviercailloux-org";
+
 	public static RepositoryFetcher withPrefix(String prefix) {
 		return new RepositoryFetcher(prefix);
 	}
@@ -33,8 +35,8 @@ public class RepositoryFetcher {
 	public ImmutableSet<RepositoryCoordinatesWithPrefix> fetch() {
 		final ImmutableSet<RepositoryCoordinatesWithPrefix> repositories;
 		try (GitHubFetcherV3 fetcher = GitHubFetcherV3.using(GitHubToken.getRealInstance())) {
-			repositories = fetcher.getRepositoriesWithPrefix("oliviercailloux-org", prefix).stream()
-					.filter(repositoriesFilter).collect(ImmutableSet.toImmutableSet());
+			repositories = fetcher.getRepositoriesWithPrefix(DEFAULT_ORG, prefix).stream().filter(repositoriesFilter)
+					.collect(ImmutableSet.toImmutableSet());
 		}
 		return repositories;
 	}
