@@ -21,6 +21,7 @@ import io.github.oliviercailloux.grade.format.HtmlGrades;
 import io.github.oliviercailloux.grade.format.json.JsonGrade;
 import io.github.oliviercailloux.jaris.exceptions.Throwing;
 import io.github.oliviercailloux.jaris.exceptions.Throwing.Function;
+import io.github.oliviercailloux.jaris.throwing.TOptional;
 import io.github.oliviercailloux.java_grade.testers.JavaMarkHelper;
 import io.github.oliviercailloux.json.JsonbUtils;
 import io.github.oliviercailloux.utils.Utils;
@@ -56,14 +57,14 @@ public class BatchGitHistoryGrader<X extends Exception> {
 	}
 
 	public ImmutableMap<GitHubUsername, IGrade> getGrades() throws X, IOException {
-		return getGrades(Optional.empty());
+		return getGrades(TOptional.empty());
 	}
 
 	public ImmutableMap<GitHubUsername, IGrade> getAndWriteGrades(Path out) throws X, IOException {
-		return getGrades(Optional.of(out));
+		return getGrades(TOptional.of(out));
 	}
 
-	private ImmutableMap<GitHubUsername, IGrade> getGrades(Optional<Path> outOpt) throws X, IOException {
+	private ImmutableMap<GitHubUsername, IGrade> getGrades(TOptional<Path> outOpt) throws X, IOException {
 		final RepositoryFetcher fetcher = RepositoryFetcher.withPrefix(prefix);
 		final ImmutableSet<RepositoryCoordinatesWithPrefix> coordinatess = fetcher.fetch();
 		final LinearPenalizer penalizer = LinearPenalizer.DEFAULT_PENALIZER;
@@ -89,13 +90,10 @@ public class BatchGitHistoryGrader<X extends Exception> {
 					final Optional<Instant> earliestTimeCommitByGitHub = history
 							.filter(JavaMarkHelper::committerIsGitHub).asGitHistory().getTimestamps().values().stream()
 							.min(Comparator.naturalOrder());
-					if (earliestTimeCommitByGitHub.isPresent()) {
-						beforeCommitByGitHub = history
-								.filter(c -> history.asGitHistory().getTimestamp(c.getCommit().getId())
-										.isBefore(earliestTimeCommitByGitHub.orElseThrow()));
-					} else {
-						beforeCommitByGitHub = history;
-					}
+					beforeCommitByGitHub = TOptional.wrapping(earliestTimeCommitByGitHub)
+							.map(t -> history.filter(
+									c -> history.asGitHistory().getTimestamp(c.getCommit().getId()).isBefore(t)))
+							.orElse(history);
 
 					commentGeneralCapped = earliestTimeCommitByGitHub
 							.map(t -> "Ignored commits after " + t.toString() + ", sent by GitHub.").orElse("");
@@ -135,7 +133,7 @@ public class BatchGitHistoryGrader<X extends Exception> {
 				integratedGrade = DeadlineGrader.getBestAndSub(bestGradeCommented, byTime, deadline);
 			}
 			builder.put(author, integratedGrade);
-//			TODO outOpt.ifPresent(o -> write(builder, o));
+			outOpt.ifPresent(o -> write(builder, o));
 		}
 
 		return ImmutableMap.copyOf(builder);
@@ -158,7 +156,7 @@ public class BatchGitHistoryGrader<X extends Exception> {
 		return consideredTimestamps;
 	}
 
-	private void write(Map<GitHubUsername, IGrade> grades, Path out) throws X, IOException {
+	private void write(Map<GitHubUsername, IGrade> grades, Path out) throws IOException {
 		final ImmutableMap<String, IGrade> gradesString = grades.entrySet().stream()
 				.collect(ImmutableMap.toImmutableMap(e -> e.getKey().toString(), Entry::getValue));
 		Files.writeString(out, JsonbUtils.toJsonObject(gradesString, JsonGrade.asAdapter()).toString());
