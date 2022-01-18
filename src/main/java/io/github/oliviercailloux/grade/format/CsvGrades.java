@@ -38,17 +38,13 @@ public class CsvGrades<K> {
 
 	public static final double DEFAULT_DENOMINATOR = 20d;
 
-	public static String asCsv(Map<StudentOnGitHub, ? extends IGrade> grades) {
-		return asCsv(grades, DEFAULT_DENOMINATOR);
-	}
+	public static final Function<StudentOnGitHub, ImmutableMap<String, String>> STUDENT_IDENTITY_FUNCTION = s -> ImmutableMap
+			.of("Name", s.hasInstitutionalPart() ? s.toInstitutionalStudent().getLastName() : "unknown",
+					"GitHub username", s.getGitHubUsername().getUsername());
 
-	public static String asCsv(Map<StudentOnGitHub, ? extends IGrade> grades, double denominator) {
-		final Function<StudentOnGitHub, ImmutableMap<String, String>> f = s -> ImmutableMap.of("Name",
-				s.hasInstitutionalPart() ? s.toInstitutionalStudent().getLastName() : "unknown", "GitHub username",
-				s.getGitHubUsername().getUsername());
-		final CsvGrades<StudentOnGitHub> csvGrades = new CsvGrades<>();
-		csvGrades.setIdentityFunction(f).setDenominator(denominator);
-		return csvGrades.toCsv(grades);
+	public static <K> CsvGrades<K> newInstance(Function<K, ? extends Map<String, String>> identityFunction,
+			double denominator) {
+		return new CsvGrades<>(identityFunction, denominator);
 	}
 
 	private static Stream<Map.Entry<Criterion, IGrade>> childrenAsStream(Entry<Criterion, IGrade> parent) {
@@ -103,13 +99,10 @@ public class CsvGrades<K> {
 	private Function<K, ? extends Map<String, String>> identityFunction;
 	private double denominator;
 
-	public static <K> CsvGrades<K> newInstance() {
-		return new CsvGrades<>();
-	}
-
-	private CsvGrades() {
-		identityFunction = k -> ImmutableMap.of("name", k.toString());
-		denominator = DEFAULT_DENOMINATOR;
+	private CsvGrades(Function<K, ? extends Map<String, String>> identityFunction, double denominator) {
+		this.identityFunction = checkNotNull(identityFunction);
+		checkArgument(Double.isFinite(denominator));
+		this.denominator = denominator;
 	}
 
 	public Function<K, ? extends Map<String, String>> getIdentityFunction() {

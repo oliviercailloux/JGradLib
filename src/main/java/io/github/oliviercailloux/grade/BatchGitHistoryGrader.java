@@ -138,7 +138,7 @@ public class BatchGitHistoryGrader<X extends Exception> {
 
 	private void write(Map<GitHubUsername, IGrade> grades, Path out, String prefix) throws IOException {
 		final ImmutableMap<String, IGrade> gradesString = grades.entrySet().stream()
-				.collect(ImmutableMap.toImmutableMap(e -> e.getKey().toString(), Entry::getValue));
+				.collect(ImmutableMap.toImmutableMap(e -> e.getKey().getUsername(), Entry::getValue));
 		Files.writeString(out, JsonbUtils.toJsonObject(gradesString, JsonGrade.asAdapter()).toString());
 		final Summarizer summarizer = Summarizer.create().setInputPath(out)
 				.setCsvOutputPath(Path.of("grades " + prefix + ".csv"))

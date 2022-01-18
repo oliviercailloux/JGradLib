@@ -194,7 +194,8 @@ public class Summarizer {
 		Files.writeString(htmlOutputPath, XmlUtils.asString(doc));
 
 		LOGGER.info("Writing grades CSV.");
-		Files.writeString(csvOutputPath, CsvGrades.asCsv(completedGradesByStudent, 20d));
+		Files.writeString(csvOutputPath,
+				CsvGrades.newInstance(CsvGrades.STUDENT_IDENTITY_FUNCTION, 20d).toCsv(completedGradesByStudent));
 	}
 
 	private static IGrade dissolveTimePenalty(IGrade grade) {

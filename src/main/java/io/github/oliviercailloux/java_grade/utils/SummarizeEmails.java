@@ -83,7 +83,9 @@ public class SummarizeEmails {
 		final Document doc = HtmlGrades.asHtml(gradesByUsername, "All grades recap", 20d);
 		Files.writeString(Path.of("grades recap.html"), XmlUtils.asString(doc));
 
-		Files.writeString(Path.of("grades recap.csv"), CsvGrades.<String>newInstance().toCsv(gradesByUsername));
+		Files.writeString(Path.of("grades recap.csv"),
+				CsvGrades.<String>newInstance(k -> ImmutableMap.of("name", k.toString()), CsvGrades.DEFAULT_DENOMINATOR)
+						.toCsv(gradesByUsername));
 	}
 
 	public static <K1, K2, V> ImmutableMap<K2, V> transformKeys(Map<K1, V> source, Function<K1, K2> keyTransformation) {

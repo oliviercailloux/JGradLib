@@ -30,7 +30,9 @@ class CsvGradesTests {
 		final WeightingGrade grade1 = GradeTestsHelper.getGrade3Plus2();
 		final WeightingGrade grade2 = GradeTestsHelper.getGrade3Plus2Alt();
 		final ImmutableMap<StudentOnGitHub, WeightingGrade> grades = ImmutableMap.of(s1, grade1, s2, grade2);
-		final String written = CsvGrades.asCsv(grades);
+		final CsvGrades<StudentOnGitHub> csvGrades = CsvGrades.newInstance(CsvGrades.STUDENT_IDENTITY_FUNCTION,
+				CsvGrades.DEFAULT_DENOMINATOR);
+		final String written = csvGrades.toCsv(grades);
 		final String expected = Resources.toString(getClass().getResource("TwoStudentsGrades.csv"),
 				StandardCharsets.UTF_8);
 		assertEquals(expected, written);
@@ -41,7 +43,9 @@ class CsvGradesTests {
 		final String jsonGrade = Resources.toString(JsonGradeTests.class.getResource("VeryComplexGrade.json"),
 				StandardCharsets.UTF_8);
 		final IGrade grade = JsonGrade.asGrade(jsonGrade);
-		final String written = CsvGrades.asCsv(ImmutableMap.of(StudentOnGitHub.with("u"), grade));
+		final CsvGrades<StudentOnGitHub> csvGrades = CsvGrades.newInstance(CsvGrades.STUDENT_IDENTITY_FUNCTION,
+				CsvGrades.DEFAULT_DENOMINATOR);
+		final String written = csvGrades.toCsv(ImmutableMap.of(StudentOnGitHub.with("u"), grade));
 
 		final String expected = Resources.toString(getClass().getResource("VeryComplexGrade.csv"),
 				StandardCharsets.UTF_8);
