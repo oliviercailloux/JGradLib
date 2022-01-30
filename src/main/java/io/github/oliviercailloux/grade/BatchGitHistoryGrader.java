@@ -1,5 +1,6 @@
 package io.github.oliviercailloux.grade;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Verify.verify;
 
@@ -32,7 +33,6 @@ import org.slf4j.LoggerFactory;
 public class BatchGitHistoryGrader<X extends Exception> {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(BatchGitHistoryGrader.class);
-	private static final double USER_GRADE_WEIGHT = 0.5d / 20d;
 	private final Throwing.Supplier<GitFileSystemWithHistoryFetcher, X> fetcherFactory;
 
 	public BatchGitHistoryGrader(Throwing.Supplier<GitFileSystemWithHistoryFetcher, X> fetcherFactory) {
@@ -40,20 +40,22 @@ public class BatchGitHistoryGrader<X extends Exception> {
 	}
 
 	public <Y extends Exception> ImmutableMap<GitHubUsername, IGrade> getGrades(String prefix, ZonedDateTime deadline,
-			Throwing.Function<GitFileSystemHistory, IGrade, Y> grader) throws X, Y, IOException {
-		return getGrades(prefix, deadline, grader, TOptional.empty());
+			Duration durationForZero, Throwing.Function<GitFileSystemHistory, IGrade, Y> grader, double userGradeWeight)
+			throws X, Y, IOException {
+		return getGrades(prefix, deadline, durationForZero, grader, userGradeWeight, TOptional.empty());
 	}
 
 	public <Y extends Exception> ImmutableMap<GitHubUsername, IGrade> getAndWriteGrades(String prefix,
-			ZonedDateTime deadline, Throwing.Function<GitFileSystemHistory, IGrade, Y> grader, Path out)
-			throws X, Y, IOException {
-		return getGrades(prefix, deadline, grader, TOptional.of(out));
+			ZonedDateTime deadline, Duration durationForZero, Throwing.Function<GitFileSystemHistory, IGrade, Y> grader,
+			double userGradeWeight, Path out) throws X, Y, IOException {
+		return getGrades(prefix, deadline, durationForZero, grader, userGradeWeight, TOptional.of(out));
 	}
 
 	private <Y extends Exception> ImmutableMap<GitHubUsername, IGrade> getGrades(String prefix, ZonedDateTime deadline,
-			Throwing.Function<GitFileSystemHistory, IGrade, Y> grader, TOptional<Path> outOpt)
-			throws X, Y, IOException {
-		final LinearPenalizer penalizer = LinearPenalizer.DEFAULT_PENALIZER;
+			Duration durationForZero, Throwing.Function<GitFileSystemHistory, IGrade, Y> grader, double userGradeWeight,
+			TOptional<Path> outOpt) throws X, Y, IOException {
+		checkArgument(userGradeWeight < 1d);
+		final LinearPenalizer penalizer = LinearPenalizer.proportionalToLateness(durationForZero);
 
 		final LinkedHashMap<GitHubUsername, IGrade> builder = new LinkedHashMap<>();
 		try (GitFileSystemWithHistoryFetcher fetcher = fetcherFactory.get()) {
@@ -89,11 +91,18 @@ public class BatchGitHistoryGrader<X extends Exception> {
 					final IGrade grade = grader.apply(capped);
 
 					final Mark userGrade = DeadlineGrader.getUsernameGrade(beforeCommitByGitHub, author);
-					final WeightingGrade gradeWithUser = WeightingGrade.from(ImmutableSet.of(
-							CriterionGradeWeight.from(Criterion.given("user.name"), userGrade, USER_GRADE_WEIGHT),
-							CriterionGradeWeight.from(Criterion.given("main"), grade, 1d - USER_GRADE_WEIGHT)));
+					final ImmutableSet<CriterionGradeWeight> subGrades = grade.getSubGradesAsSet();
+					final ImmutableSet<CriterionGradeWeight> newSubGrades = ImmutableSet.<CriterionGradeWeight>builder()
+							.add(CriterionGradeWeight.from(Criterion.given("user.name"), userGrade,
+									userGradeWeight / (1d - userGradeWeight)))
+							.addAll(subGrades).build();
+//					final WeightingGrade gradeWithUser = WeightingGrade.from(ImmutableSet.of(
+//							CriterionGradeWeight.from(Criterion.given("user.name"), userGrade, userGradeWeight),
+//							CriterionGradeWeight.from(Criterion.given("main"), grade, 1d - userGradeWeight)));
+					final WeightingGrade gradeWithUser = WeightingGrade.from(newSubGrades);
 
 					final Duration lateness = Duration.between(deadline.toInstant(), timeCap);
+					LOGGER.debug("Lateness from {} to {} equal to {}.", deadline.toInstant(), timeCap, lateness);
 					final IGrade penalizedForTimeGrade = penalizer.penalize(lateness, gradeWithUser);
 					byTimeBuilder.put(timeCap, penalizedForTimeGrade);
 				}

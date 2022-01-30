@@ -1,0 +1,66 @@
+{
+	"points": 0.0,
+	"comment": "",
+	"subGrades": [
+		{
+			"criterion": "grade",
+			"grade": {
+				"points": 0.95,
+				"comment": "",
+				"subGrades": [
+					{
+						"criterion": "user.name",
+						"grade": {
+							"points": 0.0,
+							"comment": "Expected user-late, seen [Me]"
+						},
+						"weight": 0.05
+					},
+					{
+						"criterion": "main",
+						"grade": {
+							"points": 1.0,
+							"comment": "",
+							"subGrades": [
+								{
+									"criterion": "c1",
+									"grade": {
+										"points": 1.0,
+										"comment": ""
+									},
+									"weight": 0.631578947368421
+								},
+								{
+									"criterion": "c2",
+									"grade": {
+										"points": 1.0,
+										"comment": ""
+									},
+									"weight": 0.21052631578947367
+								},
+								{
+									"criterion": "c3",
+									"grade": {
+										"points": 1.0,
+										"comment": ""
+									},
+									"weight": 0.15789473684210525
+								}
+							]
+						},
+						"weight": 0.95
+					}
+				]
+			},
+			"weight": 0.0
+		},
+		{
+			"criterion": "Time penalty",
+			"grade": {
+				"points": 0.0,
+				"comment": "Lateness: PT3H30M"
+			},
+			"weight": 1.0
+		}
+	]
+}

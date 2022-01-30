@@ -28,11 +28,12 @@ import io.github.oliviercailloux.grade.IGrade.GradePath;
 import io.github.oliviercailloux.grade.Mark;
 import io.github.oliviercailloux.grade.WeightingGrade;
 import io.github.oliviercailloux.grade.WeightingGrade.PathGradeWeight;
-import io.github.oliviercailloux.grade.comm.StudentOnGitHub;
+import io.github.oliviercailloux.grade.comm.InstitutionalStudent;
 import io.github.oliviercailloux.grade.comm.json.JsonStudentsReader;
 import io.github.oliviercailloux.grade.format.CsvGrades;
 import io.github.oliviercailloux.grade.format.HtmlGrades;
 import io.github.oliviercailloux.grade.utils.Compressor;
+import io.github.oliviercailloux.jaris.collections.CollectionUtils;
 import io.github.oliviercailloux.utils.Utils;
 import io.github.oliviercailloux.xml.XmlUtils;
 import java.io.IOException;
@@ -41,6 +42,7 @@ import java.nio.file.Path;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 import org.slf4j.Logger;
@@ -123,6 +125,7 @@ public class Summarizer {
 
 	public Summarizer setModel(GradeStructure model) {
 		this.model = model;
+		LOGGER.info("Set model to {}.", model);
 		return this;
 	}
 
@@ -142,30 +145,32 @@ public class Summarizer {
 		LOGGER.debug("Grades: {}.",
 				grades.values().stream().map(g -> g.limitedDepth(1)).collect(ImmutableList.toImmutableList()));
 
-		final ImmutableMap<GitHubUsername, IGrade> dissolved = Maps.toMap(grades.keySet(), u -> dissolveInto(
-				dissolve(dissolveTimePenalty(grades.get(u)), Criterion.given("Penalty: commit by GitHub"))));
-		LOGGER.debug("Dissolved: {}.",
-				dissolved.values().stream().map(g -> g.toTree()).collect(ImmutableList.toImmutableList()));
+//		final ImmutableMap<GitHubUsername, IGrade> dissolved = Maps.toMap(grades.keySet(), u -> dissolveInto(
+//				dissolve(dissolveTimePenalty(grades.get(u)), Criterion.given("Penalty: commit by GitHub"))));
+//		LOGGER.debug("Dissolved: {}.",
+//				dissolved.values().stream().map(g -> g.toTree()).collect(ImmutableList.toImmutableList()));
 
 		final ImmutableMap<GitHubUsername, IGrade> filtered = Maps.toMap(grades.keySet(),
-				u -> filter(dissolved.get(u)));
-		LOGGER.debug("Filtered: {}.",
+//				u -> filter(dissolved.get(u)));
+				u -> nonZero(grades.get(u)));
+		LOGGER.info("Filtered: {}.",
 				filtered.values().stream().map(g -> g.limitedDepth(1)).collect(ImmutableList.toImmutableList()));
 
 //		if (model == null) {
-////			final GradeStructure struct = getAutoModel(ImmutableSet.copyOf(filtered.values()));
+//			final GradeStructure struct;
 //			if (filtered.values().size() > 1) {
-//				final GradeStructure struct = getMajoritarianModel(ImmutableSet.copyOf(filtered.values()));
-//				setModel(struct);
+//				struct = getAutoModel(ImmutableSet.copyOf(filtered.values()));
+//				struct = getMajoritarianModel(ImmutableSet.copyOf(filtered.values()));
 //			} else {
-//				setModel(Iterables.getOnlyElement(filtered.values()).toTree());
+//				struct = Iterables.getOnlyElement(filtered.values()).toTree();
 //			}
+//			setModel(struct);
 //		}
 		final ImmutableMap<GitHubUsername, IGrade> modeled = Maps.toMap(grades.keySet(), u -> model(filtered.get(u)));
 		LOGGER.debug("Modeled: {}.",
 				modeled.values().stream().map(g -> g.limitedDepth(1)).collect(ImmutableList.toImmutableList()));
 
-		final ImmutableBiMap<GitHubUsername, StudentOnGitHub> usernames = readUsernames();
+		final ImmutableBiMap<GitHubUsername, InstitutionalStudent> usernames = readKnownUsernames();
 		final ImmutableSet<GitHubUsername> missing = Sets.difference(usernames.keySet(), grades.keySet())
 				.immutableCopy();
 		final ImmutableSet<GitHubUsername> unknown = Sets.difference(grades.keySet(), usernames.keySet())
@@ -175,27 +180,25 @@ public class Summarizer {
 			LOGGER.warn("Missing: {}; unknown: {}.", missing, unknown);
 		}
 
-		final ImmutableSet<GitHubUsername> toExport = Sets.intersection(grades.keySet(), usernames.keySet())
-				.immutableCopy();
-
 		/* NB we want to iterate using the reading order. */
-		final ImmutableSet<GitHubUsername> allUsernames = Streams.concat(toExport.stream(), missing.stream())
-				.collect(ImmutableSet.toImmutableSet());
+		final ImmutableSet<GitHubUsername> allUsernames = Streams
+				.concat(grades.keySet().stream(), usernames.keySet().stream()).collect(ImmutableSet.toImmutableSet());
 		final ImmutableMap<GitHubUsername, IGrade> completedGrades = Maps.toMap(allUsernames,
 				s -> modeled.getOrDefault(s, Mark.zero("No grade")));
-		final ImmutableMap<StudentOnGitHub, IGrade> completedGradesByStudent = allUsernames.stream()
-				.collect(ImmutableMap.toImmutableMap(usernames::get, completedGrades::get));
+//		final ImmutableMap<StudentOnGitHub, IGrade> completedGradesByStudent = allUsernames.stream()
+//				.collect(ImmutableMap.toImmutableMap(usernames::get, completedGrades::get));
 
 		LOGGER.info("Writing grades Html.");
-		final ImmutableMap<String, IGrade> gradesByString = Maps.toMap(
-				toExport.stream().map(GitHubUsername::getUsername).collect(ImmutableSet.toImmutableSet()),
-				u -> grades.get(GitHubUsername.given(u)));
+		final ImmutableMap<String, IGrade> gradesByString = CollectionUtils.transformKeys(grades,
+				GitHubUsername::getUsername);
 		final Document doc = HtmlGrades.asHtml(gradesByString, "All grades", 20d);
 		Files.writeString(htmlOutputPath, XmlUtils.asString(doc));
 
 		LOGGER.info("Writing grades CSV.");
-		Files.writeString(csvOutputPath,
-				CsvGrades.newInstance(CsvGrades.STUDENT_IDENTITY_FUNCTION, 20d).toCsv(completedGradesByStudent));
+		final Function<GitHubUsername, Map<String, String>> identityFunction = u -> ImmutableMap.of("Name",
+				Optional.ofNullable(usernames.get(u)).map(InstitutionalStudent::getLastName).orElse(""),
+				"GitHub username", u.getUsername());
+		Files.writeString(csvOutputPath, CsvGrades.newInstance(identityFunction, 20d).toCsv(completedGrades));
 	}
 
 	private static IGrade dissolveTimePenalty(IGrade grade) {
@@ -248,10 +251,9 @@ public class Summarizer {
 
 	public static GradeStructure getAutoModel(Set<IGrade> grades) {
 		final Criterion userName = Criterion.given("user.name");
-		final Criterion main = Criterion.given("main");
 		final ImmutableSet<GradeStructure> templates = grades.stream()
-				.filter(g -> g.getSubGrades().keySet().equals(ImmutableSet.of(userName, main))).map(IGrade::toTree)
-				.map(t -> t.getStructure(main)).collect(ImmutableSet.toImmutableSet());
+				.filter(g -> g.getSubGrades().keySet().contains(userName)).map(IGrade::toTree)
+				.collect(ImmutableSet.toImmutableSet());
 		return templates.stream().map(Summarizer::getAutoModel).distinct().collect(MoreCollectors.onlyElement());
 	}
 
@@ -272,10 +274,11 @@ public class Summarizer {
 		return merged;
 	}
 
-	private static ImmutableBiMap<GitHubUsername, StudentOnGitHub> readUsernames() throws IOException {
+	private static ImmutableBiMap<GitHubUsername, InstitutionalStudent> readKnownUsernames() throws IOException {
 		LOGGER.debug("Reading usernames.");
 		final JsonStudentsReader students = JsonStudentsReader.from(Files.readString(Path.of("usernames.json")));
-		final ImmutableBiMap<GitHubUsername, StudentOnGitHub> usernames = students.getStudentsByGitHubUsername();
+		final ImmutableBiMap<GitHubUsername, InstitutionalStudent> usernames = students
+				.getInstitutionalStudentsByGitHubUsername();
 		return usernames;
 	}
 

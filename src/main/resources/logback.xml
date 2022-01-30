@@ -26,7 +26,7 @@
 	<logger name="io.github.oliviercailloux.grade.format.json.JsonGrade" level="INFO" />
 	<logger name="io.github.oliviercailloux.git.fs" level="INFO" />
 	<logger name="io.github.oliviercailloux.grade.CriterionGradeWeight" level="INFO" />
-	<logger name="io.github.oliviercailloux.grade.WeightingGrade" level="INFO" />
+	<logger name="io.github.oliviercailloux.grade.WeightingGrade" level="DEBUG" />
 
 	<root level="DEBUG">
 		<appender-ref ref="STDOUT" />

@@ -240,10 +240,11 @@ public class DeadlineGrader {
 				final double fractionPenalty = Math.min(lateness.getSeconds() / (double) nbSecondsZero, 1d);
 				verify(0d < fractionPenalty);
 				verify(fractionPenalty <= 1d);
-				penalizedGrade = WeightingGrade.from(ImmutableSet.of(
+				final WeightingGrade global = WeightingGrade.from(ImmutableSet.of(
 						CriterionGradeWeight.from(Criterion.given("grade"), grade, 1d - fractionPenalty),
 						CriterionGradeWeight.from(Criterion.given("Time penalty"), Mark.zero("Lateness: " + lateness),
 								fractionPenalty)));
+				penalizedGrade = global.withDissolved(Criterion.given("Time penalty")).withoutTopLayer();
 			} else {
 				penalizedGrade = grade;
 			}

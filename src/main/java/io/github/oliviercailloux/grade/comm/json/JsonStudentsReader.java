@@ -226,4 +226,10 @@ public class JsonStudentsReader {
 		return entries.stream().map(JsonStudentEntry::getInstitutionalStudent).filter(Optional::isPresent)
 				.map(Optional::get).collect(ImmutableBiMap.toImmutableBiMap(InstitutionalStudent::getUsername, s -> s));
 	}
+
+	public ImmutableBiMap<GitHubUsername, InstitutionalStudent> getInstitutionalStudentsByGitHubUsername() {
+		return entries.stream().map(JsonStudentEntry::getInstitutionalStudent).filter(Optional::isPresent)
+				.map(Optional::get)
+				.collect(ImmutableBiMap.toImmutableBiMap(s -> GitHubUsername.given(s.getUsername()), s -> s));
+	}
 }

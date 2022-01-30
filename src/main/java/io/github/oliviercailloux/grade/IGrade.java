@@ -348,6 +348,15 @@ public interface IGrade {
 		return current;
 	}
 
+	public default IGrade withoutTopLayer() {
+		final ImmutableSet<CriterionGradeWeight> subGradesAsSet = getSubGradesAsSet();
+		final ImmutableSet<CriterionGradeWeight> grandChildren = subGradesAsSet.stream()
+				.flatMap(c -> getSubGrades().get(c.getCriterion()).getSubGradesAsSet().stream().map(
+						s -> CriterionGradeWeight.from(s.getCriterion(), s.getGrade(), c.getWeight() * s.getWeight())))
+				.collect(ImmutableSet.toImmutableSet());
+		return WeightingGrade.from(grandChildren);
+	};
+
 	/**
 	 * Two {@link IGrade} objects are equal iff they have the same points, comment,
 	 * and sub grades (irrespective of the order of the sub grades).

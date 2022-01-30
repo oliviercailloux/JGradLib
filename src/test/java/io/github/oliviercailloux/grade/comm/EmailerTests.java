@@ -332,30 +332,28 @@ public class EmailerTests {
 			assertEquals(0, emailer.searchIn(folder,
 					ImapSearchPredicate.recipientAddressEquals(RecipientType.TO, "olivier.cailloux@lamsade.dauphine"))
 					.size());
-			assertEquals(1, emailer.searchIn(folder, ImapSearchPredicate.recipientFullAddressContains(RecipientType.TO,
-					"olivier.cailloux@lamsade.dauphine.fr")).size());
+
+			assertEquals(1, emailer
+					.searchIn(folder, ImapSearchPredicate.recipientFullAddressContains(RecipientType.TO, "olivier"))
+					.size());
 			assertEquals(1, emailer.searchIn(folder, ImapSearchPredicate.recipientFullAddressContains(RecipientType.TO,
 					"olivier.cailloux@lamsade.dauphine.")).size());
+			assertEquals(1, emailer.searchIn(folder, ImapSearchPredicate.recipientFullAddressContains(RecipientType.TO,
+					"olivier.cailloux@lamsade.dauphine.fr")).size());
 			assertEquals(1, emailer.searchIn(folder, ImapSearchPredicate.recipientFullAddressContains(RecipientType.TO,
 					" <olivier.cailloux@lamsade.dauphine.fr>")).size());
 			assertEquals(1, emailer.searchIn(folder, ImapSearchPredicate.recipientFullAddressContains(RecipientType.TO,
 					"olivier cailloux <olivier.cailloux@lamsade.dauphine.fr>")).size());
-
-			/**
-			 * Should not throw. Finds an e-mail sent to "xxxx
-			 * <olivier.cailloux@INVALIDdauphine.fr>" (real name hidden for privacy
-			 * reasons).
-			 */
-			assertThrows(VerifyException.class,
-					() -> emailer.searchIn(folder,
+			assertEquals(1,
+					emailer.searchIn(folder,
 							ImapSearchPredicate.recipientFullAddressContains(RecipientType.TO, "olivier cailloux"))
 							.size());
-			assertThrows(VerifyException.class,
-					() -> emailer.searchIn(folder,
+			assertEquals(1,
+					emailer.searchIn(folder,
 							ImapSearchPredicate.recipientFullAddressContains(RecipientType.TO, "olivier cailloux <"))
 							.size());
-			/** Should equal 1. */
-			assertEquals(0,
+			/** Fails as of Jan 2022. */
+			assertEquals(1,
 					emailer.searchIn(folder,
 							ImapSearchPredicate.recipientFullAddressContains(RecipientType.TO, "olivier cailloux <o"))
 							.size());
@@ -373,7 +371,7 @@ public class EmailerTests {
 	}
 
 	@Test
-	void testZohoBug() throws Exception {
+	void testZohoNoBug() throws Exception {
 		try (Emailer emailer = Emailer.instance()) {
 			emailer.connectToStore(Emailer.getZohoImapSession(), EmailerDauphineHelper.USERNAME_OTHERS,
 					EmailerDauphineHelper.getZohoToken());
@@ -383,8 +381,7 @@ public class EmailerTests {
 			final Message[] asArray = folder.search(new SubjectTerm("grades git-br"));
 			final ImmutableSet<Message> found = ImmutableSet.copyOf(asArray);
 			/** Should be empty. */
-			assertFalse(found.isEmpty());
-			LOGGER.info(Emailer.getDescription(found.iterator().next()));
+			assertTrue(found.isEmpty());
 		}
 	}
 
@@ -423,12 +420,15 @@ public class EmailerTests {
 			emailer.connectToStore(Emailer.getZohoImapSession(), EmailerDauphineHelper.USERNAME_OTHERS,
 					EmailerDauphineHelper.getZohoToken());
 			@SuppressWarnings("resource")
-			final Folder folder = emailer.getFolder("Grades");
+			final Folder folder = emailer.getFolder("Tests");
 
 			final SearchTerm r1 = new RecipientTerm(RecipientType.TO,
 					new InternetAddress("olivier.cailloux@lamsade.dauphine.fr"));
-			final SearchTerm r2 = new RecipientTerm(RecipientType.TO,
-					new InternetAddress("olivier.cailloux@notexistdauphine.fr"));
+			{
+				final Message[] asArray = folder.search(r1);
+				final ImmutableSet<Message> found = ImmutableSet.copyOf(asArray);
+				assertEquals(1, found.size());
+			}
 			final SearchTerm s = new SubjectTerm("grade commit");
 			{
 				/**
@@ -439,6 +439,8 @@ public class EmailerTests {
 				final ImmutableSet<Message> found = ImmutableSet.copyOf(asArray);
 				assertEquals(1, found.size());
 			}
+			final SearchTerm r2 = new RecipientTerm(RecipientType.TO,
+					new InternetAddress("olivier.cailloux@notexistdauphine.fr"));
 			{
 				final SearchTerm r12 = new OrTerm(r1, r2);
 				final SearchTerm sAndR12 = new AndTerm(s, r12);

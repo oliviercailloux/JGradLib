@@ -94,6 +94,21 @@ public class GradeTests {
 		assertEquals(3d / 5d, dissolved.getPoints(), 1e-6d);
 	}
 
+	/**
+	 * TODO this fails, presumably because of the zero VS one weight.
+	 */
+	@Test
+	void testDissolveLate() throws Exception {
+		final IGrade grade = JsonGrade.asGrade(PrintableJsonObjectFactory.wrapPrettyPrintedString(
+				Resources.toString(getClass().getResource("Late grade.json"), StandardCharsets.UTF_8)));
+		final Criterion cGrade = Criterion.given("grade");
+		final Criterion cUser = Criterion.given("user.name");
+		final Criterion cTime = Criterion.given("Time penalty");
+		final IGrade dissolved = grade.withDissolved(cTime);
+		LOGGER.debug("Dissolved: {}.", dissolved);
+		assertEquals(1d / 20d, dissolved.getSubGrades().get(cGrade).getWeights().get(cUser), 1e-6d);
+	}
+
 	@Test
 	void testDissolveStructure() throws Exception {
 		final WeightedGrade one = WeightedGrade.given(Mark.one(), 1d);
