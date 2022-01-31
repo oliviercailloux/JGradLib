@@ -80,13 +80,13 @@ public class StructuredGrade {
 	private int getCriterionIndexByLargestMarksAmong(Criterion criterion, Set<Criterion> criteria) {
 		verify(grade.getCriteria().containsAll(criteria));
 		final Comparator<SubGrade> comparingPoints = Comparator
-				.comparing(s -> s.grade().getMark(GradePath.ROOT).points());
+				.comparing(s -> s.getGrade().getMark(GradePath.ROOT).points());
 		final ImmutableSortedSet<SubGrade> markedCriteria = criteria.stream()
 				.map(c -> SubGrade.given(c, getStructuredGrade(c).getRootMark()))
 				.collect(ImmutableSortedSet.toImmutableSortedSet(comparingPoints.reversed()));
 
 		final int criterionIndexByLargestMarks = Iterables
-				.indexOf(markedCriteria.stream().map(SubGrade::criterion).toList(), c -> c.equals(criterion));
+				.indexOf(markedCriteria.stream().map(SubGrade::getCriterion).toList(), c -> c.equals(criterion));
 		return criterionIndexByLargestMarks;
 	}
 

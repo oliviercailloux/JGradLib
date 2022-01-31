@@ -40,7 +40,7 @@ class CompositeGrade implements Grade {
 
 	@Override
 	public Grade getGrade(Criterion criterion) {
-		return getSubGrade(criterion).grade();
+		return getSubGrade(criterion).getGrade();
 	}
 
 	@Override
@@ -53,8 +53,7 @@ class CompositeGrade implements Grade {
 	public ImmutableSet<GradePath> getPathsToMarks() {
 		final ImmutableSet.Builder<GradePath> builder = ImmutableSet.builder();
 		for (Criterion criterion : subGrades.keySet()) {
-			getSubGrade(criterion).grade().getPathsToMarks().stream().map(p -> p.withPrefix(criterion))
-					.forEach(builder::add);
+			getGrade(criterion).getPathsToMarks().stream().map(p -> p.withPrefix(criterion)).forEach(builder::add);
 		}
 		return builder.build();
 	}
@@ -64,13 +63,13 @@ class CompositeGrade implements Grade {
 		if (path.isRoot()) {
 			return this;
 		}
-		return getSubGrade(path.getHead()).grade().getGrade(path.withoutHead());
+		return getGrade(path.getHead()).getGrade(path.withoutHead());
 	}
 
 	@Override
 	public Mark getMark(GradePath path) {
 		checkArgument(!path.isRoot());
-		return getSubGrade(path.getHead()).grade().getMark(path.withoutHead());
+		return getGrade(path.getHead()).getMark(path.withoutHead());
 	}
 
 }
