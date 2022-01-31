@@ -1,6 +1,5 @@
 package io.github.oliviercailloux.grade;
 
-import com.google.common.collect.ImmutableSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -24,12 +23,14 @@ import java.util.Set;
  */
 public interface GradeStructure {
 
-	public static GradeStructure absolutesWithGivenWeights(Map<Criterion, Double> weights) {
-		return new FixedWeightsGradeStructure(weights);
+	public static GradeStructure absolutesWithGivenWeights(Map<Criterion, Double> weights,
+			Map<Criterion, GradeStructure> subStructures) {
+		return new FixedWeightsGradeStructure(weights, subStructures);
 	}
 
-	public static GradeStructure maxWithGivenAbsolutes(Set<Criterion> absolutes) {
-		return new MaxGradeStructure(absolutes);
+	public static GradeStructure maxWithGivenAbsolutes(Set<Criterion> absolutes,
+			Map<Criterion, GradeStructure> subStructures) {
+		return new MaxGradeStructure(absolutes, subStructures);
 	}
 
 	public boolean isAbsolute(Criterion criterion);
@@ -59,5 +60,7 @@ public interface GradeStructure {
 	 *                 criterion or at least one absolute criterion.
 	 */
 	public Mark getMark(Set<SubMark> subMarks);
+
+	public GradeStructure getStructure(Criterion criterion);
 
 }

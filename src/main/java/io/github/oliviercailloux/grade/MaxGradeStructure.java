@@ -3,19 +3,23 @@ package io.github.oliviercailloux.grade;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Verify.verify;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Iterables;
 import java.util.Comparator;
+import java.util.Map;
 import java.util.Set;
 import java.util.function.Predicate;
 
 class MaxGradeStructure implements GradeStructure {
 
 	private final ImmutableSet<Criterion> absolutes;
+	private final ImmutableMap<Criterion, GradeStructure> subStructures;
 
-	MaxGradeStructure(Set<Criterion> absolutes) {
+	MaxGradeStructure(Set<Criterion> absolutes, Map<Criterion, GradeStructure> subStructures) {
 		this.absolutes = ImmutableSet.copyOf(absolutes);
+		this.subStructures = ImmutableMap.copyOf(subStructures);
 	}
 
 	@Override
@@ -46,6 +50,12 @@ class MaxGradeStructure implements GradeStructure {
 	@Override
 	public Mark getMark(Set<SubMark> subMarks) {
 		return FixedWeightsGradeStructure.getMark(this, subMarks);
+	}
+
+	@Override
+	public GradeStructure getStructure(Criterion criterion) {
+		checkArgument(subStructures.containsKey(criterion));
+		return subStructures.get(criterion);
 	}
 
 }

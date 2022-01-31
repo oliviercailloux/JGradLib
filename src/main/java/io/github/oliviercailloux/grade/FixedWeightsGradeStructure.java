@@ -37,9 +37,11 @@ class FixedWeightsGradeStructure implements GradeStructure {
 	}
 
 	private final ImmutableMap<Criterion, Double> weights;
+	private final ImmutableMap<Criterion, GradeStructure> subStructures;
 
-	FixedWeightsGradeStructure(Map<Criterion, Double> weights) {
+	FixedWeightsGradeStructure(Map<Criterion, Double> weights, Map<Criterion, GradeStructure> subStructures) {
 		this.weights = ImmutableMap.copyOf(weights);
+		this.subStructures = ImmutableMap.copyOf(subStructures);
 	}
 
 	@Override
@@ -62,6 +64,12 @@ class FixedWeightsGradeStructure implements GradeStructure {
 	@Override
 	public Mark getMark(Set<SubMark> subMarks) {
 		return FixedWeightsGradeStructure.getMark(this, subMarks);
+	}
+
+	@Override
+	public GradeStructure getStructure(Criterion criterion) {
+		checkArgument(subStructures.containsKey(criterion));
+		return subStructures.get(criterion);
 	}
 
 }
