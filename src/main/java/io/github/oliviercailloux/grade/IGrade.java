@@ -357,7 +357,7 @@ public interface IGrade {
 						s -> CriterionGradeWeight.from(s.getCriterion(), s.getGrade(), c.getWeight() * s.getWeight())))
 				.collect(ImmutableSet.toImmutableSet());
 		return WeightingGrade.from(grandChildren);
-	};
+	}
 
 	/**
 	 * Two {@link IGrade} objects are equal iff they have the same points, comment,
