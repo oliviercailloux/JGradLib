@@ -9,6 +9,7 @@ import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.graph.ValueGraph;
 import io.github.oliviercailloux.grade.IGrade.GradePath;
 import io.github.oliviercailloux.grade.WeightingGrade.WeightedGrade;
+import io.github.oliviercailloux.grade.old.GradeStructure;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;

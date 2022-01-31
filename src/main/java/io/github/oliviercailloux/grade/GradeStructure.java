@@ -2,160 +2,121 @@ package io.github.oliviercailloux.grade;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
-import com.google.common.base.MoreObjects;
-import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.graph.EndpointPair;
-import com.google.common.graph.Graph;
-import com.google.common.graph.GraphBuilder;
-import com.google.common.graph.ImmutableGraph;
-import io.github.oliviercailloux.grade.IGrade.GradePath;
-import java.util.ArrayDeque;
-import java.util.LinkedHashSet;
+import com.google.common.collect.MoreCollectors;
+import com.google.common.collect.Sets;
 import java.util.Map;
-import java.util.Objects;
-import java.util.Queue;
 import java.util.Set;
+import java.util.function.Predicate;
 
+/**
+ * the same for every students. May contain no criteria (represent a simple mark
+ * structure).
+ * <p>
+ * explains how the grade is decomposed (where points have been earned or lost;
+ * what justifies the final grade)
+ * <p>
+ * Required with a composite grade to compute the points weights AND/OR OWA
+ * AND/OR “absolute” marks
+ * <p>
+ * Negative may be interpreted as a variable proportion of what comes before
+ * (such as a linear lateness penality) or as an absolute penalty (such as −1
+ * for terrible spelling) or as a proportional penalty that is not linear; in
+ * any case, seems better to indicate the percentage or other explanation as a
+ * comment as it will depend.
+ * <p>
+ * Example
+ * <ul>
+ * <li>crits => c1 w1, c2 w2, c3 REST, c4 NEG, c5 OWA W1, c6 OWA W2, c7 OWAbis
+ * WW1, c8 OWAbis WW2, c9 OWAbis WWREST.</li>
+ * <li>weights: list: {c1, c2, c3}</li>
+ * <li>OWA: set: {c5, c6}</li>
+ * <li>OWAbis: {c7, c8, c9}</li>
+ * <li>NEG: set {c4}</li>
+ * </ul>
+ */
 public class GradeStructure {
+	public static final GradeStructure EMPTY = GradeStructure.given(ImmutableMap.of(), ImmutableSet.of(),
+			ImmutableSet.of(), ImmutableSet.of(), ImmutableMap.of());
 
-	public static GradeStructure given(Graph<GradePath> graph) {
-		return new GradeStructure(graph);
+	public static GradeStructure given(Map<Criterion, Double> weights, Set<OwaStructure> owas, Set<Criterion> absolutes,
+			Set<Criterion> criteria, Map<Criterion, GradeStructure> subStructures) {
+		return new GradeStructure(weights, owas, absolutes, criteria, subStructures);
 	}
+
+	private final ImmutableMap<Criterion, Double> weights;
+	private final ImmutableSet<OwaStructure> owas;
+	private final ImmutableSet<Criterion> absolutes;
+	/**
+	 * Indicates the ordering; must equal the union of the criteria in weights, owa
+	 * and absolutes.
+	 */
+	private final ImmutableSet<Criterion> criteria;
 
 	/**
-	 * @param paths need not contain every intermediate paths; anything is accepted
-	 *              (the whole structure is deduced anyway)
-	 * @return an empty grade structure iff the given paths set is empty or has only
-	 *         one root
+	 * not all criteria: some are simple marks
 	 */
-	public static GradeStructure given(Set<GradePath> paths) {
-		final Queue<GradePath> toVisit = new ArrayDeque<>();
-		toVisit.addAll(paths);
+	private final ImmutableMap<Criterion, GradeStructure> subStructures;
 
-		final Set<GradePath> visited = new LinkedHashSet<>();
+	private GradeStructure(Map<Criterion, Double> weights, Set<OwaStructure> owas, Set<Criterion> absolutes,
+			Set<Criterion> criteria, Map<Criterion, GradeStructure> subStructures) {
+		this.weights = ImmutableMap.copyOf(weights);
+		this.owas = ImmutableSet.copyOf(owas);
+		this.absolutes = ImmutableSet.copyOf(absolutes);
+		this.criteria = ImmutableSet.copyOf(criteria);
+		this.subStructures = ImmutableMap.copyOf(subStructures);
 
-		final ImmutableGraph.Builder<GradePath> builder = GraphBuilder.directed().immutable();
-		builder.addNode(GradePath.ROOT);
+		checkArgument(Sets.intersection(weights.keySet(), absolutes).isEmpty());
+		checkArgument(owas.stream().map(OwaStructure::getCriteria)
+				.allMatch(c -> Sets.intersection(weights.keySet(), c).isEmpty()));
+		checkArgument(
+				owas.stream().map(OwaStructure::getCriteria).allMatch(c -> Sets.intersection(absolutes, c).isEmpty()));
+		checkArgument(criteria.containsAll(subStructures.keySet()));
 
-		while (!toVisit.isEmpty()) {
-			final GradePath current = toVisit.remove();
-			if (visited.contains(current)) {
-				continue;
-			}
-			if (!current.isRoot()) {
-				final GradePath parent = current.withoutTail();
-				builder.putEdge(parent, current);
-				toVisit.add(parent);
-			}
-			visited.add(current);
-		}
-
-		return new GradeStructure(builder.build());
+		final ImmutableSet.Builder<Criterion> builder = ImmutableSet.builder();
+		builder.addAll(weights.keySet());
+		builder.addAll(absolutes);
+		owas.stream().map(OwaStructure::getCriteria).forEach(builder::addAll);
+		checkArgument(criteria.equals(builder.build()));
 	}
 
-	public static GradeStructure toTree(Set<Criterion> nodes) {
-		final ImmutableGraph.Builder<GradePath> builder = GraphBuilder.directed().immutable();
-		nodes.forEach(c -> builder.addNode(GradePath.from(ImmutableList.of(c))));
-		return new GradeStructure(builder.build());
+	public ImmutableSet<Criterion> getOrderedCriteria() {
+		return criteria;
 	}
 
-	public static GradeStructure toTree(Map<Criterion, GradeStructure> subTrees) {
-		final ImmutableGraph.Builder<GradePath> builder = GraphBuilder.directed().immutable();
-		builder.addNode(GradePath.ROOT);
-		for (Criterion criterion : subTrees.keySet()) {
-			final GradeStructure subTree = subTrees.get(criterion);
-			final GradePath criterionPath = GradePath.ROOT.withPrefix(criterion);
-			builder.putEdge(GradePath.ROOT, criterionPath);
-			for (EndpointPair<GradePath> endpointPair : subTree.asGraph().edges()) {
-				builder.putEdge(endpointPair.source().withPrefix(criterion),
-						endpointPair.target().withPrefix(criterion));
-			}
-		}
-		return new GradeStructure(builder.build());
+	public boolean isAbsolute(Criterion criterion) {
+		checkArgument(criteria.contains(criterion));
+		return absolutes.contains(criterion);
 	}
 
-	public static GradeStructure merge(Set<GradeStructure> grades) {
-		return given(grades.stream().flatMap(g -> g.getLeaves().stream()).collect(ImmutableSet.toImmutableSet()));
+	public boolean hasWeight(Criterion criterion) {
+		checkArgument(criteria.contains(criterion));
+		return weights.containsKey(criterion);
 	}
 
-	public static GradeStructure from(Set<String> paths) {
-		return GradeStructure.given(paths.stream().map(GradePath::from).collect(ImmutableSet.toImmutableSet()));
+	public boolean isInOwa(Criterion criterion) {
+		checkArgument(criteria.contains(criterion));
+		return owas.stream().flatMap(o -> o.getCriteria().stream()).anyMatch(Predicate.isEqual(criterion));
 	}
 
-	private final ImmutableGraph<GradePath> graph;
-
-	private GradeStructure(Graph<GradePath> graph) {
-		this.graph = ImmutableGraph.copyOf(graph);
-		checkArgument(graph.nodes().contains(GradePath.ROOT));
-		checkArgument(graph.nodes().stream()
-				.allMatch(p -> graph.successors(p).stream().allMatch(s -> s.withoutTail().equals(p))));
-		checkArgument(graph.nodes().stream().allMatch(
-				p -> p.equals(GradePath.ROOT) || graph.predecessors(p).equals(ImmutableSet.of(p.withoutTail()))));
+	public double getWeight(Criterion criterion) {
+		checkArgument(weights.containsKey(criterion));
+		return weights.get(criterion);
 	}
 
-	public ImmutableSet<GradePath> getPaths() {
-		return ImmutableSet.copyOf(graph.nodes());
+	public OwaStructure getOwaStructure(Criterion criterion) {
+		checkArgument(criteria.contains(criterion));
+		return owas.stream().filter(o -> o.getCriteria().contains(criterion)).collect(MoreCollectors.onlyElement());
 	}
 
-	public ImmutableSet<GradePath> getLeaves() {
-		return graph.nodes().stream().filter(p -> graph.successors(p).isEmpty()).collect(ImmutableSet.toImmutableSet());
+	public ImmutableSet<Criterion> getStructuredCriteria() {
+		return subStructures.keySet();
 	}
 
-	/**
-	 * @return all paths in this graph that have the given path as prefix
-	 */
-	public ImmutableSet<GradePath> getSuccessorPaths(GradePath path) {
-		return ImmutableSet.copyOf(graph.successors(path));
-	}
-
-	/**
-	 * @return all paths in this graph that have the given path as prefix
-	 */
-	public ImmutableSet<GradePath> getSiblingsIfTail(GradePath path) {
-		if (path.isRoot()) {
-			return ImmutableSet.of(GradePath.ROOT);
-		}
-		return getSuccessorPaths(path.withoutTail());
-	}
-
-	/**
-	 * @return all criteria such that path + c in sucessorpath(path)
-	 */
-	public ImmutableSet<Criterion> getSuccessorCriteria(GradePath path) {
-		return graph.successors(path).stream().map(p -> p.getTail()).collect(ImmutableSet.toImmutableSet());
-	}
-
-	public GradeStructure getStructure(Criterion child) {
-		return getStructure(GradePath.from(ImmutableList.of(child)));
-	}
-
-	public GradeStructure getStructure(GradePath path) {
-		return given(graph.nodes().stream().filter(p -> p.startsWith(path))
-				.map(p -> GradePath.from(p.subList(path.size(), p.size()))).collect(ImmutableSet.toImmutableSet()));
-	}
-
-	public ImmutableGraph<GradePath> asGraph() {
-		return graph;
-	}
-
-	@Override
-	public boolean equals(Object o2) {
-		if (!(o2 instanceof GradeStructure)) {
-			return false;
-		}
-		final GradeStructure t2 = (GradeStructure) o2;
-		return graph.equals(t2.graph);
-	}
-
-	@Override
-	public int hashCode() {
-		return Objects.hash(graph);
-	}
-
-	@Override
-	public String toString() {
-		return MoreObjects.toStringHelper(this).add("Leaves", getLeaves()).toString();
+	public GradeStructure getStructure(Criterion criterion) {
+		checkArgument(criteria.contains(criterion));
+		return subStructures.getOrDefault(criterion, GradeStructure.EMPTY);
 	}
 
 }

@@ -28,15 +28,26 @@ public interface Grade {
 	 */
 	public boolean isComposite();
 
-	public Grade getGrade(GradePath path);
+	/**
+	 * @return empty iff this is a mark.
+	 */
+	public ImmutableSet<Criterion> getCriteria();
 
 	/**
-	 * getGrade(criterion as path) = getSubGrade(criterion).toGrade().
+	 * getGrade(criterion as singleton path) = getGrade(criterion).
+	 *
+	 */
+	public Grade getGrade(Criterion criterion);
+
+	/**
+	 * getGrade(criterion as singleton path) = getSubGrade(criterion).toGrade().
 	 *
 	 */
 	public SubGrade getSubGrade(Criterion criterion);
 
-	public Mark getMark(GradePath path);
-
 	public ImmutableSet<GradePath> getPathsToMarks();
+
+	public Grade getGrade(GradePath path);
+
+	public Mark getMark(GradePath path);
 }

@@ -1,7 +1,7 @@
 package io.github.oliviercailloux.grade.markers;
 
 import io.github.oliviercailloux.grade.IGrade;
-import io.github.oliviercailloux.grade.Mark;
+import io.github.oliviercailloux.grade.old.Mark;
 import io.github.oliviercailloux.jaris.exceptions.Unchecker;
 import java.nio.file.Files;
 import java.nio.file.Path;

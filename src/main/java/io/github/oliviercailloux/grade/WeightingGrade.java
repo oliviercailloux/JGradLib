@@ -12,6 +12,8 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.math.DoubleMath;
+import io.github.oliviercailloux.grade.old.GradeStructure;
+import io.github.oliviercailloux.grade.old.Mark;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.LinkedHashMap;

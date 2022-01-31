@@ -7,9 +7,9 @@ import com.google.common.collect.ImmutableMap;
 import io.github.oliviercailloux.grade.Criterion;
 import io.github.oliviercailloux.grade.IGrade;
 import io.github.oliviercailloux.grade.IGrade.GradePath;
-import io.github.oliviercailloux.grade.Mark;
 import io.github.oliviercailloux.grade.WeightingGrade;
 import io.github.oliviercailloux.grade.WeightingGrade.WeightedGrade;
+import io.github.oliviercailloux.grade.old.Mark;
 import org.junit.jupiter.api.Test;
 
 public class SummarizeTests {

@@ -13,7 +13,7 @@ import io.github.classgraph.ClassInfo;
 import io.github.classgraph.ClassInfoList;
 import io.github.classgraph.ScanResult;
 import io.github.oliviercailloux.grade.GradingException;
-import io.github.oliviercailloux.grade.Mark;
+import io.github.oliviercailloux.grade.old.Mark;
 import io.github.oliviercailloux.java_grade.testers.JavaMarkHelper;
 import java.io.IOException;
 import java.io.InputStream;

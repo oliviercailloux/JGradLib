@@ -13,6 +13,8 @@ import com.google.common.math.DoubleMath;
 import io.github.oliviercailloux.grade.WeightingGrade.PathGradeWeight;
 import io.github.oliviercailloux.grade.WeightingGrade.WeightedGrade;
 import io.github.oliviercailloux.grade.WeightingGrade.WeightedMark;
+import io.github.oliviercailloux.grade.old.GradeStructure;
+import io.github.oliviercailloux.grade.old.Mark;
 import java.util.List;
 import java.util.Optional;
 import java.util.RandomAccess;

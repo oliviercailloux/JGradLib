@@ -10,6 +10,7 @@ import io.github.oliviercailloux.git.JGit;
 import io.github.oliviercailloux.git.fs.GitFileSystem;
 import io.github.oliviercailloux.git.fs.GitFileSystemProvider;
 import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
+import io.github.oliviercailloux.grade.old.Mark;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.time.Duration;

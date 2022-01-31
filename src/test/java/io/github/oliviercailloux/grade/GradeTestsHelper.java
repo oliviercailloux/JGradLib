@@ -3,6 +3,7 @@ package io.github.oliviercailloux.grade;
 import com.google.common.base.Verify;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.math.DoubleMath;
+import io.github.oliviercailloux.grade.old.Mark;
 import java.util.Map.Entry;
 
 public class GradeTestsHelper {

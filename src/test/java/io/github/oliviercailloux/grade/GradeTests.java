@@ -10,6 +10,8 @@ import io.github.oliviercailloux.grade.IGrade.GradePath;
 import io.github.oliviercailloux.grade.WeightingGrade.WeightedGrade;
 import io.github.oliviercailloux.grade.format.json.JsonGrade;
 import io.github.oliviercailloux.grade.format.json.JsonGradeTests;
+import io.github.oliviercailloux.grade.old.GradeStructure;
+import io.github.oliviercailloux.grade.old.Mark;
 import io.github.oliviercailloux.json.PrintableJsonObjectFactory;
 import java.nio.charset.StandardCharsets;
 import org.junit.jupiter.api.Test;
