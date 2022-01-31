@@ -37,4 +37,8 @@ public class OwaStructure {
 		return weights;
 	}
 
+	public double getWeightForPosition(int positionByLargestMarks) {
+		return weights.get(positionByLargestMarks);
+	}
+
 }

@@ -11,14 +11,19 @@ import java.util.Set;
 import java.util.function.Predicate;
 
 /**
- * the same for every students. May contain no criteria (represent a simple mark
- * structure).
+ * the same for every students. May contain no criteria
  * <p>
  * explains how the grade is decomposed (where points have been earned or lost;
  * what justifies the final grade)
  * <p>
- * Required with a composite grade to compute the points weights AND/OR OWA
- * AND/OR “absolute” marks
+ * Required with a composite grade to compute the points
+ * <p>
+ * Has a “default” mode: points associated to unknown criteria are aggregated
+ * using the default mode, which, currently, is necessarily MAX (thus OWA 1, 0,
+ * 0, …). Could be generalized to parameterized aggregation: using average;
+ * using absolutes; using zero weights; using MIN…
+ * <p>
+ * weights AND/OR OWA AND/OR “absolute” marks
  * <p>
  * Negative may be interpreted as a variable proportion of what comes before
  * (such as a linear lateness penality) or as an absolute penalty (such as −1
@@ -38,33 +43,31 @@ import java.util.function.Predicate;
  */
 public class GradeStructure {
 	public static final GradeStructure EMPTY = GradeStructure.given(ImmutableMap.of(), ImmutableSet.of(),
-			ImmutableSet.of(), ImmutableSet.of(), ImmutableMap.of());
+			ImmutableSet.of(), ImmutableMap.of());
 
 	public static GradeStructure given(Map<Criterion, Double> weights, Set<OwaStructure> owas, Set<Criterion> absolutes,
-			Set<Criterion> criteria, Map<Criterion, GradeStructure> subStructures) {
-		return new GradeStructure(weights, owas, absolutes, criteria, subStructures);
+			Map<Criterion, GradeStructure> subStructures) {
+		return new GradeStructure(weights, owas, absolutes, subStructures);
 	}
 
 	private final ImmutableMap<Criterion, Double> weights;
 	private final ImmutableSet<OwaStructure> owas;
 	private final ImmutableSet<Criterion> absolutes;
-	/**
-	 * Indicates the ordering; must equal the union of the criteria in weights, owa
-	 * and absolutes.
-	 */
-	private final ImmutableSet<Criterion> criteria;
 
+	/**
+	 * All the above
+	 */
+	private final ImmutableSet<Criterion> knownCriteria;
 	/**
 	 * not all criteria: some are simple marks
 	 */
 	private final ImmutableMap<Criterion, GradeStructure> subStructures;
 
 	private GradeStructure(Map<Criterion, Double> weights, Set<OwaStructure> owas, Set<Criterion> absolutes,
-			Set<Criterion> criteria, Map<Criterion, GradeStructure> subStructures) {
+			Map<Criterion, GradeStructure> subStructures) {
 		this.weights = ImmutableMap.copyOf(weights);
 		this.owas = ImmutableSet.copyOf(owas);
 		this.absolutes = ImmutableSet.copyOf(absolutes);
-		this.criteria = ImmutableSet.copyOf(criteria);
 		this.subStructures = ImmutableMap.copyOf(subStructures);
 
 		checkArgument(Sets.intersection(weights.keySet(), absolutes).isEmpty());
@@ -72,32 +75,32 @@ public class GradeStructure {
 				.allMatch(c -> Sets.intersection(weights.keySet(), c).isEmpty()));
 		checkArgument(
 				owas.stream().map(OwaStructure::getCriteria).allMatch(c -> Sets.intersection(absolutes, c).isEmpty()));
-		checkArgument(criteria.containsAll(subStructures.keySet()));
 
 		final ImmutableSet.Builder<Criterion> builder = ImmutableSet.builder();
 		builder.addAll(weights.keySet());
 		builder.addAll(absolutes);
 		owas.stream().map(OwaStructure::getCriteria).forEach(builder::addAll);
-		checkArgument(criteria.equals(builder.build()));
+		this.knownCriteria = builder.build();
 	}
 
-	public ImmutableSet<Criterion> getOrderedCriteria() {
-		return criteria;
+	public ImmutableSet<Criterion> getKnownCriteria() {
+		return knownCriteria;
 	}
 
 	public boolean isAbsolute(Criterion criterion) {
-		checkArgument(criteria.contains(criterion));
 		return absolutes.contains(criterion);
 	}
 
 	public boolean hasWeight(Criterion criterion) {
-		checkArgument(criteria.contains(criterion));
 		return weights.containsKey(criterion);
 	}
 
 	public boolean isInOwa(Criterion criterion) {
-		checkArgument(criteria.contains(criterion));
 		return owas.stream().flatMap(o -> o.getCriteria().stream()).anyMatch(Predicate.isEqual(criterion));
+	}
+
+	public boolean isKnown(Criterion criterion) {
+		return knownCriteria.contains(criterion);
 	}
 
 	public double getWeight(Criterion criterion) {
@@ -106,8 +109,14 @@ public class GradeStructure {
 	}
 
 	public OwaStructure getOwaStructure(Criterion criterion) {
-		checkArgument(criteria.contains(criterion));
 		return owas.stream().filter(o -> o.getCriteria().contains(criterion)).collect(MoreCollectors.onlyElement());
+	}
+
+	public double getDefaultOwaWeightForPosition(int positionByLargestMarks) {
+		if (positionByLargestMarks == 0) {
+			return 1d;
+		}
+		return 0d;
 	}
 
 	public ImmutableSet<Criterion> getStructuredCriteria() {
@@ -115,7 +124,6 @@ public class GradeStructure {
 	}
 
 	public GradeStructure getStructure(Criterion criterion) {
-		checkArgument(criteria.contains(criterion));
 		return subStructures.getOrDefault(criterion, GradeStructure.EMPTY);
 	}
 
