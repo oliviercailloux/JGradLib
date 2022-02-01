@@ -36,6 +36,13 @@ public interface GradeStructure {
 
 	public boolean isAbsolute(Criterion criterion);
 
+	public GradeStructure getStructure(Criterion criterion);
+
+	/**
+	 * @return if default != abs, an empty map.
+	 */
+	public ImmutableMap<Criterion, Double> getFixedWeights();
+
 	/**
 	 * NB a method double getWeight(Criterion criterion, Set<SubMark> subMarks) does
 	 * not work here: if two crit have same mark (say, rank 1 and 2), then when
@@ -59,7 +66,5 @@ public interface GradeStructure {
 	 *                 criterion or at least one absolute criterion.
 	 */
 	public Mark getMark(Set<SubMark> subMarks);
-
-	public GradeStructure getStructure(Criterion criterion);
 
 }

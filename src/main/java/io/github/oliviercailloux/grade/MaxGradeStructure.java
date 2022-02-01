@@ -27,6 +27,17 @@ class MaxGradeStructure implements GradeStructure {
 	}
 
 	@Override
+	public GradeStructure getStructure(Criterion criterion) {
+		checkArgument(subStructures.containsKey(criterion));
+		return subStructures.get(criterion);
+	}
+
+	@Override
+	public ImmutableMap<Criterion, Double> getFixedWeights() {
+		return ImmutableMap.of();
+	}
+
+	@Override
 	public ImmutableMap<SubMark, Double> getWeights(Set<SubMark> subMarks) {
 		final ImmutableSet<Criterion> criteria = subMarks.stream().map(SubMark::getCriterion)
 				.collect(ImmutableSet.toImmutableSet());
@@ -91,12 +102,6 @@ class MaxGradeStructure implements GradeStructure {
 	@Override
 	public Mark getMark(Set<SubMark> subMarks) {
 		return StructuredGrade.getMark(this, subMarks);
-	}
-
-	@Override
-	public GradeStructure getStructure(Criterion criterion) {
-		checkArgument(subStructures.containsKey(criterion));
-		return subStructures.get(criterion);
 	}
 
 }
