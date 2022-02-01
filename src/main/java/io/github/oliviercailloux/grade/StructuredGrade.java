@@ -1,23 +1,31 @@
 package io.github.oliviercailloux.grade;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Verify.verify;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.MoreCollectors;
+import io.github.oliviercailloux.grade.IGrade.GradePath;
+import java.util.Map;
 import java.util.Set;
 
 public class StructuredGrade {
 	static Mark getMark(GradeStructure structure, Set<SubMark> subMarks) {
-		final ImmutableSet<SubMark> weightedSubMarks = subMarks.stream()
+		ImmutableSet<SubMark> absoluteSubMarks = subMarks.stream().filter(s -> structure.isAbsolute(s.getCriterion()))
+				.collect(ImmutableSet.toImmutableSet());
+		final ImmutableSet<SubMark> toBeWeightedSubMarks = subMarks.stream()
 				.filter(s -> !structure.isAbsolute(s.getCriterion())).collect(ImmutableSet.toImmutableSet());
-		final ImmutableMap<Criterion, Double> weights = structure.getWeights(weightedSubMarks);
-		final double weightedSum = weightedSubMarks.stream()
-				.mapToDouble(s -> weights.get(s.getCriterion()) * s.getGrade().points()).sum();
-		final double sumOfWeights = weights.values().stream().mapToDouble(d -> d).sum();
+		ImmutableMap<SubMark, Double> weightedSubMarks = structure.getWeights(toBeWeightedSubMarks);
+		return getMark(absoluteSubMarks, weightedSubMarks);
+	}
+
+	static Mark getMark(Set<SubMark> absoluteSubMarks, Map<SubMark, Double> weightedSubMarks) {
+		final double weightedSum = weightedSubMarks.keySet().stream()
+				.mapToDouble(s -> weightedSubMarks.get(s) * s.getGrade().points()).sum();
+		final double sumOfWeights = weightedSubMarks.values().stream().mapToDouble(d -> d).sum();
 		final boolean hasWeightedCriteria = sumOfWeights != 0d;
 
-		final ImmutableSet<SubMark> absoluteSubMarks = subMarks.stream()
-				.filter(s -> structure.isAbsolute(s.getCriterion())).collect(ImmutableSet.toImmutableSet());
 		final double absolutePoints = absoluteSubMarks.stream().mapToDouble(s -> s.getGrade().points()).sum();
 
 		if (hasWeightedCriteria) {
@@ -39,12 +47,14 @@ public class StructuredGrade {
 
 	private final Grade grade;
 	private final GradeStructure structure;
-	private ImmutableMap<Criterion, Double> weights;
+	private ImmutableMap<SubMark, Double> weightedSubMarks;
+	private ImmutableSet<SubMark> absoluteSubMarks;
 
 	private StructuredGrade(Grade grade, GradeStructure structure) {
 		this.grade = checkNotNull(grade);
 		this.structure = checkNotNull(structure);
-		weights = null;
+		weightedSubMarks = null;
+		absoluteSubMarks = null;
 	}
 
 	public boolean isAbsolute(Criterion criterion) {
@@ -55,22 +65,30 @@ public class StructuredGrade {
 	 * @param criterion not absolute
 	 */
 	public double getWeight(Criterion criterion) {
-		return getWeights().get(criterion);
+		initSubMarks();
+		final SubMark subMark = weightedSubMarks.keySet().stream().filter(s -> s.getCriterion().equals(criterion))
+				.collect(MoreCollectors.onlyElement());
+		return weightedSubMarks.get(subMark);
 	}
 
-	private ImmutableMap<Criterion, Double> getWeights() {
-		weights = structure.getWeights(getSubMarks());
-		return weights;
-	}
-
-	private ImmutableSet<SubMark> getSubMarks() {
+	private void initSubMarks() {
+		final boolean hasWeightedSubMarks = weightedSubMarks != null;
+		final boolean hasAbsoluteSubMarks = absoluteSubMarks != null;
+		verify(hasWeightedSubMarks == hasAbsoluteSubMarks);
+		if (hasWeightedSubMarks) {
+			return;
+		}
 		/*
 		 * This assumes that the marks of the sub criteria can be computed using
 		 * recursion; but does not use the root mark of this grade.
 		 */
-		final ImmutableSet<SubMark> markedCriteria = grade.getCriteria().stream()
+		final ImmutableSet<SubMark> allSubMarks = grade.getCriteria().stream()
 				.map(c -> SubMark.given(c, getStructuredGrade(c).getRootMark())).collect(ImmutableSet.toImmutableSet());
-		return markedCriteria;
+		absoluteSubMarks = allSubMarks.stream().filter(s -> structure.isAbsolute(s.getCriterion()))
+				.collect(ImmutableSet.toImmutableSet());
+		final ImmutableSet<SubMark> toBeWeightedSubMarks = allSubMarks.stream()
+				.filter(s -> !structure.isAbsolute(s.getCriterion())).collect(ImmutableSet.toImmutableSet());
+		weightedSubMarks = structure.getWeights(toBeWeightedSubMarks);
 	}
 
 	public StructuredGrade getStructuredGrade(Criterion criterion) {
@@ -81,8 +99,12 @@ public class StructuredGrade {
 	 * @return the points at the root
 	 */
 	public Mark getRootMark() {
+		if (grade.isMark()) {
+			return grade.getMark(GradePath.ROOT);
+		}
+		initSubMarks();
 		/* This assumes that the criteria weights can be computed recursively. */
-		return structure.getMark(getSubMarks());
+		return getMark(absoluteSubMarks, weightedSubMarks);
 	}
 
 }

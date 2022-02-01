@@ -27,7 +27,7 @@ class MaxGradeStructure implements GradeStructure {
 	}
 
 	@Override
-	public ImmutableMap<Criterion, Double> getWeights(Set<SubMark> subMarks) {
+	public ImmutableMap<SubMark, Double> getWeights(Set<SubMark> subMarks) {
 		final ImmutableSet<Criterion> criteria = subMarks.stream().map(SubMark::getCriterion)
 				.collect(ImmutableSet.toImmutableSet());
 		checkArgument(subMarks.size() == criteria.size());
@@ -37,9 +37,9 @@ class MaxGradeStructure implements GradeStructure {
 		final ImmutableSortedSet<SubMark> subMarksLargestFirst = ImmutableSortedSet.copyOf(comparingPoints.reversed(),
 				subMarks);
 
-		final ImmutableMap.Builder<Criterion, Double> weightsBuilder = ImmutableMap.builder();
+		final ImmutableMap.Builder<SubMark, Double> weightsBuilder = ImmutableMap.builder();
 		final Stream<Double> weights = Stream.concat(Stream.of(1d), Stream.generate(() -> 0d));
-		Streams.forEachPair(subMarksLargestFirst.stream(), weights, (s, w) -> weightsBuilder.put(s.getCriterion(), w));
+		Streams.forEachPair(subMarksLargestFirst.stream(), weights, weightsBuilder::put);
 		return weightsBuilder.build();
 
 //		final double tolerance = 1e-6d;

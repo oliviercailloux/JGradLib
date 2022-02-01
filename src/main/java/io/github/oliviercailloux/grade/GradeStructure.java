@@ -49,7 +49,7 @@ public interface GradeStructure {
 	 *                 misleading)
 	 * @return the weights
 	 */
-	public ImmutableMap<Criterion, Double> getWeights(Set<SubMark> subMarks);
+	public ImmutableMap<SubMark, Double> getWeights(Set<SubMark> subMarks);
 
 	/**
 	 * Then weighted sum divided by sum of weights not counting absolute ones; plus

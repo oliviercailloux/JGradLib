@@ -25,13 +25,14 @@ class FixedWeightsGradeStructure implements GradeStructure {
 	}
 
 	@Override
-	public ImmutableMap<Criterion, Double> getWeights(Set<SubMark> subMarks) {
+	public ImmutableMap<SubMark, Double> getWeights(Set<SubMark> subMarks) {
 		final ImmutableSet<Criterion> criteria = subMarks.stream().map(SubMark::getCriterion)
 				.collect(ImmutableSet.toImmutableSet());
 		checkArgument(subMarks.size() == criteria.size());
 		checkArgument(criteria.stream().noneMatch(this::isAbsolute));
 		verify(weights.keySet().containsAll(criteria));
-		return criteria.stream().collect(ImmutableMap.toImmutableMap(Function.identity(), weights::get));
+		return subMarks.stream()
+				.collect(ImmutableMap.toImmutableMap(Function.identity(), s -> weights.get(s.getCriterion())));
 	}
 
 	@Override
