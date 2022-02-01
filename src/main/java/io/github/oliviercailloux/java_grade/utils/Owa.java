@@ -13,7 +13,7 @@ import io.github.oliviercailloux.grade.GradeUtils;
 import io.github.oliviercailloux.grade.IGrade;
 import io.github.oliviercailloux.grade.IGrade.GradePath;
 import io.github.oliviercailloux.grade.format.json.JsonCriterion;
-import io.github.oliviercailloux.grade.format.json.JsonGrade;
+import io.github.oliviercailloux.grade.format.json.JsonbGrade;
 import io.github.oliviercailloux.java_grade.graders.WorkersGrader;
 import io.github.oliviercailloux.json.JsonbUtils;
 import java.lang.reflect.Type;
@@ -39,11 +39,11 @@ public class Owa {
 		}.getClass().getGenericSuperclass();
 
 		final Map<String, IGrade> grades = JsonbUtils.fromJson(Files.readString(Path.of("grades " + prefix + ".json")),
-				type, JsonGrade.instance());
+				type, JsonbGrade.instance());
 		final ImmutableMap<String, IGrade> gradesOwa = Maps.toMap(grades.keySet(), s -> toOwa(grades.get(s)));
 
 		Files.writeString(Path.of("grades " + prefix + " owa.json"),
-				JsonbUtils.toJsonObject(gradesOwa, JsonCriterion.instance(), JsonGrade.instance()).toString());
+				JsonbUtils.toJsonObject(gradesOwa, JsonCriterion.instance(), JsonbGrade.instance()).toString());
 	}
 
 	private static IGrade toOwa(IGrade grade) {

@@ -18,7 +18,7 @@ import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
 import io.github.oliviercailloux.grade.GitFileSystemHistory;
 import io.github.oliviercailloux.grade.GitWork;
 import io.github.oliviercailloux.grade.IGrade;
-import io.github.oliviercailloux.grade.format.json.JsonGrade;
+import io.github.oliviercailloux.grade.format.json.JsonbGrade;
 import java.nio.file.FileSystem;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -48,7 +48,7 @@ public class GitBranchingTests {
 					GitHistory.create(GraphBuilder.directed().build(), ImmutableMap.of()));
 
 			final IGrade grade = new GitBranching().grade(GitWork.given(GitHubUsername.given("ploum"), empty));
-			LOGGER.debug("Grade: {}.", JsonGrade.asJson(grade));
+			LOGGER.debug("Grade: {}.", JsonbGrade.asJson(grade));
 			assertEquals(0d, grade.getPoints());
 		}
 
@@ -106,7 +106,7 @@ public class GitBranchingTests {
 
 					final IGrade grade = new GitBranching()
 							.grade(GitWork.given(GitHubUsername.given("Not me"), withConstantTimes));
-					LOGGER.info("Grade: {}.", JsonGrade.asJson(grade));
+					LOGGER.info("Grade: {}.", JsonbGrade.asJson(grade));
 					assertEquals(0.5d, grade.getPoints(), 1e-5d);
 				}
 			}
@@ -164,7 +164,7 @@ public class GitBranchingTests {
 
 					final IGrade grade = new GitBranching()
 							.grade(GitWork.given(GitHubUsername.given("Me"), withConstantTimes));
-					LOGGER.debug("Grade direct: {}.", JsonGrade.asJson(grade));
+					LOGGER.debug("Grade direct: {}.", JsonbGrade.asJson(grade));
 					assertEquals(1.0d, grade.getPoints());
 				}
 			}

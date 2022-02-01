@@ -23,7 +23,7 @@ import io.github.oliviercailloux.grade.comm.EmailerDauphineHelper;
 import io.github.oliviercailloux.grade.comm.GradesInEmails;
 import io.github.oliviercailloux.grade.comm.StudentOnGitHubKnown;
 import io.github.oliviercailloux.grade.comm.json.JsonStudentsReader;
-import io.github.oliviercailloux.grade.format.json.JsonGrade;
+import io.github.oliviercailloux.grade.format.json.JsonbGrade;
 import io.github.oliviercailloux.grade.old.Mark;
 import io.github.oliviercailloux.json.JsonbUtils;
 import io.github.oliviercailloux.xml.XmlUtils;
@@ -58,7 +58,7 @@ public class SendEmails {
 		final Type type = new HashMap<String, IGrade>() {
 		}.getClass().getGenericSuperclass();
 		final Map<String, IGrade> gradesByString = JsonbUtils.fromJson(
-				Files.readString(WORK_DIR.resolve("grades " + prefix + ".json")), type, JsonGrade.asAdapter());
+				Files.readString(WORK_DIR.resolve("grades " + prefix + ".json")), type, JsonbGrade.asAdapter());
 
 		final ImmutableSet<String> missing = gradesByString.keySet().stream()
 				.filter(s -> !usernames.containsKey(GitHubUsername.given(s))).collect(ImmutableSet.toImmutableSet());

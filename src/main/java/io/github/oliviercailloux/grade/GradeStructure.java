@@ -1,5 +1,6 @@
 package io.github.oliviercailloux.grade;
 
+import com.google.common.collect.ImmutableMap;
 import java.util.Map;
 import java.util.Set;
 
@@ -23,7 +24,7 @@ import java.util.Set;
  */
 public interface GradeStructure {
 
-	public static GradeStructure absolutesWithGivenWeights(Map<Criterion, Double> weights,
+	public static GradeStructure givenWeights(Map<Criterion, Double> weights,
 			Map<Criterion, GradeStructure> subStructures) {
 		return new FixedWeightsGradeStructure(weights, subStructures);
 	}
@@ -36,21 +37,19 @@ public interface GradeStructure {
 	public boolean isAbsolute(Criterion criterion);
 
 	/**
-	 * NB if two crit have same mark (say, rank 1 and 2), then we average the
-	 * corresponding weights.
+	 * NB a method double getWeight(Criterion criterion, Set<SubMark> subMarks) does
+	 * not work here: if two crit have same mark (say, rank 1 and 2), then when
+	 * returning weights individually we’d need to average the corresponding
+	 * weights; but we prefer having one weight 1d and one 0d than two 0.5d when
+	 * showing the results to the student.
 	 *
-	 * Error if criterion is absolute (weight counts as one when multiplying to get
-	 * the weighted sum, but counts as zero when summing to get the sum of weights
-	 * to use in normalization, misleading)
+	 * @param subMarks may not contain absolute criteria (weight counts as one when
+	 *                 multiplying to get the weighted sum, but counts as zero when
+	 *                 summing to get the sum of weights to use in normalization,
+	 *                 misleading)
+	 * @return the weights
 	 */
-	public double getWeight(Criterion criterion, Set<SubMark> subMarks);
-
-	/**
-	 * the sum of the weights returned by {@link #getWeight(Criterion, Set)}.
-	 *
-	 * @param criteria only non absolute ones
-	 */
-	public double getSumOfWeights(Set<Criterion> criteria);
+	public ImmutableMap<Criterion, Double> getWeights(Set<SubMark> subMarks);
 
 	/**
 	 * Then weighted sum divided by sum of weights not counting absolute ones; plus

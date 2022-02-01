@@ -10,7 +10,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedSet;
 import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
 import io.github.oliviercailloux.grade.DeadlineGrader.LinearPenalizer;
-import io.github.oliviercailloux.grade.format.json.JsonGrade;
+import io.github.oliviercailloux.grade.format.json.JsonbGrade;
 import io.github.oliviercailloux.grade.old.Mark;
 import io.github.oliviercailloux.jaris.exceptions.Throwing;
 import io.github.oliviercailloux.jaris.throwing.TOptional;
@@ -149,7 +149,7 @@ public class BatchGitHistoryGrader<X extends Exception> {
 	private void write(Map<GitHubUsername, IGrade> grades, Path out, String prefix) throws IOException {
 		final ImmutableMap<String, IGrade> gradesString = grades.entrySet().stream()
 				.collect(ImmutableMap.toImmutableMap(e -> e.getKey().getUsername(), Entry::getValue));
-		Files.writeString(out, JsonbUtils.toJsonObject(gradesString, JsonGrade.asAdapter()).toString());
+		Files.writeString(out, JsonbUtils.toJsonObject(gradesString, JsonbGrade.asAdapter()).toString());
 		final Summarizer summarizer = Summarizer.create().setInputPath(out)
 				.setCsvOutputPath(Path.of("grades " + prefix + ".csv"))
 				.setHtmlOutputPath(Path.of("grades " + prefix + ".html"));

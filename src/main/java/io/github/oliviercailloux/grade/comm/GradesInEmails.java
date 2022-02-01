@@ -22,7 +22,7 @@ import io.github.oliviercailloux.email.EmailAddressAndPersonal;
 import io.github.oliviercailloux.email.ImapSearchPredicate;
 import io.github.oliviercailloux.grade.IGrade;
 import io.github.oliviercailloux.grade.format.HtmlGrades;
-import io.github.oliviercailloux.grade.format.json.JsonGrade;
+import io.github.oliviercailloux.grade.format.json.JsonbGrade;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.UncheckedIOException;
@@ -78,13 +78,13 @@ public class GradesInEmails implements AutoCloseable {
 			htmler.setQuantiles(quartiles);
 		}
 		final Document doc = htmler.asHtml(grade);
-		final Email email = Email.withDocumentAndFile(doc, FILE_NAME, JsonGrade.asJson(grade).toString(), MIME_SUBTYPE,
+		final Email email = Email.withDocumentAndFile(doc, FILE_NAME, JsonbGrade.asJson(grade).toString(), MIME_SUBTYPE,
 				studentAddress);
 		return email;
 	}
 
 	public static GradesInEmails newInstance() {
-		return new GradesInEmails(JsonGrade.create().instanceAsAdapter());
+		return new GradesInEmails(JsonbGrade.create().instanceAsAdapter());
 	}
 
 	private final Emailer emailer;

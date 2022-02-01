@@ -8,7 +8,7 @@ import com.google.common.collect.Maps;
 import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.grade.IGrade;
-import io.github.oliviercailloux.grade.format.json.JsonGrade;
+import io.github.oliviercailloux.grade.format.json.JsonbGrade;
 import io.github.oliviercailloux.json.JsonbUtils;
 import java.io.IOException;
 import java.lang.reflect.Type;
@@ -62,7 +62,7 @@ public class GradesByGitHubReader {
 
 		LOGGER.debug("Reading grades.");
 		final String sourceGrades = Files.readString(gradesInputPath);
-		final Map<String, IGrade> grades = JsonbUtils.fromJson(sourceGrades, type, JsonGrade.asAdapter());
+		final Map<String, IGrade> grades = JsonbUtils.fromJson(sourceGrades, type, JsonbGrade.asAdapter());
 		LOGGER.debug("Read keys: {}.", grades.keySet());
 		final ImmutableMap<GitHubUsername, IGrade> gradesByUsername = Maps.toMap(
 				grades.keySet().stream().map(GitHubUsername::given).collect(ImmutableSet.toImmutableSet()),
