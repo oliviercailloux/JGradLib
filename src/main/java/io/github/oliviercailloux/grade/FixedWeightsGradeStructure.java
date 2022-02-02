@@ -9,6 +9,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 
+/**
+ * May have empty weights. Use absolute as default. Weights, if not empty, must
+ * sum to (approx) one.
+ */
 class FixedWeightsGradeStructure implements GradeStructure {
 
 	private final ImmutableMap<Criterion, Double> weights;
@@ -16,7 +20,13 @@ class FixedWeightsGradeStructure implements GradeStructure {
 
 	FixedWeightsGradeStructure(Map<Criterion, Double> weights, Map<Criterion, GradeStructure> subStructures) {
 		this.weights = ImmutableMap.copyOf(weights);
+		checkArgument(weights.values().stream().mapToDouble(d -> d).sum() == 1d || weights.isEmpty());
 		this.subStructures = ImmutableMap.copyOf(subStructures);
+	}
+
+	@Override
+	public DefaultAggregation getDefaultAggregation() {
+		return DefaultAggregation.ABSOLUTE;
 	}
 
 	@Override

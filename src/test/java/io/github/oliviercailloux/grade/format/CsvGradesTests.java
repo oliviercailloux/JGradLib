@@ -12,7 +12,7 @@ import io.github.oliviercailloux.grade.WeightingGrade;
 import io.github.oliviercailloux.grade.comm.InstitutionalStudent;
 import io.github.oliviercailloux.grade.comm.StudentOnGitHub;
 import io.github.oliviercailloux.grade.format.json.JsonbGrade;
-import io.github.oliviercailloux.grade.format.json.JsonGradeTests;
+import io.github.oliviercailloux.grade.format.json.JsonbGradeTests;
 import java.nio.charset.StandardCharsets;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
@@ -40,7 +40,7 @@ class CsvGradesTests {
 
 	@Test
 	void writeVeryComplexGradeTest() throws Exception {
-		final String jsonGrade = Resources.toString(JsonGradeTests.class.getResource("VeryComplexGrade.json"),
+		final String jsonGrade = Resources.toString(JsonbGradeTests.class.getResource("VeryComplexGrade.json"),
 				StandardCharsets.UTF_8);
 		final IGrade grade = JsonbGrade.asGrade(jsonGrade);
 		final CsvGrades<StudentOnGitHub> csvGrades = CsvGrades.newInstance(CsvGrades.STUDENT_IDENTITY_FUNCTION,

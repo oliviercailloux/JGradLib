@@ -24,6 +24,10 @@ import java.util.Set;
  */
 public interface GradeStructure {
 
+	public static enum DefaultAggregation {
+		AVERAGE, MAX, MIN, ABSOLUTE
+	}
+
 	public static GradeStructure givenWeights(Map<Criterion, Double> weights,
 			Map<Criterion, GradeStructure> subStructures) {
 		return new FixedWeightsGradeStructure(weights, subStructures);
@@ -33,6 +37,8 @@ public interface GradeStructure {
 			Map<Criterion, GradeStructure> subStructures) {
 		return new MaxGradeStructure(absolutes, subStructures);
 	}
+
+	public DefaultAggregation getDefaultAggregation();
 
 	public boolean isAbsolute(Criterion criterion);
 

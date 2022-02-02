@@ -9,7 +9,7 @@ import com.google.common.io.Resources;
 import io.github.oliviercailloux.grade.IGrade.GradePath;
 import io.github.oliviercailloux.grade.WeightingGrade.WeightedGrade;
 import io.github.oliviercailloux.grade.format.json.JsonbGrade;
-import io.github.oliviercailloux.grade.format.json.JsonGradeTests;
+import io.github.oliviercailloux.grade.format.json.JsonbGradeTests;
 import io.github.oliviercailloux.grade.old.GradeStructure;
 import io.github.oliviercailloux.grade.old.Mark;
 import io.github.oliviercailloux.json.PrintableJsonObjectFactory;
@@ -55,7 +55,7 @@ public class GradeTests {
 	@Test
 	void testTree() throws Exception {
 		final IGrade grade = JsonbGrade.asGrade(PrintableJsonObjectFactory.wrapPrettyPrintedString(
-				Resources.toString(JsonGradeTests.class.getResource("ComplexGrade.json"), StandardCharsets.UTF_8)));
+				Resources.toString(JsonbGradeTests.class.getResource("ComplexGrade.json"), StandardCharsets.UTF_8)));
 //		final IGrade grade = JsonGrade
 //				.asGrade(PrintableJsonObjectFactory.wrapPrettyPrintedString(Files.readString(Path.of("grade.json"))));
 		final GradeStructure actual = grade.toTree();

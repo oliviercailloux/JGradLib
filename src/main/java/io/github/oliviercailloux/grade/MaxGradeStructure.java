@@ -22,6 +22,11 @@ class MaxGradeStructure implements GradeStructure {
 	}
 
 	@Override
+	public DefaultAggregation getDefaultAggregation() {
+		return DefaultAggregation.MAX;
+	}
+
+	@Override
 	public boolean isAbsolute(Criterion criterion) {
 		return absolutes.contains(criterion);
 	}
