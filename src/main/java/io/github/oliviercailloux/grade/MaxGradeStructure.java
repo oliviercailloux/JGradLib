@@ -32,6 +32,11 @@ class MaxGradeStructure implements GradeStructure {
 	}
 
 	@Override
+	public ImmutableMap<Criterion, GradeStructure> getSubStructures() {
+		return subStructures;
+	}
+
+	@Override
 	public GradeStructure getStructure(Criterion criterion) {
 		checkArgument(subStructures.containsKey(criterion));
 		return subStructures.get(criterion);

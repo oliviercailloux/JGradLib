@@ -42,6 +42,8 @@ public interface GradeStructure {
 
 	public boolean isAbsolute(Criterion criterion);
 
+	public ImmutableMap<Criterion, GradeStructure> getSubStructures();
+
 	public GradeStructure getStructure(Criterion criterion);
 
 	/**
