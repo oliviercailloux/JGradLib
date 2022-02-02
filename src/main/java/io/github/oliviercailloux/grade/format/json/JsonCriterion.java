@@ -1,12 +1,12 @@
 package io.github.oliviercailloux.grade.format.json;
 
 import io.github.oliviercailloux.grade.Criterion;
-import javax.json.Json;
-import javax.json.JsonString;
-import javax.json.JsonValue;
-import javax.json.JsonValue.ValueType;
-import javax.json.bind.JsonbException;
-import javax.json.bind.adapter.JsonbAdapter;
+import jakarta.json.Json;
+import jakarta.json.JsonString;
+import jakarta.json.JsonValue;
+import jakarta.json.JsonValue.ValueType;
+import jakarta.json.bind.JsonbException;
+import jakarta.json.bind.adapter.JsonbAdapter;
 
 public class JsonCriterion implements JsonbAdapter<Criterion, JsonValue> {
 	private static final JsonCriterion INSTANCE = new JsonCriterion();
