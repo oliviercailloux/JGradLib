@@ -17,7 +17,7 @@ import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinatesWithPrefix;
 import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherQL;
 import io.github.oliviercailloux.grade.format.HtmlGrades;
-import io.github.oliviercailloux.grade.format.json.JsonbGrade;
+import io.github.oliviercailloux.grade.format.json.JsonGrade;
 import io.github.oliviercailloux.java_grade.testers.JavaMarkHelper;
 import io.github.oliviercailloux.json.JsonbUtils;
 import io.github.oliviercailloux.utils.Utils;
@@ -98,7 +98,7 @@ public class GitGeneralGrader {
 			builder.put(username, grade);
 		}
 		final ImmutableMap<String, IGrade> grades = builder.build();
-		Files.writeString(out, JsonbUtils.toJsonObject(grades, JsonbGrade.asAdapter()).toString());
+		Files.writeString(out, JsonbUtils.toJsonObject(grades, JsonGrade.asAdapter()).toString());
 		Files.writeString(Path.of("grades.html"), XmlUtils.asString(HtmlGrades.asHtml(grades, "Grades", 20d)));
 //		final ImmutableSet<String> unames = grades.keySet();
 //		final Set<StudentOnGitHub> stds = unames.stream().map((String u) -> StudentOnGitHub.with(u))

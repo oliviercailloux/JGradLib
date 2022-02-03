@@ -8,7 +8,7 @@ import io.github.oliviercailloux.grade.IGrade;
 import io.github.oliviercailloux.grade.IGrade.GradePath;
 import io.github.oliviercailloux.grade.WeightingGrade;
 import io.github.oliviercailloux.grade.WeightingGrade.WeightedGrade;
-import io.github.oliviercailloux.grade.format.json.JsonbGrade;
+import io.github.oliviercailloux.grade.format.json.JsonGrade;
 import io.github.oliviercailloux.grade.old.GradeStructure;
 import io.github.oliviercailloux.grade.old.Mark;
 import java.nio.file.Files;
@@ -18,9 +18,9 @@ import org.junit.jupiter.api.Test;
 public class CompressorTests {
 	@Test
 	void testCompress() throws Exception {
-		final WeightingGrade deflatedGrade = (WeightingGrade) JsonbGrade
+		final WeightingGrade deflatedGrade = (WeightingGrade) JsonGrade
 				.asGrade(Files.readString(Path.of(getClass().getResource("DeflatedGrade.json").toURI())));
-		final IGrade compressedGrade = JsonbGrade
+		final IGrade compressedGrade = JsonGrade
 				.asGrade(Files.readString(Path.of(getClass().getResource("CompressedGrade.json").toURI())));
 		final IGrade obtained = Compressor.compress(deflatedGrade, GradeStructure.from(ImmutableSet.of("g1", "g2")));
 		assertEquals(compressedGrade, obtained);

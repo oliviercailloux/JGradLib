@@ -19,7 +19,7 @@ import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.grade.GitFileSystemHistory;
 import io.github.oliviercailloux.grade.GitWork;
 import io.github.oliviercailloux.grade.IGrade;
-import io.github.oliviercailloux.grade.format.json.JsonbGrade;
+import io.github.oliviercailloux.grade.format.json.JsonGrade;
 import io.github.oliviercailloux.utils.Utils;
 import java.time.Instant;
 import java.util.Map;
@@ -47,7 +47,7 @@ public class EclipseTests {
 					GitHistory.create(GraphBuilder.directed().build(), ImmutableMap.of()));
 
 			final IGrade grade = new Eclipse().grade(GitWork.given(GitHubUsername.given("ploum"), empty));
-			LOGGER.debug("Grade direct: {}.", JsonbGrade.asJson(grade));
+			LOGGER.debug("Grade direct: {}.", JsonGrade.asJson(grade));
 			assertEquals(0d, grade.getPoints());
 		}
 	}
@@ -72,7 +72,7 @@ public class EclipseTests {
 
 			final IGrade grade = new Eclipse().setIncludeMine()
 					.grade(GitWork.given(GitHubUsername.given("Olivier Cailloux"), justMaster));
-			LOGGER.debug("Grade: {}.", JsonbGrade.asJson(grade));
+			LOGGER.debug("Grade: {}.", JsonGrade.asJson(grade));
 			assertEquals(0.05d, grade.getPoints());
 		}
 	}
@@ -100,7 +100,7 @@ public class EclipseTests {
 			assertFalse(new Eclipse().formatted(masterId));
 			final IGrade grade = new Eclipse().setIncludeMine()
 					.grade(GitWork.given(GitHubUsername.given("Olivier Cailloux"), fromMaster));
-			LOGGER.debug("Grade: {}.", JsonbGrade.asJson(grade));
+			LOGGER.debug("Grade: {}.", JsonGrade.asJson(grade));
 			assertEquals(1.0d, grade.getPoints());
 		}
 	}

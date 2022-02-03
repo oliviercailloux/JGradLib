@@ -17,7 +17,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
-public class JsonbSimpleGrade {
+public class JsonSimpleGrade {
 	@JsonbPropertyOrder({ "defaultAggregation", "weights", "absolutes", "subs" })
 	public static record GSR(DefaultAggregation defaultAggregation, Optional<Map<Criterion, Double>> weights,
 			Set<Criterion> absolutes, Map<Criterion, GradeStructure> subs) {

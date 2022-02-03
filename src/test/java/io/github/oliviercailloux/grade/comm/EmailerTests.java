@@ -19,7 +19,7 @@ import io.github.oliviercailloux.grade.GradeTestsHelper;
 import io.github.oliviercailloux.grade.IGrade;
 import io.github.oliviercailloux.grade.WeightingGrade;
 import io.github.oliviercailloux.grade.format.HtmlGrades;
-import io.github.oliviercailloux.grade.format.json.JsonbGrade;
+import io.github.oliviercailloux.grade.format.json.JsonGrade;
 import io.github.oliviercailloux.xml.HtmlDocument;
 import io.github.oliviercailloux.xml.XmlUtils;
 import jakarta.json.Json;
@@ -70,7 +70,7 @@ public class EmailerTests {
 		final WeightingGrade grade = GradeTestsHelper.getComplexGradeWithPenalty();
 		final Document doc2 = HtmlGrades.asHtml(grade, "Ze grade");
 		final EmailAddressAndPersonal to2 = EmailAddressAndPersonal.given("oliviercailloux@gmail.com", "OC");
-		final Email email2 = Email.withDocumentAndFile(doc2, "data.json", JsonbGrade.asJson(grade).toString(), "json",
+		final Email email2 = Email.withDocumentAndFile(doc2, "data.json", JsonGrade.asJson(grade).toString(), "json",
 				to2);
 
 		try (Emailer emailer = Emailer.instance()) {

@@ -5,7 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.graph.ImmutableValueGraph;
 import com.google.common.graph.ValueGraphBuilder;
-import io.github.oliviercailloux.grade.format.json.JsonbGrade;
+import io.github.oliviercailloux.grade.format.json.JsonGrade;
 import io.github.oliviercailloux.grade.old.Mark;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -42,7 +42,7 @@ public class GradeUtilsTests {
 
 		final IGrade actual = GradeUtils.toGrade(root, tree, leafs);
 
-		final IGrade expected = JsonbGrade
+		final IGrade expected = JsonGrade
 				.asGrade(Files.readString(Path.of(getClass().getResource("Unbalanced grade.json").toURI())));
 		assertEquals(expected.getSubGrades().keySet(), actual.getSubGrades().keySet());
 		assertEquals(expected.getSubGrades().get(cr), actual.getSubGrades().get(cr));

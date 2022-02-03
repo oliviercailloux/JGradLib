@@ -8,7 +8,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.io.Resources;
 import io.github.oliviercailloux.grade.IGrade.GradePath;
 import io.github.oliviercailloux.grade.WeightingGrade.WeightedGrade;
-import io.github.oliviercailloux.grade.format.json.JsonbGrade;
+import io.github.oliviercailloux.grade.format.json.JsonGrade;
 import io.github.oliviercailloux.grade.format.json.JsonbGradeTests;
 import io.github.oliviercailloux.grade.old.GradeStructure;
 import io.github.oliviercailloux.grade.old.Mark;
@@ -54,7 +54,7 @@ public class GradeTests {
 
 	@Test
 	void testTree() throws Exception {
-		final IGrade grade = JsonbGrade.asGrade(PrintableJsonObjectFactory.wrapPrettyPrintedString(
+		final IGrade grade = JsonGrade.asGrade(PrintableJsonObjectFactory.wrapPrettyPrintedString(
 				Resources.toString(JsonbGradeTests.class.getResource("ComplexGrade.json"), StandardCharsets.UTF_8)));
 //		final IGrade grade = JsonGrade
 //				.asGrade(PrintableJsonObjectFactory.wrapPrettyPrintedString(Files.readString(Path.of("grade.json"))));
@@ -101,7 +101,7 @@ public class GradeTests {
 	 */
 	@Test
 	void testDissolveLate() throws Exception {
-		final IGrade grade = JsonbGrade.asGrade(PrintableJsonObjectFactory.wrapPrettyPrintedString(
+		final IGrade grade = JsonGrade.asGrade(PrintableJsonObjectFactory.wrapPrettyPrintedString(
 				Resources.toString(getClass().getResource("Late grade.json"), StandardCharsets.UTF_8)));
 		final Criterion cGrade = Criterion.given("grade");
 		final Criterion cUser = Criterion.given("user.name");

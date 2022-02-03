@@ -21,8 +21,8 @@ import jakarta.json.bind.adapter.JsonbAdapter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class JsonbGrade implements JsonbAdapter<IGrade, JsonObject> {
-	private static final JsonbGrade INSTANCE = new JsonbGrade();
+public class JsonGrade implements JsonbAdapter<IGrade, JsonObject> {
+	private static final JsonGrade INSTANCE = new JsonGrade();
 
 	public static JsonbAdapter<IGrade, JsonObject> instance() {
 		return INSTANCE;
@@ -39,7 +39,7 @@ public class JsonbGrade implements JsonbAdapter<IGrade, JsonObject> {
 	}
 
 	@SuppressWarnings("unused")
-	static final Logger LOGGER = LoggerFactory.getLogger(JsonbGrade.class);
+	static final Logger LOGGER = LoggerFactory.getLogger(JsonGrade.class);
 
 	public static PrintableJsonObject asJson(IGrade grade) {
 		return create().instanceAsJson(grade);
@@ -65,23 +65,23 @@ public class JsonbGrade implements JsonbAdapter<IGrade, JsonObject> {
 		return create().instanceAsAdapter();
 	}
 
-	public static JsonbGrade create() {
-		return new JsonbGrade();
+	public static JsonGrade create() {
+		return new JsonGrade();
 	}
 
 	public static Patch asPatch(String json) {
-		return JsonbUtils.fromJson(json, Patch.class, JsonbGrade.instance(), JsonCriterion.instance());
+		return JsonbUtils.fromJson(json, Patch.class, JsonGrade.instance(), JsonCriterion.instance());
 	}
 
 	public static PrintableJsonObject patchAsJson(Patch patch) {
-		return JsonbUtils.toJsonObject(patch, JsonbGrade.instance(), JsonCriterion.instance());
+		return JsonbUtils.toJsonObject(patch, JsonGrade.instance(), JsonCriterion.instance());
 	}
 
 	private final Jsonb jsonb;
 
 	private final Jsonb jsonbWithThisAdapter;
 
-	private JsonbGrade() {
+	private JsonGrade() {
 		jsonb = JsonbBuilder.create(new JsonbConfig()
 				.withAdapters(JsonCriterion.instance(), toCriterionGradeWeightAdapter()).withFormatting(true));
 		jsonbWithThisAdapter = JsonbBuilder.create(

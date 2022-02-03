@@ -21,7 +21,7 @@ import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
 import io.github.oliviercailloux.grade.GitFileSystemHistory;
 import io.github.oliviercailloux.grade.GitWork;
 import io.github.oliviercailloux.grade.IGrade;
-import io.github.oliviercailloux.grade.format.json.JsonbGrade;
+import io.github.oliviercailloux.grade.format.json.JsonGrade;
 import io.github.oliviercailloux.utils.Utils;
 import java.nio.file.FileSystem;
 import java.nio.file.Files;
@@ -54,7 +54,7 @@ class CommitTests {
 					GitHistory.create(GraphBuilder.directed().build(), ImmutableMap.of()));
 
 			final IGrade direct = Commit.grade(GitWork.given(GitHubUsername.given("ploum"), empty));
-			LOGGER.debug("Grade direct: {}.", JsonbGrade.asJson(direct));
+			LOGGER.debug("Grade direct: {}.", JsonGrade.asJson(direct));
 			assertEquals(0d, direct.getPoints());
 		}
 
@@ -103,7 +103,7 @@ class CommitTests {
 						GitHistory.create(graph, times));
 
 				final IGrade direct = Commit.grade(GitWork.given(GitHubUsername.given("Not me"), withTimes));
-				LOGGER.debug("Grade direct: {}.", JsonbGrade.asJson(direct));
+				LOGGER.debug("Grade direct: {}.", JsonGrade.asJson(direct));
 				assertEquals(0.85d, direct.getPoints(), 1e-5);
 			}
 		}
@@ -150,7 +150,7 @@ class CommitTests {
 							GitHistory.create(graph, constantTimes));
 
 					final IGrade direct = Commit.grade(GitWork.given(GitHubUsername.given("Me"), withConstantTimes));
-					LOGGER.debug("Grade direct: {}.", JsonbGrade.asJson(direct));
+					LOGGER.debug("Grade direct: {}.", JsonGrade.asJson(direct));
 					assertEquals(1.0d, direct.getPoints());
 				}
 			}

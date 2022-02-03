@@ -27,7 +27,7 @@ import io.github.oliviercailloux.grade.comm.StudentOnGitHubKnown;
 import io.github.oliviercailloux.grade.comm.json.JsonStudentsReader;
 import io.github.oliviercailloux.grade.format.CsvGrades;
 import io.github.oliviercailloux.grade.format.HtmlGrades;
-import io.github.oliviercailloux.grade.format.json.JsonbGrade;
+import io.github.oliviercailloux.grade.format.json.JsonGrade;
 import io.github.oliviercailloux.json.JsonbUtils;
 import io.github.oliviercailloux.xml.XmlUtils;
 import java.nio.file.Files;
@@ -79,7 +79,7 @@ public class SummarizeEmails {
 				a -> usernames.get(a).getGitHubUsername().getUsername());
 
 		Files.writeString(Path.of("grades recap.json"),
-				JsonbUtils.toJsonValue(gradesByUsername, JsonbGrade.asAdapter()).toString());
+				JsonbUtils.toJsonValue(gradesByUsername, JsonGrade.asAdapter()).toString());
 		final Document doc = HtmlGrades.asHtml(gradesByUsername, "All grades recap", 20d);
 		Files.writeString(Path.of("grades recap.html"), XmlUtils.asString(doc));
 
