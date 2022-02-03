@@ -27,6 +27,11 @@ class MaxGradeStructure implements GradeStructure {
 	}
 
 	@Override
+	public ImmutableSet<Criterion> getAbsolutes() {
+		return absolutes;
+	}
+
+	@Override
 	public boolean isAbsolute(Criterion criterion) {
 		return absolutes.contains(criterion);
 	}

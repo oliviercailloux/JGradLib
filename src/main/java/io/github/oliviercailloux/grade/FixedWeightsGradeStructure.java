@@ -30,6 +30,11 @@ class FixedWeightsGradeStructure implements GradeStructure {
 	}
 
 	@Override
+	public ImmutableSet<Criterion> getAbsolutes() {
+		return ImmutableSet.of();
+	}
+
+	@Override
 	public boolean isAbsolute(Criterion criterion) {
 		return !weights.containsKey(criterion);
 	}
