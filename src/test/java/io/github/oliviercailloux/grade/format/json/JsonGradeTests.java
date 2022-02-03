@@ -12,17 +12,32 @@ import org.junit.jupiter.api.Test;
 
 public class JsonGradeTests {
 	@Test
-	void testMap() throws Exception {
+	void testWriteStructure() throws Exception {
 		final Criterion c1 = Criterion.given("c1");
 		final Criterion c2 = Criterion.given("c2");
 		final Criterion c3 = Criterion.given("c3");
 		final GradeStructure emptyAbs = GradeStructure.givenWeights(ImmutableMap.of(), ImmutableMap.of());
 		final GradeStructure emptyMax = GradeStructure.maxWithGivenAbsolutes(ImmutableSet.of(), ImmutableMap.of());
 		final GradeStructure oneMax = GradeStructure.maxWithGivenAbsolutes(ImmutableSet.of(c1), ImmutableMap.of());
-		final GradeStructure s = GradeStructure.givenWeights(ImmutableMap.of(c1, 1d),
+		final GradeStructure toWrite = GradeStructure.givenWeights(ImmutableMap.of(c1, 1d),
 				ImmutableMap.of(c1, emptyAbs, c2, emptyMax, c3, oneMax));
 
 		assertEquals(Resources.toString(this.getClass().getResource("GradeStructure.json"), StandardCharsets.UTF_8),
-				JsonSimpleGrade.toJson(s));
+				JsonSimpleGrade.toJson(toWrite));
+	}
+
+	@Test
+	void testReadStructure() throws Exception {
+		final Criterion c1 = Criterion.given("c1");
+		final Criterion c2 = Criterion.given("c2");
+		final Criterion c3 = Criterion.given("c3");
+		final GradeStructure emptyAbs = GradeStructure.givenWeights(ImmutableMap.of(), ImmutableMap.of());
+		final GradeStructure emptyMax = GradeStructure.maxWithGivenAbsolutes(ImmutableSet.of(), ImmutableMap.of());
+		final GradeStructure oneMax = GradeStructure.maxWithGivenAbsolutes(ImmutableSet.of(c1), ImmutableMap.of());
+		final GradeStructure expected = GradeStructure.givenWeights(ImmutableMap.of(c1, 1d),
+				ImmutableMap.of(c1, emptyAbs, c2, emptyMax, c3, oneMax));
+
+		assertEquals(expected, JsonSimpleGrade.asStructure(
+				Resources.toString(this.getClass().getResource("GradeStructure.json"), StandardCharsets.UTF_8)));
 	}
 }
