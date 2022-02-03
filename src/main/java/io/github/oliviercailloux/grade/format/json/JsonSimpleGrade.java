@@ -40,14 +40,62 @@ public class JsonSimpleGrade {
 				checkArgument(structure.absolutes.isEmpty(), "Not yet supported.");
 				return GradeStructure.givenWeights(structure.weights.orElse(ImmutableMap.of()), structure.subs);
 			}
-			checkArgument(structure.weights.isEmpty());
+			checkArgument(Optional.ofNullable(structure.weights).isEmpty());
 			return GradeStructure.maxWithGivenAbsolutes(structure.absolutes, structure.subs);
 		}
 	}
 
 	@JsonbPropertyOrder({ "defaultAggregation", "weights", "absolutes", "subs" })
-	public static record GSR(DefaultAggregation defaultAggregation, Optional<Map<Criterion, Double>> weights,
-			Set<Criterion> absolutes, Map<Criterion, GradeStructure> subs) {
+	public static class GSR {
+		public DefaultAggregation defaultAggregation;
+
+		public Optional<Map<Criterion, Double>> weights;
+		public Set<Criterion> absolutes;
+		public Map<Criterion, GradeStructure> subs;
+
+		public GSR() {
+		}
+
+		public GSR(DefaultAggregation defaultAggregation, Optional<Map<Criterion, Double>> weights,
+				Set<Criterion> absolutes, Map<Criterion, GradeStructure> subs) {
+			this.defaultAggregation = defaultAggregation;
+			this.weights = weights;
+			this.absolutes = absolutes;
+			this.subs = subs;
+		}
+
+		public DefaultAggregation getDefaultAggregation() {
+			return defaultAggregation;
+		}
+
+		public void setDefaultAggregation(DefaultAggregation defaultAggregation) {
+			this.defaultAggregation = defaultAggregation;
+		}
+
+		public Optional<Map<Criterion, Double>> getWeights() {
+			return weights;
+		}
+
+		public void setWeights(Optional<Map<Criterion, Double>> weights) {
+			this.weights = weights;
+		}
+
+		public Set<Criterion> getAbsolutes() {
+			return absolutes;
+		}
+
+		public void setAbsolutes(Set<Criterion> absolutes) {
+			this.absolutes = absolutes;
+		}
+
+		public Map<Criterion, GradeStructure> getSubs() {
+			return subs;
+		}
+
+		public void setSubs(Map<Criterion, GradeStructure> subs) {
+			this.subs = subs;
+		}
+
 	}
 
 	public static String toJson(GradeStructure structure) {
