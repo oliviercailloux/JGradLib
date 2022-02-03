@@ -12,6 +12,8 @@ import com.google.common.collect.ImmutableSetMultimap.Builder;
 import com.google.common.collect.ImmutableSortedSet;
 import io.github.oliviercailloux.git.git_hub.services.GitHubJsonParser;
 import io.github.oliviercailloux.json.PrintableJsonObjectFactory;
+import jakarta.json.JsonObject;
+import jakarta.json.JsonValue;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -19,8 +21,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collector;
 import java.util.stream.Collectors;
-import javax.json.JsonObject;
-import javax.json.JsonValue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

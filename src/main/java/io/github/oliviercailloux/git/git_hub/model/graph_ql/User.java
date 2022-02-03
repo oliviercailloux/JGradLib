@@ -4,9 +4,9 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import com.google.common.base.MoreObjects;
+import jakarta.json.JsonObject;
 import java.net.URI;
 import java.util.Objects;
-import javax.json.JsonObject;
 
 public class User {
 	public static User from(JsonObject json) {

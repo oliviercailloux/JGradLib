@@ -1,6 +1,6 @@
 package io.github.oliviercailloux.git.git_hub.model.v3;
 
-import javax.json.JsonObject;
+import jakarta.json.JsonObject;
 
 public class CreateBranchEvent extends Event {
 

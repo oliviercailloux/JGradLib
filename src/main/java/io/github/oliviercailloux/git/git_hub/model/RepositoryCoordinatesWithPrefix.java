@@ -2,10 +2,10 @@ package io.github.oliviercailloux.git.git_hub.model;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import jakarta.json.JsonObject;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import javax.json.JsonObject;
 
 /**
  *

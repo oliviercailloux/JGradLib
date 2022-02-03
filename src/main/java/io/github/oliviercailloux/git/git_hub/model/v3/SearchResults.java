@@ -2,10 +2,10 @@ package io.github.oliviercailloux.git.git_hub.model.v3;
 
 import static java.util.Objects.requireNonNull;
 
+import jakarta.json.JsonObject;
+import jakarta.json.JsonValue;
 import java.util.List;
 import java.util.stream.Collectors;
-import javax.json.JsonObject;
-import javax.json.JsonValue;
 
 /**
  *

@@ -4,12 +4,12 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import io.github.oliviercailloux.json.PrintableJsonObjectFactory;
+import jakarta.json.JsonArray;
+import jakarta.json.JsonObject;
+import jakarta.json.JsonValue;
 import java.time.Instant;
 import java.time.ZonedDateTime;
 import java.util.stream.Stream;
-import javax.json.JsonArray;
-import javax.json.JsonObject;
-import javax.json.JsonValue;
 
 public class GitHubJsonParser {
 

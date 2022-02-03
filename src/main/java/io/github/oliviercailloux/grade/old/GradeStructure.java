@@ -10,7 +10,6 @@ import com.google.common.graph.Graph;
 import com.google.common.graph.GraphBuilder;
 import com.google.common.graph.ImmutableGraph;
 import io.github.oliviercailloux.grade.Criterion;
-import io.github.oliviercailloux.grade.IGrade;
 import io.github.oliviercailloux.grade.IGrade.GradePath;
 import java.util.ArrayDeque;
 import java.util.LinkedHashSet;

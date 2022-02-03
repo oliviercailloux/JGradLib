@@ -8,10 +8,10 @@ import com.google.common.base.MoreObjects;
 import com.google.common.base.Strings;
 import io.github.oliviercailloux.email.EmailAddress;
 import io.github.oliviercailloux.email.EmailAddressAndPersonal;
+import jakarta.json.bind.annotation.JsonbCreator;
+import jakarta.json.bind.annotation.JsonbProperty;
+import jakarta.json.bind.annotation.JsonbPropertyOrder;
 import java.util.Objects;
-import javax.json.bind.annotation.JsonbCreator;
-import javax.json.bind.annotation.JsonbProperty;
-import javax.json.bind.annotation.JsonbPropertyOrder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

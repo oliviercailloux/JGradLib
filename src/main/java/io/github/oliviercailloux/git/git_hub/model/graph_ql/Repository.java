@@ -6,11 +6,11 @@ import static java.util.Objects.requireNonNull;
 import com.google.common.base.MoreObjects;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.git.git_hub.services.GitHubJsonParser;
+import jakarta.json.JsonObject;
+import jakarta.json.bind.annotation.JsonbPropertyOrder;
+import jakarta.json.bind.annotation.JsonbTransient;
 import java.net.URI;
 import java.time.Instant;
-import javax.json.JsonObject;
-import javax.json.bind.annotation.JsonbPropertyOrder;
-import javax.json.bind.annotation.JsonbTransient;
 
 @JsonbPropertyOrder({ "name", "ownerLogin", "htmlURL", "sshURL", "createdAt" })
 public class Repository {

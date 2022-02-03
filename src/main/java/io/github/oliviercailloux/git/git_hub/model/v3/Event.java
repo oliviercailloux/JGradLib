@@ -6,8 +6,8 @@ import static java.util.Objects.requireNonNull;
 import com.google.common.base.MoreObjects;
 import io.github.oliviercailloux.git.git_hub.services.GitHubJsonParser;
 import io.github.oliviercailloux.json.PrintableJsonObjectFactory;
+import jakarta.json.JsonObject;
 import java.time.Instant;
-import javax.json.JsonObject;
 
 /**
  * <p>

@@ -4,8 +4,8 @@ import static com.google.common.base.Preconditions.checkArgument;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Streams;
+import jakarta.json.JsonObject;
 import java.util.stream.Stream;
-import javax.json.JsonObject;
 
 public class AssignedEvent extends IssueEvent {
 

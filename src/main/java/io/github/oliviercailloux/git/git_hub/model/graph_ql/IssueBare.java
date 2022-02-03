@@ -9,13 +9,13 @@ import com.google.common.base.MoreObjects.ToStringHelper;
 import com.google.common.collect.Streams;
 import io.github.oliviercailloux.git.git_hub.model.IssueCoordinates;
 import io.github.oliviercailloux.git.git_hub.services.GitHubJsonParser;
+import jakarta.json.JsonArray;
+import jakarta.json.JsonObject;
+import jakarta.json.JsonValue;
 import java.net.URI;
 import java.time.Instant;
 import java.util.List;
 import java.util.stream.Collectors;
-import javax.json.JsonArray;
-import javax.json.JsonObject;
-import javax.json.JsonValue;
 
 public class IssueBare {
 	public static IssueBare from(JsonObject json) {

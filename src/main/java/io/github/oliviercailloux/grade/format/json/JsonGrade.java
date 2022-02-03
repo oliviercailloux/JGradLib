@@ -16,7 +16,6 @@ import io.github.oliviercailloux.grade.GradeStructure;
 import io.github.oliviercailloux.grade.GradeStructure.DefaultAggregation;
 import java.io.IOException;
 import java.util.Map;
-import java.util.function.Function;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -49,24 +48,24 @@ public class JsonGrade {
 		}
 
 		private static class GradeStructureToObjectAdapter extends TypeAdapter<GradeStructure> {
-		
+
 			private final TypeAdapter<GSR> delegate;
-		
+
 			public GradeStructureToObjectAdapter(TypeAdapter<GSR> delegate) {
 				this.delegate = checkNotNull(delegate);
 			}
-		
+
 			@Override
 			public void write(JsonWriter out, GradeStructure structure) throws IOException {
 				delegate.write(out, new GSR(structure.getDefaultAggregation(), structure.getFixedWeights(),
 						structure.getSubStructures()));
 			}
-		
+
 			@Override
 			public GradeStructure read(JsonReader in) throws IOException {
 				return GradeStructure.givenWeights(delegate.read(in).weights, ImmutableMap.of());
 			}
-		
+
 		}
 
 		@SuppressWarnings("unchecked")

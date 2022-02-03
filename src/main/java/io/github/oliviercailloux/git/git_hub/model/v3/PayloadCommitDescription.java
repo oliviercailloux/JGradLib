@@ -2,8 +2,8 @@ package io.github.oliviercailloux.git.git_hub.model.v3;
 
 import static java.util.Objects.requireNonNull;
 
+import jakarta.json.JsonObject;
 import java.net.URI;
-import javax.json.JsonObject;
 import org.eclipse.jgit.lib.ObjectId;
 
 /**

@@ -3,8 +3,8 @@ package io.github.oliviercailloux.git.git_hub.model;
 import static java.util.Objects.requireNonNull;
 
 import io.github.oliviercailloux.git.GitUri;
+import jakarta.json.JsonObject;
 import java.net.URI;
-import javax.json.JsonObject;
 
 public class RepositoryCoordinates {
 	public static RepositoryCoordinates from(String owner, String repo) {

@@ -3,8 +3,8 @@ package io.github.oliviercailloux.git.git_hub.model.graph_ql;
 import static com.google.common.base.Preconditions.checkArgument;
 
 import com.google.common.collect.ImmutableSet;
+import jakarta.json.JsonObject;
 import java.util.function.Predicate;
-import javax.json.JsonObject;
 
 public class UnassignedEvent extends IssueEvent {
 
