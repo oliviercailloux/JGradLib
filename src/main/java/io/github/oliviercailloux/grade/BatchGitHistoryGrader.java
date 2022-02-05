@@ -11,7 +11,6 @@ import com.google.common.collect.ImmutableSortedSet;
 import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
 import io.github.oliviercailloux.grade.DeadlineGrader.LinearPenalizer;
 import io.github.oliviercailloux.grade.format.json.JsonGrade;
-import io.github.oliviercailloux.grade.old.Mark;
 import io.github.oliviercailloux.jaris.exceptions.Throwing;
 import io.github.oliviercailloux.jaris.throwing.TOptional;
 import io.github.oliviercailloux.java_grade.testers.JavaMarkHelper;
@@ -34,10 +33,27 @@ import org.slf4j.LoggerFactory;
 public class BatchGitHistoryGrader<X extends Exception> {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(BatchGitHistoryGrader.class);
+	private static final Criterion C_USER_NAME = Criterion.given("user.name");
+	private static final Criterion C_GRADE = Criterion.given("grade");
+	private static final Criterion C_MAIN = Criterion.given("main");
+	private static final Criterion C_LATENESS = Criterion.given("lateness");
 	private final Throwing.Supplier<GitFileSystemWithHistoryFetcher, X> fetcherFactory;
 
 	public BatchGitHistoryGrader(Throwing.Supplier<GitFileSystemWithHistoryFetcher, X> fetcherFactory) {
 		this.fetcherFactory = checkNotNull(fetcherFactory);
+	}
+
+	private GradeStructure getUserNamedStructure(Grader<?> grader, double userGradeWeight) {
+		final GradeStructure basis = grader.getStructure();
+		return GradeStructure.givenWeights(ImmutableMap.of(C_USER_NAME, userGradeWeight, C_GRADE, 1d - userGradeWeight),
+				ImmutableMap.of(C_GRADE, basis));
+	}
+
+	private GradeStructure getComplexStructure(Grader<?> grader, double userGradeWeight) {
+		final GradeStructure main = getUserNamedStructure(grader, userGradeWeight);
+		final GradeStructure penalized = GradeStructure.maxWithGivenAbsolutes(ImmutableSet.of(C_LATENESS),
+				ImmutableMap.of(C_MAIN, main));
+		GradeStructure.maxWithGivenAbsolutes(ImmutableSet.of());
 	}
 
 	public <Y extends Exception> Exam getGrades(String prefix, ZonedDateTime deadline, Duration durationForZero,
@@ -55,11 +71,11 @@ public class BatchGitHistoryGrader<X extends Exception> {
 		checkArgument(userGradeWeight < 1d);
 		final LinearPenalizer penalizer = LinearPenalizer.proportionalToLateness(durationForZero);
 
-		final LinkedHashMap<GitHubUsername, IGrade> builder = new LinkedHashMap<>();
+		final LinkedHashMap<GitHubUsername, Grade> builder = new LinkedHashMap<>();
 		try (GitFileSystemWithHistoryFetcher fetcher = fetcherFactory.get()) {
 
 			for (GitHubUsername author : fetcher.getAuthors()) {
-				final ImmutableBiMap<Instant, IGrade> byTime;
+				final ImmutableBiMap<Instant, Grade> byTime;
 
 				final String commentGeneralCapped;
 				final GitFileSystemHistory beforeCommitByGitHub;
@@ -81,44 +97,39 @@ public class BatchGitHistoryGrader<X extends Exception> {
 				final ImmutableSortedSet<Instant> consideredTimestamps = getTimestamps(beforeCommitByGitHub,
 						deadline.toInstant());
 
-				final ImmutableBiMap.Builder<Instant, IGrade> byTimeBuilder = ImmutableBiMap.builder();
+				final ImmutableBiMap.Builder<Instant, Grade> byTimeBuilder = ImmutableBiMap.builder();
 				for (Instant timeCap : consideredTimestamps) {
 					final GitFileSystemHistory capped = beforeCommitByGitHub
 							.filter(r -> !beforeCommitByGitHub.getCommitDate(r).isAfter(timeCap));
 
 					final Grade grade = grader.grade(capped);
 
-					final Mark userGrade = DeadlineGrader.getUsernameGrade(beforeCommitByGitHub, author);
-					final ImmutableSet<CriterionGradeWeight> subGrades = grade.getSubGradesAsSet();
-					final ImmutableSet<CriterionGradeWeight> newSubGrades = ImmutableSet.<CriterionGradeWeight>builder()
-							.add(CriterionGradeWeight.from(Criterion.given("user.name"), userGrade,
-									userGradeWeight / (1d - userGradeWeight)))
-							.addAll(subGrades).build();
-//					final WeightingGrade gradeWithUser = WeightingGrade.from(ImmutableSet.of(
-//							CriterionGradeWeight.from(Criterion.given("user.name"), userGrade, userGradeWeight),
-//							CriterionGradeWeight.from(Criterion.given("main"), grade, 1d - userGradeWeight)));
-					final WeightingGrade gradeWithUser = WeightingGrade.from(newSubGrades);
+					final Mark userGrade = DeadlineGrader.getUsernameGrade(beforeCommitByGitHub, author).asNew();
+					final Grade gradeWithUser = Grade
+							.composite(ImmutableMap.of(C_USER_NAME, userGrade, C_GRADE, grade));
+
+					final GradeStructure userNamedStructure = getUserNamedStructure(grader, userGradeWeight);
 
 					final Duration lateness = Duration.between(deadline.toInstant(), timeCap);
 					LOGGER.debug("Lateness from {} to {} equal to {}.", deadline.toInstant(), timeCap, lateness);
-					final IGrade penalizedForTimeGrade = penalizer.penalize(lateness, gradeWithUser);
-					byTimeBuilder.put(timeCap, penalizedForTimeGrade);
+					final Mark penalty = penalizer.getAbsolutePenality(lateness,
+							StructuredGrade.given(gradeWithUser, userNamedStructure));
+
+					final Grade penalized = Grade
+							.composite(ImmutableMap.of(C_MAIN, gradeWithUser, C_LATENESS, penalty));
+					byTimeBuilder.put(timeCap, penalized);
 				}
 				byTime = byTimeBuilder.build();
 
-				final IGrade bestGrade = byTime.values().stream().max(Comparator.comparing(IGrade::getPoints))
-						.orElse(Mark.zero("No commit found."));
-				final String separator = bestGrade.getComment().isEmpty() || commentGeneralCapped.isEmpty() ? "" : "; ";
-				final IGrade bestGradeCommented = bestGrade
-						.withComment(bestGrade.getComment() + separator + commentGeneralCapped);
-
-				final IGrade integratedGrade;
-				if (byTime.size() <= 1) {
-					integratedGrade = bestGradeCommented;
+				final Grade byTimeGrade;
+				if (byTime.isEmpty()) {
+					byTimeGrade = Mark.zero("No commit found.");
 				} else {
-					integratedGrade = DeadlineGrader.getBestAndSub(bestGradeCommented, byTime, deadline);
+					final ImmutableMap<Criterion, Grade> subsByTime = byTime.keySet().stream().collect(ImmutableMap
+							.toImmutableMap(i -> Criterion.given("Capping at " + i.toString()), byTime::get));
+					byTimeGrade = Grade.composite(subsByTime);
 				}
-				builder.put(author, integratedGrade);
+				builder.put(author, byTimeGrade);
 
 				outOpt.ifPresent(o -> write(builder, o, prefix));
 			}
@@ -143,7 +154,7 @@ public class BatchGitHistoryGrader<X extends Exception> {
 		return consideredTimestamps;
 	}
 
-	private void write(Map<GitHubUsername, IGrade> grades, Path out, String prefix) throws IOException {
+	private void write(Map<GitHubUsername, Grade> grades, Path out, String prefix) throws IOException {
 		final ImmutableMap<String, IGrade> gradesString = grades.entrySet().stream()
 				.collect(ImmutableMap.toImmutableMap(e -> e.getKey().getUsername(), Entry::getValue));
 		Files.writeString(out, JsonbUtils.toJsonObject(gradesString, JsonGrade.asAdapter()).toString());

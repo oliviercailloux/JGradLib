@@ -103,6 +103,10 @@ public class Mark implements IGrade {
 		throw new IllegalArgumentException();
 	}
 
+	public io.github.oliviercailloux.grade.Mark asNew() {
+		return io.github.oliviercailloux.grade.Mark.given(points, comment);
+	}
+
 	@Override
 	public boolean equals(Object o2) {
 		if (!(o2 instanceof IGrade)) {
