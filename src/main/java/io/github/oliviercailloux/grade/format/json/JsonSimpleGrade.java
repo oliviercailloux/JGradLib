@@ -34,6 +34,42 @@ public class JsonSimpleGrade {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(JsonSimpleGrade.class);
 
+	private static Grade asGrade(JsonObject gradeObject) {
+		checkArgument(!gradeObject.isEmpty());
+		final ValueType valueType = gradeObject.get(gradeObject.keySet().iterator().next()).getValueType();
+		final boolean isFinal = switch (valueType) {
+		case STRING:
+		case NUMBER:
+		case TRUE:
+		case FALSE:
+		case NULL:
+			yield true;
+		case OBJECT:
+		case ARRAY:
+			yield false;
+		default:
+			throw new VerifyException("Unexpected value: " + valueType);
+		};
+
+		if (isFinal) {
+			checkArgument(gradeObject.size() == 2);
+			checkArgument(gradeObject.keySet().equals(ImmutableSet.of("points", "comment")));
+			final JsonValue pointsValue = gradeObject.get("points");
+			checkArgument(pointsValue.getValueType() == ValueType.NUMBER);
+			final JsonValue commentValue = gradeObject.get("comment");
+			checkArgument(commentValue.getValueType() == ValueType.STRING);
+			final double points = ((JsonNumber) pointsValue).doubleValue();
+			final String comment = ((JsonString) commentValue).getString();
+			return new Mark(points, comment);
+		}
+
+		checkArgument(gradeObject.values().stream().map(JsonValue::getValueType)
+				.allMatch(Predicates.equalTo(ValueType.OBJECT)));
+		final ImmutableMap<Criterion, Grade> subs = gradeObject.keySet().stream()
+				.collect(ImmutableMap.toImmutableMap(Criterion::given, s -> asGrade(gradeObject.getJsonObject(s))));
+		return Grade.composite(subs);
+	}
+
 	private static final class JsonAdapterGradeStructure implements JsonbAdapter<GradeStructure, GSR> {
 		@Override
 		public GSR adaptToJson(GradeStructure structure) {
@@ -72,6 +108,18 @@ public class JsonSimpleGrade {
 		public CompositeGrade adaptFromJson(Map<String, Grade> structure) {
 			return (CompositeGrade) Grade.composite(
 					structure.keySet().stream().collect(ImmutableMap.toImmutableMap(Criterion::given, structure::get)));
+		}
+	}
+
+	private static final class JsonAdapterJsonToGrade implements JsonbAdapter<Grade, JsonObject> {
+		@Override
+		public JsonObject adaptToJson(Grade grade) {
+			return null;
+		}
+
+		@Override
+		public Grade adaptFromJson(JsonObject structure) {
+			return asGrade(structure);
 		}
 	}
 
@@ -167,42 +215,6 @@ public class JsonSimpleGrade {
 		return asGrade(l0);
 	}
 
-	private static Grade asGrade(JsonObject gradeObject) {
-		checkArgument(!gradeObject.isEmpty());
-		final ValueType valueType = gradeObject.get(gradeObject.keySet().iterator().next()).getValueType();
-		final boolean isFinal = switch (valueType) {
-		case STRING:
-		case NUMBER:
-		case TRUE:
-		case FALSE:
-		case NULL:
-			yield true;
-		case OBJECT:
-		case ARRAY:
-			yield false;
-		default:
-			throw new VerifyException("Unexpected value: " + valueType);
-		};
-
-		if (isFinal) {
-			checkArgument(gradeObject.size() == 2);
-			checkArgument(gradeObject.keySet().equals(ImmutableSet.of("points", "comment")));
-			final JsonValue pointsValue = gradeObject.get("points");
-			checkArgument(pointsValue.getValueType() == ValueType.NUMBER);
-			final JsonValue commentValue = gradeObject.get("comment");
-			checkArgument(commentValue.getValueType() == ValueType.STRING);
-			final double points = ((JsonNumber) pointsValue).doubleValue();
-			final String comment = ((JsonString) commentValue).getString();
-			return new Mark(points, comment);
-		}
-
-		checkArgument(gradeObject.values().stream().map(JsonValue::getValueType)
-				.allMatch(Predicates.equalTo(ValueType.OBJECT)));
-		final ImmutableMap<Criterion, Grade> subs = gradeObject.keySet().stream()
-				.collect(ImmutableMap.toImmutableMap(Criterion::given, s -> asGrade(gradeObject.getJsonObject(s))));
-		return Grade.composite(subs);
-	}
-
 	public static String toJson(Exam exam) {
 		final Jsonb jsonb = JsonHelper.getJsonb(new JsonCriterionToString(), new JsonMapAdapter<Double>() {
 		}, new JsonMapAdapter<GradeStructure>() {
@@ -215,7 +227,7 @@ public class JsonSimpleGrade {
 		final Jsonb jsonb = JsonHelper.getJsonb(new JsonCriterionToString(), new JsonMapAdapter<Double>() {
 		}, new JsonMapAdapter<GradeStructure>() {
 		}, new JsonAdapterGradeStructure(), new JsonMapAdapter<Grade>() {
-		}, new JsonAdapterGrade(), new JsonAdapterExam());
+		}, new JsonAdapterGrade(), new JsonAdapterExam(), new JsonAdapterJsonToGrade());
 		return jsonb.fromJson(examString, Exam.class);
 	}
 }
