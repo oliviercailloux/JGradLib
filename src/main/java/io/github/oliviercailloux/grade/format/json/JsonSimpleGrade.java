@@ -70,15 +70,6 @@ public class JsonSimpleGrade {
 
 		@Override
 		public CompositeGrade adaptFromJson(Map<String, Grade> structure) {
-//			return null;
-//			final boolean hasPoints = structure.points != null;
-//			final boolean hasComments = structure.comments != null;
-//			final boolean hasSubs = structure.grades != null;
-//			checkArgument(hasPoints == hasComments);
-//			checkArgument(hasPoints != hasSubs);
-//			if (hasPoints) {
-//				return new Mark(structure.points, structure.comments);
-//			}
 			return (CompositeGrade) Grade.composite(
 					structure.keySet().stream().collect(ImmutableMap.toImmutableMap(Criterion::given, structure::get)));
 		}
