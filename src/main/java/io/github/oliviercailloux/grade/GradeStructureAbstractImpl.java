@@ -10,19 +10,22 @@ abstract class GradeStructureAbstractImpl implements GradeStructure {
 			return false;
 		}
 		final GradeStructureAbstractImpl t2 = (GradeStructureAbstractImpl) o2;
-		return getDefaultAggregation().equals(t2.getDefaultAggregation()) && getAbsolutes().equals(t2.getAbsolutes())
-				&& getFixedWeights().equals(t2.getFixedWeights()) && getSubStructures().equals(t2.getSubStructures());
+		return getDefaultAggregation().equals(t2.getDefaultAggregation())
+				&& getDefaultSubStructure().equals(t2.getDefaultSubStructure())
+				&& getAbsolutes().equals(t2.getAbsolutes()) && getFixedWeights().equals(t2.getFixedWeights())
+				&& getSubStructures().equals(t2.getSubStructures());
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(getDefaultAggregation(), getAbsolutes(), getFixedWeights(), getSubStructures());
+		return Objects.hash(getDefaultAggregation(), getDefaultSubStructure(), getAbsolutes(), getFixedWeights(),
+				getSubStructures());
 	}
 
 	@Override
 	public String toString() {
 		return MoreObjects.toStringHelper(this).add("default aggregation", getDefaultAggregation())
-				.add("absolutes", getAbsolutes()).add("fixed weights", getFixedWeights())
-				.add("sub structures", getSubStructures()).toString();
+				.add("default sub structure", getDefaultSubStructure()).add("absolutes", getAbsolutes())
+				.add("fixed weights", getFixedWeights()).add("sub structures", getSubStructures()).toString();
 	}
 }

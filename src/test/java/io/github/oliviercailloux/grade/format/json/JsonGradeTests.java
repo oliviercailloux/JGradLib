@@ -12,6 +12,7 @@ import io.github.oliviercailloux.grade.Grade;
 import io.github.oliviercailloux.grade.GradeStructure;
 import io.github.oliviercailloux.grade.Mark;
 import java.nio.charset.StandardCharsets;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
 public class JsonGradeTests {
@@ -21,10 +22,11 @@ public class JsonGradeTests {
 
 	private GradeStructure getStructure() {
 		final GradeStructure emptyAbs = GradeStructure.givenWeights(ImmutableMap.of(), ImmutableMap.of());
-		final GradeStructure emptyMax = GradeStructure.maxWithGivenAbsolutes(ImmutableSet.of(), ImmutableMap.of());
+		final GradeStructure defaultMax = GradeStructure.maxWithDefault(ImmutableSet.of(), Optional.of(emptyAbs),
+				ImmutableMap.of());
 		final GradeStructure oneMax = GradeStructure.maxWithGivenAbsolutes(ImmutableSet.of(C1), ImmutableMap.of());
 		final GradeStructure toWrite = GradeStructure.givenWeights(ImmutableMap.of(C1, 1d),
-				ImmutableMap.of(C1, emptyAbs, C2, emptyMax, C3, oneMax));
+				ImmutableMap.of(C1, emptyAbs, C2, defaultMax, C3, oneMax));
 		return toWrite;
 	}
 

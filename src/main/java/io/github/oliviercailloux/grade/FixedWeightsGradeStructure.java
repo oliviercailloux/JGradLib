@@ -6,6 +6,7 @@ import static com.google.common.base.Verify.verify;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 
@@ -27,6 +28,11 @@ class FixedWeightsGradeStructure extends GradeStructureAbstractImpl implements G
 	@Override
 	public DefaultAggregation getDefaultAggregation() {
 		return DefaultAggregation.ABSOLUTE;
+	}
+
+	@Override
+	public Optional<GradeStructure> getDefaultSubStructure() {
+		return Optional.empty();
 	}
 
 	@Override

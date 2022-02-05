@@ -1,6 +1,7 @@
 package io.github.oliviercailloux.grade;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -8,22 +9,31 @@ import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Streams;
 import java.util.Comparator;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Stream;
 
 class MaxGradeStructure extends GradeStructureAbstractImpl implements GradeStructure {
 
 	private final ImmutableSet<Criterion> absolutes;
+	private final Optional<GradeStructure> defaultSubStructure;
 	private final ImmutableMap<Criterion, GradeStructure> subStructures;
 
-	MaxGradeStructure(Set<Criterion> absolutes, Map<Criterion, GradeStructure> subStructures) {
+	MaxGradeStructure(Set<Criterion> absolutes, Optional<GradeStructure> defaultSubStructure,
+			Map<Criterion, GradeStructure> subStructures) {
 		this.absolutes = ImmutableSet.copyOf(absolutes);
+		this.defaultSubStructure = checkNotNull(defaultSubStructure);
 		this.subStructures = ImmutableMap.copyOf(subStructures);
 	}
 
 	@Override
 	public DefaultAggregation getDefaultAggregation() {
 		return DefaultAggregation.MAX;
+	}
+
+	@Override
+	public Optional<GradeStructure> getDefaultSubStructure() {
+		return defaultSubStructure;
 	}
 
 	@Override

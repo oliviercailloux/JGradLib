@@ -76,12 +76,13 @@ public class JsonSimpleGrade {
 			LOGGER.info("Adapting to GSR from {}.", structure);
 			final DefaultAggregation defaultAggregation = structure.getDefaultAggregation();
 			if (defaultAggregation == DefaultAggregation.ABSOLUTE) {
+				checkArgument(structure.getDefaultSubStructure().isEmpty());
 				return new GSR(defaultAggregation, Optional.of(structure.getFixedWeights()), structure.getAbsolutes(),
-						structure.getSubStructures());
+						Optional.empty(), structure.getSubStructures());
 			}
 			checkArgument(structure.getFixedWeights().isEmpty());
 			return new GSR(defaultAggregation, Optional.empty(), structure.getAbsolutes(),
-					structure.getSubStructures());
+					structure.getDefaultSubStructure(), structure.getSubStructures());
 		}
 
 		@Override
@@ -89,10 +90,12 @@ public class JsonSimpleGrade {
 			LOGGER.info("Adapting from: {}.", structure);
 			if (structure.defaultAggregation == DefaultAggregation.ABSOLUTE) {
 				checkArgument(structure.absolutes.isEmpty(), "Not yet supported.");
+				checkArgument(Optional.ofNullable(structure.getDefaultSubStructure()).isEmpty());
 				return GradeStructure.givenWeights(structure.weights.orElse(ImmutableMap.of()), structure.subs);
 			}
 			checkArgument(Optional.ofNullable(structure.weights).isEmpty());
-			return GradeStructure.maxWithGivenAbsolutes(structure.absolutes, structure.subs);
+			return GradeStructure.maxWithDefault(structure.absolutes,
+					Optional.ofNullable(structure.getDefaultSubStructure()).orElse(Optional.empty()), structure.subs);
 		}
 	}
 
@@ -143,16 +146,19 @@ public class JsonSimpleGrade {
 
 		public Optional<Map<Criterion, Double>> weights;
 		public Set<Criterion> absolutes;
+		public Optional<GradeStructure> defaultSubStructure;
 		public Map<Criterion, GradeStructure> subs;
 
 		public GSR() {
 		}
 
 		public GSR(DefaultAggregation defaultAggregation, Optional<Map<Criterion, Double>> weights,
-				Set<Criterion> absolutes, Map<Criterion, GradeStructure> subs) {
+				Set<Criterion> absolutes, Optional<GradeStructure> defaultSubStructure,
+				Map<Criterion, GradeStructure> subs) {
 			this.defaultAggregation = defaultAggregation;
 			this.weights = weights;
 			this.absolutes = absolutes;
+			this.defaultSubStructure = defaultSubStructure;
 			this.subs = subs;
 		}
 
@@ -178,6 +184,14 @@ public class JsonSimpleGrade {
 
 		public void setAbsolutes(Set<Criterion> absolutes) {
 			this.absolutes = absolutes;
+		}
+
+		public Optional<GradeStructure> getDefaultSubStructure() {
+			return defaultSubStructure;
+		}
+
+		public void setDefaultSubStructure(Optional<GradeStructure> defaultSubStructure) {
+			this.defaultSubStructure = defaultSubStructure;
 		}
 
 		public Map<Criterion, GradeStructure> getSubs() {

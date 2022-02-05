@@ -20,6 +20,15 @@
             "absolutes": [
             ],
             "subs": {
+            },
+            "defaultSubStructure": {
+                "defaultAggregation": "ABSOLUTE",
+                "weights": {
+                },
+                "absolutes": [
+                ],
+                "subs": {
+                }
             }
         },
         "c3": {

@@ -3,6 +3,7 @@ package io.github.oliviercailloux.grade;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -36,13 +37,20 @@ public interface GradeStructure {
 
 	public static GradeStructure maxWithGivenAbsolutes(Set<Criterion> absolutes,
 			Map<Criterion, GradeStructure> subStructures) {
-		return new MaxGradeStructure(absolutes, subStructures);
+		return new MaxGradeStructure(absolutes, Optional.empty(), subStructures);
+	}
+
+	public static GradeStructure maxWithDefault(Set<Criterion> absolutes, Optional<GradeStructure> defaultSubStructure,
+			Map<Criterion, GradeStructure> subStructures) {
+		return new MaxGradeStructure(absolutes, defaultSubStructure, subStructures);
 	}
 
 	/**
 	 * @return absolute if {@link #getFixedWeights()} is not empty
 	 */
 	public DefaultAggregation getDefaultAggregation();
+
+	public Optional<GradeStructure> getDefaultSubStructure();
 
 	public ImmutableSet<Criterion> getAbsolutes();
 
