@@ -40,21 +40,18 @@ public class BatchGitHistoryGrader<X extends Exception> {
 		this.fetcherFactory = checkNotNull(fetcherFactory);
 	}
 
-	public <Y extends Exception> ImmutableMap<GitHubUsername, IGrade> getGrades(String prefix, ZonedDateTime deadline,
-			Duration durationForZero, Throwing.Function<GitFileSystemHistory, IGrade, Y> grader, double userGradeWeight)
-			throws X, Y, IOException {
+	public <Y extends Exception> Exam getGrades(String prefix, ZonedDateTime deadline, Duration durationForZero,
+			Grader<Y> grader, double userGradeWeight) throws X, Y, IOException {
 		return getGrades(prefix, deadline, durationForZero, grader, userGradeWeight, TOptional.empty());
 	}
 
-	public <Y extends Exception> ImmutableMap<GitHubUsername, IGrade> getAndWriteGrades(String prefix,
-			ZonedDateTime deadline, Duration durationForZero, Throwing.Function<GitFileSystemHistory, IGrade, Y> grader,
-			double userGradeWeight, Path out) throws X, Y, IOException {
+	public <Y extends Exception> Exam getAndWriteGrades(String prefix, ZonedDateTime deadline, Duration durationForZero,
+			Grader<Y> grader, double userGradeWeight, Path out) throws X, Y, IOException {
 		return getGrades(prefix, deadline, durationForZero, grader, userGradeWeight, TOptional.of(out));
 	}
 
-	private <Y extends Exception> ImmutableMap<GitHubUsername, IGrade> getGrades(String prefix, ZonedDateTime deadline,
-			Duration durationForZero, Throwing.Function<GitFileSystemHistory, IGrade, Y> grader, double userGradeWeight,
-			TOptional<Path> outOpt) throws X, Y, IOException {
+	private <Y extends Exception> Exam getGrades(String prefix, ZonedDateTime deadline, Duration durationForZero,
+			Grader<Y> grader, double userGradeWeight, TOptional<Path> outOpt) throws X, Y, IOException {
 		checkArgument(userGradeWeight < 1d);
 		final LinearPenalizer penalizer = LinearPenalizer.proportionalToLateness(durationForZero);
 
@@ -89,7 +86,7 @@ public class BatchGitHistoryGrader<X extends Exception> {
 					final GitFileSystemHistory capped = beforeCommitByGitHub
 							.filter(r -> !beforeCommitByGitHub.getCommitDate(r).isAfter(timeCap));
 
-					final IGrade grade = grader.apply(capped);
+					final Grade grade = grader.grade(capped);
 
 					final Mark userGrade = DeadlineGrader.getUsernameGrade(beforeCommitByGitHub, author);
 					final ImmutableSet<CriterionGradeWeight> subGrades = grade.getSubGradesAsSet();
