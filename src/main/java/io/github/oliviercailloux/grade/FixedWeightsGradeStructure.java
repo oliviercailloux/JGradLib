@@ -13,7 +13,7 @@ import java.util.function.Function;
  * May have empty weights. Use absolute as default. Weights, if not empty, must
  * sum to (approx) one.
  */
-class FixedWeightsGradeStructure implements GradeStructure {
+class FixedWeightsGradeStructure extends GradeStructureAbstractImpl implements GradeStructure {
 
 	private final ImmutableMap<Criterion, Double> weights;
 	private final ImmutableMap<Criterion, GradeStructure> subStructures;

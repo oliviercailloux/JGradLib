@@ -48,10 +48,6 @@ public interface GradeStructure {
 
 	public boolean isAbsolute(Criterion criterion);
 
-	public ImmutableMap<Criterion, GradeStructure> getSubStructures();
-
-	public GradeStructure getStructure(Criterion criterion);
-
 	/**
 	 * @return if default != abs, an empty map.
 	 */
@@ -80,5 +76,16 @@ public interface GradeStructure {
 	 *                 criterion or at least one absolute criterion.
 	 */
 	public Mark getMark(Set<SubMark> subMarks);
+
+	public ImmutableMap<Criterion, GradeStructure> getSubStructures();
+
+	public GradeStructure getStructure(Criterion criterion);
+
+	/**
+	 * @return true iff the given object is a grade structure with the same default
+	 *         aggregation, absolutes, fixed weights and sub structures.
+	 */
+	@Override
+	boolean equals(Object obj);
 
 }

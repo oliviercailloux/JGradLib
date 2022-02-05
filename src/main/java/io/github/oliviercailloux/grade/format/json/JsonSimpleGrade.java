@@ -4,8 +4,11 @@ import static com.google.common.base.Preconditions.checkArgument;
 
 import com.google.common.collect.ImmutableMap;
 import io.github.oliviercailloux.grade.Criterion;
+import io.github.oliviercailloux.grade.Exam;
+import io.github.oliviercailloux.grade.Grade;
 import io.github.oliviercailloux.grade.GradeStructure;
 import io.github.oliviercailloux.grade.GradeStructure.DefaultAggregation;
+import io.github.oliviercailloux.grade.Mark;
 import jakarta.json.bind.Jsonb;
 import jakarta.json.bind.adapter.JsonbAdapter;
 import jakarta.json.bind.annotation.JsonbPropertyOrder;
@@ -98,6 +101,12 @@ public class JsonSimpleGrade {
 
 	}
 
+	@JsonbPropertyOrder({ "defaultAggregation", "weights", "absolutes", "subs" })
+	public static class GradeRecord {
+		public Mark mark;
+		public Map<Criterion, Grade> grades;
+	}
+
 	public static String toJson(GradeStructure structure) {
 		final Jsonb jsonb = JsonHelper.getJsonb(new JsonCriterion(), new JsonMapAdapter<Double>() {
 		}, new JsonMapAdapter<GradeStructure>() {
@@ -110,5 +119,19 @@ public class JsonSimpleGrade {
 		}, new JsonMapAdapter<GradeStructure>() {
 		}, new JsonAdapterGradeStructure());
 		return jsonb.fromJson(structureString, GradeStructure.class);
+	}
+
+	public static String toJson(Grade grade) {
+		final Jsonb jsonb = JsonHelper.getJsonb(new JsonCriterion(), new JsonMapAdapter<Double>() {
+		}, new JsonMapAdapter<GradeStructure>() {
+		}, new JsonAdapterGradeStructure());
+		return jsonb.toJson(grade);
+	}
+
+	public static String toJson(Exam exam) {
+		final Jsonb jsonb = JsonHelper.getJsonb(new JsonCriterion(), new JsonMapAdapter<Double>() {
+		}, new JsonMapAdapter<GradeStructure>() {
+		}, new JsonAdapterGradeStructure());
+		return jsonb.toJson(exam);
 	}
 }

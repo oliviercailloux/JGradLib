@@ -11,7 +11,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Stream;
 
-class MaxGradeStructure implements GradeStructure {
+class MaxGradeStructure extends GradeStructureAbstractImpl implements GradeStructure {
 
 	private final ImmutableSet<Criterion> absolutes;
 	private final ImmutableMap<Criterion, GradeStructure> subStructures;
