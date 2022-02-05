@@ -6,7 +6,9 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.io.Resources;
 import io.github.oliviercailloux.grade.Criterion;
+import io.github.oliviercailloux.grade.Grade;
 import io.github.oliviercailloux.grade.GradeStructure;
+import io.github.oliviercailloux.grade.Mark;
 import java.nio.charset.StandardCharsets;
 import org.junit.jupiter.api.Test;
 
@@ -39,5 +41,21 @@ public class JsonGradeTests {
 
 		assertEquals(expected, JsonSimpleGrade.asStructure(
 				Resources.toString(this.getClass().getResource("GradeStructure.json"), StandardCharsets.UTF_8)));
+	}
+
+	@Test
+	void testWriteGrade() throws Exception {
+		final Criterion c1 = Criterion.given("c1");
+		final Criterion c2 = Criterion.given("c2");
+		final Criterion c3 = Criterion.given("c3");
+		final Mark gradeC1 = Mark.one();
+		final Mark gradeC2C1 = Mark.zero("Zero!");
+		final Mark gradeC2C3 = Mark.zero();
+		final Grade gradeC2 = Grade.composite(ImmutableMap.of(c1, gradeC2C1, c3, gradeC2C3));
+		final Grade grade = Grade.composite(ImmutableMap.of(c1, gradeC1, c2, gradeC2));
+
+//		assertEquals("", JsonSimpleGrade.toJson(gradeC1));
+		assertEquals(Resources.toString(this.getClass().getResource("Grade.json"), StandardCharsets.UTF_8),
+				JsonSimpleGrade.toJson(grade));
 	}
 }

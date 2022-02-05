@@ -9,7 +9,12 @@ import java.util.Map;
 
 class CompositeGrade implements Grade {
 
-	public static CompositeGrade given(Map<Criterion, SubGrade> subGrades) {
+	public static CompositeGrade givenGrades(Map<Criterion, Grade> subGrades) {
+		return new CompositeGrade(subGrades.keySet().stream()
+				.collect(ImmutableMap.toImmutableMap(c -> c, c -> SubGrade.given(c, subGrades.get(c)))));
+	}
+
+	public static CompositeGrade givenSubGrades(Map<Criterion, SubGrade> subGrades) {
 		return new CompositeGrade(subGrades);
 	}
 

@@ -1,0 +1,34 @@
+{
+    "defaultAggregation": "ABSOLUTE",
+    "weights": {
+        "c1": 1.0
+    },
+    "absolutes": [
+    ],
+    "subs": {
+        "c1": {
+            "defaultAggregation": "ABSOLUTE",
+            "weights": {
+            },
+            "absolutes": [
+            ],
+            "subs": {
+            }
+        },
+        "c2": {
+            "defaultAggregation": "MAX",
+            "absolutes": [
+            ],
+            "subs": {
+            }
+        },
+        "c3": {
+            "defaultAggregation": "MAX",
+            "absolutes": [
+                "c1"
+            ],
+            "subs": {
+            }
+        }
+    }
+}

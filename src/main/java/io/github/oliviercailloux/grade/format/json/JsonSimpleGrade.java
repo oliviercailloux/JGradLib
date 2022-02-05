@@ -8,6 +8,7 @@ import io.github.oliviercailloux.grade.Exam;
 import io.github.oliviercailloux.grade.Grade;
 import io.github.oliviercailloux.grade.GradeStructure;
 import io.github.oliviercailloux.grade.GradeStructure.DefaultAggregation;
+import io.github.oliviercailloux.grade.IGrade.GradePath;
 import io.github.oliviercailloux.grade.Mark;
 import jakarta.json.bind.Jsonb;
 import jakarta.json.bind.adapter.JsonbAdapter;
@@ -45,6 +46,30 @@ public class JsonSimpleGrade {
 			}
 			checkArgument(Optional.ofNullable(structure.weights).isEmpty());
 			return GradeStructure.maxWithGivenAbsolutes(structure.absolutes, structure.subs);
+		}
+	}
+
+	private static final class JsonAdapterGrade implements JsonbAdapter<Grade, GradeRecord> {
+		@Override
+		public GradeRecord adaptToJson(Grade grade) {
+			if (grade.isMark()) {
+				return new GradeRecord(grade.getMark(GradePath.ROOT));
+			}
+			return new GradeRecord(
+					grade.getCriteria().stream().collect(ImmutableMap.toImmutableMap(c -> c, grade::getGrade)));
+		}
+
+		@Override
+		public Grade adaptFromJson(GradeRecord structure) {
+			final boolean hasPoints = structure.points != null;
+			final boolean hasComments = structure.comments != null;
+			final boolean hasSubs = structure.grades != null;
+			checkArgument(hasPoints == hasComments);
+			checkArgument(hasPoints != hasSubs);
+			if (hasPoints) {
+				return new Mark(structure.points, structure.comments);
+			}
+			return Grade.composite(structure.grades);
 		}
 	}
 
@@ -101,10 +126,52 @@ public class JsonSimpleGrade {
 
 	}
 
-	@JsonbPropertyOrder({ "defaultAggregation", "weights", "absolutes", "subs" })
+	@JsonbPropertyOrder({ "mark", "grades" })
 	public static class GradeRecord {
-		public Mark mark;
+		public Double points;
+		public String comments;
 		public Map<Criterion, Grade> grades;
+
+		public GradeRecord() {
+			points = null;
+			comments = null;
+			grades = null;
+		}
+
+		public GradeRecord(Mark mark) {
+			this();
+			this.points = mark.points();
+			this.comments = mark.comment();
+		}
+
+		public GradeRecord(Map<Criterion, Grade> grades) {
+			this();
+			this.grades = grades;
+		}
+
+		public Double getPoints() {
+			return points;
+		}
+
+		public void setPoints(double points) {
+			this.points = points;
+		}
+
+		public String getComments() {
+			return comments;
+		}
+
+		public void setComments(String comments) {
+			this.comments = comments;
+		}
+
+		public Map<Criterion, Grade> getGrades() {
+			return grades;
+		}
+
+		public void setGrades(Map<Criterion, Grade> grades) {
+			this.grades = grades;
+		}
 	}
 
 	public static String toJson(GradeStructure structure) {
@@ -123,8 +190,8 @@ public class JsonSimpleGrade {
 
 	public static String toJson(Grade grade) {
 		final Jsonb jsonb = JsonHelper.getJsonb(new JsonCriterion(), new JsonMapAdapter<Double>() {
-		}, new JsonMapAdapter<GradeStructure>() {
-		}, new JsonAdapterGradeStructure());
+		}, new JsonMapAdapter<Grade>() {
+		}, new JsonAdapterGrade());
 		return jsonb.toJson(grade);
 	}
 

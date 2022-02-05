@@ -2,6 +2,7 @@ package io.github.oliviercailloux.grade;
 
 import com.google.common.collect.ImmutableSet;
 import io.github.oliviercailloux.grade.IGrade.GradePath;
+import java.util.Map;
 
 /**
  * A tree of criterionpaths with marks; with no aggregation information, thus,
@@ -16,6 +17,11 @@ import io.github.oliviercailloux.grade.IGrade.GradePath;
  * </p>
  */
 public interface Grade {
+
+	public static Grade composite(Map<Criterion, Grade> subGrades) {
+		return CompositeGrade.givenGrades(subGrades);
+	}
+
 	/**
 	 * returns {@code true} iff has a root (empty) critpath, equivalently, iff has
 	 * only a root critpath
