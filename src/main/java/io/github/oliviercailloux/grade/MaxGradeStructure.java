@@ -59,7 +59,7 @@ class MaxGradeStructure extends GradeStructureAbstractImpl implements GradeStruc
 		checkArgument(subMarks.size() == criteria.size());
 		checkArgument(criteria.stream().noneMatch(this::isAbsolute));
 
-		final Comparator<SubMark> comparingPoints = Comparator.comparing(s -> s.getGrade().points());
+		final Comparator<SubMark> comparingPoints = Comparator.comparing(s -> s.getGrade().getPoints());
 		final ImmutableSortedSet<SubMark> subMarksLargestFirst = ImmutableSortedSet.copyOf(comparingPoints.reversed(),
 				subMarks);
 

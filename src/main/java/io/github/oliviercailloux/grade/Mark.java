@@ -3,12 +3,18 @@ package io.github.oliviercailloux.grade;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableSet;
 import io.github.oliviercailloux.grade.IGrade.GradePath;
 import jakarta.json.bind.annotation.JsonbCreator;
 import jakarta.json.bind.annotation.JsonbProperty;
+import java.util.Objects;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-public record Mark(double points, String comment) implements Grade {
+public class Mark implements Grade {
+	@SuppressWarnings("unused")
+	private static final Logger LOGGER = LoggerFactory.getLogger(Mark.class);
 
 	public static Mark zero() {
 		return new Mark(0d, "");
@@ -39,9 +45,21 @@ public record Mark(double points, String comment) implements Grade {
 		return new Mark(points, comment);
 	}
 
-	public Mark {
+	private final double points;
+	private final String comment;
+
+	public Mark(double points, String comment) {
 		checkArgument(Double.isFinite(points));
-		checkNotNull(comment);
+		this.comment = checkNotNull(comment);
+		this.points = points;
+	}
+
+	public double getPoints() {
+		return points;
+	}
+
+	public String getComment() {
+		return comment;
 	}
 
 	@Override
@@ -84,6 +102,25 @@ public record Mark(double points, String comment) implements Grade {
 	public Mark getMark(GradePath path) {
 		checkArgument(path.isRoot());
 		return this;
+	}
+
+	@Override
+	public boolean equals(Object o2) {
+		if (!(o2 instanceof Mark)) {
+			return false;
+		}
+		final Mark m2 = (Mark) o2;
+		return getPoints() == m2.getPoints() && getComment().equals(m2.getComment());
+	}
+
+	@Override
+	public int hashCode() {
+		return Objects.hash(getPoints(), getComment());
+	}
+
+	@Override
+	public String toString() {
+		return MoreObjects.toStringHelper(this).add("points", getPoints()).add("comment", getComment()).toString();
 	}
 
 }

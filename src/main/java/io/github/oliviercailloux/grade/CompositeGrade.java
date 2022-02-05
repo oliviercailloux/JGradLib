@@ -2,10 +2,12 @@ package io.github.oliviercailloux.grade;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import io.github.oliviercailloux.grade.IGrade.GradePath;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * Set as public as a temporary workaround for Json serialization.
@@ -78,6 +80,25 @@ public class CompositeGrade implements Grade {
 	public Mark getMark(GradePath path) {
 		checkArgument(!path.isRoot());
 		return getGrade(path.getHead()).getMark(path.withoutHead());
+	}
+
+	@Override
+	public boolean equals(Object o2) {
+		if (!(o2 instanceof CompositeGrade)) {
+			return false;
+		}
+		final CompositeGrade t2 = (CompositeGrade) o2;
+		return subGrades.equals(t2.subGrades);
+	}
+
+	@Override
+	public int hashCode() {
+		return Objects.hash(subGrades);
+	}
+
+	@Override
+	public String toString() {
+		return MoreObjects.toStringHelper(this).add("subGrades", subGrades).toString();
 	}
 
 }

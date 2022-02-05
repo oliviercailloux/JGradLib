@@ -22,11 +22,11 @@ public class StructuredGrade {
 
 	static Mark getMark(Set<SubMark> absoluteSubMarks, Map<SubMark, Double> weightedSubMarks) {
 		final double weightedSum = weightedSubMarks.keySet().stream()
-				.mapToDouble(s -> weightedSubMarks.get(s) * s.getGrade().points()).sum();
+				.mapToDouble(s -> weightedSubMarks.get(s) * s.getGrade().getPoints()).sum();
 		final double sumOfWeights = weightedSubMarks.values().stream().mapToDouble(d -> d).sum();
 		final boolean hasWeightedCriteria = sumOfWeights != 0d;
 
-		final double absolutePoints = absoluteSubMarks.stream().mapToDouble(s -> s.getGrade().points()).sum();
+		final double absolutePoints = absoluteSubMarks.stream().mapToDouble(s -> s.getGrade().getPoints()).sum();
 
 		if (hasWeightedCriteria) {
 			final double weightedAverage = weightedSum / sumOfWeights;
