@@ -2,7 +2,9 @@ package io.github.oliviercailloux.grade.format.json;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import io.github.oliviercailloux.grade.CompositeGrade;
 import io.github.oliviercailloux.grade.Criterion;
 import io.github.oliviercailloux.grade.Exam;
 import io.github.oliviercailloux.grade.Grade;
@@ -49,27 +51,76 @@ public class JsonSimpleGrade {
 		}
 	}
 
-	private static final class JsonAdapterGrade implements JsonbAdapter<Grade, GradeRecord> {
+	private static final class JsonAdapterGrade implements JsonbAdapter<CompositeGrade, Map<String, Grade>> {
 		@Override
-		public GradeRecord adaptToJson(Grade grade) {
-			if (grade.isMark()) {
-				return new GradeRecord(grade.getMark(GradePath.ROOT));
-			}
-			return new GradeRecord(
-					grade.getCriteria().stream().collect(ImmutableMap.toImmutableMap(c -> c, grade::getGrade)));
+		public Map<String, Grade> adaptToJson(CompositeGrade grade) {
+			checkArgument(grade.isComposite());
+			return grade.getCriteria().stream()
+					.collect(ImmutableMap.toImmutableMap(Criterion::getName, grade::getGrade));
 		}
 
 		@Override
-		public Grade adaptFromJson(GradeRecord structure) {
-			final boolean hasPoints = structure.points != null;
-			final boolean hasComments = structure.comments != null;
-			final boolean hasSubs = structure.grades != null;
-			checkArgument(hasPoints == hasComments);
-			checkArgument(hasPoints != hasSubs);
-			if (hasPoints) {
-				return new Mark(structure.points, structure.comments);
-			}
-			return Grade.composite(structure.grades);
+		public CompositeGrade adaptFromJson(Map<String, Grade> structure) {
+//			return null;
+//			final boolean hasPoints = structure.points != null;
+//			final boolean hasComments = structure.comments != null;
+//			final boolean hasSubs = structure.grades != null;
+//			checkArgument(hasPoints == hasComments);
+//			checkArgument(hasPoints != hasSubs);
+//			if (hasPoints) {
+//				return new Mark(structure.points, structure.comments);
+//			}
+			return (CompositeGrade) Grade.composite(
+					structure.keySet().stream().collect(ImmutableMap.toImmutableMap(Criterion::given, structure::get)));
+		}
+	}
+
+	private static final class JsonAdapterMarkStr implements JsonbAdapter<Mark, Map<String, String>> {
+		@Override
+		public Map<String, String> adaptToJson(Mark grade) {
+			checkArgument(grade.isComposite());
+			return null;
+		}
+
+		@Override
+		public Mark adaptFromJson(Map<String, String> structure) {
+			// return null;
+			// final boolean hasPoints = structure.points != null;
+			// final boolean hasComments = structure.comments != null;
+			// final boolean hasSubs = structure.grades != null;
+			// checkArgument(hasPoints == hasComments);
+			// checkArgument(hasPoints != hasSubs);
+			// if (hasPoints) {
+			// return new Mark(structure.points, structure.comments);
+			// }
+			LOGGER.info("Returning mark from {}.", structure);
+			return Mark.one();
+//			return Grade.composite(
+//					structure.keySet().stream().collect(ImmutableMap.toImmutableMap(Criterion::given, structure::get)));
+		}
+	}
+
+	private static final class JsonAdapterMark implements JsonbAdapter<Grade, Map<String, Mark>> {
+		@Override
+		public Map<String, Mark> adaptToJson(Grade grade) {
+			checkArgument(grade.isComposite());
+			return grade.getCriteria().stream().collect(ImmutableMap.toImmutableMap(Criterion::getName,
+					c -> grade.getMark(GradePath.from(ImmutableList.of(c)))));
+		}
+
+		@Override
+		public Grade adaptFromJson(Map<String, Mark> structure) {
+			// return null;
+			// final boolean hasPoints = structure.points != null;
+			// final boolean hasComments = structure.comments != null;
+			// final boolean hasSubs = structure.grades != null;
+			// checkArgument(hasPoints == hasComments);
+			// checkArgument(hasPoints != hasSubs);
+			// if (hasPoints) {
+			// return new Mark(structure.points, structure.comments);
+			// }
+			return Grade.composite(
+					structure.keySet().stream().collect(ImmutableMap.toImmutableMap(Criterion::given, structure::get)));
 		}
 	}
 
@@ -189,10 +240,15 @@ public class JsonSimpleGrade {
 	}
 
 	public static String toJson(Grade grade) {
-		final Jsonb jsonb = JsonHelper.getJsonb(new JsonCriterion(), new JsonMapAdapter<Double>() {
-		}, new JsonMapAdapter<Grade>() {
+		final Jsonb jsonb = JsonHelper.getJsonb(new JsonCriterionToString(), new JsonMapAdapter<Grade>() {
 		}, new JsonAdapterGrade());
 		return jsonb.toJson(grade);
+	}
+
+	public static Grade asGrade(String gradeString) {
+		final Jsonb jsonb = JsonHelper.getJsonb(new JsonCriterionToString(), new JsonMapAdapter<Grade>() {
+		}, new JsonAdapterMark(), new JsonAdapterMarkStr());
+		return jsonb.fromJson(gradeString, Grade.class);
 	}
 
 	public static String toJson(Exam exam) {

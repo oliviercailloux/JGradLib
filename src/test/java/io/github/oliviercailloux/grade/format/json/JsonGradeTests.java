@@ -58,4 +58,19 @@ public class JsonGradeTests {
 		assertEquals(Resources.toString(this.getClass().getResource("Grade.json"), StandardCharsets.UTF_8),
 				JsonSimpleGrade.toJson(grade));
 	}
+
+	@Test
+	void testReadGrade() throws Exception {
+		final Criterion c1 = Criterion.given("c1");
+		final Criterion c2 = Criterion.given("c2");
+		final Criterion c3 = Criterion.given("c3");
+		final Mark gradeC1 = Mark.one();
+		final Mark gradeC2C1 = Mark.zero("Zero!");
+		final Mark gradeC2C3 = Mark.zero();
+		final Grade gradeC2 = Grade.composite(ImmutableMap.of(c1, gradeC2C1, c3, gradeC2C3));
+		final Grade expected = Grade.composite(ImmutableMap.of(c1, gradeC1, c2, gradeC2));
+
+		assertEquals(expected, JsonSimpleGrade
+				.asGrade(Resources.toString(this.getClass().getResource("Grade.json"), StandardCharsets.UTF_8)));
+	}
 }

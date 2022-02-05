@@ -1,34 +1,16 @@
 {
-    "defaultAggregation": "ABSOLUTE",
-    "weights": {
-        "c1": 1.0
+    "c1": {
+        "comment": "",
+        "points": 1.0
     },
-    "absolutes": [
-    ],
-    "subs": {
+    "c2": {
         "c1": {
-            "defaultAggregation": "ABSOLUTE",
-            "weights": {
-            },
-            "absolutes": [
-            ],
-            "subs": {
-            }
-        },
-        "c2": {
-            "defaultAggregation": "MAX",
-            "absolutes": [
-            ],
-            "subs": {
-            }
+            "comment": "Zero!",
+            "points": 0.0
         },
         "c3": {
-            "defaultAggregation": "MAX",
-            "absolutes": [
-                "c1"
-            ],
-            "subs": {
-            }
+            "comment": "",
+            "points": 0.0
         }
     }
 }

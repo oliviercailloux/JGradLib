@@ -7,7 +7,10 @@ import com.google.common.collect.ImmutableSet;
 import io.github.oliviercailloux.grade.IGrade.GradePath;
 import java.util.Map;
 
-class CompositeGrade implements Grade {
+/**
+ * Set as public as a temporary workaround for Json serialization.
+ */
+public class CompositeGrade implements Grade {
 
 	public static CompositeGrade givenGrades(Map<Criterion, Grade> subGrades) {
 		return new CompositeGrade(subGrades.keySet().stream()
