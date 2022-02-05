@@ -1,0 +1,70 @@
+{
+    "structure": {
+        "defaultAggregation": "ABSOLUTE",
+        "weights": {
+            "c1": 1.0
+        },
+        "absolutes": [
+        ],
+        "subs": {
+            "c1": {
+                "defaultAggregation": "ABSOLUTE",
+                "weights": {
+                },
+                "absolutes": [
+                ],
+                "subs": {
+                }
+            },
+            "c2": {
+                "defaultAggregation": "MAX",
+                "absolutes": [
+                ],
+                "subs": {
+                }
+            },
+            "c3": {
+                "defaultAggregation": "MAX",
+                "absolutes": [
+                    "c1"
+                ],
+                "subs": {
+                }
+            }
+        }
+    },
+    "grades": {
+        "g1": {
+            "c1": {
+                "comment": "",
+                "points": 1.0
+            },
+            "c2": {
+                "c1": {
+                    "comment": "Zero!",
+                    "points": 0.0
+                },
+                "c3": {
+                    "comment": "",
+                    "points": 0.0
+                }
+            }
+        },
+        "g2": {
+            "c1": {
+                "comment": "",
+                "points": 0.0
+            },
+            "c2": {
+                "c1": {
+                    "comment": "Not zero!",
+                    "points": 1.0
+                },
+                "c3": {
+                    "comment": "",
+                    "points": 0.0
+                }
+            }
+        }
+    }
+}

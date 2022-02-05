@@ -6,6 +6,7 @@ import com.google.common.base.Predicates;
 import com.google.common.base.VerifyException;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
 import io.github.oliviercailloux.grade.CompositeGrade;
 import io.github.oliviercailloux.grade.Criterion;
 import io.github.oliviercailloux.grade.Exam;
@@ -83,6 +84,20 @@ public class JsonSimpleGrade {
 		}
 	}
 
+	private static final class JsonAdapterExam
+			implements JsonbAdapter<ImmutableMap<GitHubUsername, Grade>, Map<String, Grade>> {
+		@Override
+		public Map<String, Grade> adaptToJson(ImmutableMap<GitHubUsername, Grade> grades) {
+			return grades.keySet().stream()
+					.collect(ImmutableMap.toImmutableMap(GitHubUsername::getUsername, grades::get));
+		}
+
+		@Override
+		public ImmutableMap<GitHubUsername, Grade> adaptFromJson(Map<String, Grade> grades) {
+			return grades.keySet().stream().collect(ImmutableMap.toImmutableMap(GitHubUsername::given, grades::get));
+		}
+	}
+
 	@JsonbPropertyOrder({ "defaultAggregation", "weights", "absolutes", "subs" })
 	public static class GSR {
 		public DefaultAggregation defaultAggregation;
@@ -137,7 +152,7 @@ public class JsonSimpleGrade {
 	}
 
 	public static String toJson(GradeStructure structure) {
-		final Jsonb jsonb = JsonHelper.getJsonb(new JsonCriterion(), new JsonMapAdapter<Double>() {
+		final Jsonb jsonb = JsonHelper.getJsonb(new JsonCriterionToString(), new JsonMapAdapter<Double>() {
 		}, new JsonMapAdapter<GradeStructure>() {
 		}, new JsonAdapterGradeStructure());
 		return jsonb.toJson(structure);
@@ -198,9 +213,18 @@ public class JsonSimpleGrade {
 	}
 
 	public static String toJson(Exam exam) {
-		final Jsonb jsonb = JsonHelper.getJsonb(new JsonCriterion(), new JsonMapAdapter<Double>() {
+		final Jsonb jsonb = JsonHelper.getJsonb(new JsonCriterionToString(), new JsonMapAdapter<Double>() {
 		}, new JsonMapAdapter<GradeStructure>() {
-		}, new JsonAdapterGradeStructure());
+		}, new JsonAdapterGradeStructure(), new JsonMapAdapter<Grade>() {
+		}, new JsonAdapterGrade(), new JsonAdapterExam());
 		return jsonb.toJson(exam);
+	}
+
+	public static Exam asExam(String examString) {
+		final Jsonb jsonb = JsonHelper.getJsonb(new JsonCriterionToString(), new JsonMapAdapter<Double>() {
+		}, new JsonMapAdapter<GradeStructure>() {
+		}, new JsonAdapterGradeStructure(), new JsonMapAdapter<Grade>() {
+		}, new JsonAdapterGrade(), new JsonAdapterExam());
+		return jsonb.fromJson(examString, Exam.class);
 	}
 }
