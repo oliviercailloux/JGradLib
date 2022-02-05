@@ -17,9 +17,14 @@ import com.univocity.parsers.csv.CsvWriter;
 import com.univocity.parsers.csv.CsvWriterSettings;
 import io.github.oliviercailloux.grade.Criterion;
 import io.github.oliviercailloux.grade.CriterionGradeWeight;
+import io.github.oliviercailloux.grade.Grade;
+import io.github.oliviercailloux.grade.GradeStructure;
 import io.github.oliviercailloux.grade.IGrade;
+import io.github.oliviercailloux.grade.IGrade.GradePath;
+import io.github.oliviercailloux.grade.StructuredGrade;
 import io.github.oliviercailloux.grade.WeightingGrade;
 import io.github.oliviercailloux.grade.comm.StudentOnGitHub;
+import io.github.oliviercailloux.grade.comm.StudentOnGitHubKnown;
 import java.io.StringWriter;
 import java.text.NumberFormat;
 import java.util.Locale;
@@ -42,9 +47,44 @@ public class CsvGrades<K> {
 			.of("Name", s.hasInstitutionalPart() ? s.toInstitutionalStudent().getLastName() : "unknown",
 					"GitHub username", s.getGitHubUsername().getUsername());
 
+	public static final Function<StudentOnGitHubKnown, ImmutableMap<String, String>> STUDENT_KNOWN_IDENTITY_FUNCTION = s -> ImmutableMap
+			.of("Name", s.getLastName(), "GitHub username", s.getGitHubUsername().getUsername());
+
 	public static <K> CsvGrades<K> newInstance(Function<K, ? extends Map<String, String>> identityFunction,
 			double denominator) {
 		return new CsvGrades<>(identityFunction, denominator);
+	}
+
+	private static double getGlobalWeight(GradeStructure structure, GradePath path) {
+		double globalWeight = 1d;
+		GradeStructure sub = structure;
+		for (Criterion criterion : path) {
+			final double w = sub.isAbsolute(criterion) ? 1d : sub.getFixedWeights().get(criterion);
+			globalWeight *= w;
+			sub = sub.getStructure(criterion);
+		}
+		return globalWeight;
+	}
+
+	private static double getPoints(StructuredGrade structured, GradePath p) {
+		final double globalWeight = getGlobalWeight(structured.getStructure(), p);
+		StructuredGrade sub = structured;
+		for (Criterion criterion : p) {
+			sub = sub.getStructuredGrade(criterion);
+		}
+		return globalWeight * sub.getRootMark().getPoints();
+	}
+
+	private static Stream<GradePath> getSuccessors(Grade grade, GradePath prefix) {
+		return grade.getCriteria().stream().map(prefix::withSuffix)
+				.flatMap(p -> getSuccessors(grade.getGrade(p.getTail()), p));
+	}
+
+	private static String shorten(GradePath gradePath) {
+		if (gradePath.isRoot()) {
+			return "POINTS";
+		}
+		return gradePath.toSimpleString();
 	}
 
 	private static Stream<Map.Entry<Criterion, IGrade>> childrenAsStream(Entry<Criterion, IGrade> parent) {
@@ -247,6 +287,66 @@ public class CsvGrades<K> {
 			final int nb = Math.toIntExact(weightingGrades.values().stream().filter(g -> g.getPoints() == 1d).count());
 			writer.addValue("Points", formatter.format(nb));
 			writer.writeValuesToRow();
+		}
+
+		LOGGER.debug("Done writing.");
+		writer.close();
+
+		return stringWriter.toString();
+	}
+
+	public String gradesToCsv(GradeStructure structure, Map<K, ? extends Grade> grades) {
+		final Set<K> keys = grades.keySet();
+		checkArgument(!keys.isEmpty(), "Can’t determine identity headers with no keys.");
+
+		final NumberFormat formatter = NumberFormat.getNumberInstance(Locale.ENGLISH);
+		final StringWriter stringWriter = new StringWriter();
+		final CsvWriter writer = new CsvWriter(stringWriter, new CsvWriterSettings());
+
+		final ImmutableSet<String> identityHeadersFromFunction = keys.stream()
+				.flatMap(k -> identityFunction.apply(k).keySet().stream()).collect(ImmutableSet.toImmutableSet());
+		final ImmutableSet<String> identityHeaders = identityHeadersFromFunction.isEmpty() ? ImmutableSet.of("")
+				: identityHeadersFromFunction;
+		final ImmutableSet<GradePath> allPaths = grades.values().stream().flatMap(g -> getSuccessors(g, GradePath.ROOT))
+				.collect(ImmutableSet.toImmutableSet());
+
+		final ImmutableList<String> headers = Streams
+				.concat(identityHeaders.stream(), allPaths.stream().map(CsvGrades::shorten))
+				.collect(ImmutableList.toImmutableList());
+		writer.writeHeaders(headers);
+
+		final String firstHeader = headers.iterator().next();
+
+		for (K key : keys) {
+			final Map<String, String> identity = identityFunction.apply(key);
+			identity.entrySet().forEach(e -> writer.addValue(e.getKey(), e.getValue()));
+
+			final Grade grade = grades.get(key);
+			final StructuredGrade structured = StructuredGrade.given(grade, structure);
+			allPaths.stream().forEach(p -> writer.addValue(CsvGrades.shorten(p),
+					formatter.format(CsvGrades.getPoints(structured, p) * denominator)));
+			writer.writeValuesToRow();
+		}
+		writer.writeEmptyRow();
+
+		LOGGER.debug("Writing summary data.");
+		{
+			writer.addValue(firstHeader, "Upper bound");
+			allPaths.stream().forEach(
+					p -> writer.addValue(CsvGrades.shorten(p), formatter.format(getGlobalWeight(structure, p))));
+			writer.writeValuesToRow();
+		}
+
+		{
+			writer.addValue(firstHeader, "Average");
+		}
+
+		{
+			writer.addValue(firstHeader, "Nb > 0");
+		}
+
+		{
+			writer.addValue(firstHeader, "Nb MAX");
 		}
 
 		LOGGER.debug("Done writing.");

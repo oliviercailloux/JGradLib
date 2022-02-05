@@ -10,12 +10,14 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedSet;
 import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
 import io.github.oliviercailloux.grade.DeadlineGrader.LinearPenalizer;
-import io.github.oliviercailloux.grade.format.json.JsonGrade;
+import io.github.oliviercailloux.grade.comm.StudentOnGitHubKnown;
+import io.github.oliviercailloux.grade.comm.json.JsonStudentsReader;
+import io.github.oliviercailloux.grade.format.CsvGrades;
+import io.github.oliviercailloux.grade.format.HtmlGrades;
+import io.github.oliviercailloux.grade.format.json.JsonSimpleGrade;
 import io.github.oliviercailloux.jaris.exceptions.Throwing;
 import io.github.oliviercailloux.jaris.throwing.TOptional;
 import io.github.oliviercailloux.java_grade.testers.JavaMarkHelper;
-import io.github.oliviercailloux.java_grade.utils.Summarizer;
-import io.github.oliviercailloux.json.JsonbUtils;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -24,8 +26,6 @@ import java.time.Instant;
 import java.time.ZonedDateTime;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,7 +53,9 @@ public class BatchGitHistoryGrader<X extends Exception> {
 		final GradeStructure main = getUserNamedStructure(grader, userGradeWeight);
 		final GradeStructure penalized = GradeStructure.maxWithGivenAbsolutes(ImmutableSet.of(C_LATENESS),
 				ImmutableMap.of(C_MAIN, main));
-		GradeStructure.maxWithGivenAbsolutes(ImmutableSet.of());
+		final GradeStructure maxAmongAttempts = GradeStructure.maxWithDefault(ImmutableSet.of(), Optional.of(penalized),
+				ImmutableMap.of());
+		return maxAmongAttempts;
 	}
 
 	public <Y extends Exception> Exam getGrades(String prefix, ZonedDateTime deadline, Duration durationForZero,
@@ -72,6 +74,7 @@ public class BatchGitHistoryGrader<X extends Exception> {
 		final LinearPenalizer penalizer = LinearPenalizer.proportionalToLateness(durationForZero);
 
 		final LinkedHashMap<GitHubUsername, Grade> builder = new LinkedHashMap<>();
+		final GradeStructure whole = getComplexStructure(grader, userGradeWeight);
 		try (GitFileSystemWithHistoryFetcher fetcher = fetcherFactory.get()) {
 
 			for (GitHubUsername author : fetcher.getAuthors()) {
@@ -125,17 +128,19 @@ public class BatchGitHistoryGrader<X extends Exception> {
 				if (byTime.isEmpty()) {
 					byTimeGrade = Mark.zero("No commit found.");
 				} else {
-					final ImmutableMap<Criterion, Grade> subsByTime = byTime.keySet().stream().collect(ImmutableMap
-							.toImmutableMap(i -> Criterion.given("Capping at " + i.toString()), byTime::get));
+					final ImmutableMap<Criterion, Grade> subsByTime = byTime.keySet().stream()
+							.collect(ImmutableMap.toImmutableMap(
+									i -> Criterion.given(
+											String.format("Capping at %s.%s", i.toString(), commentGeneralCapped)),
+									byTime::get));
 					byTimeGrade = Grade.composite(subsByTime);
 				}
 				builder.put(author, byTimeGrade);
 
-				outOpt.ifPresent(o -> write(builder, o, prefix));
+				outOpt.ifPresent(o -> write(new Exam(whole, ImmutableMap.copyOf(builder)), o, prefix));
 			}
 		}
-
-		return ImmutableMap.copyOf(builder);
+		return new Exam(whole, ImmutableMap.copyOf(builder));
 	}
 
 	/**
@@ -154,13 +159,23 @@ public class BatchGitHistoryGrader<X extends Exception> {
 		return consideredTimestamps;
 	}
 
-	private void write(Map<GitHubUsername, Grade> grades, Path out, String prefix) throws IOException {
-		final ImmutableMap<String, IGrade> gradesString = grades.entrySet().stream()
-				.collect(ImmutableMap.toImmutableMap(e -> e.getKey().getUsername(), Entry::getValue));
-		Files.writeString(out, JsonbUtils.toJsonObject(gradesString, JsonGrade.asAdapter()).toString());
-		final Summarizer summarizer = Summarizer.create().setInputPath(out)
-				.setCsvOutputPath(Path.of("grades " + prefix + ".csv"))
-				.setHtmlOutputPath(Path.of("grades " + prefix + ".html"));
-		summarizer.summarize();
+	private void write(Exam exam, Path out, String prefix) throws IOException {
+		Files.writeString(out, JsonSimpleGrade.toJson(exam));
+
+		LOGGER.debug("Reading usernames.");
+		final JsonStudentsReader studentsReader = JsonStudentsReader.from(Files.readString(Path.of("usernames.json")));
+		final ImmutableBiMap<GitHubUsername, StudentOnGitHubKnown> students = studentsReader
+				.getStudentsKnownByGitHubUsername();
+
+		final ImmutableMap<StudentOnGitHubKnown, Grade> grades = exam.getUsernames().stream()
+				.collect(ImmutableMap.toImmutableMap(students::get, u -> exam.getStructuredGrade(u).getGrade()));
+		final String csv = CsvGrades.newInstance(CsvGrades.STUDENT_KNOWN_IDENTITY_FUNCTION, 20)
+				.gradesToCsv(exam.structure(), grades);
+		Files.writeString(Path.of("grades " + prefix + ".csv"), csv);
+
+		final ImmutableMap<StudentOnGitHubKnown, StructuredGrade> structuredGrades = exam.getUsernames().stream()
+				.collect(ImmutableMap.toImmutableMap(students::get, exam::getStructuredGrade));
+		final String html = HtmlGrades.asHtml(grade, prefix, 20d);
+		Files.writeString(Path.of("grades " + prefix + ".html"), html);
 	}
 }

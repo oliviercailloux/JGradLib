@@ -57,6 +57,14 @@ public class StructuredGrade {
 		absoluteSubMarks = null;
 	}
 
+	public Grade getGrade() {
+		return grade;
+	}
+
+	public GradeStructure getStructure() {
+		return structure;
+	}
+
 	public boolean isAbsolute(Criterion criterion) {
 		return structure.isAbsolute(criterion);
 	}
