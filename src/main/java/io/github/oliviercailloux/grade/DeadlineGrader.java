@@ -211,7 +211,7 @@ public class DeadlineGrader {
 	private static interface Penalizer {
 		public IGrade penalize(Duration lateness, IGrade grade);
 
-		public io.github.oliviercailloux.grade.Mark getAbsolutePenality(Duration lateness, StructuredGrade grade);
+		public io.github.oliviercailloux.grade.Mark getAbsolutePenality(Duration lateness, Grade grade);
 	}
 
 	public static class LinearPenalizer implements Penalizer {
@@ -254,13 +254,14 @@ public class DeadlineGrader {
 			return penalizedGrade;
 		}
 
-		public io.github.oliviercailloux.grade.Mark getAbsolutePenality(Duration lateness, StructuredGrade grade) {
+		@Override
+		public io.github.oliviercailloux.grade.Mark getAbsolutePenality(Duration lateness, Grade grade) {
 			final io.github.oliviercailloux.grade.Mark penalty;
 			if (!lateness.isNegative() && !lateness.isZero()) {
 				final double fractionPenalty = Math.min(lateness.getSeconds() / (double) nbSecondsZero, 1d);
 				verify(0d < fractionPenalty);
 				verify(fractionPenalty <= 1d);
-				final double currentPoints = grade.getRootMark().getPoints();
+				final double currentPoints = grade.getMark().getPoints();
 				final double penaltyPoints = currentPoints * fractionPenalty;
 				penalty = io.github.oliviercailloux.grade.Mark.given(-1d * penaltyPoints, "Lateness: " + lateness);
 			} else {
