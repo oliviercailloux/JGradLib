@@ -5,10 +5,10 @@ import com.google.common.collect.ImmutableSet;
 import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
 import jakarta.json.bind.annotation.JsonbPropertyOrder;
 
-@JsonbPropertyOrder({ "structure", "grades" })
-public record Exam(GradeStructure structure, ImmutableMap<GitHubUsername, MarksTree> grades) {
-	public StructuredGrade getStructuredGrade(GitHubUsername username) {
-		return StructuredGrade.given(grades.get(username), structure);
+@JsonbPropertyOrder({ "aggregator", "grades" })
+public record Exam(GradeAggregator aggregator, ImmutableMap<GitHubUsername, MarksTree> grades) {
+	public Grade getGrade(GitHubUsername username) {
+		return Grade.given(aggregator, grades.get(username));
 	}
 
 	public ImmutableSet<GitHubUsername> getUsernames() {
