@@ -8,7 +8,7 @@ import com.google.common.io.Resources;
 import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
 import io.github.oliviercailloux.grade.Criterion;
 import io.github.oliviercailloux.grade.Exam;
-import io.github.oliviercailloux.grade.Grade;
+import io.github.oliviercailloux.grade.MarksTree;
 import io.github.oliviercailloux.grade.GradeStructure;
 import io.github.oliviercailloux.grade.Mark;
 import java.nio.charset.StandardCharsets;
@@ -30,21 +30,21 @@ public class JsonGradeTests {
 		return toWrite;
 	}
 
-	private Grade getGrade() {
+	private MarksTree getGrade() {
 		final Mark gradeC1 = Mark.one();
 		final Mark gradeC2C1 = Mark.zero("Zero!");
 		final Mark gradeC2C3 = Mark.zero();
-		final Grade gradeC2 = Grade.composite(ImmutableMap.of(C1, gradeC2C1, C3, gradeC2C3));
-		final Grade grade = Grade.composite(ImmutableMap.of(C1, gradeC1, C2, gradeC2));
+		final MarksTree gradeC2 = MarksTree.composite(ImmutableMap.of(C1, gradeC2C1, C3, gradeC2C3));
+		final MarksTree grade = MarksTree.composite(ImmutableMap.of(C1, gradeC1, C2, gradeC2));
 		return grade;
 	}
 
-	private Grade getGrade2() {
+	private MarksTree getGrade2() {
 		final Mark gradeC1 = Mark.zero();
 		final Mark gradeC2C1 = Mark.one("Not zero!");
 		final Mark gradeC2C3 = Mark.zero();
-		final Grade gradeC2 = Grade.composite(ImmutableMap.of(C1, gradeC2C1, C3, gradeC2C3));
-		final Grade grade = Grade.composite(ImmutableMap.of(C1, gradeC1, C2, gradeC2));
+		final MarksTree gradeC2 = MarksTree.composite(ImmutableMap.of(C1, gradeC2C1, C3, gradeC2C3));
+		final MarksTree grade = MarksTree.composite(ImmutableMap.of(C1, gradeC1, C2, gradeC2));
 		return grade;
 	}
 
@@ -71,7 +71,7 @@ public class JsonGradeTests {
 
 	@Test
 	void testWriteGrade() throws Exception {
-		final Grade grade = getGrade();
+		final MarksTree grade = getGrade();
 
 //		assertEquals("", JsonSimpleGrade.toJson(gradeC1));
 		assertEquals(Resources.toString(this.getClass().getResource("Grade.json"), StandardCharsets.UTF_8),

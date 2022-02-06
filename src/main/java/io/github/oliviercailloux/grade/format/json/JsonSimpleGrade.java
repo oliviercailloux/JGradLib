@@ -7,10 +7,10 @@ import com.google.common.base.VerifyException;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
-import io.github.oliviercailloux.grade.CompositeGrade;
+import io.github.oliviercailloux.grade.CompositeMarksTree;
 import io.github.oliviercailloux.grade.Criterion;
 import io.github.oliviercailloux.grade.Exam;
-import io.github.oliviercailloux.grade.Grade;
+import io.github.oliviercailloux.grade.MarksTree;
 import io.github.oliviercailloux.grade.GradeStructure;
 import io.github.oliviercailloux.grade.GradeStructure.DefaultAggregation;
 import io.github.oliviercailloux.grade.Mark;
@@ -34,7 +34,7 @@ public class JsonSimpleGrade {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(JsonSimpleGrade.class);
 
-	private static Grade asGrade(JsonObject gradeObject) {
+	private static MarksTree asGrade(JsonObject gradeObject) {
 		checkArgument(!gradeObject.isEmpty());
 		final ValueType valueType = gradeObject.get(gradeObject.keySet().iterator().next()).getValueType();
 		final boolean isFinal = switch (valueType) {
@@ -65,9 +65,9 @@ public class JsonSimpleGrade {
 
 		checkArgument(gradeObject.values().stream().map(JsonValue::getValueType)
 				.allMatch(Predicates.equalTo(ValueType.OBJECT)));
-		final ImmutableMap<Criterion, Grade> subs = gradeObject.keySet().stream()
+		final ImmutableMap<Criterion, MarksTree> subs = gradeObject.keySet().stream()
 				.collect(ImmutableMap.toImmutableMap(Criterion::given, s -> asGrade(gradeObject.getJsonObject(s))));
-		return Grade.composite(subs);
+		return MarksTree.composite(subs);
 	}
 
 	private static final class JsonAdapterGradeStructure implements JsonbAdapter<GradeStructure, GSR> {
@@ -99,43 +99,43 @@ public class JsonSimpleGrade {
 		}
 	}
 
-	private static final class JsonAdapterGrade implements JsonbAdapter<CompositeGrade, Map<String, Grade>> {
+	private static final class JsonAdapterGrade implements JsonbAdapter<CompositeMarksTree, Map<String, MarksTree>> {
 		@Override
-		public Map<String, Grade> adaptToJson(CompositeGrade grade) {
+		public Map<String, MarksTree> adaptToJson(CompositeMarksTree grade) {
 			checkArgument(grade.isComposite());
 			return grade.getCriteria().stream()
-					.collect(ImmutableMap.toImmutableMap(Criterion::getName, grade::getGrade));
+					.collect(ImmutableMap.toImmutableMap(Criterion::getName, grade::getTree));
 		}
 
 		@Override
-		public CompositeGrade adaptFromJson(Map<String, Grade> structure) {
-			return (CompositeGrade) Grade.composite(
+		public CompositeMarksTree adaptFromJson(Map<String, MarksTree> structure) {
+			return (CompositeMarksTree) MarksTree.composite(
 					structure.keySet().stream().collect(ImmutableMap.toImmutableMap(Criterion::given, structure::get)));
 		}
 	}
 
-	private static final class JsonAdapterJsonToGrade implements JsonbAdapter<Grade, JsonObject> {
+	private static final class JsonAdapterJsonToGrade implements JsonbAdapter<MarksTree, JsonObject> {
 		@Override
-		public JsonObject adaptToJson(Grade grade) {
+		public JsonObject adaptToJson(MarksTree grade) {
 			return null;
 		}
 
 		@Override
-		public Grade adaptFromJson(JsonObject structure) {
+		public MarksTree adaptFromJson(JsonObject structure) {
 			return asGrade(structure);
 		}
 	}
 
 	private static final class JsonAdapterExam
-			implements JsonbAdapter<ImmutableMap<GitHubUsername, Grade>, Map<String, Grade>> {
+			implements JsonbAdapter<ImmutableMap<GitHubUsername, MarksTree>, Map<String, MarksTree>> {
 		@Override
-		public Map<String, Grade> adaptToJson(ImmutableMap<GitHubUsername, Grade> grades) {
+		public Map<String, MarksTree> adaptToJson(ImmutableMap<GitHubUsername, MarksTree> grades) {
 			return grades.keySet().stream()
 					.collect(ImmutableMap.toImmutableMap(GitHubUsername::getUsername, grades::get));
 		}
 
 		@Override
-		public ImmutableMap<GitHubUsername, Grade> adaptFromJson(Map<String, Grade> grades) {
+		public ImmutableMap<GitHubUsername, MarksTree> adaptFromJson(Map<String, MarksTree> grades) {
 			return grades.keySet().stream().collect(ImmutableMap.toImmutableMap(GitHubUsername::given, grades::get));
 		}
 	}
@@ -218,13 +218,13 @@ public class JsonSimpleGrade {
 		return jsonb.fromJson(structureString, GradeStructure.class);
 	}
 
-	public static String toJson(Grade grade) {
-		final Jsonb jsonb = JsonHelper.getJsonb(new JsonCriterionToString(), new JsonMapAdapter<Grade>() {
+	public static String toJson(MarksTree grade) {
+		final Jsonb jsonb = JsonHelper.getJsonb(new JsonCriterionToString(), new JsonMapAdapter<MarksTree>() {
 		}, new JsonAdapterGrade());
 		return jsonb.toJson(grade);
 	}
 
-	public static Grade asGrade(String gradeString) {
+	public static MarksTree asGrade(String gradeString) {
 		final JsonObject l0 = Json.createReader(new StringReader(gradeString)).readObject();
 		return asGrade(l0);
 	}
@@ -232,7 +232,7 @@ public class JsonSimpleGrade {
 	public static String toJson(Exam exam) {
 		final Jsonb jsonb = JsonHelper.getJsonb(new JsonCriterionToString(), new JsonMapAdapter<Double>() {
 		}, new JsonMapAdapter<GradeStructure>() {
-		}, new JsonAdapterGradeStructure(), new JsonMapAdapter<Grade>() {
+		}, new JsonAdapterGradeStructure(), new JsonMapAdapter<MarksTree>() {
 		}, new JsonAdapterGrade(), new JsonAdapterExam());
 		return jsonb.toJson(exam);
 	}
@@ -240,7 +240,7 @@ public class JsonSimpleGrade {
 	public static Exam asExam(String examString) {
 		final Jsonb jsonb = JsonHelper.getJsonb(new JsonCriterionToString(), new JsonMapAdapter<Double>() {
 		}, new JsonMapAdapter<GradeStructure>() {
-		}, new JsonAdapterGradeStructure(), new JsonMapAdapter<Grade>() {
+		}, new JsonAdapterGradeStructure(), new JsonMapAdapter<MarksTree>() {
 		}, new JsonAdapterGrade(), new JsonAdapterExam(), new JsonAdapterJsonToGrade());
 		return jsonb.fromJson(examString, Exam.class);
 	}

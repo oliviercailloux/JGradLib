@@ -23,7 +23,7 @@ import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
 import io.github.oliviercailloux.grade.Criterion;
 import io.github.oliviercailloux.grade.CriterionGradeWeight;
 import io.github.oliviercailloux.grade.IGrade;
-import io.github.oliviercailloux.grade.IGrade.GradePath;
+import io.github.oliviercailloux.grade.IGrade.CriteriaPath;
 import io.github.oliviercailloux.grade.WeightingGrade;
 import io.github.oliviercailloux.grade.WeightingGrade.PathGradeWeight;
 import io.github.oliviercailloux.grade.comm.InstitutionalStudent;
@@ -207,7 +207,7 @@ public class Summarizer {
 	}
 
 	private static IGrade dissolve(IGrade grade, Criterion toDissolve) {
-		final ImmutableSet<GradePath> penaltyPaths = grade.toTree().getPaths().stream()
+		final ImmutableSet<CriteriaPath> penaltyPaths = grade.toTree().getPaths().stream()
 				.filter(p -> !p.isRoot() && p.getTail().equals(toDissolve)).collect(ImmutableSet.toImmutableSet());
 		LOGGER.debug("Found penalty paths: {}.", penaltyPaths);
 
@@ -216,7 +216,7 @@ public class Summarizer {
 		checkArgument(allLeaves, penaltyPaths);
 
 		IGrade result = grade;
-		for (GradePath penaltyPath : penaltyPaths) {
+		for (CriteriaPath penaltyPath : penaltyPaths) {
 			result = dissolve(result, penaltyPath);
 		}
 
@@ -235,7 +235,7 @@ public class Summarizer {
 		final Stream<GradeStructure> templates = grades.stream()
 				.flatMap(g -> Streams.concat(Stream.of(g), g.getSubGrades().values().stream()))
 				.filter(g -> g.getSubGrades().keySet().equals(ImmutableSet.of(userName, main))).map(IGrade::toTree)
-				.filter(s -> !s.getPaths().contains(GradePath.from("main/Code/")));
+				.filter(s -> !s.getPaths().contains(CriteriaPath.from("main/Code/")));
 //		final Stream<GradeStructure> templates = grades.stream().map(IGrade::toTree)
 //				.flatMap(s -> s.getPaths().stream().map(s::getStructure));
 		final ImmutableMultiset<GradeStructure> trees = templates.collect(ImmutableMultiset.toImmutableMultiset());
@@ -258,7 +258,7 @@ public class Summarizer {
 	}
 
 	private static GradeStructure getAutoModel(GradeStructure main) {
-		final ImmutableSet<Criterion> mainSubs = main.getSuccessorCriteria(GradePath.ROOT);
+		final ImmutableSet<Criterion> mainSubs = main.getSuccessorCriteria(CriteriaPath.ROOT);
 		return mainSubs.stream().map(main::getStructure).map(Summarizer::getAutoModelFromMainSubTree).distinct()
 				.collect(MoreCollectors.onlyElement());
 	}
@@ -266,7 +266,7 @@ public class Summarizer {
 	private static GradeStructure getAutoModelFromMainSubTree(GradeStructure mainSubTree) {
 		final Criterion userName = Criterion.given("user.name");
 		final Criterion main = Criterion.given("main");
-		final GradeStructure sU = GradeStructure.given(ImmutableSet.of(GradePath.ROOT.withSuffix(userName)));
+		final GradeStructure sU = GradeStructure.given(ImmutableSet.of(CriteriaPath.ROOT.withSuffix(userName)));
 		LOGGER.debug("mainSubTree: {}.", mainSubTree);
 		final GradeStructure mainEmbedded = GradeStructure.toTree(ImmutableMap.of(main, mainSubTree));
 		final GradeStructure merged = GradeStructure.merge(ImmutableSet.of(sU, mainEmbedded));
@@ -283,7 +283,7 @@ public class Summarizer {
 	}
 
 	public IGrade filter(IGrade grade) {
-		final Optional<CriterionGradeWeight> filtered = filter(GradePath.ROOT, grade);
+		final Optional<CriterionGradeWeight> filtered = filter(CriteriaPath.ROOT, grade);
 		checkState(!filtered.isEmpty(), grade);
 		final CriterionGradeWeight result = filtered.get();
 		verify(result.getCriterion().getName().isEmpty());
@@ -300,11 +300,11 @@ public class Summarizer {
 	 * we should also advertise equal weights! Therefore, guarantee weights do not
 	 * sum to zero is good. However we could ease construction.)
 	 */
-	private Optional<CriterionGradeWeight> filter(GradePath context, IGrade grade) {
+	private Optional<CriterionGradeWeight> filter(CriteriaPath context, IGrade grade) {
 		final IGrade result;
 		final IGrade thisGrade = grade.getGrade(context).get();
 		final GradeStructure tree = grade.toTree();
-		final ImmutableSet<GradePath> successorPaths = tree.getSuccessorPaths(context);
+		final ImmutableSet<CriteriaPath> successorPaths = tree.getSuccessorPaths(context);
 		LOGGER.debug("Considering {} and successors {}.", context, successorPaths);
 		verify((thisGrade instanceof Mark) == successorPaths.isEmpty());
 		if (successorPaths.isEmpty()) {
@@ -346,7 +346,7 @@ public class Summarizer {
 		return result;
 	}
 
-	private static IGrade dissolve(IGrade grade, GradePath toDissolvePath) {
+	private static IGrade dissolve(IGrade grade, CriteriaPath toDissolvePath) {
 		checkArgument(grade.toTree().getPaths().contains(toDissolvePath));
 		// TODO
 //		checkArgument(grade.toTree().getSiblings(toDissolvePath).size() >= 2);
@@ -354,7 +354,7 @@ public class Summarizer {
 		checkArgument(!toDissolvePath.isRoot());
 
 		LOGGER.debug("Dissolving {}.", toDissolvePath);
-		final GradePath parent = toDissolvePath.withoutTail();
+		final CriteriaPath parent = toDissolvePath.withoutTail();
 		final Criterion toDissolveCriterion = toDissolvePath.getTail();
 		/* Need to replace parent with parent-with-dissolved-child. */
 		final IGrade parentGrade = grade.getGrade(parent).get();
@@ -456,10 +456,10 @@ public class Summarizer {
 						.toMap(treesOptPerCriterion.keySet(), c -> treesOptPerCriterion.get(c).get());
 				final ImmutableMap<Criterion, GradeStructure> rightlyRootedTrees = Maps
 						.toMap(treesPerCriterion.keySet(), c -> treesPerCriterion.get(c).getStructure(c));
-				final ImmutableGraph.Builder<GradePath> builder = GraphBuilder.directed().immutable();
+				final ImmutableGraph.Builder<CriteriaPath> builder = GraphBuilder.directed().immutable();
 				for (Criterion criterion : rightlyRootedTrees.keySet()) {
 					final GradeStructure tree = rightlyRootedTrees.get(criterion);
-					builder.putEdge(GradePath.ROOT, GradePath.ROOT.withSuffix(criterion));
+					builder.putEdge(CriteriaPath.ROOT, CriteriaPath.ROOT.withSuffix(criterion));
 					tree.asGraph().edges().stream().forEach(builder::putEdge);
 				}
 				common = Optional.of(GradeStructure.given(builder.build()));

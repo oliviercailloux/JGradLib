@@ -6,7 +6,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.io.Resources;
-import io.github.oliviercailloux.grade.IGrade.GradePath;
+import io.github.oliviercailloux.grade.IGrade.CriteriaPath;
 import io.github.oliviercailloux.grade.WeightingGrade.WeightedGrade;
 import io.github.oliviercailloux.grade.format.json.JsonGrade;
 import io.github.oliviercailloux.grade.format.json.JsonbGradeTests;
@@ -41,7 +41,7 @@ public class GradeTests {
 		final Criterion c1 = Criterion.given("C1");
 		final Criterion c2 = Criterion.given("C2");
 		final Criterion criterion = Criterion.given("criterion");
-		final GradePath c1SlashCriterion = GradePath.from(ImmutableList.of(c1, criterion));
+		final CriteriaPath c1SlashCriterion = CriteriaPath.from(ImmutableList.of(c1, criterion));
 		final Patch patch = Patch.create(c1SlashCriterion, Mark.zero("A comment"));
 
 		final WeightingGrade complexGrade = GradeTestsHelper.getComplexGrade();
@@ -65,22 +65,22 @@ public class GradeTests {
 
 	@Test
 	void testBuildKeepsOrderOfKeys() throws Exception {
-		final IGrade grade = WeightingGrade.from(ImmutableMap.of(GradePath.from("user.name"),
-				WeightedGrade.given(Mark.one(), 1d), GradePath.from("main"), WeightedGrade.given(Mark.one(), 1d)));
+		final IGrade grade = WeightingGrade.from(ImmutableMap.of(CriteriaPath.from("user.name"),
+				WeightedGrade.given(Mark.one(), 1d), CriteriaPath.from("main"), WeightedGrade.given(Mark.one(), 1d)));
 		assertEquals(ImmutableList.of(Criterion.given("user.name"), Criterion.given("main")),
 				grade.getSubGrades().keySet().asList());
 		final GradeStructure tree = grade.toTree();
-		assertEquals(ImmutableList.of(GradePath.ROOT, GradePath.from("user.name"), GradePath.from("main")),
+		assertEquals(ImmutableList.of(CriteriaPath.ROOT, CriteriaPath.from("user.name"), CriteriaPath.from("main")),
 				ImmutableList.copyOf(tree.asGraph().nodes()));
 		assertEquals(ImmutableList.of(Criterion.given("user.name"), Criterion.given("main")),
-				tree.getSuccessorCriteria(GradePath.ROOT).asList());
+				tree.getSuccessorCriteria(CriteriaPath.ROOT).asList());
 	}
 
 	@Test
 	void testDissolve() throws Exception {
 		final IGrade grade = WeightingGrade
-				.from(ImmutableMap.of(GradePath.from("c1"), WeightedGrade.given(Mark.given(0.5d, ""), 4d),
-						GradePath.from("c2"), WeightedGrade.given(Mark.one(), 1d)));
+				.from(ImmutableMap.of(CriteriaPath.from("c1"), WeightedGrade.given(Mark.given(0.5d, ""), 4d),
+						CriteriaPath.from("c2"), WeightedGrade.given(Mark.one(), 1d)));
 		final Criterion c1 = Criterion.given("c1");
 		final Criterion c2 = Criterion.given("c2");
 		final IGrade dissolved = grade.withDissolved(c2);
@@ -89,8 +89,8 @@ public class GradeTests {
 		assertEquals(expectedTree, dissolved.toTree());
 
 		assertEquals(1d, dissolved.getWeights().get(c1), 1e-6d);
-		assertEquals(4d / 5d, dissolved.getLocalWeight(GradePath.from("c1/c1")), 1e-6d);
-		assertEquals(1d / 5d, dissolved.getLocalWeight(GradePath.from("c1/c2")), 1e-6d);
+		assertEquals(4d / 5d, dissolved.getLocalWeight(CriteriaPath.from("c1/c1")), 1e-6d);
+		assertEquals(1d / 5d, dissolved.getLocalWeight(CriteriaPath.from("c1/c2")), 1e-6d);
 
 		assertEquals(3d / 5d, grade.getPoints(), 1e-6d);
 		assertEquals(3d / 5d, dissolved.getPoints(), 1e-6d);
@@ -114,9 +114,9 @@ public class GradeTests {
 	@Test
 	void testDissolveStructure() throws Exception {
 		final WeightedGrade one = WeightedGrade.given(Mark.one(), 1d);
-		final GradePath w = GradePath.from("Warnings");
+		final CriteriaPath w = CriteriaPath.from("Warnings");
 		final IGrade grade = WeightingGrade
-				.from(ImmutableMap.of(GradePath.from("Impl/Class1"), one, GradePath.from("Impl/Class2"), one, w, one));
+				.from(ImmutableMap.of(CriteriaPath.from("Impl/Class1"), one, CriteriaPath.from("Impl/Class2"), one, w, one));
 		final Criterion wc = Criterion.given("Warnings");
 		final IGrade dissolved = grade.withDissolved(wc);
 

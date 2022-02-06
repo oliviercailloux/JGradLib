@@ -73,21 +73,21 @@ public class WeightingGrade implements IGrade {
 	private static final Logger LOGGER = LoggerFactory.getLogger(WeightingGrade.class);
 
 	public static class PathGradeWeight {
-		public static PathGradeWeight given(GradePath path, IGrade grade, double weight) {
+		public static PathGradeWeight given(CriteriaPath path, IGrade grade, double weight) {
 			return new PathGradeWeight(path, grade, weight);
 		}
 
-		private final GradePath path;
+		private final CriteriaPath path;
 		private final IGrade grade;
 		private final double weight;
 
-		private PathGradeWeight(GradePath path, IGrade grade, double weight) {
+		private PathGradeWeight(CriteriaPath path, IGrade grade, double weight) {
 			this.path = checkNotNull(path);
 			this.grade = checkNotNull(grade);
 			this.weight = weight;
 		}
 
-		public GradePath getPath() {
+		public CriteriaPath getPath() {
 			return path;
 		}
 
@@ -157,7 +157,7 @@ public class WeightingGrade implements IGrade {
 			return weight * grade.getPoints();
 		}
 
-		public WeightedMark getWeightedMark(GradePath path) {
+		public WeightedMark getWeightedMark(CriteriaPath path) {
 			final WeightedMark weightedMark = grade.getWeightedMark(path);
 			return WeightedMark.given(weightedMark.getGrade(), weight * weightedMark.getWeight());
 		}
@@ -278,18 +278,18 @@ public class WeightingGrade implements IGrade {
 	 * @return a mark iff the map key set is the singleton ROOT and the (single)
 	 *         weighted grade is a weighted mark
 	 */
-	public static IGrade from(Map<GradePath, WeightedGrade> grades) {
+	public static IGrade from(Map<CriteriaPath, WeightedGrade> grades) {
 		return from(grades, false);
 	}
 
-	public static IGrade withZeroesRectified(Map<GradePath, WeightedGrade> grades) {
+	public static IGrade withZeroesRectified(Map<CriteriaPath, WeightedGrade> grades) {
 		return from(grades, true);
 	}
 
-	private static IGrade from(Map<GradePath, WeightedGrade> grades, boolean changeZeroChildren) {
+	private static IGrade from(Map<CriteriaPath, WeightedGrade> grades, boolean changeZeroChildren) {
 		checkArgument(!grades.isEmpty());
 
-		final Map<GradePath, WeightedGrade> modifiableGrades = new LinkedHashMap<>(grades);
+		final Map<CriteriaPath, WeightedGrade> modifiableGrades = new LinkedHashMap<>(grades);
 		LOGGER.debug("Initialized modifiable as: {}.", modifiableGrades);
 
 		final GradeStructure structure = GradeStructure.given(grades.keySet());
@@ -301,22 +301,22 @@ public class WeightingGrade implements IGrade {
 		 * when the map has only one remaining entry: at some point there may remain a
 		 * single key "[a/b/c]", for example.
 		 */
-		while (!modifiableGrades.keySet().contains(GradePath.ROOT)) {
+		while (!modifiableGrades.keySet().contains(CriteriaPath.ROOT)) {
 			/**
 			 * We need to consider the highest depths first, because we want all siblings to
 			 * be aggregated already.
 			 */
-			final GradePath remainingPath = modifiableGrades.keySet().stream()
-					.max(Comparator.comparing(GradePath::size)).get();
+			final CriteriaPath remainingPath = modifiableGrades.keySet().stream()
+					.max(Comparator.comparing(CriteriaPath::size)).get();
 			LOGGER.debug("Considering {}.", remainingPath);
 			verify(!remainingPath.isRoot());
-			final GradePath parent = remainingPath.withoutTail();
+			final CriteriaPath parent = remainingPath.withoutTail();
 			verify(!modifiableGrades.containsKey(parent));
-			final ImmutableSet<GradePath> childrenPaths = structure.getSuccessorPaths(parent);
+			final ImmutableSet<CriteriaPath> childrenPaths = structure.getSuccessorPaths(parent);
 			{
 				/** Modifiable grades has entries for all children nodes. */
 				final ImmutableMap<Criterion, WeightedGrade> childrenWGrades = childrenPaths.stream()
-						.collect(ImmutableMap.toImmutableMap(GradePath::getTail, modifiableGrades::get));
+						.collect(ImmutableMap.toImmutableMap(CriteriaPath::getTail, modifiableGrades::get));
 				final boolean allZeroes = childrenWGrades.values().stream().mapToDouble(WeightedGrade::getWeight)
 						.allMatch(w -> w == 0d);
 				final ImmutableMap<Criterion, WeightedGrade> nonZeroesChildrenWGrades;
@@ -337,10 +337,10 @@ public class WeightingGrade implements IGrade {
 			childrenPaths.stream().forEach(modifiableGrades::remove);
 		}
 
-		verify(modifiableGrades.keySet().equals(ImmutableSet.of(GradePath.ROOT)));
+		verify(modifiableGrades.keySet().equals(ImmutableSet.of(CriteriaPath.ROOT)));
 
 		final IGrade grade = Iterables.getOnlyElement(modifiableGrades.values()).getGrade();
-		final ImmutableSet<GradePath> expectedLeaves = grades.keySet().stream()
+		final ImmutableSet<CriteriaPath> expectedLeaves = grades.keySet().stream()
 				.flatMap(p -> grades.get(p).getGrade().toTree().getLeaves().stream().map(l -> l.withPrefix(p)))
 				.collect(ImmutableSet.toImmutableSet());
 		verify(grade.toTree().getLeaves().equals(expectedLeaves));

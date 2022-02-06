@@ -17,10 +17,10 @@ import com.univocity.parsers.csv.CsvWriter;
 import com.univocity.parsers.csv.CsvWriterSettings;
 import io.github.oliviercailloux.grade.Criterion;
 import io.github.oliviercailloux.grade.CriterionGradeWeight;
-import io.github.oliviercailloux.grade.Grade;
+import io.github.oliviercailloux.grade.MarksTree;
 import io.github.oliviercailloux.grade.GradeStructure;
 import io.github.oliviercailloux.grade.IGrade;
-import io.github.oliviercailloux.grade.IGrade.GradePath;
+import io.github.oliviercailloux.grade.IGrade.CriteriaPath;
 import io.github.oliviercailloux.grade.StructuredGrade;
 import io.github.oliviercailloux.grade.WeightingGrade;
 import io.github.oliviercailloux.grade.comm.StudentOnGitHub;
@@ -55,7 +55,7 @@ public class CsvGrades<K> {
 		return new CsvGrades<>(identityFunction, denominator);
 	}
 
-	private static double getGlobalWeight(GradeStructure structure, GradePath path) {
+	private static double getGlobalWeight(GradeStructure structure, CriteriaPath path) {
 		double globalWeight = 1d;
 		GradeStructure sub = structure;
 		for (Criterion criterion : path) {
@@ -66,7 +66,7 @@ public class CsvGrades<K> {
 		return globalWeight;
 	}
 
-	private static double getPoints(StructuredGrade structured, GradePath p) {
+	private static double getPoints(StructuredGrade structured, CriteriaPath p) {
 		final double globalWeight = getGlobalWeight(structured.getStructure(), p);
 		StructuredGrade sub = structured;
 		for (Criterion criterion : p) {
@@ -75,12 +75,12 @@ public class CsvGrades<K> {
 		return globalWeight * sub.getRootMark().getPoints();
 	}
 
-	private static Stream<GradePath> getSuccessors(Grade grade, GradePath prefix) {
+	private static Stream<CriteriaPath> getSuccessors(MarksTree grade, CriteriaPath prefix) {
 		return grade.getCriteria().stream().map(prefix::withSuffix)
-				.flatMap(p -> getSuccessors(grade.getGrade(p.getTail()), p));
+				.flatMap(p -> getSuccessors(grade.getTree(p.getTail()), p));
 	}
 
-	private static String shorten(GradePath gradePath) {
+	private static String shorten(CriteriaPath gradePath) {
 		if (gradePath.isRoot()) {
 			return "POINTS";
 		}
@@ -295,7 +295,7 @@ public class CsvGrades<K> {
 		return stringWriter.toString();
 	}
 
-	public String gradesToCsv(GradeStructure structure, Map<K, ? extends Grade> grades) {
+	public String gradesToCsv(GradeStructure structure, Map<K, ? extends MarksTree> grades) {
 		final Set<K> keys = grades.keySet();
 		checkArgument(!keys.isEmpty(), "Can’t determine identity headers with no keys.");
 
@@ -307,7 +307,7 @@ public class CsvGrades<K> {
 				.flatMap(k -> identityFunction.apply(k).keySet().stream()).collect(ImmutableSet.toImmutableSet());
 		final ImmutableSet<String> identityHeaders = identityHeadersFromFunction.isEmpty() ? ImmutableSet.of("")
 				: identityHeadersFromFunction;
-		final ImmutableSet<GradePath> allPaths = grades.values().stream().flatMap(g -> getSuccessors(g, GradePath.ROOT))
+		final ImmutableSet<CriteriaPath> allPaths = grades.values().stream().flatMap(g -> getSuccessors(g, CriteriaPath.ROOT))
 				.collect(ImmutableSet.toImmutableSet());
 
 		final ImmutableList<String> headers = Streams
@@ -321,7 +321,7 @@ public class CsvGrades<K> {
 			final Map<String, String> identity = identityFunction.apply(key);
 			identity.entrySet().forEach(e -> writer.addValue(e.getKey(), e.getValue()));
 
-			final Grade grade = grades.get(key);
+			final MarksTree grade = grades.get(key);
 			final StructuredGrade structured = StructuredGrade.given(grade, structure);
 			allPaths.stream().forEach(p -> writer.addValue(CsvGrades.shorten(p),
 					formatter.format(CsvGrades.getPoints(structured, p) * denominator)));

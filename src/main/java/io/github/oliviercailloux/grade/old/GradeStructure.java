@@ -10,7 +10,7 @@ import com.google.common.graph.Graph;
 import com.google.common.graph.GraphBuilder;
 import com.google.common.graph.ImmutableGraph;
 import io.github.oliviercailloux.grade.Criterion;
-import io.github.oliviercailloux.grade.IGrade.GradePath;
+import io.github.oliviercailloux.grade.IGrade.CriteriaPath;
 import java.util.ArrayDeque;
 import java.util.LinkedHashSet;
 import java.util.Map;
@@ -20,7 +20,7 @@ import java.util.Set;
 
 public class GradeStructure {
 
-	public static GradeStructure given(Graph<GradePath> graph) {
+	public static GradeStructure given(Graph<CriteriaPath> graph) {
 		return new GradeStructure(graph);
 	}
 
@@ -30,22 +30,22 @@ public class GradeStructure {
 	 * @return an empty grade structure iff the given paths set is empty or has only
 	 *         one root
 	 */
-	public static GradeStructure given(Set<GradePath> paths) {
-		final Queue<GradePath> toVisit = new ArrayDeque<>();
+	public static GradeStructure given(Set<CriteriaPath> paths) {
+		final Queue<CriteriaPath> toVisit = new ArrayDeque<>();
 		toVisit.addAll(paths);
 
-		final Set<GradePath> visited = new LinkedHashSet<>();
+		final Set<CriteriaPath> visited = new LinkedHashSet<>();
 
-		final ImmutableGraph.Builder<GradePath> builder = GraphBuilder.directed().immutable();
-		builder.addNode(GradePath.ROOT);
+		final ImmutableGraph.Builder<CriteriaPath> builder = GraphBuilder.directed().immutable();
+		builder.addNode(CriteriaPath.ROOT);
 
 		while (!toVisit.isEmpty()) {
-			final GradePath current = toVisit.remove();
+			final CriteriaPath current = toVisit.remove();
 			if (visited.contains(current)) {
 				continue;
 			}
 			if (!current.isRoot()) {
-				final GradePath parent = current.withoutTail();
+				final CriteriaPath parent = current.withoutTail();
 				builder.putEdge(parent, current);
 				toVisit.add(parent);
 			}
@@ -56,19 +56,19 @@ public class GradeStructure {
 	}
 
 	public static GradeStructure toTree(Set<Criterion> nodes) {
-		final ImmutableGraph.Builder<GradePath> builder = GraphBuilder.directed().immutable();
-		nodes.forEach(c -> builder.addNode(GradePath.from(ImmutableList.of(c))));
+		final ImmutableGraph.Builder<CriteriaPath> builder = GraphBuilder.directed().immutable();
+		nodes.forEach(c -> builder.addNode(CriteriaPath.from(ImmutableList.of(c))));
 		return new GradeStructure(builder.build());
 	}
 
 	public static GradeStructure toTree(Map<Criterion, GradeStructure> subTrees) {
-		final ImmutableGraph.Builder<GradePath> builder = GraphBuilder.directed().immutable();
-		builder.addNode(GradePath.ROOT);
+		final ImmutableGraph.Builder<CriteriaPath> builder = GraphBuilder.directed().immutable();
+		builder.addNode(CriteriaPath.ROOT);
 		for (Criterion criterion : subTrees.keySet()) {
 			final GradeStructure subTree = subTrees.get(criterion);
-			final GradePath criterionPath = GradePath.ROOT.withPrefix(criterion);
-			builder.putEdge(GradePath.ROOT, criterionPath);
-			for (EndpointPair<GradePath> endpointPair : subTree.asGraph().edges()) {
+			final CriteriaPath criterionPath = CriteriaPath.ROOT.withPrefix(criterion);
+			builder.putEdge(CriteriaPath.ROOT, criterionPath);
+			for (EndpointPair<CriteriaPath> endpointPair : subTree.asGraph().edges()) {
 				builder.putEdge(endpointPair.source().withPrefix(criterion),
 						endpointPair.target().withPrefix(criterion));
 			}
@@ -81,41 +81,41 @@ public class GradeStructure {
 	}
 
 	public static GradeStructure from(Set<String> paths) {
-		return GradeStructure.given(paths.stream().map(GradePath::from).collect(ImmutableSet.toImmutableSet()));
+		return GradeStructure.given(paths.stream().map(CriteriaPath::from).collect(ImmutableSet.toImmutableSet()));
 	}
 
-	private final ImmutableGraph<GradePath> graph;
+	private final ImmutableGraph<CriteriaPath> graph;
 
-	private GradeStructure(Graph<GradePath> graph) {
+	private GradeStructure(Graph<CriteriaPath> graph) {
 		this.graph = ImmutableGraph.copyOf(graph);
-		checkArgument(graph.nodes().contains(GradePath.ROOT));
+		checkArgument(graph.nodes().contains(CriteriaPath.ROOT));
 		checkArgument(graph.nodes().stream()
 				.allMatch(p -> graph.successors(p).stream().allMatch(s -> s.withoutTail().equals(p))));
 		checkArgument(graph.nodes().stream().allMatch(
-				p -> p.equals(GradePath.ROOT) || graph.predecessors(p).equals(ImmutableSet.of(p.withoutTail()))));
+				p -> p.equals(CriteriaPath.ROOT) || graph.predecessors(p).equals(ImmutableSet.of(p.withoutTail()))));
 	}
 
-	public ImmutableSet<GradePath> getPaths() {
+	public ImmutableSet<CriteriaPath> getPaths() {
 		return ImmutableSet.copyOf(graph.nodes());
 	}
 
-	public ImmutableSet<GradePath> getLeaves() {
+	public ImmutableSet<CriteriaPath> getLeaves() {
 		return graph.nodes().stream().filter(p -> graph.successors(p).isEmpty()).collect(ImmutableSet.toImmutableSet());
 	}
 
 	/**
 	 * @return all paths in this graph that have the given path as prefix
 	 */
-	public ImmutableSet<GradePath> getSuccessorPaths(GradePath path) {
+	public ImmutableSet<CriteriaPath> getSuccessorPaths(CriteriaPath path) {
 		return ImmutableSet.copyOf(graph.successors(path));
 	}
 
 	/**
 	 * @return all paths in this graph that have the given path as prefix
 	 */
-	public ImmutableSet<GradePath> getSiblingsIfTail(GradePath path) {
+	public ImmutableSet<CriteriaPath> getSiblingsIfTail(CriteriaPath path) {
 		if (path.isRoot()) {
-			return ImmutableSet.of(GradePath.ROOT);
+			return ImmutableSet.of(CriteriaPath.ROOT);
 		}
 		return getSuccessorPaths(path.withoutTail());
 	}
@@ -123,20 +123,20 @@ public class GradeStructure {
 	/**
 	 * @return all criteria such that path + c in sucessorpath(path)
 	 */
-	public ImmutableSet<Criterion> getSuccessorCriteria(GradePath path) {
+	public ImmutableSet<Criterion> getSuccessorCriteria(CriteriaPath path) {
 		return graph.successors(path).stream().map(p -> p.getTail()).collect(ImmutableSet.toImmutableSet());
 	}
 
 	public GradeStructure getStructure(Criterion child) {
-		return getStructure(GradePath.from(ImmutableList.of(child)));
+		return getStructure(CriteriaPath.from(ImmutableList.of(child)));
 	}
 
-	public GradeStructure getStructure(GradePath path) {
+	public GradeStructure getStructure(CriteriaPath path) {
 		return given(graph.nodes().stream().filter(p -> p.startsWith(path))
-				.map(p -> GradePath.from(p.subList(path.size(), p.size()))).collect(ImmutableSet.toImmutableSet()));
+				.map(p -> CriteriaPath.from(p.subList(path.size(), p.size()))).collect(ImmutableSet.toImmutableSet()));
 	}
 
-	public ImmutableGraph<GradePath> asGraph() {
+	public ImmutableGraph<CriteriaPath> asGraph() {
 		return graph;
 	}
 

@@ -3,7 +3,7 @@ package io.github.oliviercailloux.grade;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.google.common.base.MoreObjects;
-import io.github.oliviercailloux.grade.IGrade.GradePath;
+import io.github.oliviercailloux.grade.IGrade.CriteriaPath;
 import jakarta.json.bind.annotation.JsonbCreator;
 import jakarta.json.bind.annotation.JsonbProperty;
 import java.util.List;
@@ -15,24 +15,24 @@ public class Patch {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(Patch.class);
 
-	private final GradePath path;
+	private final CriteriaPath path;
 	private final IGrade grade;
 
 	@JsonbCreator
 	public static Patch create(@JsonbProperty("path") List<Criterion> path, @JsonbProperty("grade") IGrade grade) {
-		return new Patch(GradePath.from(path), grade);
+		return new Patch(CriteriaPath.from(path), grade);
 	}
 
-	public static Patch create(@JsonbProperty("path") GradePath path, @JsonbProperty("grade") IGrade grade) {
+	public static Patch create(@JsonbProperty("path") CriteriaPath path, @JsonbProperty("grade") IGrade grade) {
 		return new Patch(path, grade);
 	}
 
-	private Patch(GradePath path, IGrade grade) {
+	private Patch(CriteriaPath path, IGrade grade) {
 		this.path = checkNotNull(path);
 		this.grade = checkNotNull(grade);
 	}
 
-	public GradePath getPath() {
+	public CriteriaPath getPath() {
 		return path;
 	}
 

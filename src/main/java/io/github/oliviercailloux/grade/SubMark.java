@@ -13,4 +13,8 @@ public class SubMark extends SubGrade {
 	public Mark getGrade() {
 		return (Mark) super.getGrade();
 	}
+
+	public double getPoints() {
+		return getGrade().getPoints();
+	}
 }

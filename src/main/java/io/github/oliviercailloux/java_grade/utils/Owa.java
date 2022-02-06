@@ -11,7 +11,7 @@ import com.google.common.collect.MoreCollectors;
 import io.github.oliviercailloux.grade.Criterion;
 import io.github.oliviercailloux.grade.GradeUtils;
 import io.github.oliviercailloux.grade.IGrade;
-import io.github.oliviercailloux.grade.IGrade.GradePath;
+import io.github.oliviercailloux.grade.IGrade.CriteriaPath;
 import io.github.oliviercailloux.grade.format.json.JsonCriterion;
 import io.github.oliviercailloux.grade.format.json.JsonGrade;
 import io.github.oliviercailloux.java_grade.graders.WorkersGrader;
@@ -64,17 +64,17 @@ public class Owa {
 			paths.add(right);
 		}
 
-		if (grade.getGrade(GradePath.from(paths)).orElseThrow(() -> new VerifyException(grade.toString()))
+		if (grade.getGrade(CriteriaPath.from(paths)).orElseThrow(() -> new VerifyException(grade.toString()))
 				.getSubGrades().keySet().contains(gradeCriterion)) {
 			paths.add(gradeCriterion);
 		}
 		paths.add(mainCriterion);
-		if (grade.getGrade(GradePath.from(paths)).orElseThrow(() -> new VerifyException(grade.toString()))
+		if (grade.getGrade(CriteriaPath.from(paths)).orElseThrow(() -> new VerifyException(grade.toString()))
 				.getSubGrades().keySet().contains(codeCriterion)) {
 			paths.add(codeCriterion);
 		}
 
-		final GradePath codePath = GradePath.from(paths);
+		final CriteriaPath codePath = CriteriaPath.from(paths);
 		final IGrade code = grade.getGrade(codePath).orElseThrow(() -> new IllegalArgumentException(grade.toString()));
 
 		final DoubleStream streamOfOnes = DoubleStream.generate(() -> 1d).limit(6);

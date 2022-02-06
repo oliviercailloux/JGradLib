@@ -5,30 +5,31 @@ import static com.google.common.base.Preconditions.checkArgument;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import io.github.oliviercailloux.grade.IGrade.GradePath;
+import io.github.oliviercailloux.grade.IGrade.CriteriaPath;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Objects;
 
 /**
  * Set as public as a temporary workaround for Json serialization.
  */
-public class CompositeGrade implements Grade {
+public class CompositeMarksTree implements MarksTree {
 
-	public static CompositeGrade givenGrades(Map<Criterion, Grade> subGrades) {
-		return new CompositeGrade(subGrades.keySet().stream()
+	public static CompositeMarksTree givenGrades(Map<Criterion, MarksTree> subGrades) {
+		return new CompositeMarksTree(subGrades.keySet().stream()
 				.collect(ImmutableMap.toImmutableMap(c -> c, c -> SubGrade.given(c, subGrades.get(c)))));
 	}
 
-	public static CompositeGrade givenSubGrades(Map<Criterion, SubGrade> subGrades) {
-		return new CompositeGrade(subGrades);
+	public static CompositeMarksTree givenSubGrades(Map<Criterion, SubGrade> subGrades) {
+		return new CompositeMarksTree(subGrades);
 	}
 
 	/**
-	 * values are either CompositGrade or Mark instances
+	 * not empty; values contain either CompositeGrade or Mark instances
 	 */
 	private final ImmutableMap<Criterion, SubGrade> subGrades;
 
-	private CompositeGrade(Map<Criterion, SubGrade> subGrades) {
+	private CompositeMarksTree(Map<Criterion, SubGrade> subGrades) {
 		this.subGrades = ImmutableMap.copyOf(subGrades);
 		checkArgument(!subGrades.isEmpty());
 	}
@@ -49,45 +50,46 @@ public class CompositeGrade implements Grade {
 	}
 
 	@Override
-	public Grade getGrade(Criterion criterion) {
+	public MarksTree getTree(Criterion criterion) {
 		return getSubGrade(criterion).getGrade();
 	}
 
-	@Override
-	public SubGrade getSubGrade(Criterion criterion) {
-		checkArgument(subGrades.containsKey(criterion));
+	private SubGrade getSubGrade(Criterion criterion) {
+		if (!subGrades.containsKey(criterion)) {
+			throw new NoSuchElementException();
+		}
 		return subGrades.get(criterion);
 	}
 
 	@Override
-	public ImmutableSet<GradePath> getPathsToMarks() {
-		final ImmutableSet.Builder<GradePath> builder = ImmutableSet.builder();
+	public ImmutableSet<CriteriaPath> getPathsToMarks() {
+		final ImmutableSet.Builder<CriteriaPath> builder = ImmutableSet.builder();
 		for (Criterion criterion : subGrades.keySet()) {
-			getGrade(criterion).getPathsToMarks().stream().map(p -> p.withPrefix(criterion)).forEach(builder::add);
+			getTree(criterion).getPathsToMarks().stream().map(p -> p.withPrefix(criterion)).forEach(builder::add);
 		}
 		return builder.build();
 	}
 
 	@Override
-	public Grade getGrade(GradePath path) {
+	public MarksTree getTree(CriteriaPath path) {
 		if (path.isRoot()) {
 			return this;
 		}
-		return getGrade(path.getHead()).getGrade(path.withoutHead());
+		return getTree(path.getHead()).getTree(path.withoutHead());
 	}
 
 	@Override
-	public Mark getMark(GradePath path) {
+	public Mark getMark(CriteriaPath path) {
 		checkArgument(!path.isRoot());
-		return getGrade(path.getHead()).getMark(path.withoutHead());
+		return getTree(path.getHead()).getMark(path.withoutHead());
 	}
 
 	@Override
 	public boolean equals(Object o2) {
-		if (!(o2 instanceof CompositeGrade)) {
+		if (!(o2 instanceof CompositeMarksTree)) {
 			return false;
 		}
-		final CompositeGrade t2 = (CompositeGrade) o2;
+		final CompositeMarksTree t2 = (CompositeMarksTree) o2;
 		return subGrades.equals(t2.subGrades);
 	}
 

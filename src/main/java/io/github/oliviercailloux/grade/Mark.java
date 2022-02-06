@@ -5,14 +5,18 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableSet;
-import io.github.oliviercailloux.grade.IGrade.GradePath;
+import io.github.oliviercailloux.grade.IGrade.CriteriaPath;
 import jakarta.json.bind.annotation.JsonbCreator;
 import jakarta.json.bind.annotation.JsonbProperty;
+import java.util.NoSuchElementException;
 import java.util.Objects;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class Mark implements Grade {
+/**
+ * Points are in [−1, 1].
+ */
+public class Mark implements MarksTree {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(Mark.class);
 
@@ -50,10 +54,15 @@ public class Mark implements Grade {
 
 	public Mark(double points, String comment) {
 		checkArgument(Double.isFinite(points));
-		this.comment = checkNotNull(comment);
+		checkArgument(points >= -1);
+		checkArgument(points <= 1);
 		this.points = points;
+		this.comment = checkNotNull(comment);
 	}
 
+	/**
+	 * @return a value in [−1, 1]
+	 */
 	public double getPoints() {
 		return points;
 	}
@@ -62,45 +71,77 @@ public class Mark implements Grade {
 		return comment;
 	}
 
+	/**
+	 * Returns {@code true}.
+	 *
+	 * @return {@code true}
+	 */
 	@Override
 	public boolean isMark() {
 		return true;
 	}
 
+	/**
+	 * Returns {@code false}.
+	 *
+	 * @return {@code false}
+	 */
 	@Override
 	public boolean isComposite() {
 		return false;
 	}
 
+	/**
+	 * Returns the empty set.
+	 *
+	 * @return the empty set.
+	 */
 	@Override
 	public ImmutableSet<Criterion> getCriteria() {
 		return ImmutableSet.of();
 	}
 
+	/**
+	 * Throws {@code NoSuchElementException}.
+	 *
+	 * @throws NoSuchElementException always.
+	 */
 	@Override
-	public Grade getGrade(Criterion criterion) {
-		throw new IllegalArgumentException();
+	public MarksTree getTree(Criterion criterion) {
+		throw new NoSuchElementException();
 	}
 
 	@Override
-	public SubGrade getSubGrade(Criterion criterion) {
-		throw new IllegalArgumentException();
+	public ImmutableSet<CriteriaPath> getPathsToMarks() {
+		return ImmutableSet.of(CriteriaPath.ROOT);
 	}
 
+	/**
+	 * Returns this instance.
+	 *
+	 * @throws NoSuchElementException iff the given path is not
+	 *                                {@link CriteriaPath#ROOT}.
+	 * @deprecated There is no reason to use this method
+	 */
 	@Override
-	public ImmutableSet<GradePath> getPathsToMarks() {
-		return ImmutableSet.of(GradePath.ROOT);
+	@Deprecated()
+	public MarksTree getTree(CriteriaPath path) {
+		return getMark(path);
 	}
 
+	/**
+	 * Returns this instance.
+	 *
+	 * @throws NoSuchElementException iff the given path is not
+	 *                                {@link CriteriaPath#ROOT}.
+	 * @deprecated There is no reason to use this method
+	 */
 	@Override
-	public Grade getGrade(GradePath path) {
-		checkArgument(path.isRoot());
-		return this;
-	}
-
-	@Override
-	public Mark getMark(GradePath path) {
-		checkArgument(path.isRoot());
+	@Deprecated
+	public Mark getMark(CriteriaPath path) {
+		if (!path.isRoot()) {
+			throw new NoSuchElementException();
+		}
 		return this;
 	}
 

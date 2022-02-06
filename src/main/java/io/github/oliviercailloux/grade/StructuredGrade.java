@@ -6,7 +6,7 @@ import static com.google.common.base.Verify.verify;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.MoreCollectors;
-import io.github.oliviercailloux.grade.IGrade.GradePath;
+import io.github.oliviercailloux.grade.IGrade.CriteriaPath;
 import java.util.Map;
 import java.util.Set;
 
@@ -41,23 +41,23 @@ public class StructuredGrade {
 		throw new IllegalArgumentException("No positively weighted criteria and no absolute criteria");
 	}
 
-	public static StructuredGrade given(Grade grade, GradeStructure structure) {
+	public static StructuredGrade given(MarksTree grade, GradeStructure structure) {
 		return new StructuredGrade(grade, structure);
 	}
 
-	private final Grade grade;
+	private final MarksTree grade;
 	private final GradeStructure structure;
 	private ImmutableMap<SubMark, Double> weightedSubMarks;
 	private ImmutableSet<SubMark> absoluteSubMarks;
 
-	private StructuredGrade(Grade grade, GradeStructure structure) {
+	private StructuredGrade(MarksTree grade, GradeStructure structure) {
 		this.grade = checkNotNull(grade);
 		this.structure = checkNotNull(structure);
 		weightedSubMarks = null;
 		absoluteSubMarks = null;
 	}
 
-	public Grade getGrade() {
+	public MarksTree getGrade() {
 		return grade;
 	}
 
@@ -100,7 +100,7 @@ public class StructuredGrade {
 	}
 
 	public StructuredGrade getStructuredGrade(Criterion criterion) {
-		return StructuredGrade.given(grade.getGrade(criterion), structure.getStructure(criterion));
+		return StructuredGrade.given(grade.getTree(criterion), structure.getStructure(criterion));
 	}
 
 	/**
@@ -108,7 +108,7 @@ public class StructuredGrade {
 	 */
 	public Mark getRootMark() {
 		if (grade.isMark()) {
-			return grade.getMark(GradePath.ROOT);
+			return grade.getMark(CriteriaPath.ROOT);
 		}
 		initSubMarks();
 		/* This assumes that the criteria weights can be computed recursively. */

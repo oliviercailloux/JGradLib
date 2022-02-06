@@ -7,7 +7,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.graph.ValueGraph;
-import io.github.oliviercailloux.grade.IGrade.GradePath;
+import io.github.oliviercailloux.grade.IGrade.CriteriaPath;
 import io.github.oliviercailloux.grade.WeightingGrade.WeightedGrade;
 import io.github.oliviercailloux.grade.old.GradeStructure;
 import java.util.Comparator;
@@ -53,17 +53,17 @@ public class GradeUtils {
 
 		final GradeStructure tree = grade.toTree();
 
-		final ImmutableSortedSet<GradePath> increasingPaths = ImmutableSortedSet.copyOf(
-				Comparator.comparing((GradePath p) -> grade.getMark(p).getPoints()).thenComparing(p -> p.toString()),
+		final ImmutableSortedSet<CriteriaPath> increasingPaths = ImmutableSortedSet.copyOf(
+				Comparator.comparing((CriteriaPath p) -> grade.getMark(p).getPoints()).thenComparing(p -> p.toString()),
 				tree.getLeaves());
 		LOGGER.debug("Increasing: {}.", increasingPaths);
 		verify(increasingPaths.size() == increasingWeights.size(), grade.toString());
 
-		final ImmutableMap.Builder<GradePath, WeightedGrade> builder = ImmutableMap.builder();
-		final Iterator<GradePath> pathsIterator = increasingPaths.iterator();
+		final ImmutableMap.Builder<CriteriaPath, WeightedGrade> builder = ImmutableMap.builder();
+		final Iterator<CriteriaPath> pathsIterator = increasingPaths.iterator();
 		final Iterator<Double> weightsIterator = increasingWeights.iterator();
 		while (pathsIterator.hasNext() || weightsIterator.hasNext()) {
-			final GradePath path = pathsIterator.next();
+			final CriteriaPath path = pathsIterator.next();
 			builder.put(path, WeightedGrade.given(grade.getMark(path), weightsIterator.next()));
 		}
 		return WeightingGrade.from(builder.build()).withComment(grade.getComment());

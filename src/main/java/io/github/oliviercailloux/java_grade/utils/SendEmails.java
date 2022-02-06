@@ -14,7 +14,7 @@ import io.github.oliviercailloux.email.EmailAddressAndPersonal;
 import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
 import io.github.oliviercailloux.grade.Criterion;
 import io.github.oliviercailloux.grade.IGrade;
-import io.github.oliviercailloux.grade.IGrade.GradePath;
+import io.github.oliviercailloux.grade.IGrade.CriteriaPath;
 import io.github.oliviercailloux.grade.WeightingGrade;
 import io.github.oliviercailloux.grade.WeightingGrade.WeightedGrade;
 import io.github.oliviercailloux.grade.comm.Email;
@@ -147,9 +147,9 @@ public class SendEmails {
 		 * Considers the leaves that are different or do not exist in one. Builds a
 		 * grade with that.
 		 */
-		final ImmutableSet<GradePath> allLeaves = Stream.of(grade1, grade2)
+		final ImmutableSet<CriteriaPath> allLeaves = Stream.of(grade1, grade2)
 				.flatMap(g -> g.toTree().getLeaves().stream()).collect(ImmutableSet.toImmutableSet());
-		for (GradePath leaf : allLeaves) {
+		for (CriteriaPath leaf : allLeaves) {
 			final boolean contains1 = grade1.toTree().getPaths().contains(leaf);
 			final boolean contains2 = grade2.toTree().getPaths().contains(leaf);
 			verify(contains1 || contains2, leaf.toSimpleString());

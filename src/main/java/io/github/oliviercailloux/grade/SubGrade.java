@@ -7,14 +7,14 @@ import java.util.Objects;
 
 public class SubGrade {
 
-	public static SubGrade given(Criterion criterion, Grade grade) {
+	public static SubGrade given(Criterion criterion, MarksTree grade) {
 		return new SubGrade(criterion, grade);
 	}
 
 	private final Criterion criterion;
-	private final Grade grade;
+	private final MarksTree grade;
 
-	protected SubGrade(Criterion criterion, Grade grade) {
+	protected SubGrade(Criterion criterion, MarksTree grade) {
 		this.criterion = checkNotNull(criterion);
 		this.grade = checkNotNull(grade);
 	}
@@ -23,7 +23,7 @@ public class SubGrade {
 		return criterion;
 	}
 
-	public Grade getGrade() {
+	public MarksTree getGrade() {
 		return grade;
 	}
 

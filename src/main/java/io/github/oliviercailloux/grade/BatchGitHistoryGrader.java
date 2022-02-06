@@ -73,12 +73,12 @@ public class BatchGitHistoryGrader<X extends Exception> {
 		checkArgument(userGradeWeight < 1d);
 		final LinearPenalizer penalizer = LinearPenalizer.proportionalToLateness(durationForZero);
 
-		final LinkedHashMap<GitHubUsername, Grade> builder = new LinkedHashMap<>();
+		final LinkedHashMap<GitHubUsername, MarksTree> builder = new LinkedHashMap<>();
 		final GradeStructure whole = getComplexStructure(grader, userGradeWeight);
 		try (GitFileSystemWithHistoryFetcher fetcher = fetcherFactory.get()) {
 
 			for (GitHubUsername author : fetcher.getAuthors()) {
-				final ImmutableBiMap<Instant, Grade> byTime;
+				final ImmutableBiMap<Instant, MarksTree> byTime;
 
 				final String commentGeneralCapped;
 				final GitFileSystemHistory beforeCommitByGitHub;
@@ -100,15 +100,15 @@ public class BatchGitHistoryGrader<X extends Exception> {
 				final ImmutableSortedSet<Instant> consideredTimestamps = getTimestamps(beforeCommitByGitHub,
 						deadline.toInstant());
 
-				final ImmutableBiMap.Builder<Instant, Grade> byTimeBuilder = ImmutableBiMap.builder();
+				final ImmutableBiMap.Builder<Instant, MarksTree> byTimeBuilder = ImmutableBiMap.builder();
 				for (Instant timeCap : consideredTimestamps) {
 					final GitFileSystemHistory capped = beforeCommitByGitHub
 							.filter(r -> !beforeCommitByGitHub.getCommitDate(r).isAfter(timeCap));
 
-					final Grade grade = grader.grade(capped);
+					final MarksTree grade = grader.grade(capped);
 
 					final Mark userGrade = DeadlineGrader.getUsernameGrade(beforeCommitByGitHub, author).asNew();
-					final Grade gradeWithUser = Grade
+					final MarksTree gradeWithUser = MarksTree
 							.composite(ImmutableMap.of(C_USER_NAME, userGrade, C_GRADE, grade));
 
 					final GradeStructure userNamedStructure = getUserNamedStructure(grader, userGradeWeight);
@@ -118,22 +118,22 @@ public class BatchGitHistoryGrader<X extends Exception> {
 					final Mark penalty = penalizer.getAbsolutePenality(lateness,
 							StructuredGrade.given(gradeWithUser, userNamedStructure));
 
-					final Grade penalized = Grade
+					final MarksTree penalized = MarksTree
 							.composite(ImmutableMap.of(C_MAIN, gradeWithUser, C_LATENESS, penalty));
 					byTimeBuilder.put(timeCap, penalized);
 				}
 				byTime = byTimeBuilder.build();
 
-				final Grade byTimeGrade;
+				final MarksTree byTimeGrade;
 				if (byTime.isEmpty()) {
 					byTimeGrade = Mark.zero("No commit found.");
 				} else {
-					final ImmutableMap<Criterion, Grade> subsByTime = byTime.keySet().stream()
+					final ImmutableMap<Criterion, MarksTree> subsByTime = byTime.keySet().stream()
 							.collect(ImmutableMap.toImmutableMap(
 									i -> Criterion.given(
 											String.format("Capping at %s.%s", i.toString(), commentGeneralCapped)),
 									byTime::get));
-					byTimeGrade = Grade.composite(subsByTime);
+					byTimeGrade = MarksTree.composite(subsByTime);
 				}
 				builder.put(author, byTimeGrade);
 
@@ -167,7 +167,7 @@ public class BatchGitHistoryGrader<X extends Exception> {
 		final ImmutableBiMap<GitHubUsername, StudentOnGitHubKnown> students = studentsReader
 				.getStudentsKnownByGitHubUsername();
 
-		final ImmutableMap<StudentOnGitHubKnown, Grade> grades = exam.getUsernames().stream()
+		final ImmutableMap<StudentOnGitHubKnown, MarksTree> grades = exam.getUsernames().stream()
 				.collect(ImmutableMap.toImmutableMap(students::get, u -> exam.getStructuredGrade(u).getGrade()));
 		final String csv = CsvGrades.newInstance(CsvGrades.STUDENT_KNOWN_IDENTITY_FUNCTION, 20)
 				.gradesToCsv(exam.structure(), grades);
