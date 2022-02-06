@@ -69,8 +69,12 @@ public class GradeAggregator {
 
 	public static GradeAggregator staticAggregator(Map<Criterion, Double> weights,
 			Map<Criterion, GradeAggregator> subs) {
-		checkArgument(weights.keySet().containsAll(subs.keySet()));
 		return new GradeAggregator(new StaticWeighter(weights), subs, Optional.empty());
+	}
+
+	public static GradeAggregator given(MarkAggregator markAggregator, Map<Criterion, GradeAggregator> subs,
+			Optional<GradeAggregator> defaultSubAggregator) {
+		return new GradeAggregator(markAggregator, subs, defaultSubAggregator);
 	}
 
 	private final MarkAggregator markAggregator;
@@ -87,10 +91,18 @@ public class GradeAggregator {
 
 	private GradeAggregator(MarkAggregator markAggregator, Map<Criterion, GradeAggregator> subs,
 			Optional<GradeAggregator> defaultSubAggregator) {
+		if (markAggregator instanceof StaticWeighter) {
+			checkArgument(((StaticWeighter) markAggregator).weights().keySet().containsAll(subs.keySet()));
+		}
 		this.markAggregator = checkNotNull(markAggregator);
 		this.subs = defaultSubAggregator.map(d -> subs.keySet().stream().filter(c -> !subs.get(c).equals(d))
 				.collect(ImmutableMap.toImmutableMap(c -> c, subs::get))).orElse(ImmutableMap.copyOf(subs));
-		this.defaultSubAggregator = checkNotNull(defaultSubAggregator);
+		if (markAggregator instanceof StaticWeighter
+				&& this.subs.size() == ((StaticWeighter) markAggregator).weights().size()) {
+			this.defaultSubAggregator = Optional.empty();
+		} else {
+			this.defaultSubAggregator = defaultSubAggregator;
+		}
 	}
 
 	public MarkAggregator getMarkAggregator() {
@@ -131,5 +143,13 @@ public class GradeAggregator {
 			return this;
 		}
 		return getGradeAggregator(path.getHead()).getGradeAggregator(path.withoutHead());
+	}
+
+	public ImmutableMap<Criterion, GradeAggregator> getSubAggregators() {
+		return subs;
+	}
+
+	public Optional<GradeAggregator> getDefaultSubAggregator() {
+		return defaultSubAggregator;
 	}
 }

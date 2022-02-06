@@ -4,8 +4,11 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Verify.verify;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableMultiset;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedSet;
+import com.google.common.collect.Maps;
+import com.google.common.collect.MoreCollectors;
 import com.google.common.graph.ValueGraph;
 import io.github.oliviercailloux.grade.IGrade.CriteriaPath;
 import io.github.oliviercailloux.grade.WeightingGrade.WeightedGrade;
@@ -67,6 +70,86 @@ public class GradeUtils {
 			builder.put(path, WeightedGrade.given(grade.getMark(path), weightsIterator.next()));
 		}
 		return WeightingGrade.from(builder.build()).withComment(grade.getComment());
+	}
+
+	public static Exam toCriteriaWeighter(Exam exam) {
+	}
+
+	private static Grade newGrade(Grade original) {
+		final MarkAggregator markAggregator = original.getAggregator().getMarkAggregator();
+		final Grade newGradeBasis;
+		final MarksTree newTreeBasis;
+		if (markAggregator instanceof ParametricWeighter) {
+			if (original.getMarksTree().isMark()) {
+				newTreeBasis = original.getMarksTree();
+			} else {
+				final ParametricWeighter p = (ParametricWeighter) markAggregator;
+				p.multipliedCriterion();
+				if (original.getMarksTree().getCriteria().size() != 2) {
+					throw new UnsupportedOperationException();
+				}
+				final Mark multipliedMark = original.getGrade(p.multipliedCriterion()).getMark();
+				final Mark weightingMark = original.getGrade(p.weightingCriterion()).getMark();
+				final double absoluteModification = multipliedMark.getPoints() * (1d - weightingMark.getPoints());
+				newTreeBasis = MarksTree.composite(ImmutableMap.of(p.multipliedCriterion(), multipliedMark,
+						Criterion.given(p.weightingCriterion().getName() + ", penalty"),
+						Mark.given(absoluteModification, weightingMark.getComment())));
+			}
+
+			final AbsoluteAggregator newMarkAggregator = AbsoluteAggregator.instance();
+			final GradeAggregator newAggregatorBasis = GradeAggregator.given(newMarkAggregator,
+					original.getAggregator().getSubAggregators(), original.getAggregator().getDefaultSubAggregator());
+			newGradeBasis = Grade.given(newAggregatorBasis, newTreeBasis);
+		} else if (markAggregator instanceof OwaWeighter) {
+			if (original.getMarksTree().isMark()) {
+				newTreeBasis = original.getMarksTree();
+			} else {
+				final ImmutableMap<SubMark, Double> weightedSubMarks = original.getWeightedSubMarks();
+				final ImmutableMultiset<Double> weights = weightedSubMarks.values().stream()
+						.collect(ImmutableMultiset.toImmutableMultiset());
+				if (weights.count(1d) != 1 || weights.count(0d) != weights.size() - 1) {
+					/*
+					 * Could probably transform to absolutes, that’s the worst case that always
+					 * works…
+					 */
+					throw new UnsupportedOperationException("Owa but not MAX, can’t do");
+				}
+				final SubMark relevantMark = weightedSubMarks.keySet().stream()
+						.filter(s -> weightedSubMarks.get(s) == 1d).collect(MoreCollectors.onlyElement());
+				newTreeBasis = relevantMark.getMarksTree();
+			}
+
+			final ImmutableSet.Builder<GradeAggregator> builder = ImmutableSet.builder();
+			builder.addAll(original.getAggregator().getSubAggregators().values());
+			original.getAggregator().getDefaultSubAggregator().ifPresent(builder::add);
+			final ImmutableSet<GradeAggregator> subAggregators = builder.build();
+			if (subAggregators.size() >= 2) {
+				throw new UnsupportedOperationException("Subs might vary per individual, can’t eliminate.");
+			}
+			final GradeAggregator subAggregator = subAggregators.stream().collect(MoreCollectors.onlyElement());
+			newGradeBasis = Grade.given(subAggregator, newTreeBasis);
+		} else {
+			newTreeBasis = original.getMarksTree();
+			newGradeBasis = original;
+		}
+
+		if (newGradeBasis.getAggregator().getSubAggregators().isEmpty() && newGradeBasis.getAggregator().getDefaultSubAggregator().isEmpty()) {
+			return newGradeBasis;
+		}
+
+		final ImmutableSet.Builder<Criterion> builder = ImmutableSet.builder();
+		builder.addAll(newGradeBasis.getAggregator().getSubAggregators().keySet());
+		builder.addAll(newGradeBasis.getMarksTree().getCriteria());
+		final ImmutableSet<Criterion> subCriteria = builder.build();
+
+		final ImmutableMap<Criterion, Grade> newWholeGrade = subCriteria.stream()
+				.collect(ImmutableMap.toImmutableMap(c -> c, c -> newGrade(newGradeBasis.getGrade(c))));
+
+		final Map<Criterion, MarksTree> newWholeTree = Maps.transformValues(newWholeGrade, Grade::getMarksTree);
+		final MarksTree newMarksTree = MarksTree.composite(newWholeTree);
+
+		GradeAggregator.given(newGradeBasis.getAggregator().getMarkAggregator(), )
+		return newMarksTree;
 	}
 
 }

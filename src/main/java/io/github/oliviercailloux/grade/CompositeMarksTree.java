@@ -51,7 +51,7 @@ public class CompositeMarksTree implements MarksTree {
 
 	@Override
 	public MarksTree getTree(Criterion criterion) {
-		return getSubGrade(criterion).getGrade();
+		return getSubGrade(criterion).getMarksTree();
 	}
 
 	private SubGrade getSubGrade(Criterion criterion) {

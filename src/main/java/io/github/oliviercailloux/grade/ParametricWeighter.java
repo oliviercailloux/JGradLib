@@ -31,6 +31,14 @@ public class ParametricWeighter implements MarkAggregator {
 		this.multiplied = checkNotNull(multiplied);
 	}
 
+	public Criterion multipliedCriterion() {
+		return multiplied;
+	}
+
+	public Criterion weightingCriterion() {
+		return weighting;
+	}
+
 	@Override
 	public ImmutableMap<SubMark, Double> weights(Set<SubMark> marks) throws IllegalArgumentException {
 		final ImmutableSet<Criterion> criteria = marks.stream().map(SubMark::getCriterion)

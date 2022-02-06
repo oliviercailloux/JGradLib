@@ -31,7 +31,7 @@ public interface OwaWeighter extends MarkAggregator {
 				.collect(ImmutableSet.toImmutableSet());
 		checkArgument(marks.size() == criteria.size());
 
-		final Comparator<SubMark> comparingPoints = Comparator.comparing(s -> s.getGrade().getPoints());
+		final Comparator<SubMark> comparingPoints = Comparator.comparing(s -> s.getMarksTree().getPoints());
 		final Stream<SubMark> subMarksLargestFirstStream = marks.stream().sorted(comparingPoints.reversed());
 
 		final ImmutableMap.Builder<SubMark, Double> weightsBuilder = ImmutableMap.builder();

@@ -10,11 +10,11 @@ public class SubMark extends SubGrade {
 	}
 
 	@Override
-	public Mark getGrade() {
-		return (Mark) super.getGrade();
+	public Mark getMarksTree() {
+		return (Mark) super.getMarksTree();
 	}
 
 	public double getPoints() {
-		return getGrade().getPoints();
+		return getMarksTree().getPoints();
 	}
 }

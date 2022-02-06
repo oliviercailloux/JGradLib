@@ -44,6 +44,14 @@ public class Grade {
 		return aggregator.getMarkAggregator().aggregate(getWeightedSubMarks().keySet());
 	}
 
+	public GradeAggregator getAggregator() {
+		return aggregator;
+	}
+
+	public MarksTree getMarksTree() {
+		return marks;
+	}
+
 	/**
 	 * TODO check before that each complex sub-tree has associated aggregation
 	 * information.

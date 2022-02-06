@@ -26,6 +26,10 @@ public class StaticWeighter implements MarkAggregator {
 		checkArgument(weights.values().stream().allMatch(w -> w >= 0d));
 	}
 
+	public Map<Criterion, Double> weights() {
+		return weights;
+	}
+
 	@Override
 	public ImmutableMap<SubMark, Double> weights(Set<SubMark> marks) throws IllegalArgumentException {
 		final ImmutableSet<Criterion> criteria = marks.stream().map(SubMark::getCriterion)

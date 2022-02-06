@@ -7,11 +7,11 @@ import jakarta.json.bind.annotation.JsonbPropertyOrder;
 
 @JsonbPropertyOrder({ "aggregator", "grades" })
 public record Exam(GradeAggregator aggregator, ImmutableMap<GitHubUsername, MarksTree> grades) {
-	public Grade getGrade(GitHubUsername username) {
-		return Grade.given(aggregator, grades.get(username));
-	}
-
 	public ImmutableSet<GitHubUsername> getUsernames() {
 		return grades.keySet();
+	}
+
+	public Grade getGrade(GitHubUsername username) {
+		return Grade.given(aggregator, grades.get(username));
 	}
 }

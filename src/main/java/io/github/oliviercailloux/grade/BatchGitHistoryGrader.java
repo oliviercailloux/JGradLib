@@ -6,7 +6,6 @@ import static com.google.common.base.Verify.verify;
 
 import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedSet;
 import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
 import io.github.oliviercailloux.grade.DeadlineGrader.LinearPenalizer;
@@ -14,7 +13,7 @@ import io.github.oliviercailloux.grade.comm.StudentOnGitHubKnown;
 import io.github.oliviercailloux.grade.comm.json.JsonStudentsReader;
 import io.github.oliviercailloux.grade.format.CsvGrades;
 import io.github.oliviercailloux.grade.format.HtmlGrades;
-import io.github.oliviercailloux.grade.format.json.JsonSimpleGrade;
+import io.github.oliviercailloux.jaris.collections.CollectionUtils;
 import io.github.oliviercailloux.jaris.exceptions.Throwing;
 import io.github.oliviercailloux.jaris.throwing.TOptional;
 import io.github.oliviercailloux.java_grade.testers.JavaMarkHelper;
@@ -43,18 +42,17 @@ public class BatchGitHistoryGrader<X extends Exception> {
 		this.fetcherFactory = checkNotNull(fetcherFactory);
 	}
 
-	private GradeStructure getUserNamedStructure(Grader<?> grader, double userGradeWeight) {
-		final GradeStructure basis = grader.getStructure();
-		return GradeStructure.givenWeights(ImmutableMap.of(C_USER_NAME, userGradeWeight, C_GRADE, 1d - userGradeWeight),
+	private GradeAggregator getUserNamedAggregator(Grader<?> grader, double userGradeWeight) {
+		final GradeAggregator basis = grader.getAggregator();
+		return GradeAggregator.staticAggregator(
+				ImmutableMap.of(C_USER_NAME, userGradeWeight, C_GRADE, 1d - userGradeWeight),
 				ImmutableMap.of(C_GRADE, basis));
 	}
 
-	private GradeStructure getComplexStructure(Grader<?> grader, double userGradeWeight) {
-		final GradeStructure main = getUserNamedStructure(grader, userGradeWeight);
-		final GradeStructure penalized = GradeStructure.maxWithGivenAbsolutes(ImmutableSet.of(C_LATENESS),
-				ImmutableMap.of(C_MAIN, main));
-		final GradeStructure maxAmongAttempts = GradeStructure.maxWithDefault(ImmutableSet.of(), Optional.of(penalized),
-				ImmutableMap.of());
+	private GradeAggregator getComplexStructure(Grader<?> grader, double userGradeWeight) {
+		final GradeAggregator main = getUserNamedAggregator(grader, userGradeWeight);
+		final GradeAggregator penalized = GradeAggregator.parametric(C_MAIN, C_LATENESS, main);
+		final GradeAggregator maxAmongAttempts = GradeAggregator.max(penalized);
 		return maxAmongAttempts;
 	}
 
@@ -74,7 +72,7 @@ public class BatchGitHistoryGrader<X extends Exception> {
 		final LinearPenalizer penalizer = LinearPenalizer.proportionalToLateness(durationForZero);
 
 		final LinkedHashMap<GitHubUsername, MarksTree> builder = new LinkedHashMap<>();
-		final GradeStructure whole = getComplexStructure(grader, userGradeWeight);
+		final GradeAggregator whole = getComplexStructure(grader, userGradeWeight);
 		try (GitFileSystemWithHistoryFetcher fetcher = fetcherFactory.get()) {
 
 			for (GitHubUsername author : fetcher.getAuthors()) {
@@ -111,12 +109,12 @@ public class BatchGitHistoryGrader<X extends Exception> {
 					final MarksTree gradeWithUser = MarksTree
 							.composite(ImmutableMap.of(C_USER_NAME, userGrade, C_GRADE, grade));
 
-					final GradeStructure userNamedStructure = getUserNamedStructure(grader, userGradeWeight);
+					final GradeAggregator userNamedAggregator = getUserNamedAggregator(grader, userGradeWeight);
 
 					final Duration lateness = Duration.between(deadline.toInstant(), timeCap);
 					LOGGER.debug("Lateness from {} to {} equal to {}.", deadline.toInstant(), timeCap, lateness);
 					final Mark penalty = penalizer.getAbsolutePenality(lateness,
-							StructuredGrade.given(gradeWithUser, userNamedStructure));
+							Grade.given(userNamedAggregator, gradeWithUser));
 
 					final MarksTree penalized = MarksTree
 							.composite(ImmutableMap.of(C_MAIN, gradeWithUser, C_LATENESS, penalty));
@@ -160,22 +158,22 @@ public class BatchGitHistoryGrader<X extends Exception> {
 	}
 
 	private void write(Exam exam, Path out, String prefix) throws IOException {
-		Files.writeString(out, JsonSimpleGrade.toJson(exam));
+//		Files.writeString(out, JsonSimpleGrade.toJson(exam));
 
 		LOGGER.debug("Reading usernames.");
 		final JsonStudentsReader studentsReader = JsonStudentsReader.from(Files.readString(Path.of("usernames.json")));
 		final ImmutableBiMap<GitHubUsername, StudentOnGitHubKnown> students = studentsReader
 				.getStudentsKnownByGitHubUsername();
 
-		final ImmutableMap<StudentOnGitHubKnown, MarksTree> grades = exam.getUsernames().stream()
-				.collect(ImmutableMap.toImmutableMap(students::get, u -> exam.getStructuredGrade(u).getGrade()));
+		final ImmutableMap<StudentOnGitHubKnown, MarksTree> trees = CollectionUtils.transformKeys(exam.grades(),
+				students::get);
 		final String csv = CsvGrades.newInstance(CsvGrades.STUDENT_KNOWN_IDENTITY_FUNCTION, 20)
-				.gradesToCsv(exam.structure(), grades);
+				.gradesToCsv(exam.aggregator(), trees);
 		Files.writeString(Path.of("grades " + prefix + ".csv"), csv);
 
-		final ImmutableMap<StudentOnGitHubKnown, StructuredGrade> structuredGrades = exam.getUsernames().stream()
-				.collect(ImmutableMap.toImmutableMap(students::get, exam::getStructuredGrade));
-		final String html = HtmlGrades.asHtml(grade, prefix, 20d);
+		final ImmutableMap<String, Grade> grades = exam.getUsernames().stream()
+				.collect(ImmutableMap.toImmutableMap(GitHubUsername::getUsername, exam::getGrade));
+		final String html = HtmlGrades.asHtml(grades, prefix, 20d);
 		Files.writeString(Path.of("grades " + prefix + ".html"), html);
 	}
 }

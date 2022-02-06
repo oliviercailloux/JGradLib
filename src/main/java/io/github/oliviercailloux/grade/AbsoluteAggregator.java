@@ -11,6 +11,12 @@ import java.util.Set;
  */
 public class AbsoluteAggregator implements MarkAggregator {
 
+	private static final AbsoluteAggregator INSTANCE = new AbsoluteAggregator();
+
+	public static AbsoluteAggregator instance() {
+		return INSTANCE;
+	}
+
 	@Override
 	public ImmutableMap<SubMark, Double> weights(Set<SubMark> marks) {
 		final ImmutableSet<Criterion> criteria = marks.stream().map(SubMark::getCriterion)
