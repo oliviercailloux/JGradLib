@@ -191,7 +191,7 @@ public class Summarizer {
 		LOGGER.info("Writing grades Html.");
 		final ImmutableMap<String, IGrade> gradesByString = CollectionUtils.transformKeys(grades,
 				GitHubUsername::getUsername);
-		final Document doc = HtmlGrades.asHtml(gradesByString, "All grades", 20d);
+		final Document doc = HtmlGrades.asHtmlIGrades(gradesByString, "All grades", 20d);
 		Files.writeString(htmlOutputPath, XmlUtils.asString(doc));
 
 		LOGGER.info("Writing grades CSV.");

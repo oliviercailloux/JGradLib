@@ -10,9 +10,9 @@ import java.util.Optional;
 
 /**
  * A tree of MarkAggregator instances. Has information about how to aggregate
- * some marks trees. The other ones (corresponding to those that are rejected)
+ * some mark trees. The other ones (corresponding to those that are rejected)
  * are said to have an incompatible structure. Compatibility depends only on the
- * structure of the marks tree, (i.e., the criteria paths), not on the marks it
+ * structure of the mark tree, (i.e., the criteria paths), not on the marks it
  * contains.
  * <p>
  * A grade aggregator at a given node accepts some sets of criteria and rejects

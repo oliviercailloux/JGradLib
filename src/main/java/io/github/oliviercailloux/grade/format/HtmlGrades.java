@@ -3,10 +3,20 @@ package io.github.oliviercailloux.grade.format;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import com.google.common.base.VerifyException;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.math.Stats;
+import io.github.oliviercailloux.grade.AbsoluteAggregator;
+import io.github.oliviercailloux.grade.CriteriaWeighter;
 import io.github.oliviercailloux.grade.Criterion;
+import io.github.oliviercailloux.grade.Grade;
 import io.github.oliviercailloux.grade.IGrade;
+import io.github.oliviercailloux.grade.Mark;
+import io.github.oliviercailloux.grade.MarkAggregator;
+import io.github.oliviercailloux.grade.MaxAggregator;
+import io.github.oliviercailloux.grade.ParametricWeighter;
+import io.github.oliviercailloux.grade.StaticWeighter;
+import io.github.oliviercailloux.grade.SubGrade;
 import io.github.oliviercailloux.grade.WeightingGrade;
 import io.github.oliviercailloux.xml.HtmlDocument;
 import java.net.URI;
@@ -37,7 +47,24 @@ public class HtmlGrades {
 		return htmler.asHtml(grade);
 	}
 
-	public static Document asHtml(Map<String, ? extends IGrade> grades, String generalTitle, double denominator) {
+	public static Document asHtml(Map<String, ? extends Grade> grades, String generalTitle, double denominator) {
+		final HtmlDocument document = HtmlDocument.newInstance();
+		document.setTitle(generalTitle);
+		document.getBody().appendChild(document.createTitle1(generalTitle));
+
+		for (String key : grades.keySet()) {
+			final Grade grade = grades.get(key);
+			document.getBody().appendChild(document.createTitle2(key));
+			document.getBody()
+					.appendChild(getDescription(new SubGrade(Criterion.given("Grade"), grade), document, denominator));
+		}
+
+		return document.getDocument();
+	}
+
+	@Deprecated
+	public static Document asHtmlIGrades(Map<String, ? extends IGrade> grades, String generalTitle,
+			double denominator) {
 		final HtmlDocument document = HtmlDocument.newInstance();
 		document.setTitle(generalTitle);
 		document.getBody().appendChild(document.createTitle1(generalTitle));
@@ -50,6 +77,101 @@ public class HtmlGrades {
 		}
 
 		return document.getDocument();
+	}
+
+	private static DocumentFragment getDescription(SubGrade subGrade, HtmlDocument document, double denominator) {
+		checkNotNull(subGrade);
+		checkNotNull(document);
+		final DocumentFragment fragment = document.getDocument().createDocumentFragment();
+
+		final Criterion criterion = subGrade.criterion();
+		final Grade grade = subGrade.grade();
+
+		final Mark mark = grade.getMark();
+		final String comment = mark.getComment();
+		final String pointsText = FORMATTER.format(mark.getPoints() * denominator) + " / "
+				+ FORMATTER.format(denominator);
+
+		final boolean isMark = grade.getMarksTree().isMark();
+		if (isMark) {
+			checkArgument(comment.isEmpty());
+		}
+		final String explanation;
+		if (isMark) {
+			explanation = comment;
+		} else {
+			final MarkAggregator aggregator = grade.getAggregator().getMarkAggregator();
+			if (aggregator instanceof ParametricWeighter) {
+				final ParametricWeighter a = (ParametricWeighter) aggregator;
+				final Grade multipliedGrade = grade.getGrade(a.multipliedCriterion());
+				final String basePointsText = FORMATTER.format(multipliedGrade.getMark().getPoints() * denominator)
+						+ " / " + FORMATTER.format(denominator);
+				explanation = basePointsText + " × " + a.weightingCriterion() + " = " + pointsText;
+			} else if (aggregator instanceof AbsoluteAggregator) {
+				explanation = "Sum";
+			} else if (aggregator instanceof StaticWeighter) {
+				explanation = "Weighted sum";
+			} else if (aggregator instanceof MaxAggregator) {
+				explanation = "Max";
+			} else {
+				throw new VerifyException();
+			}
+		}
+		final String explanationSeparator = explanation.isEmpty() ? "" : ": ";
+		final String criterionSumary = criterion.getName() + " — " + explanation + explanationSeparator + pointsText;
+		fragment.appendChild(document.createParagraph(criterionSumary));
+
+		if (!isMark) {
+			final Element ul = document.createXhtmlElement("ul");
+			fragment.appendChild(ul);
+			final MarkAggregator aggregator = grade.getAggregator().getMarkAggregator();
+			if (aggregator instanceof ParametricWeighter) {
+				final ParametricWeighter a = (ParametricWeighter) aggregator;
+				{
+					final Element li = document.createXhtmlElement("li");
+					ul.appendChild(li);
+
+					final Criterion subCriterion = a.multipliedCriterion();
+					final DocumentFragment description = getDescription(
+							new SubGrade(subCriterion, grade.getGrade(subCriterion)), document, denominator);
+					li.appendChild(description);
+				}
+				{
+					final Element li = document.createXhtmlElement("li");
+					ul.appendChild(li);
+
+					final Criterion subCriterion = a.weightingCriterion();
+					final Grade subSubGrade = grade.getGrade(subCriterion);
+					checkArgument(subSubGrade.getMarksTree().isMark());
+					final DocumentFragment description = getDescription(new SubGrade(subCriterion, subSubGrade),
+							document, 1d);
+					li.appendChild(description);
+				}
+			} else if (aggregator instanceof CriteriaWeighter) {
+				for (Criterion subCriterion : grade.getMarksTree().getCriteria()) {
+					final Element li = document.createXhtmlElement("li");
+					ul.appendChild(li);
+
+					final double subWeight = grade.getWeight(subCriterion);
+					final DocumentFragment description = getDescription(
+							new SubGrade(subCriterion, grade.getGrade(subCriterion)), document,
+							denominator * subWeight);
+					li.appendChild(description);
+				}
+			} else if (aggregator instanceof MaxAggregator) {
+				for (Criterion subCriterion : grade.getMarksTree().getCriteria()) {
+					final Element li = document.createXhtmlElement("li");
+					ul.appendChild(li);
+
+					final DocumentFragment description = getDescription(
+							new SubGrade(subCriterion, grade.getGrade(subCriterion)), document, denominator);
+					li.appendChild(description);
+				}
+			} else {
+				throw new VerifyException();
+			}
+		}
+		return fragment;
 	}
 
 	private static DocumentFragment getDescription(Criterion criterion, IGrade grade, HtmlDocument document,

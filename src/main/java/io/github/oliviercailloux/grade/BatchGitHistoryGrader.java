@@ -17,6 +17,7 @@ import io.github.oliviercailloux.jaris.collections.CollectionUtils;
 import io.github.oliviercailloux.jaris.exceptions.Throwing;
 import io.github.oliviercailloux.jaris.throwing.TOptional;
 import io.github.oliviercailloux.java_grade.testers.JavaMarkHelper;
+import io.github.oliviercailloux.xml.XmlUtils;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -173,7 +174,7 @@ public class BatchGitHistoryGrader<X extends Exception> {
 
 		final ImmutableMap<String, Grade> grades = exam.getUsernames().stream()
 				.collect(ImmutableMap.toImmutableMap(GitHubUsername::getUsername, exam::getGrade));
-		final String html = HtmlGrades.asHtml(grades, prefix, 20d);
+		final String html = XmlUtils.asString(HtmlGrades.asHtml(grades, prefix, 20d));
 		Files.writeString(Path.of("grades " + prefix + ".html"), html);
 	}
 }

@@ -1,6 +1,6 @@
 package io.github.oliviercailloux.grade;
 
-public class SubMark extends SubGrade {
+public class SubMark extends SubMarksTree {
 	public static SubMark given(Criterion criterion, Mark mark) {
 		return new SubMark(criterion, mark);
 	}

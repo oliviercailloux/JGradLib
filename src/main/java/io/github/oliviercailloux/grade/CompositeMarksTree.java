@@ -17,19 +17,19 @@ public class CompositeMarksTree implements MarksTree {
 
 	public static CompositeMarksTree givenGrades(Map<Criterion, MarksTree> subGrades) {
 		return new CompositeMarksTree(subGrades.keySet().stream()
-				.collect(ImmutableMap.toImmutableMap(c -> c, c -> SubGrade.given(c, subGrades.get(c)))));
+				.collect(ImmutableMap.toImmutableMap(c -> c, c -> SubMarksTree.given(c, subGrades.get(c)))));
 	}
 
-	public static CompositeMarksTree givenSubGrades(Map<Criterion, SubGrade> subGrades) {
+	public static CompositeMarksTree givenSubGrades(Map<Criterion, SubMarksTree> subGrades) {
 		return new CompositeMarksTree(subGrades);
 	}
 
 	/**
 	 * not empty; values contain either CompositeGrade or Mark instances
 	 */
-	private final ImmutableMap<Criterion, SubGrade> subGrades;
+	private final ImmutableMap<Criterion, SubMarksTree> subGrades;
 
-	private CompositeMarksTree(Map<Criterion, SubGrade> subGrades) {
+	private CompositeMarksTree(Map<Criterion, SubMarksTree> subGrades) {
 		this.subGrades = ImmutableMap.copyOf(subGrades);
 		checkArgument(!subGrades.isEmpty());
 	}
@@ -54,7 +54,7 @@ public class CompositeMarksTree implements MarksTree {
 		return getSubGrade(criterion).getMarksTree();
 	}
 
-	private SubGrade getSubGrade(Criterion criterion) {
+	private SubMarksTree getSubGrade(Criterion criterion) {
 		if (!subGrades.containsKey(criterion)) {
 			throw new NoSuchElementException();
 		}

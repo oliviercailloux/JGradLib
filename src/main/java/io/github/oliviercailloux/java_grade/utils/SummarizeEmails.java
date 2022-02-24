@@ -80,7 +80,7 @@ public class SummarizeEmails {
 
 		Files.writeString(Path.of("grades recap.json"),
 				JsonbUtils.toJsonValue(gradesByUsername, JsonGrade.asAdapter()).toString());
-		final Document doc = HtmlGrades.asHtml(gradesByUsername, "All grades recap", 20d);
+		final Document doc = HtmlGrades.asHtmlIGrades(gradesByUsername, "All grades recap", 20d);
 		Files.writeString(Path.of("grades recap.html"), XmlUtils.asString(doc));
 
 		Files.writeString(Path.of("grades recap.csv"),

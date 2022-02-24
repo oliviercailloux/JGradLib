@@ -99,7 +99,7 @@ public class GitGeneralGrader {
 		}
 		final ImmutableMap<String, IGrade> grades = builder.build();
 		Files.writeString(out, JsonbUtils.toJsonObject(grades, JsonGrade.asAdapter()).toString());
-		Files.writeString(Path.of("grades.html"), XmlUtils.asString(HtmlGrades.asHtml(grades, "Grades", 20d)));
+		Files.writeString(Path.of("grades.html"), XmlUtils.asString(HtmlGrades.asHtmlIGrades(grades, "Grades", 20d)));
 //		final ImmutableSet<String> unames = grades.keySet();
 //		final Set<StudentOnGitHub> stds = unames.stream().map((String u) -> StudentOnGitHub.with(u))
 //				.collect(ImmutableSet.toImmutableSet());
