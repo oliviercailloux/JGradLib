@@ -71,6 +71,18 @@ public class CompositeMarksTree implements MarksTree {
 	}
 
 	@Override
+	public boolean hasPath(CriteriaPath path) {
+		if (path.isRoot()) {
+			return true;
+		}
+		final Criterion next = path.getHead();
+		if (!getCriteria().contains(next)) {
+			return false;
+		}
+		return getTree(next).hasPath(path.withoutHead());
+	}
+
+	@Override
 	public MarksTree getTree(CriteriaPath path) {
 		if (path.isRoot()) {
 			return this;

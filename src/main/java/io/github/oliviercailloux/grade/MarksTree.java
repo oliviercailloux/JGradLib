@@ -67,6 +67,12 @@ public interface MarksTree {
 	public ImmutableSet<CriteriaPath> getPathsToMarks();
 
 	/**
+	 * @return {@code true} iff this tree contains a node (terminal or not) at the
+	 *         given path.
+	 */
+	public boolean hasPath(CriteriaPath path);
+
+	/**
 	 * Returns the grade at the given path, if it exists in this instance.
 	 * <p>
 	 * If the given path is the root grade path, returns this instance.
@@ -74,6 +80,7 @@ public interface MarksTree {
 	 *
 	 * @throws NoSuchElementException iff the given path is not contained in this
 	 *                                object.
+	 * @see #hasPath(CriteriaPath)
 	 */
 	public MarksTree getTree(CriteriaPath path);
 

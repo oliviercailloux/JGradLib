@@ -116,6 +116,11 @@ public class Mark implements MarksTree {
 		return ImmutableSet.of(CriteriaPath.ROOT);
 	}
 
+	@Override
+	public boolean hasPath(CriteriaPath path) {
+		return path.isRoot();
+	}
+
 	/**
 	 * Returns this instance.
 	 *

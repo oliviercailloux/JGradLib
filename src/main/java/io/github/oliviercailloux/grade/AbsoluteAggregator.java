@@ -4,12 +4,13 @@ import static com.google.common.base.Preconditions.checkArgument;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Maps;
 import java.util.Set;
 
 /**
  * Rejects nothing. Binds the result within [−1, 1].
  */
-public class AbsoluteAggregator implements MarkAggregator {
+public class AbsoluteAggregator implements CriteriaWeighter {
 
 	private static final AbsoluteAggregator INSTANCE = new AbsoluteAggregator();
 
@@ -18,11 +19,9 @@ public class AbsoluteAggregator implements MarkAggregator {
 	}
 
 	@Override
-	public ImmutableMap<SubMark, Double> weights(Set<SubMark> marks) {
-		final ImmutableSet<Criterion> criteria = marks.stream().map(SubMark::getCriterion)
-				.collect(ImmutableSet.toImmutableSet());
-		checkArgument(marks.size() == criteria.size());
-		return marks.stream().collect(ImmutableMap.toImmutableMap(s -> s, s -> 1d));
+	public ImmutableMap<Criterion, Double> weightsFromCriteria(Set<Criterion> criteria)
+			throws IllegalArgumentException {
+		return Maps.toMap(criteria, c -> 1d);
 	}
 
 }
