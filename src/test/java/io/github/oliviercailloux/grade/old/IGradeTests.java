@@ -1,4 +1,4 @@
-package io.github.oliviercailloux.grade;
+package io.github.oliviercailloux.grade.old;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -6,6 +6,11 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.io.Resources;
+import io.github.oliviercailloux.grade.Criterion;
+import io.github.oliviercailloux.grade.GradeTestsHelper;
+import io.github.oliviercailloux.grade.IGrade;
+import io.github.oliviercailloux.grade.Patch;
+import io.github.oliviercailloux.grade.WeightingGrade;
 import io.github.oliviercailloux.grade.IGrade.CriteriaPath;
 import io.github.oliviercailloux.grade.WeightingGrade.WeightedGrade;
 import io.github.oliviercailloux.grade.format.json.JsonGrade;
@@ -18,9 +23,9 @@ import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class GradeTests {
+public class IGradeTests {
 	@SuppressWarnings("unused")
-	private static final Logger LOGGER = LoggerFactory.getLogger(GradeTests.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(IGradeTests.class);
 
 	@Test
 	void testPatchReplace() throws Exception {
