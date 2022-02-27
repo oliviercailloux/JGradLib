@@ -14,16 +14,16 @@ import java.util.Set;
  * for any two compatible mark tree, provided the two mark trees represent equal
  * trees of sets of criteria.
  */
-public interface CriteriaWeighter extends MarkAggregator {
+public sealed interface CriteriaWeighter extends MarkAggregator permits AbsoluteAggregator,StaticWeighter {
 	/**
 	 * @return the same thing as {@link #weights(Set)} when called with the same set
 	 *         of criteria.
-	 * @throws IllegalArgumentException iff the given set of criteria is rejected.
+	 * @throws AggregatorException iff the given set of criteria is rejected.
 	 */
-	ImmutableMap<Criterion, Double> weightsFromCriteria(Set<Criterion> criteria) throws IllegalArgumentException;
+	ImmutableMap<Criterion, Double> weightsFromCriteria(Set<Criterion> criteria) throws AggregatorException;
 
 	@Override
-	default ImmutableMap<SubMark, Double> weights(Set<SubMark> marks) throws IllegalArgumentException {
+	default ImmutableMap<SubMark, Double> weights(Set<SubMark> marks) throws AggregatorException {
 		final ImmutableSet<Criterion> criteria = marks.stream().map(SubMark::getCriterion)
 				.collect(ImmutableSet.toImmutableSet());
 		checkArgument(marks.size() == criteria.size());

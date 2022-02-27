@@ -1,9 +1,9 @@
 package io.github.oliviercailloux.grade;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static io.github.oliviercailloux.grade.MarkAggregator.checkCanAggregate;
 
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -11,7 +11,7 @@ import java.util.Set;
  * Rejects unknown criteria. If some criteria are missing in the given marks,
  * weights are re-normalized accordingly.
  */
-public class StaticWeighter implements CriteriaWeighter {
+public sealed class StaticWeighter implements CriteriaWeighter permits VoidAggregator {
 
 	public static StaticWeighter given(Map<Criterion, Double> weights) {
 		return new StaticWeighter(weights);
@@ -19,7 +19,7 @@ public class StaticWeighter implements CriteriaWeighter {
 
 	private final ImmutableMap<Criterion, Double> weights;
 
-	public StaticWeighter(Map<Criterion, Double> weights) {
+	protected StaticWeighter(Map<Criterion, Double> weights) {
 		this.weights = ImmutableMap.copyOf(weights);
 		checkArgument(weights.values().stream().allMatch(Double::isFinite));
 		checkArgument(weights.values().stream().allMatch(w -> w >= 0d));
@@ -30,9 +30,8 @@ public class StaticWeighter implements CriteriaWeighter {
 	}
 
 	@Override
-	public ImmutableMap<Criterion, Double> weightsFromCriteria(Set<Criterion> criteria)
-			throws IllegalArgumentException {
-		checkArgument(criteria.stream().allMatch(weights::containsKey));
+	public ImmutableMap<Criterion, Double> weightsFromCriteria(Set<Criterion> criteria) throws AggregatorException {
+		checkCanAggregate(criteria.stream().allMatch(weights::containsKey), "Unknown criterion");
 
 		final double sum = criteria.stream().mapToDouble(weights::get).sum();
 		return criteria.stream().collect(ImmutableMap.toImmutableMap(c -> c, c -> weights.get(c) / sum));

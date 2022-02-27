@@ -1,16 +1,13 @@
 package io.github.oliviercailloux.grade;
 
-import static com.google.common.base.Preconditions.checkArgument;
-
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import java.util.Set;
 
 /**
  * Rejects nothing. Binds the result within [−1, 1].
  */
-public class AbsoluteAggregator implements CriteriaWeighter {
+public final class AbsoluteAggregator implements CriteriaWeighter {
 
 	private static final AbsoluteAggregator INSTANCE = new AbsoluteAggregator();
 
@@ -19,8 +16,7 @@ public class AbsoluteAggregator implements CriteriaWeighter {
 	}
 
 	@Override
-	public ImmutableMap<Criterion, Double> weightsFromCriteria(Set<Criterion> criteria)
-			throws IllegalArgumentException {
+	public ImmutableMap<Criterion, Double> weightsFromCriteria(Set<Criterion> criteria) {
 		return Maps.toMap(criteria, c -> 1d);
 	}
 

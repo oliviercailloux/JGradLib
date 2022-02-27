@@ -10,23 +10,19 @@ import java.util.Set;
 import java.util.stream.Stream;
 
 /**
- * May reject some sizes.
+ * Rejects nothing.
  */
-public interface OwaWeighter extends MarkAggregator {
+public sealed interface OwaWeighter extends MarkAggregator permits MaxAggregator {
 	/**
 	 * @param size ≥ 0
 	 * @return the weights, starting with the one corresponding to the biggest mark,
 	 *         such that the mark can be computed using a weighted sum. Non-negative
 	 *         numbers.
-	 * @throws IllegalArgumentException if size is rejected
 	 */
-	Stream<Double> weights(int size) throws IllegalArgumentException;
+	Stream<Double> weights(int size);
 
-	/**
-	 * @throws IllegalArgumentException if marks have a size that is rejected
-	 */
 	@Override
-	default ImmutableMap<SubMark, Double> weights(Set<SubMark> marks) throws IllegalArgumentException {
+	default ImmutableMap<SubMark, Double> weights(Set<SubMark> marks) {
 		final ImmutableSet<Criterion> criteria = marks.stream().map(SubMark::getCriterion)
 				.collect(ImmutableSet.toImmutableSet());
 		checkArgument(marks.size() == criteria.size());

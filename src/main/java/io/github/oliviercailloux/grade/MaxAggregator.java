@@ -2,10 +2,7 @@ package io.github.oliviercailloux.grade;
 
 import java.util.stream.Stream;
 
-/**
- * Rejects nothing.
- */
-public class MaxAggregator implements OwaWeighter {
+public final class MaxAggregator implements OwaWeighter {
 
 	@Override
 	public Stream<Double> weights(int size) {

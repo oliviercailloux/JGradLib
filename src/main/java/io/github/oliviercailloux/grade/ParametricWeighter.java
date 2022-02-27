@@ -2,6 +2,7 @@ package io.github.oliviercailloux.grade;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
+import static io.github.oliviercailloux.grade.MarkAggregator.checkCanAggregate;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -17,7 +18,7 @@ import java.util.Set;
  * complement of the mark of the weighting criterion (so <i>cW × c1 + (1 − cW) ×
  * c2</i>, where cW is the mark of the weighting criterion).
  */
-public class ParametricWeighter implements MarkAggregator {
+public final class ParametricWeighter implements MarkAggregator {
 
 	private final Criterion multiplied;
 	private final Criterion weighting;
@@ -40,13 +41,13 @@ public class ParametricWeighter implements MarkAggregator {
 	}
 
 	@Override
-	public ImmutableMap<SubMark, Double> weights(Set<SubMark> marks) throws IllegalArgumentException {
+	public ImmutableMap<SubMark, Double> weights(Set<SubMark> marks) throws AggregatorException {
 		final ImmutableSet<Criterion> criteria = marks.stream().map(SubMark::getCriterion)
 				.collect(ImmutableSet.toImmutableSet());
 		checkArgument(marks.size() == criteria.size());
-		checkArgument(criteria.contains(multiplied));
-		checkArgument(criteria.contains(weighting));
-		checkArgument(criteria.size() <= 3);
+		checkCanAggregate(criteria.contains(multiplied), "Multiplied criterion not found");
+		checkCanAggregate(criteria.contains(weighting), "Weighting criterion not found");
+		checkCanAggregate(criteria.size() <= 3, "Too many criteria");
 
 		final SubMark multipliedMark = marks.stream().filter(s -> s.getCriterion().equals(multiplied))
 				.collect(MoreCollectors.onlyElement());
