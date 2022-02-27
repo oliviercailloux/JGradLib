@@ -2,12 +2,15 @@ package io.github.oliviercailloux.grade;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Verify.verify;
 import static io.github.oliviercailloux.grade.MarkAggregator.checkCanAggregate;
 
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import io.github.oliviercailloux.grade.IGrade.CriteriaPath;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 
 /**
@@ -42,69 +45,44 @@ import java.util.Optional;
  * aggregator bound to a ParametricWeighter rejects sets of unsuitable size or
  * content…).
  */
-public abstract sealed class GradeAggregator permits GradeAggregator.StaticGradeAggregator,GradeAggregator.DynamicGradeAggregator {
-	public static GradeAggregator max(Map<Criterion, GradeAggregator> subs, GradeAggregator defaultSubAggregator) {
-		return new GradeAggregator(new MaxAggregator(), subs, Optional.of(defaultSubAggregator));
-	}
+public class GradeAggregator {
+	public static final GradeAggregator TRIVIAL = new GradeAggregator(VoidAggregator.INSTANCE, ImmutableMap.of(), null);
 
 	public static GradeAggregator max(Map<Criterion, GradeAggregator> subs) {
-		return new GradeAggregator(new MaxAggregator(), subs, Optional.empty());
+		return new GradeAggregator(new MaxAggregator(), subs, TRIVIAL);
 	}
 
-	public static GradeAggregator max(GradeAggregator defaultSubAggregator) {
-		return new GradeAggregator(new MaxAggregator(), ImmutableMap.of(), Optional.of(defaultSubAggregator));
+	public static GradeAggregator max(Map<Criterion, GradeAggregator> subs, GradeAggregator defaultSubAggregator) {
+		return new GradeAggregator(new MaxAggregator(), subs, defaultSubAggregator);
 	}
 
 	public static GradeAggregator max() {
-		return new GradeAggregator(new MaxAggregator(), ImmutableMap.of(), Optional.empty());
+		return new GradeAggregator(new MaxAggregator(), ImmutableMap.of(), TRIVIAL);
+	}
+
+	public static GradeAggregator max(GradeAggregator defaultSubAggregator) {
+		return new GradeAggregator(new MaxAggregator(), ImmutableMap.of(), defaultSubAggregator);
 	}
 
 	public static GradeAggregator parametric(Criterion multiplied, Criterion weighting,
 			Map<Criterion, GradeAggregator> subs) {
-		return new GradeAggregator(new ParametricWeighter(multiplied, weighting), subs, Optional.empty());
+		return new GradeAggregator(new ParametricWeighter(multiplied, weighting), subs, TRIVIAL);
 	}
 
 	public static GradeAggregator parametric(Criterion multiplied, Criterion weighting,
 			GradeAggregator multipliedAggregator) {
 		return new GradeAggregator(new ParametricWeighter(multiplied, weighting),
-				ImmutableMap.of(multiplied, multipliedAggregator), Optional.empty());
+				ImmutableMap.of(multiplied, multipliedAggregator), TRIVIAL);
 	}
 
 	public static GradeAggregator staticAggregator(Map<Criterion, Double> weights,
 			Map<Criterion, GradeAggregator> subs) {
-		return new GradeAggregator(new StaticWeighter(weights), subs, Optional.empty());
+		return new GradeAggregator(new StaticWeighter(weights), subs, TRIVIAL);
 	}
 
 	public static GradeAggregator given(MarkAggregator markAggregator, Map<Criterion, GradeAggregator> subs,
-			Optional<GradeAggregator> defaultSubAggregator) {
+			GradeAggregator defaultSubAggregator) {
 		return new GradeAggregator(markAggregator, subs, defaultSubAggregator);
-	}
-
-	public static final class StaticGradeAggregator extends GradeAggregator {
-
-		private StaticGradeAggregator(StaticWeighter staticWeighter, Map<Criterion, GradeAggregator> subs) {
-			super(staticWeighter, subs);
-		}
-
-		@Override
-		public Optional<GradeAggregator> getDefaultSubAggregatorForSerialization() {
-			return Optional.empty();
-		}
-
-	}
-
-	public static final class DynamicGradeAggregator extends GradeAggregator {
-
-		private DynamicGradeAggregator(MarkAggregator markAggregator, Map<Criterion, GradeAggregator> subs,
-				GradeAggregator defaultSubAggregator) {
-			super(markAggregator, Maps.filterValues(subs, a -> !a.equals(defaultSubAggregator)), defaultSubAggregator);
-		}
-
-		@Override
-		public Optional<GradeAggregator> getDefaultSubAggregatorForSerialization() {
-			return defaultSubAggregator;
-		}
-
 	}
 
 	private final MarkAggregator markAggregator;
@@ -113,13 +91,19 @@ public abstract sealed class GradeAggregator permits GradeAggregator.StaticGrade
 	 * aggregator. No value equal to the default one.
 	 */
 	private final ImmutableMap<Criterion, GradeAggregator> subs;
+	/**
+	 * {@code null} iff this instance is trivial
+	 */
 	private final GradeAggregator defaultSubAggregator;
 
-	protected GradeAggregator(MarkAggregator markAggregator, Map<Criterion, GradeAggregator> subs,
+	private GradeAggregator(MarkAggregator markAggregator, Map<Criterion, GradeAggregator> subs,
 			GradeAggregator defaultSubAggregator) {
 		this.markAggregator = checkNotNull(markAggregator);
 		this.subs = ImmutableMap.copyOf(Maps.filterValues(subs, a -> !a.equals(defaultSubAggregator)));
-		this.defaultSubAggregator = checkNotNull(defaultSubAggregator);
+
+		this.defaultSubAggregator = defaultSubAggregator;
+		checkArgument((defaultSubAggregator == null) == (markAggregator instanceof VoidAggregator));
+
 		if (markAggregator instanceof StaticWeighter) {
 			final StaticWeighter staticWeighter = (StaticWeighter) markAggregator;
 			checkArgument(staticWeighter.weights().keySet().containsAll(subs.keySet()));
@@ -144,10 +128,12 @@ public abstract sealed class GradeAggregator permits GradeAggregator.StaticGrade
 	 *                             argument.
 	 */
 	public GradeAggregator getGradeAggregator(Criterion criterion) throws AggregatorException {
+		checkNotNull(criterion);
 		if (markAggregator instanceof StaticWeighter) {
 			final StaticWeighter staticWeighter = (StaticWeighter) markAggregator;
 			checkCanAggregate(staticWeighter.weights().containsKey(criterion), "Unknown criterion");
 		}
+		verify(defaultSubAggregator != null);
 		return subs.getOrDefault(criterion, defaultSubAggregator);
 	}
 
@@ -162,7 +148,32 @@ public abstract sealed class GradeAggregator permits GradeAggregator.StaticGrade
 		return subs;
 	}
 
-	public GradeAggregator getDefaultSubAggregatorForSerialization() {
-		return defaultSubAggregator;
+	public Optional<GradeAggregator> getDefaultSubAggregatorForSerialization() {
+		return Optional.ofNullable(defaultSubAggregator);
+	}
+
+	/**
+	 * Returns {@code true} iff the given object is an aggregator that accepts the
+	 * same trees and aggregates them all in the same way as this object.
+	 */
+	@Override
+	public boolean equals(Object o2) {
+		if (!(o2 instanceof GradeAggregator)) {
+			return false;
+		}
+		final GradeAggregator t2 = (GradeAggregator) o2;
+		return markAggregator.equals(t2.markAggregator) && subs.equals(t2.subs)
+				&& Objects.equals(defaultSubAggregator, t2.defaultSubAggregator);
+	}
+
+	@Override
+	public int hashCode() {
+		return Objects.hash(markAggregator, subs, defaultSubAggregator);
+	}
+
+	@Override
+	public String toString() {
+		return MoreObjects.toStringHelper(this).add("Mark aggregator", markAggregator).add("Subs", subs)
+				.add("default", defaultSubAggregator).toString();
 	}
 }

@@ -3,8 +3,10 @@ package io.github.oliviercailloux.grade;
 import static com.google.common.base.Preconditions.checkArgument;
 import static io.github.oliviercailloux.grade.MarkAggregator.checkCanAggregate;
 
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -37,4 +39,22 @@ public sealed class StaticWeighter implements CriteriaWeighter permits VoidAggre
 		return criteria.stream().collect(ImmutableMap.toImmutableMap(c -> c, c -> weights.get(c) / sum));
 	}
 
+	@Override
+	public boolean equals(Object o2) {
+		if (!(o2 instanceof StaticWeighter)) {
+			return false;
+		}
+		final StaticWeighter t2 = (StaticWeighter) o2;
+		return weights.equals(t2.weights);
+	}
+
+	@Override
+	public int hashCode() {
+		return Objects.hash(weights);
+	}
+
+	@Override
+	public String toString() {
+		return MoreObjects.toStringHelper(this).add("weights", weights).toString();
+	}
 }

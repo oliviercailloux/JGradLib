@@ -4,9 +4,11 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static io.github.oliviercailloux.grade.MarkAggregator.checkCanAggregate;
 
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.MoreCollectors;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 
@@ -61,6 +63,25 @@ public final class ParametricWeighter implements MarkAggregator {
 		builder.put(weightingMark, 0d);
 		remainingMark.ifPresent(m -> builder.put(m, 1d - weightingMark.getPoints()));
 		return builder.build();
+	}
+
+	@Override
+	public boolean equals(Object o2) {
+		if (!(o2 instanceof ParametricWeighter)) {
+			return false;
+		}
+		final ParametricWeighter t2 = (ParametricWeighter) o2;
+		return multiplied.equals(t2.multiplied) && weighting.equals(t2.weighting);
+	}
+
+	@Override
+	public int hashCode() {
+		return Objects.hash(multiplied, weighting);
+	}
+
+	@Override
+	public String toString() {
+		return MoreObjects.toStringHelper(this).add("Multiplied", multiplied).add("Weighting", weighting).toString();
 	}
 
 }

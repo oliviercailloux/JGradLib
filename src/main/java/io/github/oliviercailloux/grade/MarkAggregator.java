@@ -41,4 +41,12 @@ public sealed interface MarkAggregator permits ParametricWeighter,CriteriaWeight
 		final double weightedSum = weights.keySet().stream().mapToDouble(s -> weights.get(s) * s.getPoints()).sum();
 		return Mark.given(Double.min(1d, Double.max(weightedSum, 0d)), "");
 	}
+
+	/**
+	 * Returns {@code true} iff the given object is a mark aggregator that
+	 * aggregates accepts the same sets of criteria and aggregates the sub marks in
+	 * the same way as this object.
+	 */
+	@Override
+	public boolean equals(Object o2);
 }
