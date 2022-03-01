@@ -12,6 +12,8 @@ import io.github.oliviercailloux.grade.IGrade.CriteriaPath;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A tree of MarkAggregator instances. Has information about how to aggregate
@@ -46,9 +48,13 @@ import java.util.Optional;
  * content…).
  */
 public class GradeAggregator {
+	@SuppressWarnings("unused")
+	private static final Logger LOGGER = LoggerFactory.getLogger(GradeAggregator.class);
+
 	public static final WeightingGradeAggregator TRIVIAL = WeightingGradeAggregator.TRIVIAL_WEIGHTING;
 	public static final WeightingGradeAggregator ABSOLUTE = WeightingGradeAggregator.ABSOLUTE_WEIGHTING;
-	public static final GradeAggregator MAX = new GradeAggregator(MaxAggregator.INSTANCE, ImmutableMap.of(), TRIVIAL);
+	public static final GradeAggregator MAX = new GradeAggregator(MaxAggregator.INSTANCE, ImmutableMap.of(),
+			WeightingGradeAggregator.trivial());
 
 	public static GradeAggregator max(Map<Criterion, GradeAggregator> subs) {
 		return new GradeAggregator(MaxAggregator.INSTANCE, subs, TRIVIAL);
@@ -104,11 +110,13 @@ public class GradeAggregator {
 
 	protected GradeAggregator(MarkAggregator markAggregator, Map<Criterion, ? extends GradeAggregator> subs,
 			GradeAggregator defaultSubAggregator) {
+		LOGGER.debug("Init given {}, {} and default {}.", markAggregator, subs, defaultSubAggregator);
 		this.markAggregator = checkNotNull(markAggregator);
 		this.subs = ImmutableMap.copyOf(Maps.filterValues(subs, a -> !a.equals(defaultSubAggregator)));
 
 		this.defaultSubAggregator = defaultSubAggregator;
-		checkArgument((defaultSubAggregator == null) == (markAggregator instanceof VoidAggregator));
+		checkArgument((defaultSubAggregator == null) == (markAggregator instanceof VoidAggregator),
+				(defaultSubAggregator == null));
 
 		if (markAggregator instanceof StaticWeighter) {
 			final StaticWeighter staticWeighter = (StaticWeighter) markAggregator;

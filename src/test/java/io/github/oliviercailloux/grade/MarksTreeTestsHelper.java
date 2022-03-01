@@ -4,6 +4,7 @@ import static io.github.oliviercailloux.grade.CriterionTestsHelper.c1;
 import static io.github.oliviercailloux.grade.CriterionTestsHelper.c11;
 import static io.github.oliviercailloux.grade.CriterionTestsHelper.c111;
 import static io.github.oliviercailloux.grade.CriterionTestsHelper.c12;
+import static io.github.oliviercailloux.grade.CriterionTestsHelper.c13;
 import static io.github.oliviercailloux.grade.CriterionTestsHelper.c2;
 import static io.github.oliviercailloux.grade.CriterionTestsHelper.c21;
 import static io.github.oliviercailloux.grade.CriterionTestsHelper.c22;
@@ -64,6 +65,29 @@ public class MarksTreeTestsHelper {
 		final MarksTree m1 = MarksTree.composite(ImmutableMap.of(c1, Mark.one(), c2, Mark.zero()));
 		final MarksTree m2 = MarksTree.composite(ImmutableMap.of(c2, Mark.one(), c1, Mark.zero()));
 		return MarksTree.composite(ImmutableMap.of(c1, m1, c2, m2));
+	}
+
+	/**
+	 * <ul>
+	 * <li>C1</li>
+	 * <ul>
+	 * <li>C1.1: 0.3</li>
+	 * <li>C1.2: 0.2</li>
+	 * <li>C1.3: 1.0</li>
+	 * </ul>
+	 * <li>C2</li>
+	 * <ul>
+	 * <li>C2.1: 0</li>
+	 * <li>C2.2: 0.8</li>
+	 * </ul>
+	 * </ul>
+	 *
+	 */
+	public static MarksTree get3Plus2() {
+		final MarksTree t1 = MarksTree.composite(
+				ImmutableMap.of(c11, Mark.given(0.3d, ""), c12, Mark.given(0.2d, ""), c13, Mark.given(1.0d, "")));
+		final MarksTree t2 = MarksTree.composite(ImmutableMap.of(c21, Mark.given(0d, ""), c22, Mark.given(0.8d, "")));
+		return MarksTree.composite(ImmutableMap.of(c1, t1, c2, t2));
 	}
 
 }

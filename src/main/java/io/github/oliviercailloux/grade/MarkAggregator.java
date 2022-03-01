@@ -1,6 +1,7 @@
 package io.github.oliviercailloux.grade;
 
 import com.google.common.collect.ImmutableMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
@@ -16,6 +17,12 @@ public sealed interface MarkAggregator permits ParametricWeighter,CriteriaWeight
 	static void checkCanAggregate(boolean check, String message) throws AggregatorException {
 		if (!check) {
 			throw new AggregatorException(message);
+		}
+	}
+
+	static void checkCanAggregate(boolean check, String format, Object... messages) throws AggregatorException {
+		if (!check) {
+			throw new AggregatorException(String.format(Locale.ENGLISH, format, messages));
 		}
 	}
 

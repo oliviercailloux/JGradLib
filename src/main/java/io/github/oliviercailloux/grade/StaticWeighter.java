@@ -27,7 +27,7 @@ public sealed class StaticWeighter extends AbstractStaticWeighter
 
 	@Override
 	public double weight(Criterion criterion) throws AggregatorException {
-		checkCanAggregate(weights.containsKey(criterion), "Unknown criterion");
+		checkCanAggregate(weights.containsKey(criterion), "Unknown criterion: %s, not in %s.", criterion, weights);
 		return weights.get(criterion) / sum;
 	}
 

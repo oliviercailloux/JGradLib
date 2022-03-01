@@ -7,8 +7,11 @@ import java.util.Map;
 
 public class WeightingGradeAggregator extends GradeAggregator {
 
-	static final WeightingGradeAggregator TRIVIAL_WEIGHTING = new WeightingGradeAggregator(VoidAggregator.INSTANCE,
-			ImmutableMap.of(), null);
+	static final WeightingGradeAggregator TRIVIAL_WEIGHTING = trivial();
+
+	static WeightingGradeAggregator trivial() {
+		return new WeightingGradeAggregator(VoidAggregator.INSTANCE, ImmutableMap.of(), null);
+	}
 
 	static final WeightingGradeAggregator ABSOLUTE_WEIGHTING = new WeightingGradeAggregator(AbsoluteAggregator.INSTANCE,
 			ImmutableMap.of(), TRIVIAL_WEIGHTING);
@@ -24,7 +27,7 @@ public class WeightingGradeAggregator extends GradeAggregator {
 
 	public static WeightingGradeAggregator weightingStaticAggregator(Map<Criterion, Double> weights,
 			Map<Criterion, WeightingGradeAggregator> subs) {
-		return new WeightingGradeAggregator(new StaticWeighter(weights), subs, TRIVIAL);
+		return new WeightingGradeAggregator(new StaticWeighter(weights), subs, TRIVIAL_WEIGHTING);
 	}
 
 	public static WeightingGradeAggregator given(PerCriterionWeighter markAggregator,
@@ -41,7 +44,8 @@ public class WeightingGradeAggregator extends GradeAggregator {
 		if (path.isRoot()) {
 			return 1d;
 		}
-		return getMarkAggregator().weight(path.getHead()) * weight(path.withoutHead());
+		return getMarkAggregator().weight(path.getHead())
+				* getGradeAggregator(path.getHead()).weight(path.withoutHead());
 	}
 
 	@Override

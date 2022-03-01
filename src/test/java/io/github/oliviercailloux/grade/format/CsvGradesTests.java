@@ -4,16 +4,16 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.Resources;
-import io.github.oliviercailloux.email.EmailAddress;
-import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
+import io.github.oliviercailloux.grade.Grade;
 import io.github.oliviercailloux.grade.GradeTestsHelper;
 import io.github.oliviercailloux.grade.IGrade;
-import io.github.oliviercailloux.grade.WeightingGrade;
-import io.github.oliviercailloux.grade.comm.InstitutionalStudent;
+import io.github.oliviercailloux.grade.MarksTree;
 import io.github.oliviercailloux.grade.comm.StudentOnGitHub;
 import io.github.oliviercailloux.grade.format.json.JsonGrade;
 import io.github.oliviercailloux.grade.format.json.JsonbGradeTests;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,15 +24,12 @@ class CsvGradesTests {
 
 	@Test
 	void writeTest() throws Exception {
-		final StudentOnGitHub s1 = StudentOnGitHub.with("u1");
-		final StudentOnGitHub s2 = StudentOnGitHub.with(GitHubUsername.given("u2"),
-				InstitutionalStudent.withU(1, "user", "first", "last", EmailAddress.given("e@m.com")));
-		final WeightingGrade grade1 = GradeTestsHelper.getGrade3Plus2();
-		final WeightingGrade grade2 = GradeTestsHelper.getGrade3Plus2Alt();
-		final ImmutableMap<StudentOnGitHub, WeightingGrade> grades = ImmutableMap.of(s1, grade1, s2, grade2);
-		final CsvGrades<StudentOnGitHub> csvGrades = CsvGrades.newInstance(CsvGrades.STUDENT_IDENTITY_FUNCTION,
-				CsvGrades.DEFAULT_DENOMINATOR);
-		final String written = csvGrades.toCsv(grades);
+		final Grade grade = GradeTestsHelper.get3Plus2();
+		final CsvGrades<String> csvGrades = CsvGrades.newInstance(CsvGrades.STUDENT_NAME_FUNCTION, 20d);
+		final ImmutableMap<String, MarksTree> grades = ImmutableMap.of("u1", grade.toMarksTree());
+
+		final String written = csvGrades.gradesToCsv(grade.toAggregator(), grades);
+		Files.writeString(Path.of("out.csv"), written);
 		final String expected = Resources.toString(getClass().getResource("TwoStudentsGrades.csv"),
 				StandardCharsets.UTF_8);
 		assertEquals(expected, written);

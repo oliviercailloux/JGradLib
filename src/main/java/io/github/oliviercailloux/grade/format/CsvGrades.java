@@ -16,15 +16,16 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Range;
 import com.google.common.collect.Streams;
 import com.google.common.math.DoubleMath;
+import com.google.common.math.Stats;
 import com.univocity.parsers.csv.CsvWriter;
 import com.univocity.parsers.csv.CsvWriterSettings;
 import io.github.oliviercailloux.grade.Criterion;
 import io.github.oliviercailloux.grade.CriterionGradeWeight;
-import io.github.oliviercailloux.grade.Exam;
 import io.github.oliviercailloux.grade.Grade;
 import io.github.oliviercailloux.grade.GradeAggregator;
 import io.github.oliviercailloux.grade.IGrade;
 import io.github.oliviercailloux.grade.IGrade.CriteriaPath;
+import io.github.oliviercailloux.grade.Mark;
 import io.github.oliviercailloux.grade.MarksTree;
 import io.github.oliviercailloux.grade.WeightingGrade;
 import io.github.oliviercailloux.grade.WeightingGradeAggregator;
@@ -38,6 +39,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.DoubleStream;
 import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,6 +49,9 @@ public class CsvGrades<K> {
 	private static final Logger LOGGER = LoggerFactory.getLogger(CsvGrades.class);
 
 	public static final double DEFAULT_DENOMINATOR = 20d;
+
+	public static final Function<String, ImmutableMap<String, String>> STUDENT_NAME_FUNCTION = s -> ImmutableMap
+			.of("Name", s);
 
 	public static final Function<StudentOnGitHub, ImmutableMap<String, String>> STUDENT_IDENTITY_FUNCTION = s -> ImmutableMap
 			.of("Name", s.hasInstitutionalPart() ? s.toInstitutionalStudent().getLastName() : "unknown",
@@ -60,23 +65,56 @@ public class CsvGrades<K> {
 		return new CsvGrades<>(identityFunction, denominator);
 	}
 
-	public static record PerCriterionWeightingExam<L> (WeightingGradeAggregator aggregator,
-			ImmutableMap<L, MarksTree> grades) {
-		public ImmutableSet<L> getUsernames() {
-			return grades.keySet();
+	public static record GenericExam<K> (GradeAggregator aggregator, ImmutableMap<K, ? extends MarksTree> trees) {
+		public GenericExam(GradeAggregator aggregator, Map<K, ? extends MarksTree> trees) {
+			this(aggregator, ImmutableMap.copyOf(trees));
 		}
 
-		public Grade getGrade(L username) {
-			return Grade.given(aggregator, grades.get(username));
+		public ImmutableSet<K> getUsernames() {
+			return trees.keySet();
+		}
+
+		public Grade getGrade(K username) {
+			return Grade.given(aggregator, trees.get(username));
+		}
+	}
+
+	public static record PerCriterionWeightingExam<K> (WeightingGradeAggregator aggregator,
+			ImmutableMap<K, MarksTree> trees) {
+		private static Stream<CriteriaPath> getSuccessors(MarksTree grade, CriteriaPath prefix) {
+			return Streams.concat(Stream.of(prefix), grade.getCriteria().stream().map(prefix::withSuffix)
+					.flatMap(p -> getSuccessors(grade.getTree(p.getTail()), p)));
+		}
+
+		public ImmutableSet<K> getUsernames() {
+			return trees.keySet();
+		}
+
+		public Grade getGrade(K username) {
+			return Grade.given(aggregator, trees.get(username));
 		}
 
 		public double weight(CriteriaPath path) {
 			return aggregator.weight(path);
 		}
+
+		public DoubleStream points(CriteriaPath path) {
+			return getUsernames().stream().map(this::getGrade).map(g -> g.getGrade(path)).map(Grade::mark)
+					.mapToDouble(Mark::getPoints);
+		}
+
+		public double averagePoints(CriteriaPath path) {
+			return Stats.of(points(path)).mean();
+		}
+
+		public ImmutableSet<CriteriaPath> allPaths() {
+			return trees.values().stream().flatMap(g -> getSuccessors(g, CriteriaPath.ROOT))
+					.collect(ImmutableSet.toImmutableSet());
+		}
 	}
 
-	private static PerCriterionWeightingExam toPerCriterionWeightingExam(Exam exam) {
-		final PerCriterionWeightingExam newExam = new PerCriterionWeightingExam(
+	private static <K> PerCriterionWeightingExam<K> toPerCriterionWeightingExam(GenericExam<K> exam) {
+		final PerCriterionWeightingExam<K> newExam = new PerCriterionWeightingExam<>(
 				Grade.transformToPerCriterionWeighting(exam.aggregator()),
 				Maps.toMap(exam.getUsernames(), u -> Grade.adaptMarksForPerCriterionWeighting(exam.getGrade(u))));
 
@@ -84,11 +122,6 @@ public class CsvGrades<K> {
 		verify(exam.getUsernames().stream().allMatch(u -> DoubleMath.fuzzyEquals(exam.getGrade(u).mark().getPoints(),
 				newExam.getGrade(u).mark().getPoints(), 1e-6d)));
 		return newExam;
-	}
-
-	private static Stream<CriteriaPath> getSuccessors(MarksTree grade, CriteriaPath prefix) {
-		return Streams.concat(Stream.of(prefix), grade.getCriteria().stream().map(prefix::withSuffix)
-				.flatMap(p -> getSuccessors(grade.getTree(p.getTail()), p)));
 	}
 
 	private static String shorten(CriteriaPath gradePath) {
@@ -310,6 +343,9 @@ public class CsvGrades<K> {
 		final Set<K> keys = trees.keySet();
 		checkArgument(!keys.isEmpty(), "Can’t determine identity headers with no keys.");
 
+		final GenericExam<K> inputExam = new GenericExam<>(aggregator, trees);
+		final PerCriterionWeightingExam<K> exam = toPerCriterionWeightingExam(inputExam);
+
 		final NumberFormat formatter = NumberFormat.getNumberInstance(Locale.ENGLISH);
 		final StringWriter stringWriter = new StringWriter();
 		final CsvWriter writer = new CsvWriter(stringWriter, new CsvWriterSettings());
@@ -318,8 +354,7 @@ public class CsvGrades<K> {
 				.flatMap(k -> identityFunction.apply(k).keySet().stream()).collect(ImmutableSet.toImmutableSet());
 		final ImmutableSet<String> identityHeaders = identityHeadersFromFunction.isEmpty() ? ImmutableSet.of("")
 				: identityHeadersFromFunction;
-		final ImmutableSet<CriteriaPath> allPaths = trees.values().stream()
-				.flatMap(g -> getSuccessors(g, CriteriaPath.ROOT)).collect(ImmutableSet.toImmutableSet());
+		final ImmutableSet<CriteriaPath> allPaths = exam.allPaths();
 
 		final ImmutableList<String> headers = Streams
 				.concat(identityHeaders.stream(), allPaths.stream().map(CsvGrades::shorten))
@@ -332,10 +367,9 @@ public class CsvGrades<K> {
 			final Map<String, String> identity = identityFunction.apply(key);
 			identity.entrySet().forEach(e -> writer.addValue(e.getKey(), e.getValue()));
 
-			final MarksTree tree = trees.get(key);
-			final Grade grade = Grade.given(aggregator, tree);
+			final Grade grade = exam.getGrade(key);
 			allPaths.stream().forEach(p -> writer.addValue(CsvGrades.shorten(p),
-					formatter.format(grade.getWeight(p) * grade.getGrade(p).mark().getPoints() * denominator)));
+					formatter.format(exam.weight(p) * grade.mark(p).getPoints() * denominator)));
 			writer.writeValuesToRow();
 		}
 		writer.writeEmptyRow();
@@ -343,21 +377,30 @@ public class CsvGrades<K> {
 		LOGGER.debug("Writing summary data.");
 		{
 			writer.addValue(firstHeader, "Upper bound");
-			allPaths.stream().forEach(p -> writer.addValue(CsvGrades.shorten(p),
-					formatter.format(getWeight(aggregator, p, treeOfSets, CriteriaPath.ROOT))));
+			allPaths.stream().forEach(
+					p -> writer.addValue(CsvGrades.shorten(p), formatter.format(exam.weight(p) * denominator)));
 			writer.writeValuesToRow();
 		}
 
 		{
 			writer.addValue(firstHeader, "Average");
+			allPaths.stream().forEach(p -> writer.addValue(CsvGrades.shorten(p),
+					formatter.format(exam.weight(p) * exam.averagePoints(p) * denominator)));
+			writer.writeValuesToRow();
 		}
 
 		{
-			writer.addValue(firstHeader, "Nb > 0");
+			writer.addValue(firstHeader, "Nb ≠ 0");
+			allPaths.stream().forEach(p -> writer.addValue(CsvGrades.shorten(p),
+					formatter.format(exam.points(p).filter(v -> v != 0d).count())));
+			writer.writeValuesToRow();
 		}
 
 		{
 			writer.addValue(firstHeader, "Nb MAX");
+			allPaths.stream().forEach(p -> writer.addValue(CsvGrades.shorten(p),
+					formatter.format(exam.points(p).filter(v -> v == 1d).count())));
+			writer.writeValuesToRow();
 		}
 
 		LOGGER.debug("Done writing.");

@@ -1,5 +1,14 @@
 package io.github.oliviercailloux.grade;
 
+import static com.google.common.base.Verify.verify;
+import static io.github.oliviercailloux.grade.CriterionTestsHelper.c1;
+import static io.github.oliviercailloux.grade.CriterionTestsHelper.c11;
+import static io.github.oliviercailloux.grade.CriterionTestsHelper.c12;
+import static io.github.oliviercailloux.grade.CriterionTestsHelper.c13;
+import static io.github.oliviercailloux.grade.CriterionTestsHelper.c2;
+import static io.github.oliviercailloux.grade.CriterionTestsHelper.c21;
+import static io.github.oliviercailloux.grade.CriterionTestsHelper.c22;
+
 import com.google.common.base.Verify;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.math.DoubleMath;
@@ -107,6 +116,35 @@ public class GradeTestsHelper {
 				asWeights(ImmutableMap.of("C1", 0.1d, "C2", 0.9d)));
 		Verify.verify(DoubleMath.fuzzyEquals(main.getPoints(), 0.414d, 1e-5d));
 		return main;
+	}
+
+	/**
+	 * <ul>
+	 * <li>C1: 0.54 [w=0.1] ⇒ 1.08 / 2</li>
+	 * <ul>
+	 * <li>C1.1: 0.3 [w=1/5] ⇒ 0.12 / 0.4</li>
+	 * <li>C1.2: 0.2 [w=2/5] ⇒ 0.16 / 0.8</li>
+	 * <li>C1.3: 1.0 [w=2/5] ⇒ 0.8 / 0.8</li>
+	 * </ul>
+	 * <li>C2: 0.4 [w=0.9] ⇒ 7.2 / 18</li>
+	 * <ul>
+	 * <li>C2.1: 0 [w=0.5] ⇒ 0 / 9</li>
+	 * <li>C2.2: 0.8 [w=0.5] ⇒ 7.2 / 9</li>
+	 * </ul>
+	 * <li>points: 0.414 ⇒ 8.28 / 20</li>
+	 * </ul>
+	 *
+	 */
+	public static Grade get3Plus2() {
+		final WeightingGradeAggregator a1 = WeightingGradeAggregator
+				.weightingStaticAggregator(ImmutableMap.of(c11, 1d, c12, 2d, c13, 2d), ImmutableMap.of());
+		final WeightingGradeAggregator a2 = WeightingGradeAggregator
+				.weightingStaticAggregator(ImmutableMap.of(c21, 1d, c22, 1d), ImmutableMap.of());
+		final WeightingGradeAggregator a = WeightingGradeAggregator
+				.weightingStaticAggregator(ImmutableMap.of(c1, 1d, c2, 9d), ImmutableMap.of(c1, a1, c2, a2));
+		final Grade grade = Grade.given(a, MarksTreeTestsHelper.get3Plus2());
+		verify(DoubleMath.fuzzyEquals(grade.mark().getPoints(), 0.414d, 1e-6d), "" + grade.mark().getPoints());
+		return grade;
 	}
 
 	public static WeightingGrade getGrade3Plus2Alt() {
