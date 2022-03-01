@@ -4,10 +4,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.Resources;
-import io.github.oliviercailloux.grade.Grade;
-import io.github.oliviercailloux.grade.GradeTestsHelper;
+import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
+import io.github.oliviercailloux.grade.Exam;
+import io.github.oliviercailloux.grade.ExamTestsHelper;
 import io.github.oliviercailloux.grade.IGrade;
-import io.github.oliviercailloux.grade.MarksTree;
 import io.github.oliviercailloux.grade.comm.StudentOnGitHub;
 import io.github.oliviercailloux.grade.format.json.JsonGrade;
 import io.github.oliviercailloux.grade.format.json.JsonbGradeTests;
@@ -24,11 +24,13 @@ class CsvGradesTests {
 
 	@Test
 	void writeTest() throws Exception {
-		final Grade grade = GradeTestsHelper.get3Plus2();
-		final CsvGrades<String> csvGrades = CsvGrades.newInstance(CsvGrades.STUDENT_NAME_FUNCTION, 20d);
-		final ImmutableMap<String, MarksTree> grades = ImmutableMap.of("u1", grade.toMarksTree());
+//		final Grade grade = GradeTestsHelper.get3Plus2();
+//		final CsvGrades<String> csvGrades = CsvGrades.newInstance(CsvGrades.STUDENT_NAME_FUNCTION, 20d);
+//		final ImmutableMap<String, MarksTree> grades = ImmutableMap.of("u1", grade.toMarksTree());
 
-		final String written = csvGrades.gradesToCsv(grade.toAggregator(), grades);
+		final Exam exam = ExamTestsHelper.get3Plus2();
+		final CsvGrades<GitHubUsername> csvGrades = CsvGrades.newInstance(CsvGrades.STUDENT_USERNAME_FUNCTION, 20d);
+		final String written = csvGrades.gradesToCsv(exam.aggregator(), exam.grades());
 		Files.writeString(Path.of("out.csv"), written);
 		final String expected = Resources.toString(getClass().getResource("TwoStudentsGrades.csv"),
 				StandardCharsets.UTF_8);

@@ -19,6 +19,7 @@ import com.google.common.math.DoubleMath;
 import com.google.common.math.Stats;
 import com.univocity.parsers.csv.CsvWriter;
 import com.univocity.parsers.csv.CsvWriterSettings;
+import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
 import io.github.oliviercailloux.grade.Criterion;
 import io.github.oliviercailloux.grade.CriterionGradeWeight;
 import io.github.oliviercailloux.grade.Grade;
@@ -52,6 +53,12 @@ public class CsvGrades<K> {
 
 	public static final Function<String, ImmutableMap<String, String>> STUDENT_NAME_FUNCTION = s -> ImmutableMap
 			.of("Name", s);
+
+	public static final Function<GitHubUsername, ImmutableMap<String, String>> STUDENT_USERNAME_FUNCTION = s -> ImmutableMap
+			.of("Username", s.getUsername());
+
+	public static final Function<Object, ImmutableMap<String, String>> STUDENT_GENERIC_NAME_FUNCTION = s -> ImmutableMap
+			.of("Name", s.toString());
 
 	public static final Function<StudentOnGitHub, ImmutableMap<String, String>> STUDENT_IDENTITY_FUNCTION = s -> ImmutableMap
 			.of("Name", s.hasInstitutionalPart() ? s.toInstitutionalStudent().getLastName() : "unknown",
@@ -339,12 +346,12 @@ public class CsvGrades<K> {
 		return stringWriter.toString();
 	}
 
-	public String gradesToCsv(GradeAggregator aggregator, Map<K, ? extends MarksTree> trees) {
-		final Set<K> keys = trees.keySet();
+	public <L extends K> String gradesToCsv(GradeAggregator aggregator, Map<L, ? extends MarksTree> trees) {
+		final Set<L> keys = trees.keySet();
 		checkArgument(!keys.isEmpty(), "Can’t determine identity headers with no keys.");
 
-		final GenericExam<K> inputExam = new GenericExam<>(aggregator, trees);
-		final PerCriterionWeightingExam<K> exam = toPerCriterionWeightingExam(inputExam);
+		final GenericExam<L> inputExam = new GenericExam<>(aggregator, trees);
+		final PerCriterionWeightingExam<L> exam = toPerCriterionWeightingExam(inputExam);
 
 		final NumberFormat formatter = NumberFormat.getNumberInstance(Locale.ENGLISH);
 		final StringWriter stringWriter = new StringWriter();
@@ -363,7 +370,7 @@ public class CsvGrades<K> {
 
 		final String firstHeader = headers.iterator().next();
 
-		for (K key : keys) {
+		for (L key : keys) {
 			final Map<String, String> identity = identityFunction.apply(key);
 			identity.entrySet().forEach(e -> writer.addValue(e.getKey(), e.getValue()));
 

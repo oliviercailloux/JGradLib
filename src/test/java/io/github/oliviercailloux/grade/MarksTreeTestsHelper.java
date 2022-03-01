@@ -90,4 +90,27 @@ public class MarksTreeTestsHelper {
 		return MarksTree.composite(ImmutableMap.of(c1, t1, c2, t2));
 	}
 
+	/**
+	 * <ul>
+	 * <li>C1</li>
+	 * <ul>
+	 * <li>C1.1: 0.3</li>
+	 * <li>C1.2: 0.2</li>
+	 * <li>C1.3: 1.0</li>
+	 * </ul>
+	 * <li>C2</li>
+	 * <ul>
+	 * <li>C2.1: 0</li>
+	 * <li>C2.2: 0.1</li>
+	 * </ul>
+	 * </ul>
+	 *
+	 */
+	public static MarksTree get3Plus2Variant() {
+		final MarksTree t1 = MarksTree.composite(
+				ImmutableMap.of(c11, Mark.given(0.3d, ""), c12, Mark.given(0.2d, ""), c13, Mark.given(1.0d, "")));
+		final MarksTree t2 = MarksTree.composite(ImmutableMap.of(c21, Mark.given(0d, ""), c22, Mark.given(0.1d, "")));
+		return MarksTree.composite(ImmutableMap.of(c1, t1, c2, t2));
+	}
+
 }
