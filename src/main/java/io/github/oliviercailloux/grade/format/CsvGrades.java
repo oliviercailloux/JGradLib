@@ -8,21 +8,16 @@ import com.google.common.base.Verify;
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableMultiset;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSetMultimap;
 import com.google.common.collect.ImmutableTable;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
-import com.google.common.collect.MoreCollectors;
 import com.google.common.collect.Range;
 import com.google.common.collect.Streams;
 import com.google.common.math.DoubleMath;
 import com.univocity.parsers.csv.CsvWriter;
 import com.univocity.parsers.csv.CsvWriterSettings;
-import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
-import io.github.oliviercailloux.grade.AbsoluteAggregator;
-import io.github.oliviercailloux.grade.CriteriaWeighter;
 import io.github.oliviercailloux.grade.Criterion;
 import io.github.oliviercailloux.grade.CriterionGradeWeight;
 import io.github.oliviercailloux.grade.Exam;
@@ -30,12 +25,7 @@ import io.github.oliviercailloux.grade.Grade;
 import io.github.oliviercailloux.grade.GradeAggregator;
 import io.github.oliviercailloux.grade.IGrade;
 import io.github.oliviercailloux.grade.IGrade.CriteriaPath;
-import io.github.oliviercailloux.grade.Mark;
-import io.github.oliviercailloux.grade.MarkAggregator;
 import io.github.oliviercailloux.grade.MarksTree;
-import io.github.oliviercailloux.grade.OwaWeighter;
-import io.github.oliviercailloux.grade.ParametricWeighter;
-import io.github.oliviercailloux.grade.SubMark;
 import io.github.oliviercailloux.grade.WeightingGrade;
 import io.github.oliviercailloux.grade.WeightingGradeAggregator;
 import io.github.oliviercailloux.grade.comm.StudentOnGitHub;
@@ -70,13 +60,13 @@ public class CsvGrades<K> {
 		return new CsvGrades<>(identityFunction, denominator);
 	}
 
-	public static record PerCriterionWeightingExam(WeightingGradeAggregator aggregator,
-			ImmutableMap<GitHubUsername, MarksTree> grades) {
-		public ImmutableSet<GitHubUsername> getUsernames() {
+	public static record PerCriterionWeightingExam<L> (WeightingGradeAggregator aggregator,
+			ImmutableMap<L, MarksTree> grades) {
+		public ImmutableSet<L> getUsernames() {
 			return grades.keySet();
 		}
 
-		public Grade getGrade(GitHubUsername username) {
+		public Grade getGrade(L username) {
 			return Grade.given(aggregator, grades.get(username));
 		}
 
@@ -94,104 +84,6 @@ public class CsvGrades<K> {
 		verify(exam.getUsernames().stream().allMatch(u -> DoubleMath.fuzzyEquals(exam.getGrade(u).mark().getPoints(),
 				newExam.getGrade(u).mark().getPoints(), 1e-6d)));
 		return newExam;
-	}
-
-	private static MarksTree newTree(Grade original) {
-		final MarkAggregator markAggregator = original.getAggregator().getMarkAggregator();
-		final MarksTree newTreeBasis;
-		if (markAggregator instanceof ParametricWeighter) {
-			if (original.toMarksTree().isMark()) {
-				newTreeBasis = original.toMarksTree();
-			} else {
-				final ParametricWeighter p = (ParametricWeighter) markAggregator;
-				p.multipliedCriterion();
-				if (original.toMarksTree().getCriteria().size() != 2) {
-					throw new UnsupportedOperationException();
-				}
-				final Mark multipliedMark = original.getGrade(p.multipliedCriterion()).mark();
-				final Mark weightingMark = original.getGrade(p.weightingCriterion()).mark();
-				final double absoluteModification = multipliedMark.getPoints() * (1d - weightingMark.getPoints());
-				newTreeBasis = MarksTree.composite(ImmutableMap.of(p.multipliedCriterion(), multipliedMark,
-						Criterion.given(p.weightingCriterion().getName() + ", penalty"),
-						Mark.given(absoluteModification, weightingMark.getComment())));
-			}
-		} else if (markAggregator instanceof OwaWeighter) {
-			if (original.toMarksTree().isMark()) {
-				newTreeBasis = original.toMarksTree();
-			} else {
-				final ImmutableMap<SubMark, Double> weightedSubMarks = original.getWeightedSubMarks();
-				final ImmutableMultiset<Double> weights = weightedSubMarks.values().stream()
-						.collect(ImmutableMultiset.toImmutableMultiset());
-				if (weights.count(1d) != 1 || weights.count(0d) != weights.size() - 1) {
-					/*
-					 * Could probably transform to absolutes, that’s the worst case that always
-					 * works…
-					 */
-					throw new UnsupportedOperationException("Owa but not MAX, can’t do");
-				}
-				final SubMark relevantMark = weightedSubMarks.keySet().stream()
-						.filter(s -> weightedSubMarks.get(s) == 1d).collect(MoreCollectors.onlyElement());
-				newTreeBasis = relevantMark.getMarksTree();
-			}
-		} else if (!(markAggregator instanceof CriteriaWeighter)) {
-			throw new UnsupportedOperationException();
-		} else {
-			newTreeBasis = original.toMarksTree();
-		}
-		final Grade newGradeBasis = Grade.given(newAggregatorBasis(original.getAggregator()), newTreeBasis);
-
-		final Map<Criterion, MarksTree> newWholeTree = newTreeBasis.getCriteria().stream()
-				.collect(ImmutableMap.toImmutableMap(c -> c, c -> newTree(newGradeBasis.getGrade(c))));
-		return MarksTree.composite(newWholeTree);
-	}
-
-	private static GradeAggregator newAggregatorBasis(GradeAggregator aggregator) {
-		final MarkAggregator markAggregator = aggregator.getMarkAggregator();
-		final GradeAggregator newAggregatorBasis;
-		if (markAggregator instanceof ParametricWeighter) {
-			final AbsoluteAggregator newMarkAggregator = AbsoluteAggregator.instance();
-			newAggregatorBasis = GradeAggregator.given(newMarkAggregator, aggregator.getSubAggregators(),
-					aggregator.getDefaultSubAggregator());
-		} else if (markAggregator instanceof OwaWeighter) {
-			final ImmutableSet.Builder<GradeAggregator> builder = ImmutableSet.builder();
-			builder.addAll(aggregator.getSubAggregators().values());
-			aggregator.getDefaultSubAggregator().ifPresent(builder::add);
-			final ImmutableSet<GradeAggregator> subAggregators = builder.build();
-			if (subAggregators.size() >= 2) {
-				throw new UnsupportedOperationException("Subs might vary per individual, can’t eliminate.");
-			}
-			newAggregatorBasis = subAggregators.stream().collect(MoreCollectors.onlyElement());
-		} else {
-			newAggregatorBasis = aggregator;
-		}
-		return newAggregatorBasis;
-	}
-
-	private static GradeAggregator newAggregator(GradeAggregator aggregator) {
-		final GradeAggregator newAggregatorBasis = newAggregatorBasis(aggregator);
-
-		if (newAggregatorBasis.getSubAggregators().isEmpty()
-				&& newAggregatorBasis.getDefaultSubAggregator().isEmpty()) {
-			return newAggregatorBasis;
-		}
-
-		final ImmutableMap<Criterion, GradeAggregator> newSubs = newAggregatorBasis.getSubAggregators().keySet()
-				.stream().collect(ImmutableMap.toImmutableMap(c -> c,
-						c -> newAggregator(newAggregatorBasis.getGradeAggregator(c))));
-		return GradeAggregator.given(newAggregatorBasis.getMarkAggregator(), newSubs,
-				newAggregatorBasis.getDefaultSubAggregator().map(CsvGrades::newAggregator));
-	}
-
-	private static double getWeight(GradeAggregator aggregator, CriteriaPath path,
-			Map<CriteriaPath, ImmutableSet<Criterion>> treeOfSets, CriteriaPath treePointer) {
-		checkArgument(aggregator.getMarkAggregator() instanceof CriteriaWeighter);
-		if (path.isRoot()) {
-			return 1d;
-		}
-		final CriteriaWeighter weighter = (CriteriaWeighter) aggregator.getMarkAggregator();
-		final double w1 = weighter.weightsFromCriteria(treeOfSets.get(treePointer)).get(path.getHead());
-		return w1 * getWeight(aggregator.getGradeAggregator(path.getHead()), path.withoutHead(), treeOfSets,
-				treePointer.withSuffix(path.getHead()));
 	}
 
 	private static Stream<CriteriaPath> getSuccessors(MarksTree grade, CriteriaPath prefix) {
@@ -428,15 +320,6 @@ public class CsvGrades<K> {
 				: identityHeadersFromFunction;
 		final ImmutableSet<CriteriaPath> allPaths = trees.values().stream()
 				.flatMap(g -> getSuccessors(g, CriteriaPath.ROOT)).collect(ImmutableSet.toImmutableSet());
-		final boolean allSameTreesOfCriteriaSets = allPaths.stream().allMatch(
-				p -> trees.values().stream().filter(t -> t.hasPath(p)).map(t -> t.getTree(p)).distinct().count() == 1);
-		if (!allSameTreesOfCriteriaSets) {
-			throw new UnsupportedOperationException(
-					"No guarantee that every node has the same weight for everybody because some trees have different criteria at a given node.");
-		}
-		final ImmutableMap<CriteriaPath, ImmutableSet<Criterion>> treeOfSets = allPaths.stream()
-				.collect(ImmutableMap.toImmutableMap(p -> p, p -> trees.values().stream().filter(t -> t.hasPath(p))
-						.map(t -> t.getTree(p).getCriteria()).collect(MoreCollectors.onlyElement())));
 
 		final ImmutableList<String> headers = Streams
 				.concat(identityHeaders.stream(), allPaths.stream().map(CsvGrades::shorten))
