@@ -93,7 +93,7 @@ public class GradeTests {
 		final MarksTree expectedMarks = MarksTree.composite(ImmutableMap.of(c1, Mark.one(), c2, Mark.zero()));
 		final Grade expected = Grade.given(expectedAggregator, expectedMarks);
 
-		final Grade transformed = Grade.transformToCriteriaWeighting(grade);
+		final Grade transformed = Grade.transformToPerCriterionWeighting(grade);
 		assertEquals(expected.toMarksTree(), transformed.toMarksTree());
 	}
 
@@ -117,7 +117,7 @@ public class GradeTests {
 		final MarksTree expectedMarks = MarksTree.composite(ImmutableMap.of(c1, expectedMarksC1, c2, expectedMarksC2));
 		final Grade expected = Grade.given(expectedAggregator, expectedMarks);
 
-		final Grade transformed = Grade.transformToCriteriaWeighting(grade);
+		final Grade transformed = Grade.transformToPerCriterionWeighting(grade);
 		assertEquals(expected.toMarksTree(), transformed.toMarksTree());
 		assertEquals(expected.toAggregator(), transformed.toAggregator());
 	}
@@ -143,7 +143,7 @@ public class GradeTests {
 				ImmutableMap.of(c1, expectedMarksC1, ParametricWeighter.toPenalized(c1), expectedMarksPenalizedC1));
 		final Grade expected = Grade.given(expectedAggregator, expectedMarks);
 
-		final Grade transformed = Grade.transformToCriteriaWeighting(grade);
+		final Grade transformed = Grade.transformToPerCriterionWeighting(grade);
 		assertEquals(expected.toMarksTree(), transformed.toMarksTree());
 		assertEquals(expected.toAggregator(), transformed.toAggregator());
 	}

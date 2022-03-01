@@ -29,7 +29,7 @@ public class Grade {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(Grade.class);
 
-	public static Grade transformToCriteriaWeighting(Grade original) {
+	public static Grade transformToPerCriterionWeighting(Grade original) {
 		/*
 		 * We want to transform aggregator and marks tree so that the aggregator still
 		 * accepts every tree it originally accepted and the resulting mark is the same,
@@ -45,21 +45,22 @@ public class Grade {
 		 * different places due to their limited depths, so this method would not ensure
 		 * exploration of the whole aggregator.
 		 */
-		final WeightingGradeAggregator transformedAggregator = transformToCriteriaWeighting(original.toAggregator());
-		final MarksTree transformedMarks = adaptMarksForCriteriaWeighting(original);
+		final WeightingGradeAggregator transformedAggregator = transformToPerCriterionWeighting(
+				original.toAggregator());
+		final MarksTree transformedMarks = adaptMarksForPerCriterionWeighting(original);
 		final Grade transformed = Grade.given(transformedAggregator, transformedMarks);
 		verify(DoubleMath.fuzzyEquals(original.mark().getPoints(), transformed.mark().getPoints(), 1e-6d));
 		return transformed;
 	}
 
-	private static WeightingGradeAggregator transformToCriteriaWeighting(GradeAggregator original) {
+	public static WeightingGradeAggregator transformToPerCriterionWeighting(GradeAggregator original) {
 		if (original instanceof WeightingGradeAggregator w) {
 			return w;
 		}
 		final MarkAggregator a = original.getMarkAggregator();
 
 		if (a instanceof MaxAggregator m && original.getSpecialSubAggregators().isEmpty()) {
-			return transformToCriteriaWeighting(original.getDefaultSubAggregator());
+			return transformToPerCriterionWeighting(original.getDefaultSubAggregator());
 		}
 
 		/*
@@ -74,11 +75,11 @@ public class Grade {
 		 * mark; and max nodes treated here become terminal nodes in marks trees.
 		 */
 		final Map<Criterion, WeightingGradeAggregator> transformedSubs = Maps.transformValues(specialSubs,
-				Grade::transformToCriteriaWeighting);
+				Grade::transformToPerCriterionWeighting);
 		final PerCriterionWeighter newAggregator = (a instanceof PerCriterionWeighter c) ? c
 				: AbsoluteAggregator.INSTANCE;
 		return WeightingGradeAggregator.given(newAggregator, transformedSubs,
-				transformToCriteriaWeighting(original.getDefaultSubAggregator()));
+				transformToPerCriterionWeighting(original.getDefaultSubAggregator()));
 
 		// return switch(original.getMarkAggregator()) {
 //		case ParametricWeighter w -> AbsoluteAggregator.INSTANCE;
@@ -86,7 +87,7 @@ public class Grade {
 //		}
 	}
 
-	private static MarksTree adaptMarksForCriteriaWeighting(Grade original) {
+	public static MarksTree adaptMarksForPerCriterionWeighting(Grade original) {
 		if (original.getWeightedSubMarks().isEmpty()) {
 			return original.toMarksTree();
 		}
@@ -121,19 +122,20 @@ public class Grade {
 			final Criterion multipliedCriterion = p.multipliedCriterion();
 			verify(absoluteMarks.keySet().contains(multipliedCriterion));
 			final LinkedHashMap<Criterion, MarksTree> newMarks = new LinkedHashMap<>(absoluteMarks);
-			newMarks.put(multipliedCriterion, adaptMarksForCriteriaWeighting(original.getGrade(multipliedCriterion)));
+			newMarks.put(multipliedCriterion,
+					adaptMarksForPerCriterionWeighting(original.getGrade(multipliedCriterion)));
 			return MarksTree.composite(newMarks);
 		}
 		if ((a instanceof MaxAggregator) && originalAggregator.getSpecialSubAggregators().isEmpty()) {
 			final ImmutableMap<SubMark, Double> weightedSubMarks = original.getWeightedSubMarks();
 			final Criterion criterionWithAllWeight = Maps.filterEntries(weightedSubMarks, e -> e.getValue() == 1d)
 					.keySet().stream().collect(MoreCollectors.onlyElement()).getCriterion();
-			return adaptMarksForCriteriaWeighting(original.getGrade(criterionWithAllWeight));
+			return adaptMarksForPerCriterionWeighting(original.getGrade(criterionWithAllWeight));
 		}
 		if (a instanceof CriteriaWeighter) {
 			final ImmutableSet<Criterion> criteria = original.toMarksTree().getCriteria();
 			final ImmutableMap<Criterion, MarksTree> subTrees = criteria.stream().collect(
-					ImmutableMap.toImmutableMap(c -> c, c -> adaptMarksForCriteriaWeighting(original.getGrade(c))));
+					ImmutableMap.toImmutableMap(c -> c, c -> adaptMarksForPerCriterionWeighting(original.getGrade(c))));
 			return MarksTree.composite(subTrees);
 		}
 		throw new VerifyException();

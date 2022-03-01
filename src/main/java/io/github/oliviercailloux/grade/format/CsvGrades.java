@@ -20,6 +20,7 @@ import com.google.common.collect.Streams;
 import com.google.common.math.DoubleMath;
 import com.univocity.parsers.csv.CsvWriter;
 import com.univocity.parsers.csv.CsvWriterSettings;
+import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
 import io.github.oliviercailloux.grade.AbsoluteAggregator;
 import io.github.oliviercailloux.grade.CriteriaWeighter;
 import io.github.oliviercailloux.grade.Criterion;
@@ -36,6 +37,7 @@ import io.github.oliviercailloux.grade.OwaWeighter;
 import io.github.oliviercailloux.grade.ParametricWeighter;
 import io.github.oliviercailloux.grade.SubMark;
 import io.github.oliviercailloux.grade.WeightingGrade;
+import io.github.oliviercailloux.grade.WeightingGradeAggregator;
 import io.github.oliviercailloux.grade.comm.StudentOnGitHub;
 import io.github.oliviercailloux.grade.comm.StudentOnGitHubKnown;
 import java.io.StringWriter;
@@ -68,9 +70,25 @@ public class CsvGrades<K> {
 		return new CsvGrades<>(identityFunction, denominator);
 	}
 
-	public static Exam toCriteriaWeighter(Exam exam) {
-		final Exam newExam = new Exam(newAggregator(exam.aggregator()),
-				Maps.toMap(exam.getUsernames(), u -> newTree(exam.getGrade(u))));
+	public static record PerCriterionWeightingExam(WeightingGradeAggregator aggregator,
+			ImmutableMap<GitHubUsername, MarksTree> grades) {
+		public ImmutableSet<GitHubUsername> getUsernames() {
+			return grades.keySet();
+		}
+
+		public Grade getGrade(GitHubUsername username) {
+			return Grade.given(aggregator, grades.get(username));
+		}
+
+		public double weight(CriteriaPath path) {
+			return aggregator.weight(path);
+		}
+	}
+
+	private static PerCriterionWeightingExam toPerCriterionWeightingExam(Exam exam) {
+		final PerCriterionWeightingExam newExam = new PerCriterionWeightingExam(
+				Grade.transformToPerCriterionWeighting(exam.aggregator()),
+				Maps.toMap(exam.getUsernames(), u -> Grade.adaptMarksForPerCriterionWeighting(exam.getGrade(u))));
 
 		verify(exam.getUsernames().equals(newExam.getUsernames()));
 		verify(exam.getUsernames().stream().allMatch(u -> DoubleMath.fuzzyEquals(exam.getGrade(u).mark().getPoints(),
