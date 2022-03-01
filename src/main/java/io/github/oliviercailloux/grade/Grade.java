@@ -62,28 +62,25 @@ public class Grade {
 			return transformToCriteriaWeighting(original.getDefaultSubAggregator());
 		}
 
-		final boolean maxAndMultipleSubs = (a instanceof MaxAggregator)
-				&& !original.getSpecialSubAggregators().isEmpty();
-		if ((a instanceof ParametricWeighter) || maxAndMultipleSubs || (a instanceof CriteriaWeighter c)) {
-			/*
-			 * Note that switching from ParametricWeighter to AbsoluteAggregator extends the
-			 * admissible sub-trees.
-			 */
-			final ImmutableMap<Criterion, ? extends GradeAggregator> specialSubs = original.getSpecialSubAggregators();
-			/*
-			 * Some further pruning is possible (and might be welcome) as some of these
-			 * sub-aggregators will never be used: in parametric nodes, the weighting branch
-			 * will not be used as the corresponding marks tree is reduced to an absolute
-			 * mark; and max nodes treated here become terminal nodes in marks trees.
-			 */
-			final Map<Criterion, WeightingGradeAggregator> transformedSubs = Maps.transformValues(specialSubs,
-					Grade::transformToCriteriaWeighting);
-			final CriteriaWeighter newAggregator = (a instanceof CriteriaWeighter c) ? c : AbsoluteAggregator.INSTANCE;
-			return WeightingGradeAggregator.given(newAggregator, transformedSubs,
-					transformToCriteriaWeighting(original.getDefaultSubAggregator()));
-		}
-		throw new VerifyException();
-//		return switch(original.getMarkAggregator()) {
+		/*
+		 * Note that switching, for example, from ParametricWeighter to
+		 * AbsoluteAggregator extends the admissible sub-trees.
+		 */
+		final ImmutableMap<Criterion, ? extends GradeAggregator> specialSubs = original.getSpecialSubAggregators();
+		/*
+		 * Some further pruning is possible (and might be welcome) as some of these
+		 * sub-aggregators will never be used: in parametric nodes, the weighting branch
+		 * will not be used as the corresponding marks tree is reduced to an absolute
+		 * mark; and max nodes treated here become terminal nodes in marks trees.
+		 */
+		final Map<Criterion, WeightingGradeAggregator> transformedSubs = Maps.transformValues(specialSubs,
+				Grade::transformToCriteriaWeighting);
+		final PerCriterionWeighter newAggregator = (a instanceof PerCriterionWeighter c) ? c
+				: AbsoluteAggregator.INSTANCE;
+		return WeightingGradeAggregator.given(newAggregator, transformedSubs,
+				transformToCriteriaWeighting(original.getDefaultSubAggregator()));
+
+		// return switch(original.getMarkAggregator()) {
 //		case ParametricWeighter w -> AbsoluteAggregator.INSTANCE;
 //		default -> throw new IllegalArgumentException("Unexpected value: " + original.getMarkAggregator());
 //		}
@@ -102,7 +99,7 @@ public class Grade {
 		final boolean parametricWeightedSum = (a instanceof ParametricWeighter p)
 				&& originalMarks.getCriteria().size() == 3;
 
-		if (maxAndMultipleSubs || parametricWeightedSum) {
+		if (maxAndMultipleSubs || parametricWeightedSum || (a instanceof NormalizingStaticWeighter)) {
 			/*
 			 * All these criteria are associated to dynamic weights (weights that depend on
 			 * the marks tree), that we thus can’t integrate into a static structure (an

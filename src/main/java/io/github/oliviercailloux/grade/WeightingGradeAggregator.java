@@ -27,23 +27,26 @@ public class WeightingGradeAggregator extends GradeAggregator {
 		return new WeightingGradeAggregator(new StaticWeighter(weights), subs, TRIVIAL);
 	}
 
-	public static WeightingGradeAggregator given(CriteriaWeighter markAggregator,
+	public static WeightingGradeAggregator given(PerCriterionWeighter markAggregator,
 			Map<Criterion, WeightingGradeAggregator> subs, WeightingGradeAggregator defaultSubAggregator) {
 		return new WeightingGradeAggregator(markAggregator, subs, defaultSubAggregator);
 	}
 
-	private WeightingGradeAggregator(CriteriaWeighter markAggregator, Map<Criterion, WeightingGradeAggregator> subs,
+	private WeightingGradeAggregator(PerCriterionWeighter markAggregator, Map<Criterion, WeightingGradeAggregator> subs,
 			WeightingGradeAggregator defaultSubAggregator) {
 		super(markAggregator, subs, defaultSubAggregator);
 	}
 
 	public double weight(CriteriaPath path) {
-		return getMarkAggregator().weightsFromCriteria();
+		if (path.isRoot()) {
+			return 1d;
+		}
+		return getMarkAggregator().weight(path.getHead()) * weight(path.withoutHead());
 	}
 
 	@Override
-	public CriteriaWeighter getMarkAggregator() {
-		return (CriteriaWeighter) super.getMarkAggregator();
+	public PerCriterionWeighter getMarkAggregator() {
+		return (PerCriterionWeighter) super.getMarkAggregator();
 	}
 
 	@Override
