@@ -21,12 +21,12 @@ import java.util.Optional;
  * </p>
  * <p>
  * A grade aggregator at a given node accepts some sets of criteria and rejects
- * others. The compatible trees are those such that the set of child criteria at
- * each node is accepted.
+ * others. The compatible trees are those such that, for each node, the set of
+ * child criteria at that node is accepted.
  * </p>
  * <p>
- * A grade aggregator is static iff it is bound to a static weighting mark
- * aggregator; dynamic otherwise.
+ * A grade aggregator is static (at a given node) iff it is bound to a static
+ * weighting mark aggregator at that node; dynamic otherwise.
  * </p>
  * <p>
  * A grade aggregator also has sub-aggregators, associated each to a criterion,
@@ -46,22 +46,28 @@ import java.util.Optional;
  * content…).
  */
 public class GradeAggregator {
-	public static final GradeAggregator TRIVIAL = new GradeAggregator(VoidAggregator.INSTANCE, ImmutableMap.of(), null);
+	public static final WeightingGradeAggregator TRIVIAL = WeightingGradeAggregator.TRIVIAL_WEIGHTING;
+	public static final WeightingGradeAggregator ABSOLUTE = WeightingGradeAggregator.ABSOLUTE_WEIGHTING;
+	public static final GradeAggregator MAX = new GradeAggregator(MaxAggregator.INSTANCE, ImmutableMap.of(), TRIVIAL);
 
 	public static GradeAggregator max(Map<Criterion, GradeAggregator> subs) {
-		return new GradeAggregator(new MaxAggregator(), subs, TRIVIAL);
+		return new GradeAggregator(MaxAggregator.INSTANCE, subs, TRIVIAL);
 	}
 
 	public static GradeAggregator max(Map<Criterion, GradeAggregator> subs, GradeAggregator defaultSubAggregator) {
-		return new GradeAggregator(new MaxAggregator(), subs, defaultSubAggregator);
-	}
-
-	public static GradeAggregator max() {
-		return new GradeAggregator(new MaxAggregator(), ImmutableMap.of(), TRIVIAL);
+		return new GradeAggregator(MaxAggregator.INSTANCE, subs, defaultSubAggregator);
 	}
 
 	public static GradeAggregator max(GradeAggregator defaultSubAggregator) {
-		return new GradeAggregator(new MaxAggregator(), ImmutableMap.of(), defaultSubAggregator);
+		return new GradeAggregator(MaxAggregator.INSTANCE, ImmutableMap.of(), defaultSubAggregator);
+	}
+
+	public static GradeAggregator absolute(Map<Criterion, GradeAggregator> subs, GradeAggregator defaultSubAggregator) {
+		return new GradeAggregator(AbsoluteAggregator.INSTANCE, subs, defaultSubAggregator);
+	}
+
+	public static GradeAggregator absolute(GradeAggregator defaultSubAggregator) {
+		return new GradeAggregator(AbsoluteAggregator.INSTANCE, ImmutableMap.of(), defaultSubAggregator);
 	}
 
 	public static GradeAggregator parametric(Criterion multiplied, Criterion weighting,
@@ -96,7 +102,7 @@ public class GradeAggregator {
 	 */
 	private final GradeAggregator defaultSubAggregator;
 
-	private GradeAggregator(MarkAggregator markAggregator, Map<Criterion, GradeAggregator> subs,
+	protected GradeAggregator(MarkAggregator markAggregator, Map<Criterion, ? extends GradeAggregator> subs,
 			GradeAggregator defaultSubAggregator) {
 		this.markAggregator = checkNotNull(markAggregator);
 		this.subs = ImmutableMap.copyOf(Maps.filterValues(subs, a -> !a.equals(defaultSubAggregator)));
@@ -115,15 +121,15 @@ public class GradeAggregator {
 	}
 
 	/**
-	 * This method may fail to return an aggregator (because none is defined) even
-	 * if this aggregator would anyway accept the criterion when it is associated to
-	 * a simple mark.
+	 * This method is guaranteed to return an aggregator if this aggregator would
+	 * accept the criterion when it is associated to a simple mark (the converse may
+	 * not hold).
 	 *
 	 * @throws AggregatorException iff this aggregator rejects this criterion
 	 *                             systematically (meaning, whatever set it is part
 	 *                             of); equivalently, iff this aggregator is a
 	 *                             static aggregator and the criterion is unknown to
-	 *                             its static wegighter; implying that for trivial
+	 *                             its static weighter; implying that for trivial
 	 *                             aggregators, his method throws whatever its
 	 *                             argument.
 	 */
@@ -144,12 +150,15 @@ public class GradeAggregator {
 		return getGradeAggregator(path.getHead()).getGradeAggregator(path.withoutHead());
 	}
 
-	public ImmutableMap<Criterion, GradeAggregator> getSubAggregatorsForSerialization() {
+	/**
+	 * @return the non-default sub-aggregators.
+	 */
+	public ImmutableMap<Criterion, ? extends GradeAggregator> getSpecialSubAggregators() {
 		return subs;
 	}
 
-	public Optional<GradeAggregator> getDefaultSubAggregatorForSerialization() {
-		return Optional.ofNullable(defaultSubAggregator);
+	public GradeAggregator getDefaultSubAggregator() {
+		return Optional.ofNullable(defaultSubAggregator).orElse(TRIVIAL);
 	}
 
 	/**

@@ -10,11 +10,20 @@ public class SubMark extends SubMarksTree {
 	}
 
 	@Override
+	@Deprecated
 	public Mark getMarksTree() {
+		return toMark();
+	}
+
+	public Mark toMark() {
 		return (Mark) super.getMarksTree();
 	}
 
 	public double getPoints() {
-		return getMarksTree().getPoints();
+		return toMark().getPoints();
+	}
+
+	public String comment() {
+		return toMark().getComment();
 	}
 }

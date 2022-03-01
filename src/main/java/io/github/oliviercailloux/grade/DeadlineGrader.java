@@ -261,7 +261,7 @@ public class DeadlineGrader {
 				final double fractionPenalty = Math.min(lateness.getSeconds() / (double) nbSecondsZero, 1d);
 				verify(0d < fractionPenalty);
 				verify(fractionPenalty <= 1d);
-				final double currentPoints = grade.getMark().getPoints();
+				final double currentPoints = grade.mark().getPoints();
 				final double penaltyPoints = currentPoints * fractionPenalty;
 				penalty = io.github.oliviercailloux.grade.Mark.given(-1d * penaltyPoints, "Lateness: " + lateness);
 			} else {

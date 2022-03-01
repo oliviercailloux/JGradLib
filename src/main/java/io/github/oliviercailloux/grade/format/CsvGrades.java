@@ -73,41 +73,33 @@ public class CsvGrades<K> {
 				Maps.toMap(exam.getUsernames(), u -> newTree(exam.getGrade(u))));
 
 		verify(exam.getUsernames().equals(newExam.getUsernames()));
-		verify(exam.getUsernames().stream().allMatch(u -> DoubleMath.fuzzyEquals(exam.getGrade(u).getMark().getPoints(),
-				newExam.getGrade(u).getMark().getPoints(), 1e-6d)));
+		verify(exam.getUsernames().stream().allMatch(u -> DoubleMath.fuzzyEquals(exam.getGrade(u).mark().getPoints(),
+				newExam.getGrade(u).mark().getPoints(), 1e-6d)));
 		return newExam;
 	}
 
 	private static MarksTree newTree(Grade original) {
-		/*
-		 * Unfortunately, it is not sufficient to transform a grade into a grade: this
-		 * might transform aggregators differently (from one user to another, even if
-		 * they start with the same aggregator). That is because different trees stop at
-		 * different places due to their limited depths, so this method (visiting
-		 * simultaneously the marks tree and the aggregator tree) would not ensure
-		 * exploration of the whole aggregator.
-		 */
 		final MarkAggregator markAggregator = original.getAggregator().getMarkAggregator();
 		final MarksTree newTreeBasis;
 		if (markAggregator instanceof ParametricWeighter) {
-			if (original.getMarksTree().isMark()) {
-				newTreeBasis = original.getMarksTree();
+			if (original.toMarksTree().isMark()) {
+				newTreeBasis = original.toMarksTree();
 			} else {
 				final ParametricWeighter p = (ParametricWeighter) markAggregator;
 				p.multipliedCriterion();
-				if (original.getMarksTree().getCriteria().size() != 2) {
+				if (original.toMarksTree().getCriteria().size() != 2) {
 					throw new UnsupportedOperationException();
 				}
-				final Mark multipliedMark = original.getGrade(p.multipliedCriterion()).getMark();
-				final Mark weightingMark = original.getGrade(p.weightingCriterion()).getMark();
+				final Mark multipliedMark = original.getGrade(p.multipliedCriterion()).mark();
+				final Mark weightingMark = original.getGrade(p.weightingCriterion()).mark();
 				final double absoluteModification = multipliedMark.getPoints() * (1d - weightingMark.getPoints());
 				newTreeBasis = MarksTree.composite(ImmutableMap.of(p.multipliedCriterion(), multipliedMark,
 						Criterion.given(p.weightingCriterion().getName() + ", penalty"),
 						Mark.given(absoluteModification, weightingMark.getComment())));
 			}
 		} else if (markAggregator instanceof OwaWeighter) {
-			if (original.getMarksTree().isMark()) {
-				newTreeBasis = original.getMarksTree();
+			if (original.toMarksTree().isMark()) {
+				newTreeBasis = original.toMarksTree();
 			} else {
 				final ImmutableMap<SubMark, Double> weightedSubMarks = original.getWeightedSubMarks();
 				final ImmutableMultiset<Double> weights = weightedSubMarks.values().stream()
@@ -126,7 +118,7 @@ public class CsvGrades<K> {
 		} else if (!(markAggregator instanceof CriteriaWeighter)) {
 			throw new UnsupportedOperationException();
 		} else {
-			newTreeBasis = original.getMarksTree();
+			newTreeBasis = original.toMarksTree();
 		}
 		final Grade newGradeBasis = Grade.given(newAggregatorBasis(original.getAggregator()), newTreeBasis);
 
@@ -175,8 +167,9 @@ public class CsvGrades<K> {
 	private static double getWeight(GradeAggregator aggregator, CriteriaPath path,
 			Map<CriteriaPath, ImmutableSet<Criterion>> treeOfSets, CriteriaPath treePointer) {
 		checkArgument(aggregator.getMarkAggregator() instanceof CriteriaWeighter);
-		if (path.isRoot())
+		if (path.isRoot()) {
 			return 1d;
+		}
 		final CriteriaWeighter weighter = (CriteriaWeighter) aggregator.getMarkAggregator();
 		final double w1 = weighter.weightsFromCriteria(treeOfSets.get(treePointer)).get(path.getHead());
 		return w1 * getWeight(aggregator.getGradeAggregator(path.getHead()), path.withoutHead(), treeOfSets,
@@ -441,7 +434,7 @@ public class CsvGrades<K> {
 			final MarksTree tree = trees.get(key);
 			final Grade grade = Grade.given(aggregator, tree);
 			allPaths.stream().forEach(p -> writer.addValue(CsvGrades.shorten(p),
-					formatter.format(grade.getWeight(p) * grade.getGrade(p).getMark().getPoints() * denominator)));
+					formatter.format(grade.getWeight(p) * grade.getGrade(p).mark().getPoints() * denominator)));
 			writer.writeValuesToRow();
 		}
 		writer.writeEmptyRow();

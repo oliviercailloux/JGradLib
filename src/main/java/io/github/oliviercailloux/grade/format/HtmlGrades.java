@@ -87,12 +87,12 @@ public class HtmlGrades {
 		final Criterion criterion = subGrade.criterion();
 		final Grade grade = subGrade.grade();
 
-		final Mark mark = grade.getMark();
+		final Mark mark = grade.mark();
 		final String comment = mark.getComment();
 		final String pointsText = FORMATTER.format(mark.getPoints() * denominator) + " / "
 				+ FORMATTER.format(denominator);
 
-		final boolean isMark = grade.getMarksTree().isMark();
+		final boolean isMark = grade.toMarksTree().isMark();
 		if (isMark) {
 			checkArgument(comment.isEmpty());
 		}
@@ -104,7 +104,7 @@ public class HtmlGrades {
 			if (aggregator instanceof ParametricWeighter) {
 				final ParametricWeighter a = (ParametricWeighter) aggregator;
 				final Grade multipliedGrade = grade.getGrade(a.multipliedCriterion());
-				final String basePointsText = FORMATTER.format(multipliedGrade.getMark().getPoints() * denominator)
+				final String basePointsText = FORMATTER.format(multipliedGrade.mark().getPoints() * denominator)
 						+ " / " + FORMATTER.format(denominator);
 				explanation = basePointsText + " × " + a.weightingCriterion() + " = " + pointsText;
 			} else if (aggregator instanceof AbsoluteAggregator) {
@@ -142,13 +142,13 @@ public class HtmlGrades {
 
 					final Criterion subCriterion = a.weightingCriterion();
 					final Grade subSubGrade = grade.getGrade(subCriterion);
-					checkArgument(subSubGrade.getMarksTree().isMark());
+					checkArgument(subSubGrade.toMarksTree().isMark());
 					final DocumentFragment description = getDescription(new SubGrade(subCriterion, subSubGrade),
 							document, 1d);
 					li.appendChild(description);
 				}
 			} else if (aggregator instanceof CriteriaWeighter) {
-				for (Criterion subCriterion : grade.getMarksTree().getCriteria()) {
+				for (Criterion subCriterion : grade.toMarksTree().getCriteria()) {
 					final Element li = document.createXhtmlElement("li");
 					ul.appendChild(li);
 
@@ -159,7 +159,7 @@ public class HtmlGrades {
 					li.appendChild(description);
 				}
 			} else if (aggregator instanceof MaxAggregator) {
-				for (Criterion subCriterion : grade.getMarksTree().getCriteria()) {
+				for (Criterion subCriterion : grade.toMarksTree().getCriteria()) {
 					final Element li = document.createXhtmlElement("li");
 					ul.appendChild(li);
 

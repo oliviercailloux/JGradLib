@@ -15,7 +15,7 @@ import java.util.Objects;
  */
 public class CompositeMarksTree implements MarksTree {
 
-	public static CompositeMarksTree givenGrades(Map<Criterion, MarksTree> subGrades) {
+	public static CompositeMarksTree givenGrades(Map<Criterion, ? extends MarksTree> subGrades) {
 		return new CompositeMarksTree(subGrades.keySet().stream()
 				.collect(ImmutableMap.toImmutableMap(c -> c, c -> SubMarksTree.given(c, subGrades.get(c)))));
 	}

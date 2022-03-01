@@ -30,9 +30,33 @@ public class MarksTreeTestsHelper {
 		return MarksTree.composite(ImmutableMap.of(c1, get1_1()));
 	}
 
+	/**
+	 * Returns the following tree.
+	 * <ul>
+	 * <li>c11: 1</li>
+	 * <li>c12: 0</li>
+	 * <li>c21: 1</li>
+	 * <li>c22: 0</li>
+	 * </ul>
+	 */
 	public static MarksTree get1_11And1_12And2_21And2_22() {
 		final MarksTree m1 = MarksTree.composite(ImmutableMap.of(c11, Mark.one(), c12, Mark.zero()));
 		final MarksTree m2 = MarksTree.composite(ImmutableMap.of(c21, Mark.one(), c22, Mark.zero()));
+		return MarksTree.composite(ImmutableMap.of(c1, m1, c2, m2));
+	}
+
+	/**
+	 * Returns the following tree.
+	 * <ul>
+	 * <li>c11: 1</li>
+	 * <li>c12: 0.5</li>
+	 * <li>c21: 1</li>
+	 * <li>c22: 0.5</li>
+	 * </ul>
+	 */
+	public static MarksTree get1_11And1_12And2_21And2_22Half() {
+		final MarksTree m1 = MarksTree.composite(ImmutableMap.of(c11, Mark.one(), c12, Mark.given(0.5d, "")));
+		final MarksTree m2 = MarksTree.composite(ImmutableMap.of(c21, Mark.one(), c22, Mark.given(0.5d, "")));
 		return MarksTree.composite(ImmutableMap.of(c1, m1, c2, m2));
 	}
 

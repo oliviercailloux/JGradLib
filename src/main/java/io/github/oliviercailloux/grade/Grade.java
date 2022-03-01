@@ -1,91 +1,205 @@
 package io.github.oliviercailloux.grade;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Verify.verify;
 
+import com.google.common.base.MoreObjects;
+import com.google.common.base.VerifyException;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Maps;
 import com.google.common.collect.MoreCollectors;
+import com.google.common.math.DoubleMath;
 import io.github.oliviercailloux.grade.IGrade.CriteriaPath;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.NoSuchElementException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * A tree whose leaves contains marks plus aggregation information at each node,
- * so, producing a tree with marks at each node, plus the ability to explain the
- * aggregation strategy used to obtain them.
+ * A tree with marks at each node, plus, for non-leaf nodes, the ability to
+ * explain the aggregation strategy used to obtain them.
  * <p>
  * Equivalent to a single mark iff there are no children in the (root of the)
  * tree.
  * </p>
  */
 public class Grade {
+	@SuppressWarnings("unused")
+	private static final Logger LOGGER = LoggerFactory.getLogger(Grade.class);
+
+	public static Grade transformToCriteriaWeighting(Grade original) {
+		/*
+		 * We want to transform aggregator and marks tree so that the aggregator still
+		 * accepts every tree it originally accepted and the resulting mark is the same,
+		 * while losing as few information as possible. We want the transformed
+		 * aggregation to have fixed weights, in the sense that it gives to every node a
+		 * weight that is independent of the marks tree (i.e., a weight that depends
+		 * only on the aggregator).
+		 *
+		 * Unfortunately, it is not sufficient to transform a grade into a grade by
+		 * visiting simultaneously the marks tree and the aggregator tree: this might
+		 * transform aggregators differently (from one user to another, even if they
+		 * start with the same aggregator). That is because different trees stop at
+		 * different places due to their limited depths, so this method would not ensure
+		 * exploration of the whole aggregator.
+		 */
+		final WeightingGradeAggregator transformedAggregator = transformToCriteriaWeighting(original.toAggregator());
+		final MarksTree transformedMarks = adaptMarksForCriteriaWeighting(original);
+		final Grade transformed = Grade.given(transformedAggregator, transformedMarks);
+		verify(DoubleMath.fuzzyEquals(original.mark().getPoints(), transformed.mark().getPoints(), 1e-6d));
+		return transformed;
+	}
+
+	private static WeightingGradeAggregator transformToCriteriaWeighting(GradeAggregator original) {
+		if (original instanceof WeightingGradeAggregator w) {
+			return w;
+		}
+		final MarkAggregator a = original.getMarkAggregator();
+
+		if (a instanceof MaxAggregator m && original.getSpecialSubAggregators().isEmpty()) {
+			return transformToCriteriaWeighting(original.getDefaultSubAggregator());
+		}
+
+		final boolean maxAndMultipleSubs = (a instanceof MaxAggregator)
+				&& !original.getSpecialSubAggregators().isEmpty();
+		if ((a instanceof ParametricWeighter) || maxAndMultipleSubs || (a instanceof CriteriaWeighter c)) {
+			/*
+			 * Note that switching from ParametricWeighter to AbsoluteAggregator extends the
+			 * admissible sub-trees.
+			 */
+			final ImmutableMap<Criterion, ? extends GradeAggregator> specialSubs = original.getSpecialSubAggregators();
+			/*
+			 * Some further pruning is possible (and might be welcome) as some of these
+			 * sub-aggregators will never be used: in parametric nodes, the weighting branch
+			 * will not be used as the corresponding marks tree is reduced to an absolute
+			 * mark; and max nodes treated here become terminal nodes in marks trees.
+			 */
+			final Map<Criterion, WeightingGradeAggregator> transformedSubs = Maps.transformValues(specialSubs,
+					Grade::transformToCriteriaWeighting);
+			final CriteriaWeighter newAggregator = (a instanceof CriteriaWeighter c) ? c : AbsoluteAggregator.INSTANCE;
+			return WeightingGradeAggregator.given(newAggregator, transformedSubs,
+					transformToCriteriaWeighting(original.getDefaultSubAggregator()));
+		}
+		throw new VerifyException();
+//		return switch(original.getMarkAggregator()) {
+//		case ParametricWeighter w -> AbsoluteAggregator.INSTANCE;
+//		default -> throw new IllegalArgumentException("Unexpected value: " + original.getMarkAggregator());
+//		}
+	}
+
+	private static MarksTree adaptMarksForCriteriaWeighting(Grade original) {
+		if (original.getWeightedSubMarks().isEmpty()) {
+			return original.toMarksTree();
+		}
+
+		final GradeAggregator originalAggregator = original.toAggregator();
+		final MarksTree originalMarks = original.toMarksTree();
+		final MarkAggregator a = originalAggregator.getMarkAggregator();
+		final boolean maxAndMultipleSubs = (a instanceof MaxAggregator)
+				&& !originalAggregator.getSpecialSubAggregators().isEmpty();
+		final boolean parametricWeightedSum = (a instanceof ParametricWeighter p)
+				&& originalMarks.getCriteria().size() == 3;
+
+		if (maxAndMultipleSubs || parametricWeightedSum) {
+			/*
+			 * All these criteria are associated to dynamic weights (weights that depend on
+			 * the marks tree), that we thus can’t integrate into a static structure (an
+			 * aggregator that would not depend on the tree), so we must prune the tree.
+			 */
+			final ImmutableMap<SubMark, Double> weightedSubMarks = original.getWeightedSubMarks();
+			final ImmutableMap<Criterion, Mark> absoluteMarks = weightedSubMarks.keySet().stream()
+					.collect(ImmutableMap.toImmutableMap(SubMark::getCriterion,
+							s -> Mark.given(s.getPoints() * weightedSubMarks.get(s), s.comment())));
+			LOGGER.debug("Reduced to absolute: from {} to {}.", weightedSubMarks, absoluteMarks);
+			return MarksTree.composite(absoluteMarks);
+		}
+		if ((a instanceof ParametricWeighter p) && originalMarks.getCriteria().size() == 2) {
+			final ImmutableMap<SubMark, Double> weightedSubMarks = p.weightsWithPenalty(original.subMarks());
+			final ImmutableMap<Criterion, Mark> absoluteMarks = weightedSubMarks.keySet().stream()
+					.collect(ImmutableMap.toImmutableMap(SubMark::getCriterion,
+							s -> Mark.given(s.getPoints() * weightedSubMarks.get(s), s.comment())));
+			verify(absoluteMarks.size() == 2);
+			final Criterion multipliedCriterion = p.multipliedCriterion();
+			verify(absoluteMarks.keySet().contains(multipliedCriterion));
+			final LinkedHashMap<Criterion, MarksTree> newMarks = new LinkedHashMap<>(absoluteMarks);
+			newMarks.put(multipliedCriterion, adaptMarksForCriteriaWeighting(original.getGrade(multipliedCriterion)));
+			return MarksTree.composite(newMarks);
+		}
+		if ((a instanceof MaxAggregator) && originalAggregator.getSpecialSubAggregators().isEmpty()) {
+			final ImmutableMap<SubMark, Double> weightedSubMarks = original.getWeightedSubMarks();
+			final Criterion criterionWithAllWeight = Maps.filterEntries(weightedSubMarks, e -> e.getValue() == 1d)
+					.keySet().stream().collect(MoreCollectors.onlyElement()).getCriterion();
+			return adaptMarksForCriteriaWeighting(original.getGrade(criterionWithAllWeight));
+		}
+		if (a instanceof CriteriaWeighter) {
+			final ImmutableSet<Criterion> criteria = original.toMarksTree().getCriteria();
+			final ImmutableMap<Criterion, MarksTree> subTrees = criteria.stream().collect(
+					ImmutableMap.toImmutableMap(c -> c, c -> adaptMarksForCriteriaWeighting(original.getGrade(c))));
+			return MarksTree.composite(subTrees);
+		}
+		throw new VerifyException();
+	}
+
 	public static Grade given(GradeAggregator aggregator, MarksTree marks) {
 		return new Grade(aggregator, marks);
 	}
 
 	private final GradeAggregator aggregator;
 	private final MarksTree marks;
+	private final ImmutableMap<SubMark, Double> weightedSubMarks;
+	private final Mark mark;
 
-	private Grade(GradeAggregator aggregator, MarksTree marks) {
+	private Grade(GradeAggregator aggregator, MarksTree marks) throws AggregatorException {
 		this.aggregator = checkNotNull(aggregator);
 		this.marks = checkNotNull(marks);
-		/* Just to check that it is able to compute it. */
-		getWeightedSubMarks();
+		/* To check that it is able to compute it. */
+		weightedSubMarks = computeWeightedSubMarks();
+		mark = computeMark();
 	}
 
-	public Mark getMark() {
-		/*
-		 * This method throws IllegalArgumentException if unable to aggregate, but this
-		 * is an implementation detail: after initial check when building, it will not
-		 * throw more than announced.
-		 */
+	public Mark mark() {
+		return mark;
+	}
+
+	public Mark mark(Criterion criterion) {
+		return getGrade(criterion).mark();
+	}
+
+	public Mark mark(CriteriaPath path) {
+		return getGrade(path).mark();
+	}
+
+	private Mark computeMark() {
 		if (marks.isMark()) {
 			return marks.getMark(CriteriaPath.ROOT);
 		}
-		return aggregator.getMarkAggregator().aggregate(getWeightedSubMarks().keySet());
-	}
-
-	public GradeAggregator getAggregator() {
-		return aggregator;
-	}
-
-	public MarksTree getMarksTree() {
-		return marks;
+		final double weightedSum = weightedSubMarks.keySet().stream()
+				.mapToDouble(s -> weightedSubMarks.get(s) * s.getPoints()).sum();
+		return Mark.given(Double.min(1d, Double.max(weightedSum, 0d)), "");
 	}
 
 	/**
-	 * TODO check before that each complex sub-tree has associated aggregation
-	 * information.
-	 *
-	 * @throws NoSuchElementException iff the given criterion is not in this tree.
+	 * Returns a mark aggregator able to aggregate the children of this grade node
+	 * (and possibly other ones).
 	 */
-	public Grade getGrade(Criterion criterion) throws NoSuchElementException {
-		/*
-		 * This method throws IllegalArgumentException if unable to aggregate, but this
-		 * is an implementation detail: after initial check when building, it will not
-		 * throw more than announced.
-		 */
-		final MarksTree subMarks = marks.getTree(criterion);
-		final GradeAggregator subAggregator;
-		if (subMarks.isMark()) {
-			subAggregator = GradeAggregator.max();
-		} else {
-			subAggregator = aggregator.getGradeAggregator(criterion);
-		}
-		return given(subAggregator, subMarks);
+	public MarkAggregator getMarkAggregator() {
+		return aggregator.getMarkAggregator();
 	}
 
-	public Grade getGrade(CriteriaPath path) throws NoSuchElementException {
-		if (path.isRoot()) {
-			return this;
-		}
-		return getGrade(path.getHead()).getGrade(path.withoutHead());
+	public MarkAggregator getMarkAggregator(Criterion criterion) {
+		return aggregator.getGradeAggregator(criterion).getMarkAggregator();
+	}
+
+	public MarkAggregator getMarkAggregator(CriteriaPath path) {
+		return aggregator.getGradeAggregator(path).getMarkAggregator();
 	}
 
 	/**
 	 * @throws NoSuchElementException iff the given criterion is not in this tree.
 	 */
 	public double getWeight(Criterion criterion) throws NoSuchElementException {
-		final ImmutableMap<SubMark, Double> weightedSubMarks = getWeightedSubMarks();
 		return weightedSubMarks.keySet().stream().filter(s -> s.getCriterion().equals(criterion))
 				.map(weightedSubMarks::get).collect(MoreCollectors.onlyElement());
 	}
@@ -98,17 +212,69 @@ public class Grade {
 	}
 
 	/**
-	 * @return the criteria in the key set equal the child criteria of this (root of
-	 *         the) tree.
+	 * @return the criteria in the key set equal the child criteria at the root of
+	 *         this tree.
 	 */
 	public ImmutableMap<SubMark, Double> getWeightedSubMarks() {
+		return weightedSubMarks;
+	}
+
+	private ImmutableMap<SubMark, Double> computeWeightedSubMarks() throws AggregatorException {
+		final ImmutableSet<SubMark> subMarks = subMarks();
+		final MarkAggregator markAggregator = aggregator.getMarkAggregator();
+		final ImmutableMap<SubMark, Double> weights = markAggregator.weights(subMarks);
+		LOGGER.debug("Obtained via {}, from {}: {}.", markAggregator, subMarks, weights);
+		verify(subMarks.size() == weights.size());
+		return weights;
+	}
+
+	private ImmutableSet<SubMark> subMarks() {
+		return marks.getCriteria().stream().map(c -> SubMark.given(c, getGrade(c).mark()))
+				.collect(ImmutableSet.toImmutableSet());
+	}
+
+	/**
+	 * @throws NoSuchElementException iff the given criterion is not in this tree.
+	 */
+	public Grade getGrade(Criterion criterion) throws NoSuchElementException {
 		/*
-		 * This method throws IllegalArgumentException if unable to aggregate, but this
-		 * is an implementation detail: after initial check when building, it will not
-		 * throw more than announced.
+		 * Note that performance would be much better by returning a Grade that
+		 * delegates to this object with a shifted root (the shift being a
+		 * CriteriaPath).
 		 */
-		final ImmutableSet<SubMark> subMarks = marks.getCriteria().stream()
-				.map(c -> SubMark.given(c, getGrade(c).getMark())).collect(ImmutableSet.toImmutableSet());
-		return aggregator.getMarkAggregator().weights(subMarks);
+		final MarksTree subMarks = marks.getTree(criterion);
+		final GradeAggregator subAggregator;
+		try {
+			subAggregator = aggregator.getGradeAggregator(criterion);
+		} catch (AggregatorException e) {
+			throw new VerifyException(
+					"We checked that we can compute the mark and that the criterion exists in this tree, so we should accept it",
+					e);
+		}
+		return given(subAggregator, subMarks);
+	}
+
+	public Grade getGrade(CriteriaPath path) throws NoSuchElementException {
+		if (path.isRoot()) {
+			return this;
+		}
+		return getGrade(path.getHead()).getGrade(path.withoutHead());
+	}
+
+	public MarksTree toMarksTree() {
+		return marks;
+	}
+
+	/**
+	 * Returns the aggregator associated to this grade (able to aggregate the marks
+	 * tree associated to this grade and possibly other ones)
+	 */
+	public GradeAggregator toAggregator() {
+		return aggregator;
+	}
+
+	@Override
+	public String toString() {
+		return MoreObjects.toStringHelper(this).add("Aggregator", aggregator).add("Marks", marks).toString();
 	}
 }

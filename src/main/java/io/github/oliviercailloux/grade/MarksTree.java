@@ -26,7 +26,7 @@ import java.util.NoSuchElementException;
  */
 public interface MarksTree {
 
-	public static MarksTree composite(Map<Criterion, MarksTree> subGrades) {
+	public static MarksTree composite(Map<Criterion, ? extends MarksTree> subGrades) {
 		return CompositeMarksTree.givenGrades(subGrades);
 	}
 

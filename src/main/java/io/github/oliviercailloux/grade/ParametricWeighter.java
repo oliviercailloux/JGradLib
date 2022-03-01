@@ -22,6 +22,10 @@ import java.util.Set;
  */
 public final class ParametricWeighter implements MarkAggregator {
 
+	static Criterion toPenalized(Criterion original) {
+		return Criterion.given(original.getName() + ", penalty");
+	}
+
 	private final Criterion multiplied;
 	private final Criterion weighting;
 
@@ -62,6 +66,38 @@ public final class ParametricWeighter implements MarkAggregator {
 		builder.put(multipliedMark, weightingMark.getPoints());
 		builder.put(weightingMark, 0d);
 		remainingMark.ifPresent(m -> builder.put(m, 1d - weightingMark.getPoints()));
+		return builder.build();
+	}
+
+	/**
+	 * Returns [the multiplied criterion × 100%, − the multiplied criterion × (1 −
+	 * weighting)]. The second one has a different criterion name and uses the
+	 * comment of the weighting sub mark. This breaks the {@link #weights} contract
+	 * as the returned criteria set generally differs from the input criteria set
+	 * (although the size is the same). Only authorized if there are two criteria,
+	 * not three.
+	 */
+	public ImmutableMap<SubMark, Double> weightsWithPenalty(Set<SubMark> marks) throws AggregatorException {
+		final ImmutableSet<Criterion> criteria = marks.stream().map(SubMark::getCriterion)
+				.collect(ImmutableSet.toImmutableSet());
+		checkArgument(marks.size() == criteria.size());
+		checkCanAggregate(criteria.contains(multiplied), "Multiplied criterion not found");
+		checkCanAggregate(criteria.contains(weighting), "Weighting criterion not found");
+		checkCanAggregate(criteria.size() <= 2, "Too many criteria");
+
+		final SubMark multipliedMark = marks.stream().filter(s -> s.getCriterion().equals(multiplied))
+				.collect(MoreCollectors.onlyElement());
+		final SubMark weightingMark = marks.stream().filter(s -> s.getCriterion().equals(weighting))
+				.collect(MoreCollectors.onlyElement());
+
+		final Criterion multipliedPenalty = toPenalized(multiplied);
+		final Mark negativeMultipledMark = Mark.given(-multipliedMark.getPoints(), weightingMark.comment());
+		final SubMark penaltySubMark = SubMark.given(multipliedPenalty, negativeMultipledMark);
+
+		final ImmutableMap.Builder<SubMark, Double> builder = ImmutableMap.builder();
+		final double weightingScore = weightingMark.getPoints();
+		builder.put(multipliedMark, 1d);
+		builder.put(penaltySubMark, 1d - weightingScore);
 		return builder.build();
 	}
 
