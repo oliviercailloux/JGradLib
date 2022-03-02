@@ -11,6 +11,18 @@
 	<properties>
 		<maven.compiler.showWarnings>true</maven.compiler.showWarnings>
 	</properties>
+	<repositories>
+		<repository>
+			<id>jakarta</id>
+			<url>https://jakarta.oss.sonatype.org/content/repositories/staging/</url>
+			<releases>
+				<enabled>true</enabled>
+			</releases>
+			<snapshots>
+				<enabled>true</enabled>
+			</snapshots>
+		</repository>
+	</repositories>
 	<dependencies>
 		<dependency>
 			<groupId>com.google.guava</groupId>
@@ -35,12 +47,12 @@
 		<dependency>
 			<groupId>io.github.oliviercailloux</groupId>
 			<artifactId>json</artifactId>
-			<version>0.0.4</version>
+			<version>0.0.5-SNAPSHOT</version>
 		</dependency>
 		<dependency>
 			<groupId>org.eclipse</groupId>
 			<artifactId>yasson</artifactId>
-			<version>2.0.4</version>
+			<version>3.0.0-RC1</version>
 			<scope>runtime</scope>
 		</dependency>
 		<dependency>
