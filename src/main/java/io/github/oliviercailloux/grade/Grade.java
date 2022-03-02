@@ -115,6 +115,8 @@ public class Grade {
 		}
 		if ((a instanceof ParametricWeighter p) && originalMarks.getCriteria().size() == 2) {
 			final ImmutableMap<SubMark, Double> weightedSubMarks = p.weightsWithPenalty(original.subMarks());
+			LOGGER.info("Given {}, points: {}.", weightedSubMarks, weightedSubMarks.keySet().stream().collect(
+					ImmutableMap.toImmutableMap(SubMark::getCriterion, s -> s.getPoints() * weightedSubMarks.get(s))));
 			final ImmutableMap<Criterion, Mark> absoluteMarks = weightedSubMarks.keySet().stream()
 					.collect(ImmutableMap.toImmutableMap(SubMark::getCriterion,
 							s -> Mark.given(s.getPoints() * weightedSubMarks.get(s), s.comment())));
@@ -253,6 +255,10 @@ public class Grade {
 		return given(subAggregator, subMarks);
 	}
 
+	/**
+	 * @throws NoSuchElementException iff the given criterion path is not in this
+	 *                                tree.
+	 */
 	public Grade getGrade(CriteriaPath path) throws NoSuchElementException {
 		if (path.isRoot()) {
 			return this;

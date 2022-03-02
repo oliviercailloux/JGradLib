@@ -28,7 +28,7 @@ public sealed interface MarkAggregator permits ParametricWeighter,CriteriaWeight
 
 	/**
 	 * @param marks may be empty; must have all different criteria
-	 * @return non-negative numbers such that the mark can be computed by a weighted
+	 * @return numbers in [0, 1] such that the mark can be computed by a weighted
 	 *         sum (not necessarily equal to a weighted average as the sum may not
 	 *         be one); may sum to greater than one, for example, if absolute
 	 *         aggregation. May contain zeroes, and may consist in only zeroes. The

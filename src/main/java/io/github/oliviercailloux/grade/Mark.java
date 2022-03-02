@@ -108,7 +108,7 @@ public class Mark implements MarksTree {
 	 */
 	@Override
 	public MarksTree getTree(Criterion criterion) {
-		throw new NoSuchElementException();
+		throw new NoSuchElementException(criterion.getName());
 	}
 
 	@Override

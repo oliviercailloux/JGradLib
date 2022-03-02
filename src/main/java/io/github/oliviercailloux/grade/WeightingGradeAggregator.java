@@ -40,7 +40,10 @@ public class WeightingGradeAggregator extends GradeAggregator {
 		super(markAggregator, subs, defaultSubAggregator);
 	}
 
-	public double weight(CriteriaPath path) {
+	/**
+	 * @throws AggregatorException iff the given criterion is rejected.
+	 */
+	public double weight(CriteriaPath path) throws AggregatorException {
 		if (path.isRoot()) {
 			return 1d;
 		}

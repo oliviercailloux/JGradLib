@@ -85,8 +85,9 @@ public class MarksTreeTestsHelper {
 	 */
 	public static MarksTree get3Plus2() {
 		final MarksTree t1 = MarksTree.composite(
-				ImmutableMap.of(c11, Mark.given(0.3d, ""), c12, Mark.given(0.2d, ""), c13, Mark.given(1.0d, "")));
-		final MarksTree t2 = MarksTree.composite(ImmutableMap.of(c21, Mark.given(0d, ""), c22, Mark.given(0.8d, "")));
+				ImmutableMap.of(c11, Mark.given(0.3d, "c11"), c12, Mark.given(0.2d, ""), c13, Mark.given(1.0d, "")));
+		final MarksTree t2 = MarksTree
+				.composite(ImmutableMap.of(c21, Mark.given(0d, "c21"), c22, Mark.given(0.8d, "")));
 		return MarksTree.composite(ImmutableMap.of(c1, t1, c2, t2));
 	}
 

@@ -25,7 +25,7 @@ import java.util.Set;
 
 public class JsonStudentsReader {
 	@JsonbTypeAdapter(JsonStudentAdapter.class)
-	static class JsonStudentEntry {
+	public static class JsonStudentEntry {
 		public static JsonStudentEntry given(Optional<GitHubUsername> gitHubUsername, Optional<Integer> institutionalId,
 				String institutionalUsername, String firstName, String lastName, Optional<EmailAddress> email) {
 			return new JsonStudentEntry(gitHubUsername, institutionalId, institutionalUsername, firstName, lastName,

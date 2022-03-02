@@ -93,19 +93,17 @@ public class HtmlGrades {
 				+ FORMATTER.format(denominator);
 
 		final boolean isMark = grade.toMarksTree().isMark();
-		if (isMark) {
-			checkArgument(comment.isEmpty());
-		}
 		final String explanation;
 		if (isMark) {
 			explanation = comment;
 		} else {
-			final MarkAggregator aggregator = grade.getAggregator().getMarkAggregator();
+			checkArgument(comment.isEmpty(), comment);
+			final MarkAggregator aggregator = grade.getMarkAggregator();
 			if (aggregator instanceof ParametricWeighter) {
 				final ParametricWeighter a = (ParametricWeighter) aggregator;
 				final Grade multipliedGrade = grade.getGrade(a.multipliedCriterion());
-				final String basePointsText = FORMATTER.format(multipliedGrade.mark().getPoints() * denominator)
-						+ " / " + FORMATTER.format(denominator);
+				final String basePointsText = FORMATTER.format(multipliedGrade.mark().getPoints() * denominator) + " / "
+						+ FORMATTER.format(denominator);
 				explanation = basePointsText + " × " + a.weightingCriterion() + " = " + pointsText;
 			} else if (aggregator instanceof AbsoluteAggregator) {
 				explanation = "Sum";
@@ -124,7 +122,7 @@ public class HtmlGrades {
 		if (!isMark) {
 			final Element ul = document.createXhtmlElement("ul");
 			fragment.appendChild(ul);
-			final MarkAggregator aggregator = grade.getAggregator().getMarkAggregator();
+			final MarkAggregator aggregator = grade.getMarkAggregator();
 			if (aggregator instanceof ParametricWeighter) {
 				final ParametricWeighter a = (ParametricWeighter) aggregator;
 				{

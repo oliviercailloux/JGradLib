@@ -63,9 +63,11 @@ public final class ParametricWeighter implements MarkAggregator {
 				.filter(m -> !m.getCriterion().equals(weighting)).collect(MoreCollectors.toOptional());
 
 		final ImmutableMap.Builder<SubMark, Double> builder = ImmutableMap.builder();
-		builder.put(multipliedMark, weightingMark.getPoints());
+		final double weightingValue = weightingMark.getPoints();
+		checkCanAggregate(weightingValue >= 0d, "Negative weighting points in set %s.", marks);
+		builder.put(multipliedMark, weightingValue);
 		builder.put(weightingMark, 0d);
-		remainingMark.ifPresent(m -> builder.put(m, 1d - weightingMark.getPoints()));
+		remainingMark.ifPresent(m -> builder.put(m, 1d - weightingValue));
 		return builder.build();
 	}
 
@@ -95,9 +97,10 @@ public final class ParametricWeighter implements MarkAggregator {
 		final SubMark penaltySubMark = SubMark.given(multipliedPenalty, negativeMultipledMark);
 
 		final ImmutableMap.Builder<SubMark, Double> builder = ImmutableMap.builder();
-		final double weightingScore = weightingMark.getPoints();
+		final double weightingValue = weightingMark.getPoints();
+		checkCanAggregate(weightingValue >= 0d, "Negative weighting points");
 		builder.put(multipliedMark, 1d);
-		builder.put(penaltySubMark, 1d - weightingScore);
+		builder.put(penaltySubMark, 1d - weightingValue);
 		return builder.build();
 	}
 

@@ -10,7 +10,6 @@ import io.github.oliviercailloux.git.JGit;
 import io.github.oliviercailloux.git.fs.GitFileSystem;
 import io.github.oliviercailloux.git.fs.GitFileSystemProvider;
 import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
-import io.github.oliviercailloux.grade.old.Mark;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -30,6 +29,25 @@ public class BatchGitHistoryGraderTests {
 	private static final double W_TOT = W_USER + W1 + W2 + W3;
 
 	private static final double USER_GRADE_WEIGHT = W_USER / W_TOT;
+
+	private static class MyGrader implements Grader<RuntimeException> {
+		private static final Criterion C1 = Criterion.given("c1");
+		private static final Criterion C2 = Criterion.given("c2");
+		private static final Criterion C3 = Criterion.given("c3");
+
+		@Override
+		public MarksTree grade(GitFileSystemHistory history) {
+			final int nbCommits = history.getGraph().nodes().size();
+			final ImmutableMap<Criterion, Mark> subGrades = ImmutableMap.of(C1, Mark.binary(nbCommits >= 1), C2,
+					Mark.binary(nbCommits >= 2), C3, Mark.binary(nbCommits >= 3));
+			return MarksTree.composite(subGrades);
+		}
+
+		@Override
+		public GradeAggregator getAggregator() {
+			return GradeAggregator.staticAggregator(ImmutableMap.of(C1, W1, C2, W2, C3, W3), ImmutableMap.of());
+		}
+	}
 
 	@Test
 	void testBatch() throws Exception {
@@ -62,26 +80,15 @@ public class BatchGitHistoryGraderTests {
 			final BatchGitHistoryGrader<RuntimeException> batchGrader = new BatchGitHistoryGrader<>(
 					() -> new StaticFetcher(gitFses));
 
-			final ImmutableMap<GitHubUsername, IGrade> grades = batchGrader.getAndWriteGrades("testprefix",
-					nowTime.plus(30, ChronoUnit.MINUTES), Duration.of(1, ChronoUnit.HOURS), this::gradeByNbCommits,
-					USER_GRADE_WEIGHT, Path.of("test grades.json"));
+			final Exam exam = batchGrader.getAndWriteGrades("testprefix", nowTime.plus(30, ChronoUnit.MINUTES),
+					Duration.of(1, ChronoUnit.HOURS), new MyGrader(), USER_GRADE_WEIGHT, Path.of("test grades.json"));
 
-			assertEquals(gitFses.keySet(), grades.keySet());
-			assertEquals(Mark.zero("No commit found."), grades.get(userEmpty));
-			assertEquals((W1 + W2 + W3) / W_TOT, grades.get(userEarly).getPoints(), 1e-6d);
-			assertEquals(W1 / W_TOT, grades.get(userNow).getPoints(), 1e-6d);
-			assertEquals(W1 / W_TOT / 2d, grades.get(userLate).getPoints(), 1e-6d);
+			assertEquals(gitFses.keySet(), exam.getUsernames());
+			assertEquals(Mark.zero("No commit found."), exam.getGrade(userEmpty).mark());
+			assertEquals((W1 + W2 + W3) / W_TOT, exam.getGrade(userEarly).mark().getPoints(), 1e-6d);
+			assertEquals(W1 / W_TOT, exam.getGrade(userNow).mark().getPoints(), 1e-6d);
+			assertEquals(W1 / W_TOT / 2d, exam.getGrade(userLate).mark().getPoints(), 1e-6d);
 		}
-	}
-
-	public IGrade gradeByNbCommits(GitFileSystemHistory history) throws Exception {
-		final Criterion c1 = Criterion.given("c1");
-		final Criterion c2 = Criterion.given("c2");
-		final Criterion c3 = Criterion.given("c3");
-		final int nbCommits = history.getGraph().nodes().size();
-		final ImmutableMap<Criterion, Mark> subGrades = ImmutableMap.of(c1, Mark.binary(nbCommits >= 1), c2,
-				Mark.binary(nbCommits >= 2), c3, Mark.binary(nbCommits >= 3));
-		return WeightingGrade.from(subGrades, ImmutableMap.of(c1, W1, c2, W2, c3, W3));
 	}
 
 	static class StaticFetcher implements GitFileSystemWithHistoryFetcher {

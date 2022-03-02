@@ -26,7 +26,6 @@ import io.github.oliviercailloux.grade.Grade;
 import io.github.oliviercailloux.grade.GradeAggregator;
 import io.github.oliviercailloux.grade.IGrade;
 import io.github.oliviercailloux.grade.IGrade.CriteriaPath;
-import io.github.oliviercailloux.grade.Mark;
 import io.github.oliviercailloux.grade.MarksTree;
 import io.github.oliviercailloux.grade.WeightingGrade;
 import io.github.oliviercailloux.grade.WeightingGradeAggregator;
@@ -106,8 +105,13 @@ public class CsvGrades<K> {
 		}
 
 		public DoubleStream points(CriteriaPath path) {
-			return getUsernames().stream().map(this::getGrade).map(g -> g.getGrade(path)).map(Grade::mark)
-					.mapToDouble(Mark::getPoints);
+			return getUsernames().stream().map(this::getGrade)
+					.mapToDouble(g -> g.toMarksTree().hasPath(path) ? g.getGrade(path).mark().getPoints() : 0d);
+		}
+
+		public double points(K key, CriteriaPath path) {
+			final Grade grade = getGrade(key);
+			return grade.toMarksTree().hasPath(path) ? grade.mark(path).getPoints() : 0d;
 		}
 
 		public double averagePoints(CriteriaPath path) {
@@ -374,9 +378,8 @@ public class CsvGrades<K> {
 			final Map<String, String> identity = identityFunction.apply(key);
 			identity.entrySet().forEach(e -> writer.addValue(e.getKey(), e.getValue()));
 
-			final Grade grade = exam.getGrade(key);
 			allPaths.stream().forEach(p -> writer.addValue(CsvGrades.shorten(p),
-					formatter.format(exam.weight(p) * grade.mark(p).getPoints() * denominator)));
+					formatter.format(exam.weight(p) * exam.points(key, p) * denominator)));
 			writer.writeValuesToRow();
 		}
 		writer.writeEmptyRow();

@@ -269,6 +269,19 @@ public class DeadlineGrader {
 			}
 			return penalty;
 		}
+
+		public io.github.oliviercailloux.grade.Mark getFractionPenality(Duration lateness) {
+			final io.github.oliviercailloux.grade.Mark penalty;
+			if (!lateness.isNegative() && !lateness.isZero()) {
+				final double fractionPenalty = Math.min(lateness.getSeconds() / (double) nbSecondsZero, 1d);
+				verify(0d < fractionPenalty);
+				verify(fractionPenalty <= 1d);
+				penalty = io.github.oliviercailloux.grade.Mark.given(fractionPenalty, "Lateness: " + lateness);
+			} else {
+				penalty = io.github.oliviercailloux.grade.Mark.zero();
+			}
+			return penalty;
+		}
 	}
 
 	public static DeadlineGrader usingGitGrader(GitGrader grader, ZonedDateTime deadline) {

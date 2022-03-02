@@ -1,6 +1,7 @@
 package io.github.oliviercailloux.grade;
 
 public class CriterionTestsHelper {
+	public static Criterion c = Criterion.given("C");
 	public static Criterion c1 = Criterion.given("C1");
 	public static Criterion c11 = Criterion.given("C1.1");
 	public static Criterion c111 = Criterion.given("C1.1.1");

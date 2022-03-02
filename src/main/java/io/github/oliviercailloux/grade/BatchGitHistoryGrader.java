@@ -26,6 +26,7 @@ import java.time.Instant;
 import java.time.ZonedDateTime;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
+import java.util.NoSuchElementException;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -63,12 +64,12 @@ public class BatchGitHistoryGrader<X extends Exception> {
 	}
 
 	public <Y extends Exception> Exam getAndWriteGrades(String prefix, ZonedDateTime deadline, Duration durationForZero,
-			Grader<Y> grader, double userGradeWeight, Path out) throws X, Y, IOException {
-		return getGrades(prefix, deadline, durationForZero, grader, userGradeWeight, TOptional.of(out));
+			Grader<Y> grader, double userGradeWeight, Path outWithoutExtension) throws X, Y, IOException {
+		return getGrades(prefix, deadline, durationForZero, grader, userGradeWeight, TOptional.of(outWithoutExtension));
 	}
 
 	private <Y extends Exception> Exam getGrades(String prefix, ZonedDateTime deadline, Duration durationForZero,
-			Grader<Y> grader, double userGradeWeight, TOptional<Path> outOpt) throws X, Y, IOException {
+			Grader<Y> grader, double userGradeWeight, TOptional<Path> outWithoutExtensionOpt) throws X, Y, IOException {
 		checkArgument(userGradeWeight < 1d);
 		final LinearPenalizer penalizer = LinearPenalizer.proportionalToLateness(durationForZero);
 
@@ -114,8 +115,7 @@ public class BatchGitHistoryGrader<X extends Exception> {
 
 					final Duration lateness = Duration.between(deadline.toInstant(), timeCap);
 					LOGGER.debug("Lateness from {} to {} equal to {}.", deadline.toInstant(), timeCap, lateness);
-					final Mark penalty = penalizer.getAbsolutePenality(lateness,
-							Grade.given(userNamedAggregator, gradeWithUser));
+					final Mark penalty = penalizer.getFractionPenality(lateness);
 
 					final MarksTree penalized = MarksTree
 							.composite(ImmutableMap.of(C_MAIN, gradeWithUser, C_LATENESS, penalty));
@@ -136,7 +136,7 @@ public class BatchGitHistoryGrader<X extends Exception> {
 				}
 				builder.put(author, byTimeGrade);
 
-				outOpt.ifPresent(o -> write(new Exam(whole, ImmutableMap.copyOf(builder)), o, prefix));
+				outWithoutExtensionOpt.ifPresent(o -> write(new Exam(whole, ImmutableMap.copyOf(builder)), o, prefix));
 			}
 		}
 		return new Exam(whole, ImmutableMap.copyOf(builder));
@@ -158,8 +158,9 @@ public class BatchGitHistoryGrader<X extends Exception> {
 		return consideredTimestamps;
 	}
 
-	private void write(Exam exam, Path out, String prefix) throws IOException {
-//		Files.writeString(out, JsonSimpleGrade.toJson(exam));
+	private void write(Exam exam, Path outWithoutExtension, String prefix) throws IOException {
+//		Files.writeString(outWithoutExtension.resolveSibling(outWithoutExtension.getFileName() + ".json"),
+//				JsonSimpleGrade.toJson(exam));
 
 		LOGGER.debug("Reading usernames.");
 		final JsonStudentsReader studentsReader = JsonStudentsReader.from(Files.readString(Path.of("usernames.json")));
@@ -167,14 +168,15 @@ public class BatchGitHistoryGrader<X extends Exception> {
 				.getStudentsKnownByGitHubUsername();
 
 		final ImmutableMap<StudentOnGitHubKnown, MarksTree> trees = CollectionUtils.transformKeys(exam.grades(),
-				students::get);
+				u -> Optional.ofNullable(students.get(u))
+						.orElseThrow(() -> new NoSuchElementException(u.getUsername())));
 		final String csv = CsvGrades.newInstance(CsvGrades.STUDENT_KNOWN_IDENTITY_FUNCTION, 20)
 				.gradesToCsv(exam.aggregator(), trees);
-		Files.writeString(Path.of("grades " + prefix + ".csv"), csv);
+		Files.writeString(outWithoutExtension.resolveSibling(outWithoutExtension.getFileName() + ".csv"), csv);
 
 		final ImmutableMap<String, Grade> grades = exam.getUsernames().stream()
 				.collect(ImmutableMap.toImmutableMap(GitHubUsername::getUsername, exam::getGrade));
 		final String html = XmlUtils.asString(HtmlGrades.asHtml(grades, prefix, 20d));
-		Files.writeString(Path.of("grades " + prefix + ".html"), html);
+		Files.writeString(outWithoutExtension.resolveSibling(outWithoutExtension.getFileName() + ".html"), html);
 	}
 }
