@@ -10,8 +10,6 @@ import io.github.oliviercailloux.grade.IGrade;
 import io.github.oliviercailloux.grade.WeightingGrade;
 import io.github.oliviercailloux.xml.XmlUtils;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,16 +46,13 @@ class HtmlGradeTests {
 	}
 
 	@Test
-	void testNewGrade() throws Exception {
+	void test3Plus2() throws Exception {
 		final Grade grade = GradeTestsHelper.get3Plus2();
 		final Document document = HtmlGrades.asHtml(ImmutableMap.of("g1", grade), "Ze grades", 20d);
 		XmlUtils.validate(document);
 		final String written = XmlUtils.asString(document);
-		Files.writeString(Path.of("tested.html"), written);
-		LOGGER.info("Eclectic grade: {}.", written);
 
-		final String expected = Resources.toString(getClass().getResource("EclecticGrade.html"),
-				StandardCharsets.UTF_8);
+		final String expected = Resources.toString(getClass().getResource("3Plus2.html"), StandardCharsets.UTF_8);
 		assertEquals(expected, written);
 	}
 
