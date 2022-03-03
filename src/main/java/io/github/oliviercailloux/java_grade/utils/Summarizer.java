@@ -29,13 +29,11 @@ import io.github.oliviercailloux.grade.WeightingGrade.PathGradeWeight;
 import io.github.oliviercailloux.grade.comm.InstitutionalStudent;
 import io.github.oliviercailloux.grade.comm.json.JsonStudentsReader;
 import io.github.oliviercailloux.grade.format.CsvGrades;
-import io.github.oliviercailloux.grade.format.HtmlGrades;
 import io.github.oliviercailloux.grade.old.GradeStructure;
 import io.github.oliviercailloux.grade.old.Mark;
 import io.github.oliviercailloux.grade.utils.Compressor;
 import io.github.oliviercailloux.jaris.collections.CollectionUtils;
 import io.github.oliviercailloux.utils.Utils;
-import io.github.oliviercailloux.xml.XmlUtils;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -47,7 +45,6 @@ import java.util.function.Predicate;
 import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.w3c.dom.Document;
 
 public class Summarizer {
 	@SuppressWarnings("unused")
@@ -191,8 +188,8 @@ public class Summarizer {
 		LOGGER.info("Writing grades Html.");
 		final ImmutableMap<String, IGrade> gradesByString = CollectionUtils.transformKeys(grades,
 				GitHubUsername::getUsername);
-		final Document doc = HtmlGrades.asHtmlIGrades(gradesByString, "All grades", 20d);
-		Files.writeString(htmlOutputPath, XmlUtils.asString(doc));
+//		final Document doc = HtmlGrades.asHtmlIGrades(gradesByString, "All grades", 20d);
+//		Files.writeString(htmlOutputPath, XmlUtils.asString(doc));
 
 		LOGGER.info("Writing grades CSV.");
 		final Function<GitHubUsername, Map<String, String>> identityFunction = u -> ImmutableMap.of("Name",

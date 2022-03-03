@@ -166,7 +166,8 @@ public class JsonStudentsReader {
 		@SuppressWarnings("serial")
 		final Set<JsonStudentEntry> type = new LinkedHashSet<>() {
 		};
-		return new JsonStudentsReader(JsonbUtils.fromJson(json, type.getClass().getGenericSuperclass()));
+		return new JsonStudentsReader(
+				JsonbUtils.fromJson(json, type.getClass().getGenericSuperclass(), new JsonStudentAdapter()));
 	}
 
 	private final ImmutableSet<JsonStudentEntry> entries;

@@ -15,11 +15,10 @@ import com.google.common.collect.Range;
 import io.github.oliviercailloux.email.EmailAddress;
 import io.github.oliviercailloux.email.EmailAddressAndPersonal;
 import io.github.oliviercailloux.email.ImapSearchPredicate;
+import io.github.oliviercailloux.grade.Grade;
 import io.github.oliviercailloux.grade.GradeTestsHelper;
-import io.github.oliviercailloux.grade.IGrade;
-import io.github.oliviercailloux.grade.WeightingGrade;
 import io.github.oliviercailloux.grade.format.HtmlGrades;
-import io.github.oliviercailloux.grade.format.json.JsonGrade;
+import io.github.oliviercailloux.grade.format.json.JsonSimpleGrade;
 import io.github.oliviercailloux.xml.HtmlDocument;
 import io.github.oliviercailloux.xml.XmlUtils;
 import jakarta.json.Json;
@@ -67,11 +66,10 @@ public class EmailerTests {
 		final Email email1 = Email.withDocumentAndFile(doc1, "data.json",
 				Json.createObjectBuilder().add("jsonint", 1).build().toString(), "json", to1);
 
-		final WeightingGrade grade = GradeTestsHelper.getComplexGradeWithPenalty();
-		final Document doc2 = HtmlGrades.asHtml(grade, "Ze grade");
+		final Grade grade = GradeTestsHelper.get3Plus2();
+		final Document doc2 = HtmlGrades.asHtml(grade, "Ze grade", 20d);
 		final EmailAddressAndPersonal to2 = EmailAddressAndPersonal.given("oliviercailloux@gmail.com", "OC");
-		final Email email2 = Email.withDocumentAndFile(doc2, "data.json", JsonGrade.asJson(grade).toString(), "json",
-				to2);
+		final Email email2 = Email.withDocumentAndFile(doc2, "data.json", JsonSimpleGrade.toJson(grade), "json", to2);
 
 		try (Emailer emailer = Emailer.instance()) {
 			emailer.connectToStore(Emailer.getOutlookImapSession(), EmailerDauphineHelper.USERNAME_DAUPHINE,
@@ -402,7 +400,7 @@ public class EmailerTests {
 			try (GradesInEmails gradesInEmails = GradesInEmails.newInstance()) {
 				for (Message message : found) {
 					LOGGER.info("Getting grade for {}.", message.getMessageNumber());
-					final IGrade grade = gradesInEmails.toGrade(message).get();
+					final Grade grade = gradesInEmails.toGrade(message).get();
 					LOGGER.info("Grade: {}.", grade);
 				}
 			}
@@ -482,23 +480,23 @@ public class EmailerTests {
 			final EmailAddress inexistant = EmailAddress.given("olivier.cailloux@inexistant.fr");
 
 			sendEmails.filterRecipients(ImmutableSet.of(inexistant, existant));
-			final ImmutableMap<EmailAddress, IGrade> gradeT = sendEmails.getLastGrades("git-br");
-			assertEquals(8.88d / 20d, gradeT.get(existant).getPoints(), 0.001d);
+			final ImmutableMap<EmailAddress, Grade> gradeT = sendEmails.getLastGrades("git-br");
+			assertEquals(8.88d / 20d, gradeT.get(existant).mark().getPoints(), 0.001d);
 
-			final Optional<IGrade> grade = sendEmails.getLastGradeTo(existant, "git-br");
-			assertEquals(8.88d / 20d, grade.get().getPoints(), 0.001d);
+			final Optional<Grade> grade = sendEmails.getLastGradeTo(existant, "git-br");
+			assertEquals(8.88d / 20d, grade.get().mark().getPoints(), 0.001d);
 
 			sendEmails.filterRecipients(ImmutableSet.of(existant));
-			final ImmutableMap<EmailAddress, IGrade> grades = sendEmails.getLastGrades("git-br");
-			assertEquals(8.88d / 20d, grades.get(existant).getPoints(), 0.001d);
+			final ImmutableMap<EmailAddress, Grade> grades = sendEmails.getLastGrades("git-br");
+			assertEquals(8.88d / 20d, grades.get(existant).mark().getPoints(), 0.001d);
 
 			sendEmails.filterSent(
 					Range.closed(Instant.parse("2001-01-01T00:00:00.00Z"), Instant.parse("2020-06-01T00:00:00.00Z")));
-			final ImmutableMap<EmailAddress, IGrade> gradesInPeriod = sendEmails.getLastGrades("git-br");
-			assertEquals(8.88d / 20d, gradesInPeriod.get(existant).getPoints(), 0.001d);
+			final ImmutableMap<EmailAddress, Grade> gradesInPeriod = sendEmails.getLastGrades("git-br");
+			assertEquals(8.88d / 20d, gradesInPeriod.get(existant).mark().getPoints(), 0.001d);
 
 			sendEmails.filterSent(Range.atMost(Instant.parse("2001-01-01T00:00:00.00Z")));
-			final ImmutableMap<EmailAddress, IGrade> gradesOld = sendEmails.getLastGrades("git-br");
+			final ImmutableMap<EmailAddress, Grade> gradesOld = sendEmails.getLastGrades("git-br");
 			assertEquals(ImmutableMap.of(), gradesOld);
 		}
 	}
@@ -513,7 +511,7 @@ public class EmailerTests {
 			final EmailAddress inexistant = EmailAddress.given("olivier.cailloux@inexistant.fr");
 			final EmailAddress existant = EmailAddress.given("olivier.cailloux@invaliddauphine.fr");
 			sendEmails.filterRecipients(ImmutableSet.of(inexistant, existant));
-			final ImmutableMap<EmailAddress, IGrade> grades = sendEmails.getLastGrades("git-br");
+			final ImmutableMap<EmailAddress, Grade> grades = sendEmails.getLastGrades("git-br");
 			assertEquals(ImmutableSet.of(existant), grades.keySet());
 		}
 	}

@@ -17,6 +17,7 @@ import com.google.common.math.DoubleMath;
 import io.github.oliviercailloux.email.EmailAddress;
 import io.github.oliviercailloux.grade.Criterion;
 import io.github.oliviercailloux.grade.CriterionGradeWeight;
+import io.github.oliviercailloux.grade.Grade;
 import io.github.oliviercailloux.grade.GradeUtils;
 import io.github.oliviercailloux.grade.IGrade;
 import io.github.oliviercailloux.grade.WeightingGrade;
@@ -25,7 +26,6 @@ import io.github.oliviercailloux.grade.comm.EmailerDauphineHelper;
 import io.github.oliviercailloux.grade.comm.GradesInEmails;
 import io.github.oliviercailloux.grade.comm.StudentOnGitHubKnown;
 import io.github.oliviercailloux.grade.comm.json.JsonStudentsReader;
-import io.github.oliviercailloux.grade.format.CsvGrades;
 import io.github.oliviercailloux.grade.format.HtmlGrades;
 import io.github.oliviercailloux.grade.format.json.JsonGrade;
 import io.github.oliviercailloux.json.JsonbUtils;
@@ -46,7 +46,7 @@ public class SummarizeEmails {
 	private static final Logger LOGGER = LoggerFactory.getLogger(SummarizeEmails.class);
 
 	public static void main(String[] args) throws Exception {
-		final ImmutableTable<EmailAddress, String, IGrade> lastGrades;
+		final ImmutableTable<EmailAddress, String, Grade> lastGrades;
 		try (GradesInEmails gradesInEmails = GradesInEmails.newInstance()) {
 			@SuppressWarnings("resource")
 			final Emailer emailer = gradesInEmails.getEmailer();
@@ -66,26 +66,26 @@ public class SummarizeEmails {
 //		final ImmutableMap<EmailAddress, WeightingGrade> grades = addresses.stream()
 //				.collect(ImmutableMap.toImmutableMap(a -> a, a -> from(lastGrades.row(a), Criterion::given, s -> 1d)));
 
-		final ImmutableMap<EmailAddress, IGrade> grades = Maps.toMap(addresses,
-				a -> getWeightingGradeUML(lastGrades.row(a), a));
-//		final ImmutableMap<EmailAddress, IGrade> grades = lastGrades.column("Projet Java");
+//		final ImmutableMap<EmailAddress, IGrade> grades = Maps.toMap(addresses,
+//				a -> getWeightingGradeUML(lastGrades.row(a), a));
+		final ImmutableMap<EmailAddress, Grade> grades = lastGrades.column("Projet Java");
 
 		final JsonStudentsReader students = JsonStudentsReader.from(Files.readString(Path.of("usernames.json")));
 
 		final ImmutableMap<EmailAddress, StudentOnGitHubKnown> usernames = students.getStudentsKnownByGitHubUsername()
 				.values().stream().collect(ImmutableBiMap.toImmutableBiMap(s -> s.getEmail().getAddress(), s -> s));
 
-		final ImmutableMap<String, IGrade> gradesByUsername = transformKeys(grades,
+		final ImmutableMap<String, Grade> gradesByUsername = transformKeys(grades,
 				a -> usernames.get(a).getGitHubUsername().getUsername());
 
 		Files.writeString(Path.of("grades recap.json"),
 				JsonbUtils.toJsonValue(gradesByUsername, JsonGrade.asAdapter()).toString());
-		final Document doc = HtmlGrades.asHtmlIGrades(gradesByUsername, "All grades recap", 20d);
+		final Document doc = HtmlGrades.asHtmlGrades(gradesByUsername, "All grades recap", 20d);
 		Files.writeString(Path.of("grades recap.html"), XmlUtils.asString(doc));
 
-		Files.writeString(Path.of("grades recap.csv"),
-				CsvGrades.<String>newInstance(k -> ImmutableMap.of("name", k.toString()), CsvGrades.DEFAULT_DENOMINATOR)
-						.toCsv(gradesByUsername));
+//		Files.writeString(Path.of("grades recap.csv"),
+//				CsvGrades.<String>newInstance(k -> ImmutableMap.of("name", k.toString()), CsvGrades.DEFAULT_DENOMINATOR)
+//						.gradesToCsv(gradesByUsername));
 	}
 
 	public static <K1, K2, V> ImmutableMap<K2, V> transformKeys(Map<K1, V> source, Function<K1, K2> keyTransformation) {

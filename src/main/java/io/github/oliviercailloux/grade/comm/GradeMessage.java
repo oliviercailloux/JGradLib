@@ -2,23 +2,23 @@ package io.github.oliviercailloux.grade.comm;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
-import io.github.oliviercailloux.grade.IGrade;
+import io.github.oliviercailloux.grade.Grade;
 import javax.mail.Message;
 
 class GradeMessage {
-	public static GradeMessage given(IGrade grade, Message message) {
+	public static GradeMessage given(Grade grade, Message message) {
 		return new GradeMessage(grade, message);
 	}
 
-	private IGrade grade;
+	private Grade grade;
 	private Message message;
 
-	private GradeMessage(IGrade grade, Message message) {
+	private GradeMessage(Grade grade, Message message) {
 		this.grade = checkNotNull(grade);
 		this.message = checkNotNull(message);
 	}
 
-	public IGrade getGrade() {
+	public Grade getGrade() {
 		return grade;
 	}
 

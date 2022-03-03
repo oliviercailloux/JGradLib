@@ -1,7 +1,6 @@
 package io.github.oliviercailloux.grade.comm;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.base.Verify.verify;
 import static io.github.oliviercailloux.email.UncheckedMessagingException.MESSAGING_UNCHECKER;
@@ -20,14 +19,9 @@ import com.google.common.math.Stats;
 import io.github.oliviercailloux.email.EmailAddress;
 import io.github.oliviercailloux.email.EmailAddressAndPersonal;
 import io.github.oliviercailloux.email.ImapSearchPredicate;
-import io.github.oliviercailloux.grade.IGrade;
+import io.github.oliviercailloux.grade.Grade;
 import io.github.oliviercailloux.grade.format.HtmlGrades;
-import io.github.oliviercailloux.grade.format.json.JsonGrade;
-import jakarta.json.JsonObject;
-import jakarta.json.bind.Jsonb;
-import jakarta.json.bind.JsonbBuilder;
-import jakarta.json.bind.JsonbConfig;
-import jakarta.json.bind.adapter.JsonbAdapter;
+import io.github.oliviercailloux.grade.format.json.JsonSimpleGrade;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.UncheckedIOException;
@@ -58,6 +52,7 @@ public class GradesInEmails implements AutoCloseable {
 	public static final String FILE_NAME = "data.json";
 
 	public static final String MIME_SUBTYPE = "json";
+
 	private static ImmutableList<MimeBodyPart> getParts(MimeMessage source) throws IOException, MessagingException {
 		final MimeMultipart multipart = (MimeMultipart) source.getContent();
 		final ImmutableList.Builder<MimeBodyPart> partsBuilder = ImmutableList.<MimeBodyPart>builder();
@@ -69,7 +64,7 @@ public class GradesInEmails implements AutoCloseable {
 		return parts;
 	}
 
-	public static Email asEmail(EmailAddressAndPersonal studentAddress, String gradeName, IGrade grade, Stats stats,
+	public static Email asEmail(EmailAddressAndPersonal studentAddress, String gradeName, Grade grade, Stats stats,
 			Map<Integer, Double> quartiles) {
 		final HtmlGrades htmler = HtmlGrades.newInstance();
 		htmler.setTitle("Grade " + gradeName);
@@ -78,13 +73,13 @@ public class GradesInEmails implements AutoCloseable {
 			htmler.setQuantiles(quartiles);
 		}
 		final Document doc = htmler.asHtml(grade);
-		final Email email = Email.withDocumentAndFile(doc, FILE_NAME, JsonGrade.asJson(grade).toString(), MIME_SUBTYPE,
-				studentAddress);
+		final Email email = Email.withDocumentAndFile(doc, FILE_NAME, JsonSimpleGrade.toJson(grade).toString(),
+				MIME_SUBTYPE, studentAddress);
 		return email;
 	}
 
 	public static GradesInEmails newInstance() {
-		return new GradesInEmails(JsonGrade.create().instanceAsAdapter());
+		return new GradesInEmails();
 	}
 
 	private final Emailer emailer;
@@ -94,15 +89,11 @@ public class GradesInEmails implements AutoCloseable {
 	private ImmutableSet<EmailAddress> recipientsFilter;
 	private Range<Instant> sentFilter;
 
-	private final Jsonb jsonb;
-
-	private GradesInEmails(JsonbAdapter<IGrade, JsonObject> jsonGradeAdapter) {
+	private GradesInEmails() {
 		emailer = Emailer.instance();
 		folder = null;
 		recipientsFilter = null;
 		sentFilter = null;
-		jsonb = JsonbBuilder
-				.create(new JsonbConfig().withAdapters(checkNotNull(jsonGradeAdapter)).withFormatting(true));
 	}
 
 	public Emailer getEmailer() {
@@ -133,7 +124,7 @@ public class GradesInEmails implements AutoCloseable {
 		sentFilter = filter;
 	}
 
-	Optional<IGrade> toGrade(Message source) {
+	Optional<Grade> toGrade(Message source) {
 		return getGradeMessage(source).map(GradeMessage::getGrade);
 	}
 
@@ -154,7 +145,7 @@ public class GradesInEmails implements AutoCloseable {
 					.filter(MESSAGING_UNCHECKER.wrapPredicate(p -> p.isMimeType("text/" + MIME_SUBTYPE)))
 					.filter(MESSAGING_UNCHECKER.wrapPredicate(p -> p.getFileName().equals(FILE_NAME)))
 					.collect(MoreCollectors.toOptional());
-			final Optional<IGrade> grade = matchingPart.map(this::getGrade);
+			final Optional<Grade> grade = matchingPart.map(this::getGrade);
 			return grade.map(g -> GradeMessage.given(g, source));
 		} catch (IOException e) {
 			throw new UncheckedIOException(e);
@@ -163,11 +154,11 @@ public class GradesInEmails implements AutoCloseable {
 		}
 	}
 
-	private IGrade getGrade(MimeBodyPart part) {
-		final IGrade grade;
+	private Grade getGrade(MimeBodyPart part) {
+		final Grade grade;
 		try (InputStreamReader reader = new InputStreamReader(part.getInputStream(), StandardCharsets.UTF_8)) {
 			final String content = CharStreams.toString(reader);
-			grade = jsonb.fromJson(content, IGrade.class);
+			grade = JsonSimpleGrade.asGrade(content);
 		} catch (IOException e) {
 			throw new UncheckedIOException(e);
 		} catch (MessagingException e) {
@@ -235,10 +226,10 @@ public class GradesInEmails implements AutoCloseable {
 		return matching;
 	}
 
-	public ImmutableTable<EmailAddress, String, IGrade> getLastGrades() {
+	public ImmutableTable<EmailAddress, String, Grade> getLastGrades() {
 		checkState(folder != null);
 
-		final ImmutableTable<EmailAddress, String, IGrade> grades = getLastGradesToInternal(recipientsFilter,
+		final ImmutableTable<EmailAddress, String, Grade> grades = getLastGradesToInternal(recipientsFilter,
 				"Grade ".toLowerCase());
 		return grades;
 	}
@@ -246,7 +237,7 @@ public class GradesInEmails implements AutoCloseable {
 	/**
 	 * @param recipients {@code null} for no filter.
 	 */
-	private ImmutableTable<EmailAddress, String, IGrade> getLastGradesToInternal(Set<EmailAddress> recipients,
+	private ImmutableTable<EmailAddress, String, Grade> getLastGradesToInternal(Set<EmailAddress> recipients,
 			String subjectPattern) {
 		final ImmutableSet<Message> matching = getMessagesTo(recipients, subjectPattern);
 		/**
@@ -261,19 +252,19 @@ public class GradesInEmails implements AutoCloseable {
 
 		emailer.fetchMessages(folder, ImmutableSet.copyOf(messages.values()));
 
-		final Table<EmailAddress, String, Optional<IGrade>> gradesOpt = Tables.transformValues(messages, this::toGrade);
+		final Table<EmailAddress, String, Optional<Grade>> gradesOpt = Tables.transformValues(messages, this::toGrade);
 		return gradesOpt.cellSet().stream().filter(c -> c.getValue().isPresent()).collect(
 				ImmutableTable.toImmutableTable(c -> c.getRowKey(), c -> c.getColumnKey(), o -> o.getValue().get()));
 	}
 
-	public Optional<IGrade> getLastGradeTo(EmailAddress recipient, String prefix) {
+	public Optional<Grade> getLastGradeTo(EmailAddress recipient, String prefix) {
 		checkArgument(recipientsFilter == null || recipientsFilter.contains(recipient));
 		return Optional
 				.ofNullable(getLastGradesToInternal(ImmutableSet.of(recipient), ("Grade " + prefix).toLowerCase())
 						.column(prefix).get(recipient));
 	}
 
-	public ImmutableMap<EmailAddress, IGrade> getLastGrades(String prefix) {
+	public ImmutableMap<EmailAddress, Grade> getLastGrades(String prefix) {
 		checkState(folder != null);
 		return getLastGradesToInternal(recipientsFilter, ("Grade " + prefix).toLowerCase()).column(prefix);
 	}

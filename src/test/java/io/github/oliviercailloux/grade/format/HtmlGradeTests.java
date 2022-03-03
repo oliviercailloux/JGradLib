@@ -20,32 +20,6 @@ class HtmlGradeTests {
 	private static final Logger LOGGER = LoggerFactory.getLogger(HtmlGradeTests.class);
 
 	@Test
-	void testComplexGrade() throws Exception {
-		final WeightingGrade grade = GradeTestsHelper.getComplexGradeWithPenalty();
-		final Document document = HtmlGrades.asHtml(grade, "Ze grade");
-//		XmlUtils.validate(document);
-		final String written = XmlUtils.asString(document);
-		LOGGER.info("Complex grade: {}.", written);
-
-		final String expected = Resources.toString(getClass().getResource("ComplexGradeWithPenalty.html"),
-				StandardCharsets.UTF_8);
-		assertEquals(expected, written);
-	}
-
-	@Test
-	void testEclecticGrade() throws Exception {
-		final IGrade grade = GradeTestsHelper.getEclecticWeightedGrade();
-		final Document document = HtmlGrades.asHtml(grade, "Ze grade");
-//		XmlUtils.validate(document);
-		final String written = XmlUtils.asString(document);
-		LOGGER.info("Eclectic grade: {}.", written);
-
-		final String expected = Resources.toString(getClass().getResource("EclecticGrade.html"),
-				StandardCharsets.UTF_8);
-		assertEquals(expected, written);
-	}
-
-	@Test
 	void test3Plus2() throws Exception {
 		final Grade grade = GradeTestsHelper.get3Plus2();
 		final Document document = HtmlGrades.asHtml(ImmutableMap.of("g1", grade), "Ze grades", 20d);

@@ -10,14 +10,12 @@ import io.github.oliviercailloux.grade.AbsoluteAggregator;
 import io.github.oliviercailloux.grade.CriteriaWeighter;
 import io.github.oliviercailloux.grade.Criterion;
 import io.github.oliviercailloux.grade.Grade;
-import io.github.oliviercailloux.grade.IGrade;
 import io.github.oliviercailloux.grade.Mark;
 import io.github.oliviercailloux.grade.MarkAggregator;
 import io.github.oliviercailloux.grade.MaxAggregator;
 import io.github.oliviercailloux.grade.ParametricWeighter;
 import io.github.oliviercailloux.grade.StaticWeighter;
 import io.github.oliviercailloux.grade.SubGrade;
-import io.github.oliviercailloux.grade.WeightingGrade;
 import io.github.oliviercailloux.xml.HtmlDocument;
 import java.net.URI;
 import java.text.NumberFormat;
@@ -36,11 +34,7 @@ public class HtmlGrades {
 		return new HtmlGrades();
 	}
 
-	public static Document asHtml(IGrade grade, String title) {
-		return asHtml(grade, title, DEFAULT_DENOMINATOR);
-	}
-
-	public static Document asHtml(IGrade grade, String title, double denominator) {
+	public static Document asHtml(Grade grade, String title, double denominator) {
 		final HtmlGrades htmler = newInstance();
 		htmler.setTitle(title);
 		htmler.setDenominator(denominator);
@@ -62,18 +56,16 @@ public class HtmlGrades {
 		return document.getDocument();
 	}
 
-	@Deprecated
-	public static Document asHtmlIGrades(Map<String, ? extends IGrade> grades, String generalTitle,
-			double denominator) {
+	public static Document asHtmlGrades(Map<String, ? extends Grade> grades, String generalTitle, double denominator) {
 		final HtmlDocument document = HtmlDocument.newInstance();
 		document.setTitle(generalTitle);
 		document.getBody().appendChild(document.createTitle1(generalTitle));
 
 		for (String key : grades.keySet()) {
-			final IGrade grade = grades.get(key);
+			final Grade grade = grades.get(key);
 			document.getBody().appendChild(document.createTitle2(key));
 			document.getBody()
-					.appendChild(getDescription(Criterion.given("Grade"), grade, document, denominator, false));
+					.appendChild(getDescription(new SubGrade(Criterion.given("Grade"), grade), document, denominator));
 		}
 
 		return document.getDocument();
@@ -172,83 +164,6 @@ public class HtmlGrades {
 		return fragment;
 	}
 
-	private static DocumentFragment getDescription(Criterion criterion, IGrade grade, HtmlDocument document,
-			double denominator, boolean zeroWeight) {
-		checkNotNull(criterion);
-		checkNotNull(grade);
-		final DocumentFragment fragment = document.getDocument().createDocumentFragment();
-
-		final String weightZeroString;
-		if (zeroWeight) {
-			weightZeroString = " (for information only)";
-		} else {
-			weightZeroString = "";
-		}
-
-		final String startGradeText = criterion.getName() + ": " + FORMATTER.format(grade.getPoints() * denominator)
-				+ " / " + FORMATTER.format(denominator) + weightZeroString;
-		final String comment = grade.getComment();
-		final String thisGradeText;
-		if (comment.isEmpty()) {
-			thisGradeText = startGradeText;
-		} else {
-			thisGradeText = startGradeText + " (" + comment + ")";
-		}
-		fragment.appendChild(document.createParagraph(thisGradeText));
-
-		if (!grade.getSubGrades().isEmpty()) {
-			final Element ul = document.createXhtmlElement("ul");
-			fragment.appendChild(ul);
-			for (Criterion subCriterion : grade.getSubGrades().keySet()) {
-				final Element li = document.createXhtmlElement("li");
-				ul.appendChild(li);
-				final double subWeight;
-				if (grade instanceof WeightingGrade) {
-					subWeight = ((WeightingGrade) grade).getWeights().get(subCriterion);
-				} else {
-					subWeight = 1d;
-				}
-				final DocumentFragment description;
-				if (subWeight > 0d) {
-					description = getDescription(subCriterion, grade.getSubGrades().get(subCriterion), document,
-							denominator * subWeight, false);
-				} else if (subWeight == 0d) {
-					description = getDescription(subCriterion, grade.getSubGrades().get(subCriterion), document,
-							denominator, true);
-				} else {
-					description = getDescriptionOfPenalty(subCriterion, grade.getSubGrades().get(subCriterion),
-							document, denominator * -subWeight);
-				}
-				li.appendChild(description);
-			}
-		}
-		return fragment;
-	}
-
-	private static DocumentFragment getDescriptionOfPenalty(Criterion criterion, IGrade grade, HtmlDocument document,
-			double denominator) {
-		checkArgument(denominator >= 0d);
-
-		final NumberFormat formatter = NumberFormat.getNumberInstance(Locale.ENGLISH);
-
-		final DocumentFragment fragment = document.getDocument().createDocumentFragment();
-
-		final String startGradeText = criterion.getName() + ": " + "−"
-				+ formatter.format((1d - grade.getPoints()) * denominator) + " / " + "−"
-				+ formatter.format(denominator);
-		final String comment = grade.getComment();
-		final String thisGradeText;
-		if (comment.isEmpty() || grade instanceof WeightingGrade) {
-			thisGradeText = startGradeText;
-		} else {
-			thisGradeText = startGradeText + " (" + comment + ")";
-		}
-		fragment.appendChild(document.createParagraph(thisGradeText));
-
-		checkArgument(grade.getSubGrades().isEmpty());
-		return fragment;
-	}
-
 	private String title;
 	private double denominator;
 	private Stats stats;
@@ -296,14 +211,15 @@ public class HtmlGrades {
 		this.quantiles = ImmutableMap.copyOf(checkNotNull(quantiles));
 	}
 
-	public Document asHtml(IGrade grade) {
+	public Document asHtml(Grade grade) {
 		final HtmlDocument document = HtmlDocument.newInstance();
 		document.setTitle(title);
 
 		final String introText = "Hi! This is an automated e-mail containing your grade: " + title;
 		document.getBody().appendChild(document.createParagraph(introText));
 
-		document.getBody().appendChild(getDescription(Criterion.given("Grade"), grade, document, denominator, false));
+		document.getBody()
+				.appendChild(getDescription(new SubGrade(Criterion.given("Grade"), grade), document, denominator));
 
 		if (quantiles.containsKey(1) && quantiles.containsKey(2) && quantiles.containsKey(3) && stats != null) {
 			final Element p = document.createXhtmlElement("p");
