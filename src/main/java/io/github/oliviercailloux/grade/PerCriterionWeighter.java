@@ -9,7 +9,7 @@ import java.util.Set;
  * weight to each criterion, independently of the rest of the criteria or of the
  * mark.
  */
-public sealed interface PerCriterionWeighter extends CriteriaWeighter permits AbsoluteAggregator,StaticWeighter {
+public interface PerCriterionWeighter extends CriteriaWeighter {
 
 	/**
 	 * @throws AggregatorException iff the given criterion is rejected.

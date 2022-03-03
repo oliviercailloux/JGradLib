@@ -10,8 +10,7 @@ import java.util.Objects;
 /**
  * Rejects unknown criteria.
  */
-public sealed abstract class AbstractStaticWeighter
-		implements CriteriaWeighter permits StaticWeighter,NormalizingStaticWeighter {
+public abstract class AbstractStaticWeighter implements CriteriaWeighter {
 
 	protected final ImmutableMap<Criterion, Double> weights;
 

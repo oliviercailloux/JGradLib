@@ -11,8 +11,7 @@ import java.util.Set;
  * they had a zero mark (i.e., the rest of the criteria receive their normal
  * weight, independently of the possible absence of some other criteria).
  */
-public sealed class StaticWeighter extends AbstractStaticWeighter
-		implements PerCriterionWeighter permits VoidAggregator {
+public class StaticWeighter extends AbstractStaticWeighter implements PerCriterionWeighter {
 
 	private final double sum;
 

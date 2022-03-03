@@ -14,7 +14,7 @@ import java.util.Set;
  * for any two compatible mark tree, provided the two mark trees represent equal
  * trees of sets of criteria.
  */
-public sealed interface CriteriaWeighter extends MarkAggregator permits AbstractStaticWeighter,PerCriterionWeighter {
+public interface CriteriaWeighter extends MarkAggregator {
 	/**
 	 * @return the same thing as {@link #weights(Set)} when called with the same set
 	 *         of criteria.
