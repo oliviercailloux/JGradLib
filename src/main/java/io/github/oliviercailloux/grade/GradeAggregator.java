@@ -52,7 +52,7 @@ public class GradeAggregator {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(GradeAggregator.class);
 
-	public static final WeightingGradeAggregator TRIVIAL = WeightingGradeAggregator.TRIVIAL_WEIGHTING;
+	public static final WeightingGradeAggregator TRIVIAL = WeightingGradeAggregator.trivial();
 	public static final WeightingGradeAggregator ABSOLUTE = WeightingGradeAggregator.ABSOLUTE_WEIGHTING;
 	public static final GradeAggregator MAX = new GradeAggregator(MaxAggregator.INSTANCE, ImmutableMap.of(),
 			WeightingGradeAggregator.trivial());

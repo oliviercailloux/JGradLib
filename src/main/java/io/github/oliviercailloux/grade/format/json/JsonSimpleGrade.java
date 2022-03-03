@@ -1,11 +1,13 @@
 package io.github.oliviercailloux.grade.format.json;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Verify.verifyNotNull;
 
 import com.google.common.base.Predicates;
 import com.google.common.base.VerifyException;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Maps;
 import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
 import io.github.oliviercailloux.grade.AbsoluteAggregator;
 import io.github.oliviercailloux.grade.CompositeMarksTree;
@@ -34,7 +36,6 @@ import jakarta.json.bind.annotation.JsonbPropertyOrder;
 import java.io.StringReader;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -119,24 +120,30 @@ public class JsonSimpleGrade {
 		return MarksTree.composite(subs);
 	}
 
-	private static final class JsonAdapterGradeStructure implements JsonbAdapter<GradeStructure, GSR> {
+	private static final class JsonAdapterGradeAggregator
+			implements JsonbAdapter<GradeAggregator, GenericGradeAggregator> {
 		@Override
-		public GSR adaptToJson(GradeStructure structure) {
-			LOGGER.info("Adapting to GSR from {}.", structure);
-			final DefaultAggregation defaultAggregation = structure.getDefaultAggregation();
-			if (defaultAggregation == DefaultAggregation.ABSOLUTE) {
-				checkArgument(structure.getDefaultSubStructure().isEmpty());
-				return new GSR(defaultAggregation, Optional.of(structure.getFixedWeights()), structure.getAbsolutes(),
-						Optional.empty(), structure.getSubStructures());
-			}
-			checkArgument(structure.getFixedWeights().isEmpty());
-			return new GSR(defaultAggregation, Optional.empty(), structure.getAbsolutes(),
-					structure.getDefaultSubStructure(), structure.getSubStructures());
+		public GenericGradeAggregator adaptToJson(GradeAggregator aggregator) {
+			LOGGER.info("Adapting to GSR from {}.", aggregator);
+			final ImmutableMap<Criterion, ? extends GradeAggregator> subs = aggregator.getSpecialSubAggregators();
+			final Map<Criterion, ? extends GradeAggregator> nonTrivialSubs = Maps.filterEntries(subs,
+					e -> !e.getValue().equals(GradeAggregator.TRIVIAL));
+			final Map<Criterion, GenericGradeAggregator> transformedNonTrivialSubs = Maps
+					.transformValues(nonTrivialSubs, this::adaptToJson);
+			final GradeAggregator defaultSub = aggregator.getDefaultSubAggregator();
+			verifyNotNull(defaultSub);
+			final Optional<GradeAggregator> nonTrivialDefaultSub = defaultSub.equals(GradeAggregator.TRIVIAL)
+					? Optional.empty()
+					: Optional.of(defaultSub);
+			final Optional<GenericGradeAggregator> transformedNonTrivialDefaultSub = nonTrivialDefaultSub
+					.map(this::adaptToJson);
+			return new GenericGradeAggregator(aggregator.getMarkAggregator(), transformedNonTrivialDefaultSub,
+					transformedNonTrivialSubs);
 		}
 
 		@Override
-		public GradeStructure adaptFromJson(GSR structure) {
-			LOGGER.info("Adapting from: {}.", structure);
+		public GradeAggregator adaptFromJson(GenericGradeAggregator aggregator) {
+			LOGGER.info("Adapting from: {}.", aggregator);
 			if (structure.defaultAggregation == DefaultAggregation.ABSOLUTE) {
 				checkArgument(structure.absolutes.isEmpty(), "Not yet supported.");
 				checkArgument(Optional.ofNullable(structure.getDefaultSubStructure()).isEmpty());
@@ -225,68 +232,9 @@ public class JsonSimpleGrade {
 		}
 	}
 
-	@JsonbPropertyOrder({ "defaultAggregation", "weights", "absolutes", "subs" })
-	public static class GSR {
-		public DefaultAggregation defaultAggregation;
-
-		public Optional<Map<Criterion, Double>> weights;
-		public Set<Criterion> absolutes;
-		public Optional<GradeStructure> defaultSubStructure;
-		public Map<Criterion, GradeStructure> subs;
-
-		public GSR() {
-		}
-
-		public GSR(DefaultAggregation defaultAggregation, Optional<Map<Criterion, Double>> weights,
-				Set<Criterion> absolutes, Optional<GradeStructure> defaultSubStructure,
-				Map<Criterion, GradeStructure> subs) {
-			this.defaultAggregation = defaultAggregation;
-			this.weights = weights;
-			this.absolutes = absolutes;
-			this.defaultSubStructure = defaultSubStructure;
-			this.subs = subs;
-		}
-
-		public DefaultAggregation getDefaultAggregation() {
-			return defaultAggregation;
-		}
-
-		public void setDefaultAggregation(DefaultAggregation defaultAggregation) {
-			this.defaultAggregation = defaultAggregation;
-		}
-
-		public Optional<Map<Criterion, Double>> getWeights() {
-			return weights;
-		}
-
-		public void setWeights(Optional<Map<Criterion, Double>> weights) {
-			this.weights = weights;
-		}
-
-		public Set<Criterion> getAbsolutes() {
-			return absolutes;
-		}
-
-		public void setAbsolutes(Set<Criterion> absolutes) {
-			this.absolutes = absolutes;
-		}
-
-		public Optional<GradeStructure> getDefaultSubStructure() {
-			return defaultSubStructure;
-		}
-
-		public void setDefaultSubStructure(Optional<GradeStructure> defaultSubStructure) {
-			this.defaultSubStructure = defaultSubStructure;
-		}
-
-		public Map<Criterion, GradeStructure> getSubs() {
-			return subs;
-		}
-
-		public void setSubs(Map<Criterion, GradeStructure> subs) {
-			this.subs = subs;
-		}
-
+	@JsonbPropertyOrder({ "markAggregator", "defaultSub", "subs" })
+	public static record GenericGradeAggregator(MarkAggregator markAggregator,
+			Optional<GenericGradeAggregator> defaultSub, Map<Criterion, GenericGradeAggregator> subs) {
 	}
 
 	public static String toJson(MarkAggregator aggregator) {
@@ -303,8 +251,8 @@ public class JsonSimpleGrade {
 
 	public static String toJson(GradeAggregator aggregator) {
 		final Jsonb jsonb = JsonHelper.getJsonb(new JsonCriterionToString(), new JsonMapAdapter<Double>() {
-		}, new JsonMapAdapter<GradeStructure>() {
-		}, new JsonAdapterGradeStructure());
+		}, new JsonMapAdapter<GenericGradeAggregator>() {
+		}, new JsonAdapterMarkAggregator(), new JsonAdapterGradeAggregator());
 		return jsonb.toJson(aggregator);
 	}
 

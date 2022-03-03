@@ -10,6 +10,8 @@ import com.google.common.io.Resources;
 import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
 import io.github.oliviercailloux.grade.Criterion;
 import io.github.oliviercailloux.grade.Exam;
+import io.github.oliviercailloux.grade.GradeAggregator;
+import io.github.oliviercailloux.grade.GradeTestsHelper;
 import io.github.oliviercailloux.grade.MarkAggregator;
 import io.github.oliviercailloux.grade.MarksTree;
 import io.github.oliviercailloux.grade.MarksTreeTestsHelper;
@@ -86,6 +88,71 @@ public class JsonGradeTests {
 
 	@Test
 	void testReadStaticWeighter() throws Exception {
+		final String input = """
+				{
+				    "type": "NormalizingStaticWeighter",
+				    "weights": {
+				        "C1": 1.0,
+				        "C2": 2.0
+				    }
+				}""";
+		final MarkAggregator read = JsonSimpleGrade.asMarkAggregator(input);
+
+		final NormalizingStaticWeighter expected = NormalizingStaticWeighter.given(ImmutableMap.of(c1, 1d, c2, 2d));
+		assertEquals(expected, read);
+	}
+
+	@Test
+	void testWriteAggregator() throws Exception {
+		final GradeAggregator aggregator = GradeTestsHelper.get3Plus2().toAggregator();
+		final String json = JsonSimpleGrade.toJson(aggregator);
+
+		final String expected = """
+				{
+				    "markAggregator": {
+				        "type": "StaticWeighter",
+				        "weights": {
+				            "C1": 1.0,
+				            "C2": 9.0
+				        }
+				    },
+				    "subs": [
+				        {
+				            "key": "C1",
+				            "value": {
+				                "markAggregator": {
+				                    "type": "StaticWeighter",
+				                    "weights": {
+				                        "C1.1": 1.0,
+				                        "C1.2": 2.0,
+				                        "C1.3": 2.0
+				                    }
+				                },
+				                "subs": [
+				                ]
+				            }
+				        },
+				        {
+				            "key": "C2",
+				            "value": {
+				                "markAggregator": {
+				                    "type": "StaticWeighter",
+				                    "weights": {
+				                        "C2.1": 1.0,
+				                        "C2.2": 1.0
+				                    }
+				                },
+				                "subs": [
+				                ]
+				            }
+				        }
+				    ]
+				}""";
+		assertEquals(expected, json);
+	}
+
+	@Test
+	void testReadAggregator() throws Exception {
 		final String input = """
 				{
 				    "type": "NormalizingStaticWeighter",
