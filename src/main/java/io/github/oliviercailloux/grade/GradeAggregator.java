@@ -79,12 +79,12 @@ public class GradeAggregator {
 
 	public static GradeAggregator parametric(Criterion multiplied, Criterion weighting,
 			Map<Criterion, GradeAggregator> subs) {
-		return new GradeAggregator(new ParametricWeighter(multiplied, weighting), subs, TRIVIAL);
+		return new GradeAggregator(ParametricWeighter.given(multiplied, weighting), subs, TRIVIAL);
 	}
 
 	public static GradeAggregator parametric(Criterion multiplied, Criterion weighting,
 			GradeAggregator multipliedAggregator) {
-		return new GradeAggregator(new ParametricWeighter(multiplied, weighting),
+		return new GradeAggregator(ParametricWeighter.given(multiplied, weighting),
 				ImmutableMap.of(multiplied, multipliedAggregator), TRIVIAL);
 	}
 
