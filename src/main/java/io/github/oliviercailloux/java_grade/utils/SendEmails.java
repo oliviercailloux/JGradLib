@@ -1,11 +1,13 @@
 package io.github.oliviercailloux.java_grade.utils;
 
+import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.base.Verify.verify;
 
 import com.google.common.base.Verify;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.math.Quantiles;
 import com.google.common.math.Stats;
@@ -13,8 +15,12 @@ import io.github.oliviercailloux.email.EmailAddress;
 import io.github.oliviercailloux.email.EmailAddressAndPersonal;
 import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
 import io.github.oliviercailloux.grade.Criterion;
+import io.github.oliviercailloux.grade.Exam;
+import io.github.oliviercailloux.grade.Grade;
 import io.github.oliviercailloux.grade.IGrade;
 import io.github.oliviercailloux.grade.IGrade.CriteriaPath;
+import io.github.oliviercailloux.grade.Mark;
+import io.github.oliviercailloux.grade.MarksTree;
 import io.github.oliviercailloux.grade.WeightingGrade;
 import io.github.oliviercailloux.grade.WeightingGrade.WeightedGrade;
 import io.github.oliviercailloux.grade.comm.Email;
@@ -23,14 +29,10 @@ import io.github.oliviercailloux.grade.comm.EmailerDauphineHelper;
 import io.github.oliviercailloux.grade.comm.GradesInEmails;
 import io.github.oliviercailloux.grade.comm.StudentOnGitHubKnown;
 import io.github.oliviercailloux.grade.comm.json.JsonStudentsReader;
-import io.github.oliviercailloux.grade.format.json.JsonGrade;
-import io.github.oliviercailloux.grade.old.Mark;
-import io.github.oliviercailloux.json.JsonbUtils;
+import io.github.oliviercailloux.grade.format.json.JsonSimpleGrade;
 import io.github.oliviercailloux.xml.XmlUtils;
-import java.lang.reflect.Type;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -54,26 +56,30 @@ public class SendEmails {
 		final ImmutableMap<GitHubUsername, StudentOnGitHubKnown> usernames = students
 				.getStudentsKnownByGitHubUsername();
 
-		@SuppressWarnings("all")
-		final Type type = new HashMap<String, IGrade>() {
-		}.getClass().getGenericSuperclass();
-		final Map<String, IGrade> gradesByString = JsonbUtils.fromJson(
-				Files.readString(WORK_DIR.resolve("grades " + prefix + ".json")), type, JsonGrade.asAdapter());
+		final Exam exam = JsonSimpleGrade.asExam(Files.readString(WORK_DIR.resolve("grades " + prefix + ".json")));
+		final boolean allKnown = students.getInstitutionalStudentsByGitHubUsername().keySet()
+				.containsAll(exam.getUsernames());
+		checkState(allKnown);
 
-		final ImmutableSet<String> missing = gradesByString.keySet().stream()
-				.filter(s -> !usernames.containsKey(GitHubUsername.given(s))).collect(ImmutableSet.toImmutableSet());
+		final ImmutableSet<GitHubUsername> missing = Sets
+				.difference(exam.getUsernames(), students.getInstitutionalStudentsByGitHubUsername().keySet())
+				.immutableCopy();
+		if (!missing.isEmpty()) {
+			LOGGER.warn("Missing: {}.", missing);
+		}
+
+		final Mark defaultMark = Mark.given(0d, "GitHub repository not found");
+		final ImmutableMap<EmailAddressAndPersonal, MarksTree> marksByEmail = exam.getUsernames().stream()
+				.collect(ImmutableMap.toImmutableMap(u -> usernames.get(u).getEmail(),
+						u -> exam.getUsernames().contains(u) ? exam.getGrade(u).toMarksTree() : defaultMark));
+		final ImmutableMap<EmailAddressAndPersonal, Grade> gradesByEmail = ImmutableMap
+				.copyOf(Maps.transformValues(marksByEmail, m -> Grade.given(exam.aggregator(), m)));
+
 		final ImmutableMap<String, IGrade> knownGrades = gradesByString.keySet().stream()
 				.filter(s -> usernames.containsKey(GitHubUsername.given(s)))
 				.collect(ImmutableMap.toImmutableMap(s -> s, gradesByString::get));
-		if (!missing.isEmpty()) {
-			LOGGER.warn("Missing: {} out of usernames: {}.", missing, usernames);
-		}
 
-		final ImmutableMap<EmailAddressAndPersonal, IGrade> gradesByEmail = knownGrades.entrySet().stream()
-				.collect(ImmutableMap.toImmutableMap(e -> usernames.get(GitHubUsername.given(e.getKey())).getEmail(),
-						Map.Entry::getValue));
-
-		final ImmutableList<Double> points = knownGrades.values().stream().map(IGrade::getPoints)
+		final ImmutableList<Double> points = gradesByEmail.values().stream().map(Grade::mark).map(Mark::getPoints)
 				.collect(ImmutableList.toImmutableList());
 		final Stats stats = Stats.of(points);
 		final Map<Integer, Double> quartiles = Quantiles.quartiles().indexes(1, 2, 3).compute(points);
