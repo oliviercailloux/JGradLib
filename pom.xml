@@ -4,7 +4,7 @@
 	<parent>
 		<groupId>io.github.oliviercailloux</groupId>
 		<artifactId>pom</artifactId>
-		<version>0.0.6</version>
+		<version>0.0.14</version>
 	</parent>
 	<artifactId>st-projects</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
@@ -245,6 +245,7 @@
 		<dependency>
 			<groupId>ch.qos.logback</groupId>
 			<artifactId>logback-classic</artifactId>
+			<version>1.2.6</version>
 			<scope>compile</scope>
 			<optional>true</optional>
 		</dependency>
