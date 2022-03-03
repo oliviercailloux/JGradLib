@@ -10,7 +10,7 @@ import java.util.Set;
  * If some criteria are missing in the given marks, weights are re-normalized
  * accordingly.
  */
-public final class NormalizingStaticWeighter extends AbstractStaticWeighter {
+public final class NormalizingStaticWeighter extends AbstractStaticWeighter implements MarkAggregator {
 
 	public static NormalizingStaticWeighter given(Map<Criterion, Double> weights) {
 		return new NormalizingStaticWeighter(weights);

@@ -1,5 +1,7 @@
 package io.github.oliviercailloux.grade.format.json;
 
+import static io.github.oliviercailloux.grade.CriterionTestsHelper.c1;
+import static io.github.oliviercailloux.grade.CriterionTestsHelper.c2;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.google.common.collect.ImmutableMap;
@@ -8,9 +10,12 @@ import com.google.common.io.Resources;
 import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
 import io.github.oliviercailloux.grade.Criterion;
 import io.github.oliviercailloux.grade.Exam;
+import io.github.oliviercailloux.grade.MarkAggregator;
 import io.github.oliviercailloux.grade.MarksTree;
-import io.github.oliviercailloux.grade.GradeStructure;
-import io.github.oliviercailloux.grade.Mark;
+import io.github.oliviercailloux.grade.MarksTreeTestsHelper;
+import io.github.oliviercailloux.grade.NormalizingStaticWeighter;
+import io.github.oliviercailloux.grade.ParametricWeighter;
+import io.github.oliviercailloux.grade.old.GradeStructure;
 import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
@@ -30,27 +35,69 @@ public class JsonGradeTests {
 		return toWrite;
 	}
 
-	private MarksTree getGrade() {
-		final Mark gradeC1 = Mark.one();
-		final Mark gradeC2C1 = Mark.zero("Zero!");
-		final Mark gradeC2C3 = Mark.zero();
-		final MarksTree gradeC2 = MarksTree.composite(ImmutableMap.of(C1, gradeC2C1, C3, gradeC2C3));
-		final MarksTree grade = MarksTree.composite(ImmutableMap.of(C1, gradeC1, C2, gradeC2));
-		return grade;
-	}
-
-	private MarksTree getGrade2() {
-		final Mark gradeC1 = Mark.zero();
-		final Mark gradeC2C1 = Mark.one("Not zero!");
-		final Mark gradeC2C3 = Mark.zero();
-		final MarksTree gradeC2 = MarksTree.composite(ImmutableMap.of(C1, gradeC2C1, C3, gradeC2C3));
-		final MarksTree grade = MarksTree.composite(ImmutableMap.of(C1, gradeC1, C2, gradeC2));
-		return grade;
-	}
-
 	private Exam getExam() {
 		return new Exam(getStructure(),
 				ImmutableMap.of(GitHubUsername.given("g1"), getGrade(), GitHubUsername.given("g2"), getGrade2()));
+	}
+
+	@Test
+	void testWriteParametricWeighter() throws Exception {
+		final ParametricWeighter p = ParametricWeighter.given(c1, c2);
+		final String json = JsonSimpleGrade.toJson(p);
+
+		final String expected = """
+				{
+				    "type": "ParametricWeighter",
+				    "multiplied": "C1",
+				    "weighting": "C2"
+				}""";
+		assertEquals(expected, json);
+	}
+
+	@Test
+	void testReadParametricWeighter() throws Exception {
+		final String input = """
+				{
+				    "type": "ParametricWeighter",
+				    "multiplied": "m",
+				    "weighting": "w"
+				}""";
+		final MarkAggregator read = JsonSimpleGrade.asMarkAggregator(input);
+
+		final ParametricWeighter expected = ParametricWeighter.given(Criterion.given("m"), Criterion.given("w"));
+		assertEquals(expected, read);
+	}
+
+	@Test
+	void testWriteStaticWeighter() throws Exception {
+		final NormalizingStaticWeighter w = NormalizingStaticWeighter.given(ImmutableMap.of(c1, 1d, c2, 2d));
+		final String json = JsonSimpleGrade.toJson(w);
+
+		final String expected = """
+				{
+				    "type": "NormalizingStaticWeighter",
+				    "weights": {
+				        "C1": 1.0,
+				        "C2": 2.0
+				    }
+				}""";
+		assertEquals(expected, json);
+	}
+
+	@Test
+	void testReadStaticWeighter() throws Exception {
+		final String input = """
+				{
+				    "type": "NormalizingStaticWeighter",
+				    "weights": {
+				        "C1": 1.0,
+				        "C2": 2.0
+				    }
+				}""";
+		final MarkAggregator read = JsonSimpleGrade.asMarkAggregator(input);
+
+		final NormalizingStaticWeighter expected = NormalizingStaticWeighter.given(ImmutableMap.of(c1, 1d, c2, 2d));
+		assertEquals(expected, read);
 	}
 
 	@Test
@@ -70,18 +117,21 @@ public class JsonGradeTests {
 	}
 
 	@Test
-	void testWriteGrade() throws Exception {
-		final MarksTree grade = getGrade();
+	void testWriteMarksTree() throws Exception {
+		final MarksTree tree = MarksTreeTestsHelper.get3Plus2();
+		final String json = JsonSimpleGrade.toJson(tree);
 
-//		assertEquals("", JsonSimpleGrade.toJson(gradeC1));
-		assertEquals(Resources.toString(this.getClass().getResource("Grade.json"), StandardCharsets.UTF_8),
-				JsonSimpleGrade.toJson(grade));
+		final String expected = Resources.toString(this.getClass().getResource("3Plus2.json"), StandardCharsets.UTF_8);
+		assertEquals(expected, json);
 	}
 
 	@Test
-	void testReadGrade() throws Exception {
-		assertEquals(getGrade(), JsonSimpleGrade
-				.asGrade(Resources.toString(this.getClass().getResource("Grade.json"), StandardCharsets.UTF_8)));
+	void testReadMarksTree() throws Exception {
+		final MarksTree read = JsonSimpleGrade
+				.asMarksTree(Resources.toString(this.getClass().getResource("3Plus2.json"), StandardCharsets.UTF_8));
+
+		final MarksTree expected = MarksTreeTestsHelper.get3Plus2();
+		assertEquals(expected, read);
 	}
 
 	@Test

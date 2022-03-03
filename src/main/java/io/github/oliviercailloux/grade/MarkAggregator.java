@@ -13,7 +13,7 @@ import java.util.Set;
  * more than one unknown criterion. Implementors must give a programmatic way of
  * determining which sets of criteria are accepted.
  */
-public sealed interface MarkAggregator permits ParametricWeighter,CriteriaWeighter,OwaWeighter {
+public sealed interface MarkAggregator permits ParametricWeighter,CriteriaWeighter,OwaWeighter,NormalizingStaticWeighter {
 	static void checkCanAggregate(boolean check, String message) throws AggregatorException {
 		if (!check) {
 			throw new AggregatorException(message);

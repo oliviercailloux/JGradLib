@@ -33,7 +33,7 @@ public final class ParametricWeighter implements MarkAggregator {
 		return new ParametricWeighter(multiplied, weighting);
 	}
 
-	public ParametricWeighter(Criterion multiplied, Criterion weighting) {
+	private ParametricWeighter(Criterion multiplied, Criterion weighting) {
 		this.weighting = checkNotNull(weighting);
 		this.multiplied = checkNotNull(multiplied);
 	}
