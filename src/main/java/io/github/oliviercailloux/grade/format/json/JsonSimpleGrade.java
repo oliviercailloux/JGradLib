@@ -13,8 +13,8 @@ import io.github.oliviercailloux.grade.AbsoluteAggregator;
 import io.github.oliviercailloux.grade.CompositeMarksTree;
 import io.github.oliviercailloux.grade.Criterion;
 import io.github.oliviercailloux.grade.Exam;
+import io.github.oliviercailloux.grade.Grade;
 import io.github.oliviercailloux.grade.GradeAggregator;
-import io.github.oliviercailloux.grade.GradeStructure.DefaultAggregation;
 import io.github.oliviercailloux.grade.Mark;
 import io.github.oliviercailloux.grade.MarkAggregator;
 import io.github.oliviercailloux.grade.MarksTree;
@@ -22,8 +22,6 @@ import io.github.oliviercailloux.grade.MaxAggregator;
 import io.github.oliviercailloux.grade.NormalizingStaticWeighter;
 import io.github.oliviercailloux.grade.ParametricWeighter;
 import io.github.oliviercailloux.grade.StaticWeighter;
-import io.github.oliviercailloux.grade.old.GradeStructure;
-import jakarta.json.Json;
 import jakarta.json.JsonNumber;
 import jakarta.json.JsonObject;
 import jakarta.json.JsonString;
@@ -33,7 +31,6 @@ import jakarta.json.bind.Jsonb;
 import jakarta.json.bind.adapter.JsonbAdapter;
 import jakarta.json.bind.annotation.JsonbCreator;
 import jakarta.json.bind.annotation.JsonbPropertyOrder;
-import java.io.StringReader;
 import java.util.Map;
 import java.util.Optional;
 import org.slf4j.Logger;
@@ -124,7 +121,6 @@ public class JsonSimpleGrade {
 			implements JsonbAdapter<GradeAggregator, GenericGradeAggregator> {
 		@Override
 		public GenericGradeAggregator adaptToJson(GradeAggregator aggregator) {
-			LOGGER.info("Adapting to GSR from {}.", aggregator);
 			final ImmutableMap<Criterion, ? extends GradeAggregator> subs = aggregator.getSpecialSubAggregators();
 			final Map<Criterion, ? extends GradeAggregator> nonTrivialSubs = Maps.filterEntries(subs,
 					e -> !e.getValue().equals(GradeAggregator.TRIVIAL));
@@ -138,21 +134,30 @@ public class JsonSimpleGrade {
 			final Optional<GenericGradeAggregator> transformedNonTrivialDefaultSub = nonTrivialDefaultSub
 					.map(this::adaptToJson);
 			return new GenericGradeAggregator(aggregator.getMarkAggregator(), transformedNonTrivialDefaultSub,
-					transformedNonTrivialSubs);
+					JsonMapAdapter.toStringKeys(transformedNonTrivialSubs));
 		}
 
 		@Override
 		public GradeAggregator adaptFromJson(GenericGradeAggregator aggregator) {
-			LOGGER.info("Adapting from: {}.", aggregator);
-			if (structure.defaultAggregation == DefaultAggregation.ABSOLUTE) {
-				checkArgument(structure.absolutes.isEmpty(), "Not yet supported.");
-				checkArgument(Optional.ofNullable(structure.getDefaultSubStructure()).isEmpty());
-				return GradeStructure.givenWeights(structure.weights.orElse(ImmutableMap.of()), structure.subs);
-			}
-			checkArgument(Optional.ofNullable(structure.weights).isEmpty());
-			return GradeStructure.maxWithDefault(structure.absolutes,
-					Optional.ofNullable(structure.getDefaultSubStructure()).orElse(Optional.empty()), structure.subs);
+			final Map<Criterion, GenericGradeAggregator> subs = JsonMapAdapter.toCriterionKeys(aggregator.subs);
+			final Map<Criterion, GradeAggregator> transformedSubs = Maps.transformValues(subs, this::adaptFromJson);
+			return GradeAggregator.given(aggregator.markAggregator, transformedSubs,
+					aggregator.defaultSub.map(this::adaptFromJson).orElse(GradeAggregator.TRIVIAL));
 		}
+	}
+
+	private static final class JsonAdapterGrade implements JsonbAdapter<Grade, GenericGrade> {
+
+		@Override
+		public GenericGrade adaptToJson(Grade grade) throws Exception {
+			return new GenericGrade(grade.toMarksTree(), grade.toAggregator());
+		}
+
+		@Override
+		public Grade adaptFromJson(GenericGrade grade) throws Exception {
+			return Grade.given(grade.aggregator, grade.marks);
+		}
+
 	}
 
 	private static final class JsonAdapterMarksTree
@@ -234,7 +239,12 @@ public class JsonSimpleGrade {
 
 	@JsonbPropertyOrder({ "markAggregator", "defaultSub", "subs" })
 	public static record GenericGradeAggregator(MarkAggregator markAggregator,
-			Optional<GenericGradeAggregator> defaultSub, Map<Criterion, GenericGradeAggregator> subs) {
+			Optional<GenericGradeAggregator> defaultSub, Map<String, GenericGradeAggregator> subs) {
+	}
+
+	@JsonbPropertyOrder({ "marks", "aggregator" })
+	public static record GenericGrade(MarksTree marks, GradeAggregator aggregator) {
+
 	}
 
 	public static String toJson(MarkAggregator aggregator) {
@@ -251,16 +261,14 @@ public class JsonSimpleGrade {
 
 	public static String toJson(GradeAggregator aggregator) {
 		final Jsonb jsonb = JsonHelper.getJsonb(new JsonCriterionToString(), new JsonMapAdapter<Double>() {
-		}, new JsonMapAdapter<GenericGradeAggregator>() {
 		}, new JsonAdapterMarkAggregator(), new JsonAdapterGradeAggregator());
 		return jsonb.toJson(aggregator);
 	}
 
-	public static GradeStructure asStructure(String structureString) {
+	public static GradeAggregator asAggregator(String aggregatorString) {
 		final Jsonb jsonb = JsonHelper.getJsonb(new JsonCriterion(), new JsonMapAdapter<Double>() {
-		}, new JsonMapAdapter<GradeStructure>() {
-		}, new JsonAdapterGradeStructure());
-		return jsonb.fromJson(structureString, GradeStructure.class);
+		}, new JsonAdapterMarkAggregator(), new JsonAdapterGradeAggregator());
+		return jsonb.fromJson(aggregatorString, GradeAggregator.class);
 	}
 
 	public static String toJson(MarksTree marksTree) {
@@ -269,24 +277,38 @@ public class JsonSimpleGrade {
 		return jsonb.toJson(marksTree);
 	}
 
-	public static MarksTree asMarksTree(String gradeString) {
-		final JsonObject l0 = Json.createReader(new StringReader(gradeString)).readObject();
-		return asMarksTree(l0);
+	public static MarksTree asMarksTree(String treeString) {
+		final Jsonb jsonb = JsonHelper.getJsonb(new JsonAdapterJsonToMarksTree());
+		return jsonb.fromJson(treeString, MarksTree.class);
+	}
+
+	public static String toJson(Grade grade) {
+		final Jsonb jsonb = JsonHelper.getJsonb(new JsonCriterionToString(), new JsonMapAdapter<MarksTree>() {
+		}, new JsonAdapterMarksTree(), new JsonMapAdapter<Double>() {
+		}, new JsonAdapterMarkAggregator(), new JsonAdapterGradeAggregator(), new JsonAdapterGrade());
+		return jsonb.toJson(grade);
+	}
+
+	public static Grade asGrade(String gradeString) {
+		final Jsonb jsonb = JsonHelper.getJsonb(new JsonAdapterJsonToMarksTree(), new JsonCriterion(),
+				new JsonMapAdapter<Double>() {
+				}, new JsonAdapterMarkAggregator(), new JsonAdapterGradeAggregator(), new JsonAdapterGrade());
+		return jsonb.fromJson(gradeString, Grade.class);
 	}
 
 	public static String toJson(Exam exam) {
-		final Jsonb jsonb = JsonHelper.getJsonb(new JsonCriterionToString(), new JsonMapAdapter<Double>() {
-		}, new JsonMapAdapter<GradeStructure>() {
-		}, new JsonAdapterGradeStructure(), new JsonMapAdapter<MarksTree>() {
-		}, new JsonAdapterMarksTree(), new JsonAdapterExam());
+		final Jsonb jsonb = JsonHelper.getJsonb(new JsonCriterionToString(), new JsonMapAdapter<MarksTree>() {
+		}, new JsonAdapterMarksTree(), new JsonMapAdapter<Double>() {
+		}, new JsonAdapterMarkAggregator(), new JsonAdapterGradeAggregator(), new JsonAdapterGrade(),
+				new JsonAdapterExam());
 		return jsonb.toJson(exam);
 	}
 
 	public static Exam asExam(String examString) {
-		final Jsonb jsonb = JsonHelper.getJsonb(new JsonCriterionToString(), new JsonMapAdapter<Double>() {
-		}, new JsonMapAdapter<GradeStructure>() {
-		}, new JsonAdapterGradeStructure(), new JsonMapAdapter<MarksTree>() {
-		}, new JsonAdapterMarksTree(), new JsonAdapterExam(), new JsonAdapterJsonToMarksTree());
+		final Jsonb jsonb = JsonHelper.getJsonb(new JsonAdapterJsonToMarksTree(), new JsonCriterion(),
+				new JsonMapAdapter<Double>() {
+				}, new JsonAdapterMarkAggregator(), new JsonAdapterGradeAggregator(), new JsonAdapterGrade(),
+				new JsonAdapterExam());
 		return jsonb.fromJson(examString, Exam.class);
 	}
 }

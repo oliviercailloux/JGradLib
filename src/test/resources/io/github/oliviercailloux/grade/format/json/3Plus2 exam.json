@@ -1,0 +1,90 @@
+{
+    "aggregator": {
+        "markAggregator": {
+            "type": "StaticWeighter",
+            "weights": {
+                "C1": 1.0,
+                "C2": 9.0
+            }
+        },
+        "subs": {
+            "C1": {
+                "markAggregator": {
+                    "type": "StaticWeighter",
+                    "weights": {
+                        "C1.1": 1.0,
+                        "C1.2": 2.0,
+                        "C1.3": 2.0
+                    }
+                },
+                "subs": {
+                }
+            },
+            "C2": {
+                "markAggregator": {
+                    "type": "StaticWeighter",
+                    "weights": {
+                        "C2.1": 1.0,
+                        "C2.2": 1.0
+                    }
+                },
+                "subs": {
+                }
+            }
+        }
+    },
+    "grades": {
+        "u1": {
+            "C1": {
+                "C1.1": {
+                    "points": 0.3,
+                    "comment": "c11"
+                },
+                "C1.2": {
+                    "points": 0.2,
+                    "comment": ""
+                },
+                "C1.3": {
+                    "points": 1.0,
+                    "comment": ""
+                }
+            },
+            "C2": {
+                "C2.1": {
+                    "points": 0.0,
+                    "comment": "c21"
+                },
+                "C2.2": {
+                    "points": 0.8,
+                    "comment": ""
+                }
+            }
+        },
+        "u2": {
+            "C1": {
+                "C1.1": {
+                    "points": 0.3,
+                    "comment": ""
+                },
+                "C1.2": {
+                    "points": 0.2,
+                    "comment": ""
+                },
+                "C1.3": {
+                    "points": 1.0,
+                    "comment": ""
+                }
+            },
+            "C2": {
+                "C2.1": {
+                    "points": 0.0,
+                    "comment": ""
+                },
+                "C2.2": {
+                    "points": 0.1,
+                    "comment": ""
+                }
+            }
+        }
+    }
+}
