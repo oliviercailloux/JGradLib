@@ -47,6 +47,26 @@ import org.slf4j.LoggerFactory;
  * rejects every criteria unknown to its static mark aggregator; a dynamic grade
  * aggregator bound to a ParametricWeighter rejects sets of unsuitable size or
  * content…).
+ * </p>
+ * <p>
+ * TODO distinguish two sorts of static weights. Consider this grade.
+ * <ul>
+ * <li>Capping at 2022-03-04T07:50:09Z — Weighted sum: 20 / 20
+ * <ul>
+ * <li>user.name — 2 / 2</li>
+ * <li>Grade — Weighted sum: 18 / 18
+ * <ul>
+ * <li>First commit — Weighted sum: 9 / 9</li>
+ * <li>Second commit — Weighted sum: 9 / 9</li>
+ * </ul>
+ * </li>
+ * </ul>
+ * </li>
+ * </ul>
+ * Here we want to keep the two levels of weighter so that if the main Grade is
+ * a simple mark, it is still aggregated correctly; but in general, we want to
+ * display the static weighter flat, i.e., with three criteria instead of one
+ * and then two.
  */
 public class GradeAggregator {
 	@SuppressWarnings("unused")
