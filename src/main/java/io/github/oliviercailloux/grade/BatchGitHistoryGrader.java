@@ -60,7 +60,8 @@ public class BatchGitHistoryGrader<X extends Exception> {
 				ImmutableMap.of(C_GRADE, basis));
 	}
 
-	private GradeAggregator getComplexStructure(GradeAggregator main, boolean withTimePenalty) {
+	private GradeAggregator getComplexStructure(Grader<?> grader, double userGradeWeight, boolean withTimePenalty) {
+		final GradeAggregator main = getUserNamedAggregator(grader, userGradeWeight);
 		final GradeAggregator penalized;
 		if (withTimePenalty) {
 			penalized = GradeAggregator.parametric(C_MAIN, C_LATENESS, main);
@@ -86,32 +87,14 @@ public class BatchGitHistoryGrader<X extends Exception> {
 
 	private <Y extends Exception> Exam getGrades(ZonedDateTime deadline, Duration durationForZero, Grader<Y> grader,
 			double userGradeWeight, TOptional<Path> outWithoutExtensionOpt, String docTitle) throws X, Y, IOException {
-		checkArgument(userGradeWeight > 0d);
 		checkArgument(userGradeWeight < 1d);
 		verify(outWithoutExtensionOpt.isPresent() == !docTitle.isEmpty());
 
 		final LinearPenalizer penalizer = LinearPenalizer.proportionalToLateness(durationForZero);
 
-		final GradeAggregator basis = grader.getAggregator();
-		final boolean flatUserName = basis.getMarkAggregator() instanceof StaticWeighter w;
-		final GradeAggregator userNamedAggregator;
-		final double remainingWeight = 1d - userGradeWeight;
-		if (basis.getMarkAggregator() instanceof StaticWeighter w) {
-			checkArgument(!w.weights.containsKey(C_USER_NAME));
-			final ImmutableMap.Builder<Criterion, Double> builder = ImmutableMap.builder();
-			builder.put(C_USER_NAME, userGradeWeight);
-			w.weights.keySet().stream().forEach(c -> builder.put(c, w.weight(c) * remainingWeight));
-			userNamedAggregator = GradeAggregator.staticAggregator(builder.build(), basis.getSpecialSubAggregators(),
-					basis.getDefaultSubAggregator());
-		} else {
-			userNamedAggregator = GradeAggregator.staticAggregator(
-					ImmutableMap.of(C_USER_NAME, userGradeWeight, C_GRADE, remainingWeight),
-					ImmutableMap.of(C_GRADE, basis));
-		}
-
-		final boolean withTimePenalty = !deadline.equals(MAX_DEADLINE);
-		final GradeAggregator whole = getComplexStructure(userNamedAggregator, withTimePenalty);
 		final LinkedHashMap<GitHubUsername, MarksTree> builder = new LinkedHashMap<>();
+		final boolean withTimePenalty = !deadline.equals(MAX_DEADLINE);
+		final GradeAggregator whole = getComplexStructure(grader, userGradeWeight, withTimePenalty);
 		try (GitFileSystemWithHistoryFetcher fetcher = fetcherFactory.get()) {
 
 			for (GitHubUsername author : fetcher.getAuthors()) {
@@ -145,12 +128,8 @@ public class BatchGitHistoryGrader<X extends Exception> {
 					final MarksTree grade = grader.grade(capped);
 
 					final Mark userGrade = DeadlineGrader.getUsernameGrade(beforeCommitByGitHub, author).asNew();
-					final MarksTree gradeWithUser;
-					if (flatUserName) {
-						gradeWithUser = MarksTree.composite(ImmutableMap.of(C_USER_NAME, userGrade, C_GRADE, grade));
-					} else {
-						gradeWithUser = MarksTree.composite(ImmutableMap.of(C_USER_NAME, userGrade, C_GRADE, grade));
-					}
+					final MarksTree gradeWithUser = MarksTree
+							.composite(ImmutableMap.of(C_USER_NAME, userGrade, C_GRADE, grade));
 
 					final MarksTree perhapsPenalized;
 					if (!withTimePenalty) {
