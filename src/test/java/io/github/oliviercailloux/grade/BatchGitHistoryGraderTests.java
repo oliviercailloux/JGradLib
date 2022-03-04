@@ -1,21 +1,19 @@
 package io.github.oliviercailloux.grade;
 
-import static com.google.common.base.Preconditions.checkArgument;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import io.github.oliviercailloux.git.GitUtils;
 import io.github.oliviercailloux.git.JGit;
 import io.github.oliviercailloux.git.fs.GitFileSystem;
 import io.github.oliviercailloux.git.fs.GitFileSystemProvider;
 import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
-import java.io.IOException;
+import io.github.oliviercailloux.grade.format.json.JsonSimpleGrade;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
-import java.util.Map;
 import org.eclipse.jgit.internal.storage.dfs.DfsRepositoryDescription;
 import org.eclipse.jgit.internal.storage.dfs.InMemoryRepository;
 import org.eclipse.jgit.lib.Repository;
@@ -77,41 +75,19 @@ public class BatchGitHistoryGraderTests {
 
 			final ImmutableMap<GitHubUsername, GitFileSystemHistory> gitFses = ImmutableMap.of(userEmpty, emptyWithHist,
 					userEarly, earlyWithHist, userNow, nowWithHist, userLate, lateWithHist);
-			final BatchGitHistoryGrader<RuntimeException> batchGrader = new BatchGitHistoryGrader<>(
-					() -> new StaticFetcher(gitFses));
+			final BatchGitHistoryGrader<RuntimeException> batchGrader = BatchGitHistoryGrader
+					.given(() -> StaticFetcher.multiple(gitFses));
 
-			final Exam exam = batchGrader.getAndWriteGrades("testprefix", nowTime.plus(30, ChronoUnit.MINUTES),
-					Duration.of(1, ChronoUnit.HOURS), new MyGrader(), USER_GRADE_WEIGHT, Path.of("test grades.json"));
+			final Exam exam = batchGrader.getAndWriteGrades(nowTime.plus(30, ChronoUnit.MINUTES),
+					Duration.of(1, ChronoUnit.HOURS), new MyGrader(), USER_GRADE_WEIGHT, Path.of("test grades.json"),
+					"testprefix");
+			Files.writeString(Path.of("exam.json"), JsonSimpleGrade.toJson(exam));
 
 			assertEquals(gitFses.keySet(), exam.getUsernames());
 			assertEquals(Mark.zero("No commit found."), exam.getGrade(userEmpty).mark());
 			assertEquals((W1 + W2 + W3) / W_TOT, exam.getGrade(userEarly).mark().getPoints(), 1e-6d);
 			assertEquals(W1 / W_TOT, exam.getGrade(userNow).mark().getPoints(), 1e-6d);
 			assertEquals(W1 / W_TOT / 2d, exam.getGrade(userLate).mark().getPoints(), 1e-6d);
-		}
-	}
-
-	static class StaticFetcher implements GitFileSystemWithHistoryFetcher {
-		private final ImmutableMap<GitHubUsername, GitFileSystemHistory> gitFsesByauthor;
-
-		public StaticFetcher(Map<GitHubUsername, GitFileSystemHistory> gitFsesByauthor) {
-			this.gitFsesByauthor = ImmutableMap.copyOf(gitFsesByauthor);
-		}
-
-		@Override
-		public ImmutableSet<GitHubUsername> getAuthors() {
-			return gitFsesByauthor.keySet();
-		}
-
-		@Override
-		public GitFileSystemHistory goTo(GitHubUsername author) throws IOException {
-			checkArgument(gitFsesByauthor.containsKey(author));
-			return gitFsesByauthor.get(author);
-		}
-
-		@Override
-		public void close() {
-			/* Nothing to close. */
 		}
 	}
 }

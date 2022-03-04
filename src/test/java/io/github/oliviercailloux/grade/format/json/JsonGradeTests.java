@@ -17,6 +17,7 @@ import io.github.oliviercailloux.grade.MarksTree;
 import io.github.oliviercailloux.grade.MarksTreeTestsHelper;
 import io.github.oliviercailloux.grade.NormalizingStaticWeighter;
 import io.github.oliviercailloux.grade.ParametricWeighter;
+import io.github.oliviercailloux.grade.VoidAggregator;
 import java.nio.charset.StandardCharsets;
 import org.junit.jupiter.api.Test;
 
@@ -78,6 +79,62 @@ public class JsonGradeTests {
 		final MarkAggregator read = JsonSimpleGrade.asMarkAggregator(input);
 
 		final NormalizingStaticWeighter expected = NormalizingStaticWeighter.given(ImmutableMap.of(c1, 1d, c2, 2d));
+		assertEquals(expected, read);
+	}
+
+	@Test
+	void testWriteVoidAggregator() throws Exception {
+		final VoidAggregator a = VoidAggregator.INSTANCE;
+		final String json = JsonSimpleGrade.toJson(a);
+
+		final String expected = """
+				{
+				    "type": "VoidAggregator"
+				}""";
+		assertEquals(expected, json);
+	}
+
+	@Test
+	void testReadVoidAggregator() throws Exception {
+		final String input = """
+				{
+				    "type": "VoidAggregator"
+				}""";
+		final MarkAggregator read = JsonSimpleGrade.asMarkAggregator(input);
+
+		final VoidAggregator expected = VoidAggregator.INSTANCE;
+		assertEquals(expected, read);
+	}
+
+	@Test
+	void testWriteTrivialAggregator() throws Exception {
+		final GradeAggregator a = GradeAggregator.TRIVIAL;
+		final String json = JsonSimpleGrade.toJson(a);
+
+		final String expected = """
+				{
+				    "markAggregator": {
+				        "type": "VoidAggregator"
+				    },
+				    "subs": {
+				    }
+				}""";
+		assertEquals(expected, json);
+	}
+
+	@Test
+	void testReadTrivialAggregator() throws Exception {
+		final String input = """
+				{
+				    "markAggregator": {
+				        "type": "VoidAggregator"
+				    },
+				    "subs": {
+				    }
+				}""";
+		final GradeAggregator read = JsonSimpleGrade.asAggregator(input);
+
+		final GradeAggregator expected = GradeAggregator.TRIVIAL;
 		assertEquals(expected, read);
 	}
 

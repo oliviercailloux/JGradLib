@@ -93,6 +93,11 @@ public class GradeAggregator {
 		return new GradeAggregator(new StaticWeighter(weights), subs, TRIVIAL);
 	}
 
+	public static GradeAggregator staticAggregator(Map<Criterion, Double> weights,
+			Map<Criterion, ? extends GradeAggregator> subs, GradeAggregator defaultSub) {
+		return new GradeAggregator(new StaticWeighter(weights), subs, defaultSub);
+	}
+
 	public static GradeAggregator given(MarkAggregator markAggregator, Map<Criterion, GradeAggregator> subs,
 			GradeAggregator defaultSubAggregator) {
 		return new GradeAggregator(markAggregator, subs, defaultSubAggregator);

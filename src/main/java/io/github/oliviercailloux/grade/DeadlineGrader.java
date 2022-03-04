@@ -270,17 +270,17 @@ public class DeadlineGrader {
 			return penalty;
 		}
 
-		public io.github.oliviercailloux.grade.Mark getFractionPenality(Duration lateness) {
-			final io.github.oliviercailloux.grade.Mark penalty;
+		public io.github.oliviercailloux.grade.Mark getFractionRemaining(Duration lateness) {
+			final io.github.oliviercailloux.grade.Mark remaining;
 			if (!lateness.isNegative() && !lateness.isZero()) {
 				final double fractionPenalty = Math.min(lateness.getSeconds() / (double) nbSecondsZero, 1d);
 				verify(0d < fractionPenalty);
 				verify(fractionPenalty <= 1d);
-				penalty = io.github.oliviercailloux.grade.Mark.given(fractionPenalty, "Lateness: " + lateness);
+				remaining = io.github.oliviercailloux.grade.Mark.given(1d - fractionPenalty, "Lateness: " + lateness);
 			} else {
-				penalty = io.github.oliviercailloux.grade.Mark.zero();
+				remaining = io.github.oliviercailloux.grade.Mark.one();
 			}
-			return penalty;
+			return remaining;
 		}
 	}
 
@@ -327,10 +327,12 @@ public class DeadlineGrader {
 				.wrapping(history.getGraph().nodes().stream());
 		final ImmutableSet<String> authors = checkedCommits.map(GitPathRoot::getCommit).map(Commit::getAuthorName)
 				.collect(ImmutableSet.toImmutableSet());
+		final ImmutableSet<String> authorsShow = authors.stream().map(s -> "‘" + s + "’")
+				.collect(ImmutableSet.toImmutableSet());
 		LOGGER.debug("Authors: {}.", authors);
 		final String authorExpected = expectedUsername.getUsername();
 		return Mark.binary(authors.equals(ImmutableSet.of(authorExpected)), "",
-				"Expected " + authorExpected + ", seen " + authors);
+				"Expected ‘" + authorExpected + "’, seen " + authorsShow);
 	}
 
 	private final Throwing.Function<GitWork, IGrade, IOException> grader;

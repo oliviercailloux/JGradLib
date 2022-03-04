@@ -81,8 +81,8 @@ public class HtmlGrades {
 
 		final Mark mark = grade.mark();
 		final String comment = mark.getComment();
-		final String pointsText = FORMATTER.format(mark.getPoints() * denominator) + " / "
-				+ FORMATTER.format(denominator);
+		final String overDenominator = denominator == 100d ? "%" : " / " + FORMATTER.format(denominator);
+		final String pointsText = FORMATTER.format(mark.getPoints() * denominator) + overDenominator;
 
 		final boolean isMark = grade.toMarksTree().isMark();
 		final String explanation;
@@ -94,9 +94,11 @@ public class HtmlGrades {
 			if (aggregator instanceof ParametricWeighter) {
 				final ParametricWeighter a = (ParametricWeighter) aggregator;
 				final Grade multipliedGrade = grade.getGrade(a.multipliedCriterion());
-				final String basePointsText = FORMATTER.format(multipliedGrade.mark().getPoints() * denominator) + " / "
-						+ FORMATTER.format(denominator);
-				explanation = basePointsText + " × " + a.weightingCriterion() + " = " + pointsText;
+				final Grade weightingGrade = grade.getGrade(a.weightingCriterion());
+				final String basePointsText = FORMATTER.format(multipliedGrade.mark().getPoints() * denominator)
+						+ overDenominator;
+//				explanation = basePointsText + " × [" + a.weightingCriterion().getName() + "] = " + pointsText;
+				explanation = basePointsText + " × " + FORMATTER.format(weightingGrade.mark().getPoints() * 100) + "%";
 			} else if (aggregator instanceof AbsoluteAggregator) {
 				explanation = "Sum";
 			} else if (aggregator instanceof StaticWeighter) {
@@ -134,7 +136,7 @@ public class HtmlGrades {
 					final Grade subSubGrade = grade.getGrade(subCriterion);
 					checkArgument(subSubGrade.toMarksTree().isMark());
 					final DocumentFragment description = getDescription(new SubGrade(subCriterion, subSubGrade),
-							document, 1d);
+							document, 100d);
 					li.appendChild(description);
 				}
 			} else if (aggregator instanceof CriteriaWeighter) {

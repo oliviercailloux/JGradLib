@@ -81,8 +81,6 @@ public class GradeTestsHelper {
 	public static WeightingGrade getEclecticWeightedGrade() {
 		final WeightingGrade subGrade1 = getSingletonWeightingGrade();
 
-		final Criterion c1 = Criterion.given("C1");
-		final Criterion c2 = Criterion.given("C2");
 		final ImmutableMap<Criterion, Double> weights = ImmutableMap.of(c1, 0.9d, c2, 0.1d);
 		final ImmutableMap<Criterion, IGrade> subGrades = ImmutableMap.of(c1, subGrade1, c2, getMinGrade());
 		final WeightingGrade composite = WeightingGrade.from(subGrades, weights);

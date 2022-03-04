@@ -14,6 +14,7 @@ import io.github.oliviercailloux.grade.IGrade.CriteriaPath;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -115,7 +116,7 @@ public class Grade {
 		}
 		if ((a instanceof ParametricWeighter p) && originalMarks.getCriteria().size() == 2) {
 			final ImmutableMap<SubMark, Double> weightedSubMarks = p.weightsWithPenalty(original.subMarks());
-			LOGGER.info("Given {}, points: {}.", weightedSubMarks, weightedSubMarks.keySet().stream().collect(
+			LOGGER.debug("Given {}, points: {}.", weightedSubMarks, weightedSubMarks.keySet().stream().collect(
 					ImmutableMap.toImmutableMap(SubMark::getCriterion, s -> s.getPoints() * weightedSubMarks.get(s))));
 			final ImmutableMap<Criterion, Mark> absoluteMarks = weightedSubMarks.keySet().stream()
 					.collect(ImmutableMap.toImmutableMap(SubMark::getCriterion,
@@ -151,11 +152,13 @@ public class Grade {
 	private final MarksTree marks;
 	private final ImmutableMap<SubMark, Double> weightedSubMarks;
 	private final Mark mark;
+	private final ImmutableMap<Criterion, Grade> subGrades;
 
 	private Grade(GradeAggregator aggregator, MarksTree marks) throws AggregatorException {
 		this.aggregator = checkNotNull(aggregator);
 		this.marks = checkNotNull(marks);
 		/* To check that it is able to compute it. */
+		subGrades = marks.getCriteria().stream().collect(ImmutableMap.toImmutableMap(c -> c, this::computeGrade));
 		weightedSubMarks = computeWeightedSubMarks();
 		mark = computeMark();
 	}
@@ -238,20 +241,18 @@ public class Grade {
 	 * @throws NoSuchElementException iff the given criterion is not in this tree.
 	 */
 	public Grade getGrade(Criterion criterion) throws NoSuchElementException {
+		return Optional.ofNullable(subGrades.get(criterion))
+				.orElseThrow(() -> new NoSuchElementException(criterion.getName()));
+	}
+
+	private Grade computeGrade(Criterion criterion) throws NoSuchElementException, AggregatorException {
 		/*
 		 * Note that performance would be much better by returning a Grade that
 		 * delegates to this object with a shifted root (the shift being a
 		 * CriteriaPath).
 		 */
 		final MarksTree subMarks = marks.getTree(criterion);
-		final GradeAggregator subAggregator;
-		try {
-			subAggregator = aggregator.getGradeAggregator(criterion);
-		} catch (AggregatorException e) {
-			throw new VerifyException(
-					"We checked that we can compute the mark and that the criterion exists in this tree, so we should accept it",
-					e);
-		}
+		final GradeAggregator subAggregator = aggregator.getGradeAggregator(criterion);
 		return given(subAggregator, subMarks);
 	}
 

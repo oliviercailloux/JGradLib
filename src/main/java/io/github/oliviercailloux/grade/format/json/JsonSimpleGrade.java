@@ -22,6 +22,7 @@ import io.github.oliviercailloux.grade.MaxAggregator;
 import io.github.oliviercailloux.grade.NormalizingStaticWeighter;
 import io.github.oliviercailloux.grade.ParametricWeighter;
 import io.github.oliviercailloux.grade.StaticWeighter;
+import io.github.oliviercailloux.grade.VoidAggregator;
 import jakarta.json.JsonNumber;
 import jakarta.json.JsonObject;
 import jakarta.json.JsonString;
@@ -41,7 +42,8 @@ public class JsonSimpleGrade {
 	private static final Logger LOGGER = LoggerFactory.getLogger(JsonSimpleGrade.class);
 
 	public static enum MarkAggregatorType {
-		ParametricWeighter, NormalizingStaticWeighter, StaticWeighter, AbsoluteAggregator, MaxAggregator;
+		ParametricWeighter, VoidAggregator, NormalizingStaticWeighter, StaticWeighter, AbsoluteAggregator,
+		MaxAggregator;
 	}
 
 	@JsonbPropertyOrder({ "type", "multiplied", "weighting", "weights" })
@@ -63,7 +65,7 @@ public class JsonSimpleGrade {
 			checkArgument((type != MarkAggregatorType.ParametricWeighter) == hasNoCrits);
 			checkArgument((type == MarkAggregatorType.NormalizingStaticWeighter
 					|| type == MarkAggregatorType.StaticWeighter) == hasWeights);
-			checkArgument((type == MarkAggregatorType.AbsoluteAggregator
+			checkArgument((type == MarkAggregatorType.VoidAggregator || type == MarkAggregatorType.AbsoluteAggregator
 					|| type == MarkAggregatorType.MaxAggregator) == (!hasWeights && hasNoCrits));
 		}
 
@@ -141,7 +143,12 @@ public class JsonSimpleGrade {
 		public GradeAggregator adaptFromJson(GenericGradeAggregator aggregator) {
 			final Map<Criterion, GenericGradeAggregator> subs = JsonMapAdapter.toCriterionKeys(aggregator.subs);
 			final Map<Criterion, GradeAggregator> transformedSubs = Maps.transformValues(subs, this::adaptFromJson);
-			return GradeAggregator.given(aggregator.markAggregator, transformedSubs,
+			final MarkAggregator markAggregator = aggregator.markAggregator;
+			if (markAggregator.equals(VoidAggregator.INSTANCE)) {
+				checkArgument(subs.isEmpty());
+				return GradeAggregator.TRIVIAL;
+			}
+			return GradeAggregator.given(markAggregator, transformedSubs,
 					aggregator.defaultSub.map(this::adaptFromJson).orElse(GradeAggregator.TRIVIAL));
 		}
 	}
@@ -195,6 +202,9 @@ public class JsonSimpleGrade {
 			if (aggregator instanceof ParametricWeighter p) {
 				return new GenericMarkAggregator(p.multipliedCriterion(), p.weightingCriterion());
 			}
+			if (aggregator instanceof VoidAggregator) {
+				return new GenericMarkAggregator(MarkAggregatorType.VoidAggregator);
+			}
 			if (aggregator instanceof NormalizingStaticWeighter w) {
 				return new GenericMarkAggregator(MarkAggregatorType.NormalizingStaticWeighter, w.weights());
 			}
@@ -215,6 +225,7 @@ public class JsonSimpleGrade {
 			return switch (from.type) {
 			case ParametricWeighter -> ParametricWeighter.given(from.multiplied.orElseThrow(),
 					from.weighting.orElseThrow());
+			case VoidAggregator -> VoidAggregator.INSTANCE;
 			case NormalizingStaticWeighter -> NormalizingStaticWeighter.given(from.weights.orElseThrow());
 			case StaticWeighter -> StaticWeighter.given(from.weights.orElseThrow());
 			case AbsoluteAggregator -> AbsoluteAggregator.INSTANCE;
