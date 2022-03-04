@@ -1,5 +1,6 @@
 package io.github.oliviercailloux.grade;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.google.common.collect.ImmutableSet;
@@ -25,7 +26,11 @@ public class GitFileSystemWithHistoryFetcherByPrefix implements GitFileSystemWit
 	private static final Logger LOGGER = LoggerFactory.getLogger(GitFileSystemWithHistoryFetcherByPrefix.class);
 
 	public static GitFileSystemWithHistoryFetcher getRetrievingByPrefix(String prefix) {
-		return new GitFileSystemWithHistoryFetcherByPrefix(prefix);
+		return new GitFileSystemWithHistoryFetcherByPrefix(prefix, Integer.MAX_VALUE);
+	}
+
+	public static GitFileSystemWithHistoryFetcher getFirstRetrievingByPrefix(String prefix) {
+		return new GitFileSystemWithHistoryFetcherByPrefix(prefix, 1);
 	}
 
 	private final String prefix;
@@ -34,9 +39,12 @@ public class GitFileSystemWithHistoryFetcherByPrefix implements GitFileSystemWit
 	private GitFileSystem lastGitFs;
 	private Repository lastRepository;
 	private GitFileSystemHistory lastHistory;
+	private int count;
 
-	GitFileSystemWithHistoryFetcherByPrefix(String prefix) {
+	GitFileSystemWithHistoryFetcherByPrefix(String prefix, int count) {
 		this.prefix = checkNotNull(prefix);
+		this.count = count;
+		checkArgument(count >= 0);
 		cloner = GitCloner.create().setCheckCommonRefsAgree(false);
 		fetcherQl = GitHubFetcherQL.using(GitHubToken.getRealInstance());
 		lastGitFs = null;
@@ -48,8 +56,8 @@ public class GitFileSystemWithHistoryFetcherByPrefix implements GitFileSystemWit
 	public ImmutableSet<GitHubUsername> getAuthors() {
 		final RepositoryFetcher fetcher = RepositoryFetcher.withPrefix(prefix);
 		final ImmutableSet<RepositoryCoordinatesWithPrefix> coordinatess = fetcher.fetch();
-		return coordinatess.stream().map(RepositoryCoordinatesWithPrefix::getUsername).map(GitHubUsername::given)
-				.collect(ImmutableSet.toImmutableSet());
+		return coordinatess.stream().limit(count).map(RepositoryCoordinatesWithPrefix::getUsername)
+				.map(GitHubUsername::given).collect(ImmutableSet.toImmutableSet());
 	}
 
 	@Override

@@ -13,6 +13,8 @@ import io.github.oliviercailloux.grade.Grade;
 import io.github.oliviercailloux.grade.Mark;
 import io.github.oliviercailloux.grade.MarkAggregator;
 import io.github.oliviercailloux.grade.MaxAggregator;
+import io.github.oliviercailloux.grade.MinAggregator;
+import io.github.oliviercailloux.grade.OwaWeighter;
 import io.github.oliviercailloux.grade.ParametricWeighter;
 import io.github.oliviercailloux.grade.StaticWeighter;
 import io.github.oliviercailloux.grade.SubGrade;
@@ -103,6 +105,8 @@ public class HtmlGrades {
 				explanation = "Sum";
 			} else if (aggregator instanceof StaticWeighter) {
 				explanation = "Weighted sum";
+			} else if (aggregator instanceof MinAggregator) {
+				explanation = "Min";
 			} else if (aggregator instanceof MaxAggregator) {
 				explanation = "Max";
 			} else {
@@ -150,7 +154,7 @@ public class HtmlGrades {
 							denominator * subWeight);
 					li.appendChild(description);
 				}
-			} else if (aggregator instanceof MaxAggregator) {
+			} else if (aggregator instanceof OwaWeighter) {
 				for (Criterion subCriterion : grade.toMarksTree().getCriteria()) {
 					final Element li = document.createXhtmlElement("li");
 					ul.appendChild(li);

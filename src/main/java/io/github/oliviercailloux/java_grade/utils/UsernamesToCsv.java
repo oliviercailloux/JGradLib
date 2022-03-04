@@ -5,7 +5,7 @@ import com.univocity.parsers.csv.CsvWriter;
 import com.univocity.parsers.csv.CsvWriterSettings;
 import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
 import io.github.oliviercailloux.grade.comm.StudentOnGitHubKnown;
-import io.github.oliviercailloux.grade.comm.json.JsonStudentsReader;
+import io.github.oliviercailloux.grade.comm.json.JsonStudents;
 import java.io.StringWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -15,7 +15,7 @@ public class UsernamesToCsv {
 	private static final Path WORK_DIR = Paths.get("../../Java L3/");
 
 	public static void main(String[] args) throws Exception {
-		final JsonStudentsReader students = JsonStudentsReader
+		final JsonStudents students = JsonStudents
 				.from(Files.readString(WORK_DIR.resolve("usernames.json")));
 		final ImmutableMap<GitHubUsername, StudentOnGitHubKnown> usernames = students
 				.getStudentsKnownByGitHubUsername();

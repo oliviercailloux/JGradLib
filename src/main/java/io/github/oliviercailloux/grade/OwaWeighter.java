@@ -17,7 +17,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Rejects nothing.
  */
-public sealed interface OwaWeighter extends MarkAggregator permits MaxAggregator {
+public sealed interface OwaWeighter extends MarkAggregator permits MaxAggregator,MinAggregator {
 	@SuppressWarnings("unused")
 	public static final Logger LOGGER = LoggerFactory.getLogger(OwaWeighter.class);
 

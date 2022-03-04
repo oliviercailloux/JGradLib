@@ -20,7 +20,7 @@ class JsonStudentsReaderTests {
 	@Test
 	void test() throws Exception {
 		final String json = Files.readString(Path.of(getClass().getResource("Students.json").toURI()));
-		final JsonStudentsReader read = JsonStudentsReader.from(json);
+		final JsonStudents read = JsonStudents.from(json);
 		assertEquals(getInst(), read.getInstitutionalStudentsById());
 		assertEquals(getGH(), read.getStudentsByGitHubUsername());
 	}

@@ -4,7 +4,8 @@ import static com.google.common.base.Verify.verify;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Streams;
+import com.google.common.collect.Sets;
+import com.google.common.graph.Graphs;
 import io.github.oliviercailloux.git.fs.GitPath;
 import io.github.oliviercailloux.git.fs.GitPathRoot;
 import io.github.oliviercailloux.grade.BatchGitHistoryGrader;
@@ -22,7 +23,6 @@ import java.nio.file.Path;
 import java.time.Instant;
 import java.util.Comparator;
 import java.util.regex.Pattern;
-import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,7 +30,7 @@ public class Fake implements Grader<RuntimeException> {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(Fake.class);
 
-	private static final String PREFIX = "fake";
+	public static final String PREFIX = "fake";
 
 	public static void main(String[] args) throws Exception {
 		/*
@@ -48,8 +48,10 @@ public class Fake implements Grader<RuntimeException> {
 		 */
 		final BatchGitHistoryGrader<RuntimeException> grader = BatchGitHistoryGrader
 				.given(() -> GitFileSystemWithHistoryFetcherByPrefix.getRetrievingByPrefix(PREFIX));
-		grader.getAndWriteGrades(new Fake(), 0.2d, Path.of("out - " + PREFIX), PREFIX + " " + Instant.now());
+		grader.getAndWriteGrades(new Fake(), 0.25d, Path.of("grades " + PREFIX), PREFIX + " " + Instant.now());
 	}
+
+	private static final Criterion C0 = Criterion.given("Anything committed");
 
 	private static final Criterion C1 = Criterion.given("First commit");
 	private static final Criterion C_TWO = Criterion.given("Exactly two files");
@@ -66,29 +68,37 @@ public class Fake implements Grader<RuntimeException> {
 		verify(!data.getGraph().nodes().isEmpty());
 
 		final ImmutableSet<GitPathRoot> commitsOrdered = data.getRoots().stream()
-				.flatMap(r -> Streams.concat(Stream.of(r), data.getGraph().successors(r).stream()))
+				.flatMap(r -> Graphs.reachableNodes(data.getGraph(), r).stream())
 				.collect(ImmutableSet.toImmutableSet());
-		LOGGER.debug("Commits ordered: {}.", commitsOrdered);
+		final ImmutableSet<GitPathRoot> commitsOrderedExceptRoots = Sets.difference(commitsOrdered, data.getRoots())
+				.immutableCopy();
+		LOGGER.info("Commits ordered (except for roots): {}.", commitsOrderedExceptRoots);
+		final int nbCommits = commitsOrderedExceptRoots.size();
+
+		final MarksTree anyCommitMark = Mark.binary(!commitsOrderedExceptRoots.isEmpty(),
+				String.format("Found %s commit%s, not counting the root ones", nbCommits, nbCommits == 1 ? "" : "s"),
+				"");
+
 		final Comparator<MarksTree> byPoints = Comparator
-				.comparing(m -> Grade.given(firstCommitAggregator(), m).mark().getPoints());
-		final GitPathRoot firstCommit = commitsOrdered.stream()
+				.comparing(m -> Grade.given(firstCommitDiscriminator(), m).mark().getPoints());
+		final GitPathRoot firstCommit = commitsOrderedExceptRoots.stream()
 				.sorted(Comparator.comparing(this::firstCommitMark, byPoints.reversed())).findFirst()
-				.orElse(data.getGraph().nodes().iterator().next());
+				.orElse(data.getRoots().iterator().next());
 		final MarksTree firstCommitMark = firstCommitMark(firstCommit);
 
 		final Comparator<MarksTree> byPointsSecond = Comparator
-				.comparing(m -> Grade.given(secondCommitAggregator(), m).mark().getPoints());
-		final GitPathRoot secondCommit = data.getGraph().successors(firstCommit).stream()
+				.comparing(m -> Grade.given(secondCommitDiscriminator(), m).mark().getPoints());
+		final GitPathRoot secondCommit = Graphs.reachableNodes(data.getGraph(), firstCommit).stream()
 				.sorted(Comparator.comparing(this::secondCommitMark, byPointsSecond.reversed())).findFirst()
-				.orElse(data.getGraph().nodes().iterator().next());
+				.orElse(data.getRoots().iterator().next());
 		final MarksTree secondCommitMark = secondCommitMark(secondCommit);
 
-		return MarksTree.composite(ImmutableMap.of(C1, firstCommitMark, C2, secondCommitMark));
+		return MarksTree.composite(ImmutableMap.of(C0, anyCommitMark, C1, firstCommitMark, C2, secondCommitMark));
 	}
 
 	@Override
 	public GradeAggregator getAggregator() {
-		return GradeAggregator.staticAggregator(ImmutableMap.of(C1, 1d, C2, 1d),
+		return GradeAggregator.staticAggregator(ImmutableMap.of(C0, 1d, C1, 1d, C2, 1d),
 				ImmutableMap.of(C1, firstCommitAggregator(), C2, secondCommitAggregator()));
 	}
 
@@ -122,6 +132,10 @@ public class Fake implements Grader<RuntimeException> {
 	}
 
 	private GradeAggregator firstCommitAggregator() {
+		return GradeAggregator.MIN;
+	}
+
+	private GradeAggregator firstCommitDiscriminator() {
 		return GradeAggregator.staticAggregator(
 				ImmutableMap.of(C_TWO, 1d, C_EXISTS_S, 1d, C_EXISTS_A, 1d, C_CONTENTS_S, 1d, C_CONTENTS_A, 1d),
 				ImmutableMap.of());
@@ -146,6 +160,10 @@ public class Fake implements Grader<RuntimeException> {
 	}
 
 	private GradeAggregator secondCommitAggregator() {
+		return GradeAggregator.MIN;
+	}
+
+	private GradeAggregator secondCommitDiscriminator() {
 		return GradeAggregator.staticAggregator(
 				ImmutableMap.of(C_ONE, 1d, C_EXISTS_S, 1d, C_NO_A, 1d, C_CONTENTS_S, 1d), ImmutableMap.of());
 	}

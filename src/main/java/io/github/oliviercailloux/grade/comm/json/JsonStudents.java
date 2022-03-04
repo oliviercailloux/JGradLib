@@ -1,10 +1,13 @@
 package io.github.oliviercailloux.grade.comm.json;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Verify.verify;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableBiMap;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import io.github.oliviercailloux.email.EmailAddress;
 import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
@@ -23,9 +26,22 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 
-public class JsonStudentsReader {
+public class JsonStudents {
 	@JsonbTypeAdapter(JsonStudentAdapter.class)
 	public static class JsonStudentEntry {
+		public static int counter = 0;
+
+		public static JsonStudentEntry given(GitHubUsername gitHubUsername, EmailAddress email) {
+			/* Temporary workaround: we invent ids. */
+			final ImmutableList<String> separated = ImmutableList.copyOf(email.getAddress().split("@"));
+			verify(separated.size() == 2);
+			final String firstPart = separated.get(0);
+			final ImmutableList<String> split = ImmutableList.copyOf(firstPart.split("\\."));
+			checkArgument(split.size() == 2, firstPart, split);
+			return new JsonStudentEntry(Optional.of(gitHubUsername), Optional.of(++counter), firstPart, split.get(0),
+					split.get(1), Optional.of(email));
+		}
+
 		public static JsonStudentEntry given(Optional<GitHubUsername> gitHubUsername, Optional<Integer> institutionalId,
 				String institutionalUsername, String firstName, String lastName, Optional<EmailAddress> email) {
 			return new JsonStudentEntry(gitHubUsername, institutionalId, institutionalUsername, firstName, lastName,
@@ -96,10 +112,10 @@ public class JsonStudentsReader {
 
 		@Override
 		public boolean equals(Object o2) {
-			if (!(o2 instanceof JsonStudentsReader.JsonStudentEntry)) {
+			if (!(o2 instanceof JsonStudents.JsonStudentEntry)) {
 				return false;
 			}
-			final JsonStudentsReader.JsonStudentEntry t2 = (JsonStudentsReader.JsonStudentEntry) o2;
+			final JsonStudents.JsonStudentEntry t2 = (JsonStudents.JsonStudentEntry) o2;
 			return gitHubUsername.equals(t2.gitHubUsername) && institutionalId.equals(t2.institutionalId)
 					&& institutionalUsername.equals(t2.institutionalUsername) && firstName.equals(t2.firstName)
 					&& lastName.equals(t2.lastName) && email.equals(t2.email);
@@ -124,7 +140,7 @@ public class JsonStudentsReader {
 		public JsonObject adaptToJson(JsonStudentEntry student) {
 			final JsonObjectBuilder builder = Json.createObjectBuilder();
 			if (student.getGitHubUsername().isPresent()) {
-				builder.add("gitHubUsername", student.getGitHubUsername().get().toString());
+				builder.add("gitHubUsername", student.getGitHubUsername().get().getUsername());
 			}
 			if (student.getInstitutionalId().isPresent()) {
 				builder.add("institutionalId", student.getInstitutionalId().get());
@@ -162,17 +178,21 @@ public class JsonStudentsReader {
 
 	}
 
-	public static JsonStudentsReader from(String json) {
+	public static JsonStudents from(String json) {
 		@SuppressWarnings("serial")
 		final Set<JsonStudentEntry> type = new LinkedHashSet<>() {
 		};
-		return new JsonStudentsReader(
+		return new JsonStudents(
 				JsonbUtils.fromJson(json, type.getClass().getGenericSuperclass(), new JsonStudentAdapter()));
+	}
+
+	public static String toJson(Set<JsonStudentEntry> students) {
+		return JsonbUtils.toJsonObject(students, new JsonStudentAdapter()).toString();
 	}
 
 	private final ImmutableSet<JsonStudentEntry> entries;
 
-	private JsonStudentsReader(Set<JsonStudentEntry> entries) {
+	private JsonStudents(Set<JsonStudentEntry> entries) {
 		this.entries = ImmutableSet.copyOf(entries);
 		/**
 		 * Just to check that these are unique.
@@ -229,8 +249,7 @@ public class JsonStudentsReader {
 	}
 
 	public ImmutableBiMap<GitHubUsername, InstitutionalStudent> getInstitutionalStudentsByGitHubUsername() {
-		return entries.stream().map(JsonStudentEntry::getInstitutionalStudent).filter(Optional::isPresent)
-				.map(Optional::get)
-				.collect(ImmutableBiMap.toImmutableBiMap(s -> GitHubUsername.given(s.getUsername()), s -> s));
+		return entries.stream().filter(s -> s.getInstitutionalStudent().isPresent()).collect(ImmutableBiMap
+				.toImmutableBiMap(s -> s.gitHubUsername.orElseThrow(), s -> s.getInstitutionalStudent().orElseThrow()));
 	}
 }

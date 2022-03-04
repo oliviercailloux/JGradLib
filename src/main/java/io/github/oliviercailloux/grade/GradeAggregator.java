@@ -74,6 +74,9 @@ public class GradeAggregator {
 
 	public static final WeightingGradeAggregator TRIVIAL = WeightingGradeAggregator.trivial();
 	public static final WeightingGradeAggregator ABSOLUTE = WeightingGradeAggregator.ABSOLUTE_WEIGHTING;
+	public static final GradeAggregator MIN = new GradeAggregator(MinAggregator.INSTANCE, ImmutableMap.of(),
+			WeightingGradeAggregator.trivial());
+
 	public static final GradeAggregator MAX = new GradeAggregator(MaxAggregator.INSTANCE, ImmutableMap.of(),
 			WeightingGradeAggregator.trivial());
 

@@ -19,6 +19,7 @@ import io.github.oliviercailloux.grade.Mark;
 import io.github.oliviercailloux.grade.MarkAggregator;
 import io.github.oliviercailloux.grade.MarksTree;
 import io.github.oliviercailloux.grade.MaxAggregator;
+import io.github.oliviercailloux.grade.MinAggregator;
 import io.github.oliviercailloux.grade.NormalizingStaticWeighter;
 import io.github.oliviercailloux.grade.ParametricWeighter;
 import io.github.oliviercailloux.grade.StaticWeighter;
@@ -43,7 +44,7 @@ public class JsonSimpleGrade {
 
 	public static enum MarkAggregatorType {
 		ParametricWeighter, VoidAggregator, NormalizingStaticWeighter, StaticWeighter, AbsoluteAggregator,
-		MaxAggregator;
+		MinAggregator, MaxAggregator;
 	}
 
 	@JsonbPropertyOrder({ "type", "multiplied", "weighting", "weights" })
@@ -66,6 +67,7 @@ public class JsonSimpleGrade {
 			checkArgument((type == MarkAggregatorType.NormalizingStaticWeighter
 					|| type == MarkAggregatorType.StaticWeighter) == hasWeights);
 			checkArgument((type == MarkAggregatorType.VoidAggregator || type == MarkAggregatorType.AbsoluteAggregator
+					|| type == MarkAggregatorType.MinAggregator
 					|| type == MarkAggregatorType.MaxAggregator) == (!hasWeights && hasNoCrits));
 		}
 
@@ -214,6 +216,9 @@ public class JsonSimpleGrade {
 			if (aggregator instanceof AbsoluteAggregator) {
 				return new GenericMarkAggregator(MarkAggregatorType.AbsoluteAggregator);
 			}
+			if (aggregator instanceof MinAggregator) {
+				return new GenericMarkAggregator(MarkAggregatorType.MinAggregator);
+			}
 			if (aggregator instanceof MaxAggregator) {
 				return new GenericMarkAggregator(MarkAggregatorType.MaxAggregator);
 			}
@@ -229,6 +234,7 @@ public class JsonSimpleGrade {
 			case NormalizingStaticWeighter -> NormalizingStaticWeighter.given(from.weights.orElseThrow());
 			case StaticWeighter -> StaticWeighter.given(from.weights.orElseThrow());
 			case AbsoluteAggregator -> AbsoluteAggregator.INSTANCE;
+			case MinAggregator -> MinAggregator.INSTANCE;
 			case MaxAggregator -> MaxAggregator.INSTANCE;
 			};
 		}

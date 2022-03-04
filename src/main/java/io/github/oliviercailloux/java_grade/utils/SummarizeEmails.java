@@ -25,7 +25,7 @@ import io.github.oliviercailloux.grade.comm.Emailer;
 import io.github.oliviercailloux.grade.comm.EmailerDauphineHelper;
 import io.github.oliviercailloux.grade.comm.GradesInEmails;
 import io.github.oliviercailloux.grade.comm.StudentOnGitHubKnown;
-import io.github.oliviercailloux.grade.comm.json.JsonStudentsReader;
+import io.github.oliviercailloux.grade.comm.json.JsonStudents;
 import io.github.oliviercailloux.grade.format.HtmlGrades;
 import io.github.oliviercailloux.grade.format.json.JsonGrade;
 import io.github.oliviercailloux.json.JsonbUtils;
@@ -70,7 +70,7 @@ public class SummarizeEmails {
 //				a -> getWeightingGradeUML(lastGrades.row(a), a));
 		final ImmutableMap<EmailAddress, Grade> grades = lastGrades.column("Projet Java");
 
-		final JsonStudentsReader students = JsonStudentsReader.from(Files.readString(Path.of("usernames.json")));
+		final JsonStudents students = JsonStudents.from(Files.readString(Path.of("usernames.json")));
 
 		final ImmutableMap<EmailAddress, StudentOnGitHubKnown> usernames = students.getStudentsKnownByGitHubUsername()
 				.values().stream().collect(ImmutableBiMap.toImmutableBiMap(s -> s.getEmail().getAddress(), s -> s));

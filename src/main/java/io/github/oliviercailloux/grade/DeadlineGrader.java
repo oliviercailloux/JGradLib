@@ -326,7 +326,7 @@ public class DeadlineGrader {
 		final CheckedStream<GitPathRoot, IOException> checkedCommits = CheckedStream
 				.wrapping(history.getGraph().nodes().stream());
 		final ImmutableSet<String> authors = checkedCommits.map(GitPathRoot::getCommit).map(Commit::getAuthorName)
-				.collect(ImmutableSet.toImmutableSet());
+				.filter(s -> !s.equals("github-classroom[bot]")).collect(ImmutableSet.toImmutableSet());
 		final ImmutableSet<String> authorsShow = authors.stream().map(s -> "‘" + s + "’")
 				.collect(ImmutableSet.toImmutableSet());
 		LOGGER.debug("Authors: {}.", authors);

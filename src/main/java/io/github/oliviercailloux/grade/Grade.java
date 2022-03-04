@@ -60,7 +60,7 @@ public class Grade {
 		}
 		final MarkAggregator a = original.getMarkAggregator();
 
-		if (a instanceof MaxAggregator m && original.getSpecialSubAggregators().isEmpty()) {
+		if (a instanceof OwaWeighter && original.getSpecialSubAggregators().isEmpty()) {
 			return transformToPerCriterionWeighting(original.getDefaultSubAggregator());
 		}
 
@@ -96,12 +96,12 @@ public class Grade {
 		final GradeAggregator originalAggregator = original.toAggregator();
 		final MarksTree originalMarks = original.toMarksTree();
 		final MarkAggregator a = originalAggregator.getMarkAggregator();
-		final boolean maxAndMultipleSubs = (a instanceof MaxAggregator)
+		final boolean owaAndMultipleSubs = (a instanceof OwaWeighter)
 				&& !originalAggregator.getSpecialSubAggregators().isEmpty();
 		final boolean parametricWeightedSum = (a instanceof ParametricWeighter p)
 				&& originalMarks.getCriteria().size() == 3;
 
-		if (maxAndMultipleSubs || parametricWeightedSum || (a instanceof NormalizingStaticWeighter)) {
+		if (owaAndMultipleSubs || parametricWeightedSum || (a instanceof NormalizingStaticWeighter)) {
 			/*
 			 * All these criteria are associated to dynamic weights (weights that depend on
 			 * the marks tree), that we thus can’t integrate into a static structure (an
@@ -129,7 +129,7 @@ public class Grade {
 					adaptMarksForPerCriterionWeighting(original.getGrade(multipliedCriterion)));
 			return MarksTree.composite(newMarks);
 		}
-		if ((a instanceof MaxAggregator) && originalAggregator.getSpecialSubAggregators().isEmpty()) {
+		if ((a instanceof OwaWeighter) && originalAggregator.getSpecialSubAggregators().isEmpty()) {
 			final ImmutableMap<SubMark, Double> weightedSubMarks = original.getWeightedSubMarks();
 			final Criterion criterionWithAllWeight = Maps.filterEntries(weightedSubMarks, e -> e.getValue() == 1d)
 					.keySet().stream().collect(MoreCollectors.onlyElement()).getCriterion();

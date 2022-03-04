@@ -20,9 +20,9 @@ import io.github.oliviercailloux.grade.comm.Email;
 import io.github.oliviercailloux.grade.comm.Emailer;
 import io.github.oliviercailloux.grade.comm.EmailerDauphineHelper;
 import io.github.oliviercailloux.grade.comm.GradesInEmails;
-import io.github.oliviercailloux.grade.comm.StudentOnGitHubKnown;
-import io.github.oliviercailloux.grade.comm.json.JsonStudentsReader;
+import io.github.oliviercailloux.grade.comm.json.JsonStudents;
 import io.github.oliviercailloux.grade.format.json.JsonSimpleGrade;
+import io.github.oliviercailloux.java_grade.graders.Fake;
 import io.github.oliviercailloux.xml.XmlUtils;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -40,20 +40,18 @@ public class SendEmails {
 
 	public static void main(String[] args) throws Exception {
 //		final String prefix = PersonsManagerGrader.PREFIX;
-		final String prefix = "UML";
+		final String prefix = Fake.PREFIX;
 
-		final JsonStudentsReader students = JsonStudentsReader
-				.from(Files.readString(WORK_DIR.resolve("usernames.json")));
-		final ImmutableMap<GitHubUsername, StudentOnGitHubKnown> usernames = students
-				.getStudentsKnownByGitHubUsername();
+		final JsonStudents students = JsonStudents.from(Files.readString(WORK_DIR.resolve("usernames.json")));
 
 		final Exam exam = JsonSimpleGrade.asExam(Files.readString(WORK_DIR.resolve("grades " + prefix + ".json")));
 		final boolean allKnown = students.getInstitutionalStudentsByGitHubUsername().keySet()
 				.containsAll(exam.getUsernames());
-		checkState(allKnown);
+		checkState(allKnown,
+				Sets.difference(exam.getUsernames(), students.getInstitutionalStudentsByGitHubUsername().keySet()));
 
 		final ImmutableSet<GitHubUsername> missing = Sets
-				.difference(exam.getUsernames(), students.getInstitutionalStudentsByGitHubUsername().keySet())
+				.difference(students.getInstitutionalStudentsByGitHubUsername().keySet(), exam.getUsernames())
 				.immutableCopy();
 		if (!missing.isEmpty()) {
 			LOGGER.warn("Missing: {}.", missing);
@@ -61,7 +59,8 @@ public class SendEmails {
 
 		final Mark defaultMark = Mark.given(0d, "GitHub repository not found");
 		final ImmutableMap<EmailAddressAndPersonal, MarksTree> marksByEmail = exam.getUsernames().stream()
-				.collect(ImmutableMap.toImmutableMap(u -> usernames.get(u).getEmail(),
+				.collect(ImmutableMap.toImmutableMap(
+						u -> students.getInstitutionalStudentsByGitHubUsername().get(u).getEmail(),
 						u -> exam.getUsernames().contains(u) ? exam.getGrade(u).toMarksTree() : defaultMark));
 		final ImmutableMap<EmailAddressAndPersonal, Grade> gradesByEmail = ImmutableMap
 				.copyOf(Maps.transformValues(marksByEmail, m -> Grade.given(exam.aggregator(), m)));
@@ -113,15 +112,16 @@ public class SendEmails {
 				}
 			}
 
-			final ImmutableSet<Email> emails = gradesDiffering.entrySet().stream()
-					.map(e -> GradesInEmails.asEmail(e.getKey(), prefix, e.getValue(), stats, quartiles))
+			final ImmutableSet<Email> emails = gradesDiffering.entrySet().stream().map(
+					e -> GradesInEmails.asEmail(getDestination(e.getKey()), prefix, e.getValue(), stats, quartiles))
 					.collect(ImmutableSet.toImmutableSet());
 
 			final ImmutableSet<Email> effectiveEmails = emails;
 			// final ImmutableSet<Email> effectiveEmails =
 			// emails.stream().limit(3).collect(ImmutableSet.toImmutableSet());
-			LOGGER.info("Prepared first doc (out of {}): {}.", effectiveEmails.size(),
-					XmlUtils.asString(effectiveEmails.iterator().next().getDocument()));
+			final Optional<Email> first = effectiveEmails.stream().findFirst();
+			LOGGER.info("Prepared first doc (out of {}): {}, to {}.", effectiveEmails.size(),
+					first.map(Email::getDocument).map(XmlUtils::asString), first.map(Email::getTo));
 			// LOGGER.info("Prepared {}.", effectiveEmails);
 
 			emailer.saveInto(folder);
@@ -134,5 +134,10 @@ public class SendEmails {
 				&& current.toMarksTree().equals(lastGrade.map(Grade::toMarksTree).orElse(null));
 		return !isSame;
 //		return !DoubleMath.fuzzyEquals(lastGrade.map(IGrade::getPoints).orElse(-1d), current.getPoints(), 1e-8d);
+	}
+
+	private static EmailAddressAndPersonal getDestination(EmailAddressAndPersonal e) {
+		return e;
+//		return EmailAddressAndPersonal.given(EmailerDauphineHelper.FROM.getAddress().getAddress(), e.getPersonal());
 	}
 }

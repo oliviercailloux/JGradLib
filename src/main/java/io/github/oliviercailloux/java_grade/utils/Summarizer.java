@@ -27,7 +27,7 @@ import io.github.oliviercailloux.grade.IGrade.CriteriaPath;
 import io.github.oliviercailloux.grade.WeightingGrade;
 import io.github.oliviercailloux.grade.WeightingGrade.PathGradeWeight;
 import io.github.oliviercailloux.grade.comm.InstitutionalStudent;
-import io.github.oliviercailloux.grade.comm.json.JsonStudentsReader;
+import io.github.oliviercailloux.grade.comm.json.JsonStudents;
 import io.github.oliviercailloux.grade.format.CsvGrades;
 import io.github.oliviercailloux.grade.old.GradeStructure;
 import io.github.oliviercailloux.grade.old.Mark;
@@ -273,7 +273,7 @@ public class Summarizer {
 
 	private static ImmutableBiMap<GitHubUsername, InstitutionalStudent> readKnownUsernames() throws IOException {
 		LOGGER.debug("Reading usernames.");
-		final JsonStudentsReader students = JsonStudentsReader.from(Files.readString(Path.of("usernames.json")));
+		final JsonStudents students = JsonStudents.from(Files.readString(Path.of("usernames.json")));
 		final ImmutableBiMap<GitHubUsername, InstitutionalStudent> usernames = students
 				.getInstitutionalStudentsByGitHubUsername();
 		return usernames;

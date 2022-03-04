@@ -9,10 +9,11 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedSet;
 import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
 import io.github.oliviercailloux.grade.DeadlineGrader.LinearPenalizer;
-import io.github.oliviercailloux.grade.comm.StudentOnGitHubKnown;
-import io.github.oliviercailloux.grade.comm.json.JsonStudentsReader;
+import io.github.oliviercailloux.grade.comm.StudentOnGitHub;
+import io.github.oliviercailloux.grade.comm.json.JsonStudents;
 import io.github.oliviercailloux.grade.format.CsvGrades;
 import io.github.oliviercailloux.grade.format.HtmlGrades;
+import io.github.oliviercailloux.grade.format.json.JsonSimpleGrade;
 import io.github.oliviercailloux.jaris.collections.CollectionUtils;
 import io.github.oliviercailloux.jaris.exceptions.Throwing;
 import io.github.oliviercailloux.jaris.throwing.TOptional;
@@ -115,10 +116,12 @@ public class BatchGitHistoryGrader<X extends Exception> {
 				final GitFileSystemHistory beforeCommitByGitHub;
 				{
 					final GitFileSystemHistory history = fetcher.goTo(author);
+					LOGGER.info("Found {} commits (total).", history.getGraph().nodes().size());
 
+					/* GitHub creates the very first commit when importing from a template. */
 					final Optional<Instant> earliestTimeCommitByGitHub = history
-							.filter(JavaMarkHelper::committerIsGitHub).asGitHistory().getTimestamps().values().stream()
-							.min(Comparator.naturalOrder());
+							.filter(JavaMarkHelper::committerIsGitHub).filter(c -> !history.getRoots().contains(c))
+							.asGitHistory().getTimestamps().values().stream().min(Comparator.naturalOrder());
 					beforeCommitByGitHub = TOptional.wrapping(earliestTimeCommitByGitHub)
 							.map(t -> history.filter(
 									c -> history.asGitHistory().getTimestamp(c.getCommit().getId()).isBefore(t)))
@@ -161,7 +164,7 @@ public class BatchGitHistoryGrader<X extends Exception> {
 
 				final MarksTree byTimeGrade;
 				if (byTime.isEmpty()) {
-					byTimeGrade = Mark.zero("No commit found.");
+					byTimeGrade = Mark.zero(String.format("No commit found%s", commentGeneralCapped));
 				} else {
 					final ImmutableMap<Criterion, MarksTree> subsByTime = byTime.keySet().stream()
 							.collect(ImmutableMap.toImmutableMap(
@@ -205,19 +208,18 @@ public class BatchGitHistoryGrader<X extends Exception> {
 	}
 
 	private void write(Exam exam, Path outWithoutExtension, String docTitle) throws IOException {
-//		Files.writeString(outWithoutExtension.resolveSibling(outWithoutExtension.getFileName() + ".json"),
-//				JsonSimpleGrade.toJson(exam));
+		Files.writeString(outWithoutExtension.resolveSibling(outWithoutExtension.getFileName() + ".json"),
+				JsonSimpleGrade.toJson(exam));
 
 		LOGGER.debug("Reading usernames.");
-		final JsonStudentsReader studentsReader = JsonStudentsReader.from(Files.readString(Path.of("usernames.json")));
-		final ImmutableBiMap<GitHubUsername, StudentOnGitHubKnown> students = studentsReader
-				.getStudentsKnownByGitHubUsername();
+		final JsonStudents studentsReader = JsonStudents.from(Files.readString(Path.of("usernames.json")));
+		final ImmutableBiMap<GitHubUsername, StudentOnGitHub> students = studentsReader.getStudentsByGitHubUsername();
 
-		final ImmutableMap<StudentOnGitHubKnown, MarksTree> trees = CollectionUtils.transformKeys(exam.grades(),
-				u -> Optional.ofNullable(students.get(u))
-						.orElseThrow(() -> new NoSuchElementException(u.getUsername())));
-		final String csv = CsvGrades.newInstance(CsvGrades.STUDENT_KNOWN_IDENTITY_FUNCTION, 20)
-				.gradesToCsv(exam.aggregator(), trees);
+		final ImmutableMap<StudentOnGitHub, MarksTree> trees = CollectionUtils.transformKeys(exam.grades(),
+				u -> Optional.ofNullable(students.get(u)).orElseThrow(
+						() -> new NoSuchElementException(u.getUsername() + " among " + students.keySet())));
+		final String csv = CsvGrades.newInstance(CsvGrades.STUDENT_IDENTITY_FUNCTION, 20).gradesToCsv(exam.aggregator(),
+				trees);
 		Files.writeString(outWithoutExtension.resolveSibling(outWithoutExtension.getFileName() + ".csv"), csv);
 
 		final ImmutableMap<String, Grade> grades = exam.getUsernames().stream()
