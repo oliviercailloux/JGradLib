@@ -9,10 +9,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.common.net.UrlEscapers;
 import io.github.oliviercailloux.git.JGit;
+import jakarta.ws.rs.core.UriBuilder;
 import java.net.URI;
 import java.nio.file.InvalidPathException;
 import java.util.Map;
-import javax.ws.rs.core.UriBuilder;
 import org.eclipse.jgit.internal.storage.dfs.DfsRepository;
 import org.eclipse.jgit.internal.storage.dfs.DfsRepositoryDescription;
 import org.eclipse.jgit.internal.storage.dfs.InMemoryRepository;

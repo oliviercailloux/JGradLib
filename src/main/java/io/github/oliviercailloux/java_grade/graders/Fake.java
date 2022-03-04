@@ -19,9 +19,7 @@ import io.github.oliviercailloux.grade.MarksTree;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.time.Duration;
 import java.time.Instant;
-import java.time.ZonedDateTime;
 import java.util.Comparator;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
@@ -50,8 +48,7 @@ public class Fake implements Grader<RuntimeException> {
 		 */
 		final BatchGitHistoryGrader<RuntimeException> grader = BatchGitHistoryGrader
 				.given(() -> GitFileSystemWithHistoryFetcherByPrefix.getRetrievingByPrefix(PREFIX));
-		grader.getAndWriteGrades(ZonedDateTime.parse("2022-03-01T00:00:00+01:00"), Duration.ofMinutes(5), new Fake(),
-				0.2d, Path.of("out - " + PREFIX), PREFIX + " " + Instant.now());
+		grader.getAndWriteGrades(new Fake(), 0.2d, Path.of("out - " + PREFIX), PREFIX + " " + Instant.now());
 	}
 
 	private static final Criterion C1 = Criterion.given("First commit");
@@ -71,7 +68,7 @@ public class Fake implements Grader<RuntimeException> {
 		final ImmutableSet<GitPathRoot> commitsOrdered = data.getRoots().stream()
 				.flatMap(r -> Streams.concat(Stream.of(r), data.getGraph().successors(r).stream()))
 				.collect(ImmutableSet.toImmutableSet());
-		LOGGER.info("Commits ordered: {}.", commitsOrdered);
+		LOGGER.debug("Commits ordered: {}.", commitsOrdered);
 		final Comparator<MarksTree> byPoints = Comparator
 				.comparing(m -> Grade.given(firstCommitAggregator(), m).mark().getPoints());
 		final GitPathRoot firstCommit = commitsOrdered.stream()
@@ -116,7 +113,7 @@ public class Fake implements Grader<RuntimeException> {
 			final MarksTree mark = MarksTree.composite(ImmutableMap.of(C_TWO, Mark.binary(exactlyTwo, comment, comment),
 					C_EXISTS_S, Mark.binary(existsS), C_EXISTS_A, Mark.binary(existsA), C_CONTENTS_S,
 					Mark.binary(rightS), C_CONTENTS_A, Mark.binary(rightA)));
-			LOGGER.info("Commit {}; Seen content {}, matches? {}; score {}.", id, contentS, rightS,
+			LOGGER.debug("Commit {}; Seen content {}, matches? {}; score {}.", id, contentS, rightS,
 					Grade.given(firstCommitAggregator(), mark).mark().getPoints());
 			return mark;
 		} catch (IOException e) {

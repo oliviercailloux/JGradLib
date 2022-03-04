@@ -4,14 +4,14 @@ import static com.google.common.base.Preconditions.checkState;
 import static io.github.oliviercailloux.jaris.exceptions.Unchecker.IO_UNCHECKER;
 import static java.util.Objects.requireNonNull;
 
+import jakarta.ws.rs.client.Invocation;
+import jakarta.ws.rs.core.HttpHeaders;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Optional;
-import javax.ws.rs.client.Invocation;
-import javax.ws.rs.core.HttpHeaders;
 
 public class GitHubToken {
 	private static GitHubRealToken instance = null;

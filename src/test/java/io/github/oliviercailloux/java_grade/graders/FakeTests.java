@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterables;
 import com.google.common.graph.ImmutableGraph;
 import com.google.common.jimfs.Configuration;
 import com.google.common.jimfs.Jimfs;
@@ -13,7 +12,6 @@ import io.github.oliviercailloux.git.GitUtils;
 import io.github.oliviercailloux.git.JGit;
 import io.github.oliviercailloux.git.fs.GitFileSystem;
 import io.github.oliviercailloux.git.fs.GitFileSystemProvider;
-import io.github.oliviercailloux.git.fs.GitPathRoot;
 import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
 import io.github.oliviercailloux.grade.BatchGitHistoryGrader;
 import io.github.oliviercailloux.grade.Exam;
@@ -33,7 +31,6 @@ import java.time.temporal.ChronoUnit;
 import org.eclipse.jgit.internal.storage.dfs.DfsRepositoryDescription;
 import org.eclipse.jgit.internal.storage.dfs.InMemoryRepository;
 import org.eclipse.jgit.lib.Constants;
-import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.lib.PersonIdent;
 import org.eclipse.jgit.lib.Repository;
 import org.junit.jupiter.api.Test;
@@ -92,30 +89,15 @@ class FakeTests {
 			final PersonIdent personIdent = new PersonIdent(USERNAME.getUsername(), "email");
 
 			final ImmutableGraph<Path> graph = Utils.asGraph(ImmutableList.of(c1, c2, c3));
-			assertEquals(c1, graph.nodes().iterator().next());
-			assertEquals(ImmutableSet.of(c2), graph.successors(c1));
-			assertEquals(ImmutableSet.of(c3), graph.successors(c2));
 			try (Repository repository = JGit.createRepository(personIdent, graph, links)) {
 				try (GitFileSystem gitFs = GitFileSystemProvider.getInstance()
 						.newFileSystemFromRepository(repository)) {
 					final GitHistory history = GitUtils.getHistory(gitFs);
-					final ImmutableSet<ObjectId> roots = history.getRoots();
-					final ObjectId rootId = Iterables.getOnlyElement(roots);
 					final GitFileSystemHistory gitH = GitFileSystemHistory.create(gitFs, history);
 					final BatchGitHistoryGrader<RuntimeException> batchGrader = BatchGitHistoryGrader
 							.given(() -> StaticFetcher.single(USERNAME, gitH));
-
-					final GitPathRoot root = gitH.getRoots().iterator().next();
-					assertEquals(rootId, root.getCommit().getId());
-					LOGGER.info("Root: {}, succ: {}, pred: {}.", root.getCommit().getId(),
-							gitH.getGraph().successors(root), gitH.getGraph().predecessors(root));
-					LOGGER.info("Contents c1: {}.", Files.list(c1).collect(ImmutableSet.toImmutableSet()));
-					LOGGER.info("Contents root: {}.", Files.list(root).collect(ImmutableSet.toImmutableSet()));
-					LOGGER.info("Contents root sub: {}.",
-							Files.list(root.resolve("Some folder/")).collect(ImmutableSet.toImmutableSet()));
-					LOGGER.info("Exists: {}.", Files.exists(root.resolve("Some folder/")));
-					final Exam exam = batchGrader.getGrades(BatchGitHistoryGrader.MAX_DEADLINE,
-							Duration.of(1, ChronoUnit.HOURS), new Fake(), 0.1d);
+					final Exam exam = batchGrader.getGrades(BatchGitHistoryGrader.MAX_DEADLINE, Duration.ofMinutes(0),
+							new Fake(), 0.1d);
 
 					Files.writeString(Path.of("test grades.json"), JsonSimpleGrade.toJson(exam));
 					Files.writeString(Path.of("test grades.html"), XmlUtils

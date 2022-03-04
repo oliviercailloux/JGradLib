@@ -72,9 +72,20 @@ public class BatchGitHistoryGrader<X extends Exception> {
 		return maxAmongAttempts;
 	}
 
+	public <Y extends Exception> Exam getGrades(Grader<Y> grader, double userGradeWeight) throws X, Y, IOException {
+		return getGrades(MAX_DEADLINE, Duration.ofMinutes(0), grader, userGradeWeight, TOptional.empty(), "");
+	}
+
 	public <Y extends Exception> Exam getGrades(ZonedDateTime deadline, Duration durationForZero, Grader<Y> grader,
 			double userGradeWeight) throws X, Y, IOException {
 		return getGrades(deadline, durationForZero, grader, userGradeWeight, TOptional.empty(), "");
+	}
+
+	public <Y extends Exception> Exam getAndWriteGrades(Grader<Y> grader, double userGradeWeight,
+			Path outWithoutExtension, String docTitle) throws X, Y, IOException {
+		checkArgument(!docTitle.isEmpty());
+		return getGrades(BatchGitHistoryGrader.MAX_DEADLINE, Duration.ofMinutes(0), grader, userGradeWeight,
+				TOptional.of(outWithoutExtension), docTitle);
 	}
 
 	public <Y extends Exception> Exam getAndWriteGrades(ZonedDateTime deadline, Duration durationForZero,
@@ -87,10 +98,10 @@ public class BatchGitHistoryGrader<X extends Exception> {
 
 	private <Y extends Exception> Exam getGrades(ZonedDateTime deadline, Duration durationForZero, Grader<Y> grader,
 			double userGradeWeight, TOptional<Path> outWithoutExtensionOpt, String docTitle) throws X, Y, IOException {
+		checkArgument(deadline.equals(MAX_DEADLINE) == (durationForZero.getSeconds() == 0l));
+		checkArgument(userGradeWeight > 0d);
 		checkArgument(userGradeWeight < 1d);
 		verify(outWithoutExtensionOpt.isPresent() == !docTitle.isEmpty());
-
-		final LinearPenalizer penalizer = LinearPenalizer.proportionalToLateness(durationForZero);
 
 		final LinkedHashMap<GitHubUsername, MarksTree> builder = new LinkedHashMap<>();
 		final boolean withTimePenalty = !deadline.equals(MAX_DEADLINE);
@@ -136,6 +147,7 @@ public class BatchGitHistoryGrader<X extends Exception> {
 						perhapsPenalized = gradeWithUser;
 					} else {
 						final Duration lateness = Duration.between(deadline.toInstant(), timeCap);
+						final LinearPenalizer penalizer = LinearPenalizer.proportionalToLateness(durationForZero);
 						final Mark remaining = penalizer.getFractionRemaining(lateness);
 						LOGGER.debug("Lateness from {} to {} equal to {}; remaining {}.", deadline.toInstant(), timeCap,
 								lateness, remaining);
