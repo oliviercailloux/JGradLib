@@ -124,11 +124,11 @@ public class BatchGitHistoryGrader<X extends Exception> {
 							.asGitHistory().getTimestamps().values().stream().min(Comparator.naturalOrder());
 					beforeCommitByGitHub = TOptional.wrapping(earliestTimeCommitByGitHub)
 							.map(t -> history.filter(
-									c -> history.asGitHistory().getTimestamp(c.getCommit().getId()).isBefore(t)))
+									c -> history.asGitHistory().getTimestamp(c.getCommit().getId()).isBefore(t), t))
 							.orElse(history);
 
-					commentGeneralCapped = earliestTimeCommitByGitHub
-							.map(t -> "; ignored commits after " + t.toString() + ", sent by GitHub").orElse("");
+					commentGeneralCapped = earliestTimeCommitByGitHub.map(t -> "; ignored commits after "
+							+ t.atZone(deadline.getZone()).toString() + ", sent by GitHub").orElse("");
 				}
 
 				final ImmutableSortedSet<Instant> consideredTimestamps = getTimestamps(beforeCommitByGitHub,
@@ -137,7 +137,7 @@ public class BatchGitHistoryGrader<X extends Exception> {
 				final ImmutableBiMap.Builder<Instant, MarksTree> byTimeBuilder = ImmutableBiMap.builder();
 				for (Instant timeCap : consideredTimestamps) {
 					final GitFileSystemHistory capped = beforeCommitByGitHub
-							.filter(r -> !beforeCommitByGitHub.getCommitDate(r).isAfter(timeCap));
+							.filter(r -> !beforeCommitByGitHub.getCommitDate(r).isAfter(timeCap), timeCap);
 
 					final MarksTree grade = grader.grade(capped);
 
@@ -167,10 +167,12 @@ public class BatchGitHistoryGrader<X extends Exception> {
 					byTimeGrade = Mark.zero(String.format("No commit found%s", commentGeneralCapped));
 				} else {
 					final ImmutableMap<Criterion, MarksTree> subsByTime = byTime.keySet().stream()
-							.collect(ImmutableMap.toImmutableMap(
-									i -> Criterion.given(
-											String.format("Capping at %s%s", i.toString(), commentGeneralCapped)),
-									byTime::get));
+							.collect(ImmutableMap.toImmutableMap(i -> {
+								final String cappingAt = i.equals(Instant.MAX) ? "No capping"
+										: i.equals(Instant.MIN) ? "Capping at MIN"
+												: ("Capping at " + i.atZone(deadline.getZone()).toString());
+								return Criterion.given(cappingAt + commentGeneralCapped);
+							}, byTime::get));
 					byTimeGrade = MarksTree.composite(subsByTime);
 				}
 				builder.put(author, byTimeGrade);

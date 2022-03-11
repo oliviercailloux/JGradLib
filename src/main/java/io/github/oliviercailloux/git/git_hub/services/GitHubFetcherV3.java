@@ -15,6 +15,7 @@ import io.github.oliviercailloux.git.git_hub.model.GitHubToken;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinatesWithPrefix;
 import io.github.oliviercailloux.git.git_hub.model.v3.CommitGitHubDescription;
+import io.github.oliviercailloux.git.git_hub.model.v3.CreateBranchEvent;
 import io.github.oliviercailloux.git.git_hub.model.v3.Event;
 import io.github.oliviercailloux.git.git_hub.model.v3.EventType;
 import io.github.oliviercailloux.git.git_hub.model.v3.PushEvent;
@@ -496,10 +497,10 @@ public class GitHubFetcherV3 implements AutoCloseable {
 		return pushEvents;
 	}
 
-	public ImmutableList<Event> getCreateBranchEvents(RepositoryCoordinates repositoryCoordinates) {
+	public ImmutableList<CreateBranchEvent> getCreateBranchEvents(RepositoryCoordinates repositoryCoordinates) {
 		final ImmutableList<Event> events = getEvents(repositoryCoordinates);
-		final ImmutableList<Event> selectedEvents = events.stream()
-				.filter((e) -> e.getType().equals(EventType.CREATE_BRANCH_EVENT))
+		final ImmutableList<CreateBranchEvent> selectedEvents = events.stream()
+				.filter((e) -> e.getType().equals(EventType.CREATE_BRANCH_EVENT)).map(e -> (CreateBranchEvent) e)
 				.collect(ImmutableList.toImmutableList());
 		LOGGER.debug("All: {}.",
 				selectedEvents.stream()

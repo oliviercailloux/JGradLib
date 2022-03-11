@@ -9,6 +9,7 @@ import io.github.oliviercailloux.grade.IGrade.CriteriaPath;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
+import java.util.Set;
 
 /**
  * Set as public as a temporary workaround for Json serialization.
@@ -24,6 +25,11 @@ public class CompositeMarksTree implements MarksTree {
 		return new CompositeMarksTree(subGrades);
 	}
 
+	public static CompositeMarksTree givenSubGrades(Set<? extends SubMarksTree> subGrades) {
+		return new CompositeMarksTree(
+				subGrades.stream().collect(ImmutableMap.toImmutableMap(SubMarksTree::getCriterion, s -> s)));
+	}
+
 	/**
 	 * not empty; values contain either CompositeGrade or Mark instances
 	 */
@@ -32,6 +38,7 @@ public class CompositeMarksTree implements MarksTree {
 	private CompositeMarksTree(Map<Criterion, SubMarksTree> subGrades) {
 		this.subGrades = ImmutableMap.copyOf(subGrades);
 		checkArgument(!subGrades.isEmpty());
+		checkArgument(subGrades.keySet().stream().allMatch(c -> subGrades.get(c).getCriterion().equals(c)));
 	}
 
 	@Override

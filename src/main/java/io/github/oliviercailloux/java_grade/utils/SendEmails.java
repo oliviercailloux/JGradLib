@@ -22,7 +22,7 @@ import io.github.oliviercailloux.grade.comm.EmailerDauphineHelper;
 import io.github.oliviercailloux.grade.comm.GradesInEmails;
 import io.github.oliviercailloux.grade.comm.json.JsonStudents;
 import io.github.oliviercailloux.grade.format.json.JsonSimpleGrade;
-import io.github.oliviercailloux.java_grade.graders.Fake;
+import io.github.oliviercailloux.java_grade.graders.First;
 import io.github.oliviercailloux.xml.XmlUtils;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -39,8 +39,7 @@ public class SendEmails {
 	private static final Path WORK_DIR = Path.of("");
 
 	public static void main(String[] args) throws Exception {
-//		final String prefix = PersonsManagerGrader.PREFIX;
-		final String prefix = Fake.PREFIX;
+		final String prefix = First.PREFIX;
 
 		final JsonStudents students = JsonStudents.from(Files.readString(WORK_DIR.resolve("usernames.json")));
 
@@ -116,16 +115,13 @@ public class SendEmails {
 					e -> GradesInEmails.asEmail(getDestination(e.getKey()), prefix, e.getValue(), stats, quartiles))
 					.collect(ImmutableSet.toImmutableSet());
 
-			final ImmutableSet<Email> effectiveEmails = emails;
-			// final ImmutableSet<Email> effectiveEmails =
-			// emails.stream().limit(3).collect(ImmutableSet.toImmutableSet());
-			final Optional<Email> first = effectiveEmails.stream().findFirst();
-			LOGGER.info("Prepared first doc (out of {}): {}, to {}.", effectiveEmails.size(),
+			final Optional<Email> first = emails.stream().findFirst();
+			LOGGER.info("Prepared first doc (out of {}): {}, to {}.", emails.size(),
 					first.map(Email::getDocument).map(XmlUtils::asString), first.map(Email::getTo));
 			// LOGGER.info("Prepared {}.", effectiveEmails);
 
 			emailer.saveInto(folder);
-//			emailer.send(effectiveEmails, EmailerDauphineHelper.FROM);
+//			emailer.send(emails, EmailerDauphineHelper.FROM);
 		}
 	}
 

@@ -4,6 +4,7 @@ import com.google.common.collect.ImmutableSet;
 import io.github.oliviercailloux.grade.IGrade.CriteriaPath;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Set;
 
 /**
  * A tree of criteria paths with marks; with no aggregation information, thus,
@@ -25,6 +26,10 @@ import java.util.NoSuchElementException;
  * grades that differs from the aggregating structure.
  */
 public interface MarksTree {
+
+	public static MarksTree composite(Set<? extends SubMarksTree> subGrades) {
+		return CompositeMarksTree.givenSubGrades(subGrades);
+	}
 
 	public static MarksTree composite(Map<Criterion, ? extends MarksTree> subGrades) {
 		return CompositeMarksTree.givenGrades(subGrades);

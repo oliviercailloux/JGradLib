@@ -5,9 +5,12 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static io.github.oliviercailloux.jaris.exceptions.Unchecker.IO_UNCHECKER;
 
 import com.google.common.base.MoreObjects;
+import com.google.common.collect.Comparators;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.graph.ImmutableGraph;
 import io.github.oliviercailloux.git.GitHistory;
+import io.github.oliviercailloux.git.fs.Commit;
 import io.github.oliviercailloux.git.fs.GitFileFileSystem;
 import io.github.oliviercailloux.git.fs.GitFileSystem;
 import io.github.oliviercailloux.git.fs.GitPath;
@@ -24,6 +27,7 @@ import java.nio.file.NoSuchFileException;
 import java.time.Instant;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
@@ -126,16 +130,32 @@ public class GitFileSystemHistory {
 	}
 
 	public static GitFileSystemHistory create(GitFileSystem gitFs, GitHistory history) {
-		return new GitFileSystemHistory(gitFs, history);
+		return new GitFileSystemHistory(gitFs, history, ImmutableMap.of(), Instant.MAX);
+	}
+
+	public static GitFileSystemHistory create(GitFileSystem gitFs, GitHistory history,
+			Map<ObjectId, Instant> pushDates) {
+		LOGGER.debug("Using push dates {}.", pushDates);
+		return new GitFileSystemHistory(gitFs, history, pushDates, Instant.MAX);
+	}
+
+	public static GitFileSystemHistory create(GitFileSystem gitFs, GitHistory history, Map<ObjectId, Instant> pushDates,
+			Instant furtherCap) {
+		return new GitFileSystemHistory(gitFs, history, pushDates, furtherCap);
 	}
 
 	private ImmutableGraph<GitPathRoot> graph;
 	private final GitFileSystem gitFs;
 	private final GitHistory history;
+	private final Map<ObjectId, Instant> pushDates;
+	private final Instant furtherCap;
 
-	private GitFileSystemHistory(GitFileSystem gitFs, GitHistory history) {
+	private GitFileSystemHistory(GitFileSystem gitFs, GitHistory history, Map<ObjectId, Instant> pushDates,
+			Instant furtherCap) {
 		this.gitFs = checkNotNull(gitFs);
 		this.history = checkNotNull(history);
+		this.pushDates = checkNotNull(pushDates);
+		this.furtherCap = checkNotNull(furtherCap);
 		this.graph = null;
 		for (ObjectId o : history.getGraph().nodes()) {
 			checkArgument(Files.exists(gitFs.getPathRoot(o)));
@@ -174,9 +194,16 @@ public class GitFileSystemHistory {
 	}
 
 	private Stream<GitPathRootRef> getRefsStream() throws IOException {
-		final Throwing.Predicate<? super GitPathRoot, IOException> inThisHistory = GitGrader.Predicates
+		final Throwing.Predicate<GitPathRoot, IOException> inThisHistory = GitGrader.Predicates
 				.compose(GitPathRoot::getCommit, c -> history.getGraph().nodes().contains(c.getId()));
-		final Predicate<? super GitPathRoot> inThisHistoryWrapped = IO_UNCHECKER.wrapPredicate(inThisHistory);
+		/*
+		 * Note that on GitHub, every commit designated by some ref should have a push
+		 * date; but in this object, we might not have been given those push dates.
+		 */
+		final Throwing.Predicate<GitPathRoot, IOException> withinCap = GitGrader.Predicates
+				.compose(GitPathRoot::getCommit, GitGrader.Predicates.compose(Commit::getId, GitGrader.Predicates
+						.compose(o -> pushDates.getOrDefault(o, Instant.MIN), i -> !i.isAfter(furtherCap))));
+		final Predicate<GitPathRoot> inThisHistoryWrapped = IO_UNCHECKER.wrapPredicate(inThisHistory.and(withinCap));
 		try {
 			return gitFs.getRefs().stream().filter(inThisHistoryWrapped);
 		} catch (UncheckedIOException exc) {
@@ -229,9 +256,15 @@ public class GitFileSystemHistory {
 	}
 
 	public GitFileSystemHistory filter(Throwing.Predicate<GitPathRoot, IOException> predicate) throws IOException {
+		return filter(predicate, furtherCap);
+	}
+
+	public GitFileSystemHistory filter(Throwing.Predicate<GitPathRoot, IOException> predicate, Instant andFurtherCap)
+			throws IOException {
 		final Predicate<GitPathRoot> wrappedPredicate = IO_UNCHECKER.wrapPredicate(predicate);
 		try {
-			return GitFileSystemHistory.create(gitFs, history.filter(o -> wrappedPredicate.test(gitFs.getPathRoot(o))));
+			return GitFileSystemHistory.create(gitFs, history.filter(o -> wrappedPredicate.test(gitFs.getPathRoot(o))),
+					pushDates, Comparators.min(furtherCap, andFurtherCap));
 		} catch (UncheckedIOException e) {
 			throw e.getCause();
 		}
