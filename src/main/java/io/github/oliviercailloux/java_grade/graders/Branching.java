@@ -3,7 +3,6 @@ package io.github.oliviercailloux.java_grade.graders;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Verify.verify;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.MoreCollectors;
@@ -11,10 +10,6 @@ import com.google.common.collect.Sets;
 import com.google.common.graph.Graphs;
 import io.github.oliviercailloux.git.fs.GitPath;
 import io.github.oliviercailloux.git.fs.GitPathRoot;
-import io.github.oliviercailloux.git.git_hub.model.GitHubToken;
-import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinatesWithPrefix;
-import io.github.oliviercailloux.git.git_hub.model.v3.CreateBranchEvent;
-import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherV3;
 import io.github.oliviercailloux.grade.BatchGitHistoryGrader;
 import io.github.oliviercailloux.grade.Criterion;
 import io.github.oliviercailloux.grade.GitFileSystemHistory;
@@ -48,12 +43,8 @@ public class Branching implements Grader<IOException> {
 	public static final ZonedDateTime DEADLINE = ZonedDateTime.parse("2022-03-09T14:11:00+01:00[Europe/Paris]");
 
 	public static void main(String[] args) throws Exception {
-		final GitHubFetcherV3 fetcherV3 = GitHubFetcherV3.using(GitHubToken.getRealInstance());
-		final ImmutableList<CreateBranchEvent> events = fetcherV3
-				.getCreateBranchEvents(RepositoryCoordinatesWithPrefix.from("oliviercailloux-org", PREFIX, "alinou33"));
-
 		final BatchGitHistoryGrader<RuntimeException> grader = BatchGitHistoryGrader
-				.given(() -> GitFileSystemWithHistoryFetcherByPrefix.getFirstRetrievingByPrefix(PREFIX));
+				.given(() -> GitFileSystemWithHistoryFetcherByPrefix.getRetrievingByPrefix(PREFIX));
 		grader.getAndWriteGrades(DEADLINE, Duration.ofMinutes(5), new Branching(), 0.05d, Path.of("grades " + PREFIX),
 				PREFIX + " " + Instant.now().atZone(DEADLINE.getZone()));
 	}
