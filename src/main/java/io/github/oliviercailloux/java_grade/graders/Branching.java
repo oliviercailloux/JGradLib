@@ -42,10 +42,12 @@ public class Branching implements Grader<IOException> {
 
 	public static final ZonedDateTime DEADLINE = ZonedDateTime.parse("2022-03-09T14:11:00+01:00[Europe/Paris]");
 
+	public static final double USER_WEIGHT = 0.05d;
+
 	public static void main(String[] args) throws Exception {
 		final BatchGitHistoryGrader<RuntimeException> grader = BatchGitHistoryGrader
 				.given(() -> GitFileSystemWithHistoryFetcherByPrefix.getRetrievingByPrefix(PREFIX));
-		grader.getAndWriteGrades(DEADLINE, Duration.ofMinutes(5), new Branching(), 0.05d, Path.of("grades " + PREFIX),
+		grader.getAndWriteGrades(DEADLINE, Duration.ofMinutes(5), new Branching(), USER_WEIGHT, Path.of("grades " + PREFIX),
 				PREFIX + " " + Instant.now().atZone(DEADLINE.getZone()));
 	}
 
@@ -76,7 +78,7 @@ public class Branching implements Grader<IOException> {
 
 	private GitFileSystemHistory currentHistory;
 
-	private Branching() {
+	Branching() {
 		currentHistory = null;
 	}
 
@@ -257,7 +259,7 @@ public class Branching implements Grader<IOException> {
 				.collect(MoreCollectors.onlyElement());
 
 		final long nbFiles = Files.find(commitB, Integer.MAX_VALUE, (p, a) -> Files.isRegularFile(p)).count();
-		final boolean rightNb = nbFiles == 2;
+		final boolean rightNb = nbFiles == 3;
 		final SubMarksTree subNb = SubMarksTree.given(C_THREE, Mark.binary(rightNb, "", "Found " + nbFiles + " files"));
 
 		final GitPath startPath = commitB.resolve("start.txt");
