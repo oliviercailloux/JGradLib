@@ -147,14 +147,14 @@ public class GitFileSystemHistory {
 	private ImmutableGraph<GitPathRoot> graph;
 	private final GitFileSystem gitFs;
 	private final GitHistory history;
-	private final Map<ObjectId, Instant> pushDates;
+	private final ImmutableMap<ObjectId, Instant> pushDates;
 	private final Instant furtherCap;
 
 	private GitFileSystemHistory(GitFileSystem gitFs, GitHistory history, Map<ObjectId, Instant> pushDates,
 			Instant furtherCap) {
 		this.gitFs = checkNotNull(gitFs);
 		this.history = checkNotNull(history);
-		this.pushDates = checkNotNull(pushDates);
+		this.pushDates = ImmutableMap.copyOf(pushDates);
 		this.furtherCap = checkNotNull(furtherCap);
 		this.graph = null;
 		for (ObjectId o : history.getGraph().nodes()) {
@@ -175,6 +175,10 @@ public class GitFileSystemHistory {
 			graph = Utils.asImmutableGraph(history.getGraph(), gitFs::getPathRoot);
 		}
 		return graph;
+	}
+
+	public ImmutableMap<ObjectId, Instant> getPushDates() {
+		return pushDates;
 	}
 
 	/**

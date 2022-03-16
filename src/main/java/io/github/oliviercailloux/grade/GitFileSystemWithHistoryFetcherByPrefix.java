@@ -8,6 +8,7 @@ import com.google.common.collect.ImmutableSet;
 import io.github.oliviercailloux.git.GitCloner;
 import io.github.oliviercailloux.git.GitHistory;
 import io.github.oliviercailloux.git.GitHubHistory;
+import io.github.oliviercailloux.git.GitUtils;
 import io.github.oliviercailloux.git.fs.GitFileSystem;
 import io.github.oliviercailloux.git.fs.GitFileSystemProvider;
 import io.github.oliviercailloux.git.git_hub.model.GitHubToken;
@@ -28,16 +29,20 @@ public class GitFileSystemWithHistoryFetcherByPrefix implements GitFileSystemWit
 	private static final Logger LOGGER = LoggerFactory.getLogger(GitFileSystemWithHistoryFetcherByPrefix.class);
 
 	public static GitFileSystemWithHistoryFetcher getRetrievingByPrefix(String prefix) {
-		return new GitFileSystemWithHistoryFetcherByPrefix(prefix, Integer.MAX_VALUE, Predicates.alwaysTrue());
+		return new GitFileSystemWithHistoryFetcherByPrefix(prefix, Integer.MAX_VALUE, Predicates.alwaysTrue(), false);
+	}
+
+	public static GitFileSystemWithHistoryFetcher getRetrievingByPrefixAndUsingCommitDates(String prefix) {
+		return new GitFileSystemWithHistoryFetcherByPrefix(prefix, Integer.MAX_VALUE, Predicates.alwaysTrue(), true);
 	}
 
 	public static GitFileSystemWithHistoryFetcher getRetrievingByPrefixAndFiltering(String prefix, String accepted) {
 		return new GitFileSystemWithHistoryFetcherByPrefix(prefix, Integer.MAX_VALUE,
-				Predicate.isEqual(GitHubUsername.given(accepted)));
+				Predicate.isEqual(GitHubUsername.given(accepted)), false);
 	}
 
 	public static GitFileSystemWithHistoryFetcher getFirstRetrievingByPrefix(String prefix) {
-		return new GitFileSystemWithHistoryFetcherByPrefix(prefix, 1, Predicates.alwaysTrue());
+		return new GitFileSystemWithHistoryFetcherByPrefix(prefix, 1, Predicates.alwaysTrue(), false);
 	}
 
 	private final String prefix;
@@ -48,8 +53,10 @@ public class GitFileSystemWithHistoryFetcherByPrefix implements GitFileSystemWit
 	private GitFileSystemHistory lastHistory;
 	private final int count;
 	private final Predicate<GitHubUsername> accepted;
+	private final boolean useCommitDates;
 
-	GitFileSystemWithHistoryFetcherByPrefix(String prefix, int count, Predicate<GitHubUsername> accepted) {
+	GitFileSystemWithHistoryFetcherByPrefix(String prefix, int count, Predicate<GitHubUsername> accepted,
+			boolean useCommitDates) {
 		this.prefix = checkNotNull(prefix);
 		this.count = count;
 		this.accepted = checkNotNull(accepted);
@@ -59,6 +66,7 @@ public class GitFileSystemWithHistoryFetcherByPrefix implements GitFileSystemWit
 		lastGitFs = null;
 		lastRepository = null;
 		lastHistory = null;
+		this.useCommitDates = useCommitDates;
 	}
 
 	@Override
@@ -89,9 +97,14 @@ public class GitFileSystemWithHistoryFetcherByPrefix implements GitFileSystemWit
 			lastGitFs = GitFileSystemProvider.getInstance().newFileSystemFromRepository(lastRepository);
 
 			final GitHubHistory gitHubHistory = fetcherQl.getReversedGitHubHistory(coordinates);
-			final GitHistory consistentPushHistory = gitHubHistory.getConsistentPushHistory();
+			final GitHistory history;
+			if (useCommitDates) {
+				history = GitUtils.getHistory(lastGitFs);
+			} else {
+				history = gitHubHistory.getConsistentPushHistory();
+			}
 
-			lastHistory = GitFileSystemHistory.create(lastGitFs, consistentPushHistory, gitHubHistory.getPushDates());
+			lastHistory = GitFileSystemHistory.create(lastGitFs, history, gitHubHistory.getPushDates());
 			return lastHistory;
 		} catch (RuntimeException | IOException e) {
 			try {

@@ -11,6 +11,7 @@ import com.google.common.collect.HashBiMap;
 import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Maps;
 import com.google.common.graph.Graph;
 import com.google.common.graph.Graphs;
 import com.google.common.jimfs.Configuration;
@@ -29,6 +30,7 @@ import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.TimeZone;
 import java.util.stream.Stream;
@@ -54,7 +56,14 @@ public class JGit {
 
 	public static InMemoryRepository createRepository(PersonIdent personIdent, Graph<Path> baseDirs, Path links)
 			throws IOException {
+		return createRepository(Maps.asMap(baseDirs.nodes(), p -> personIdent), baseDirs, links);
+	}
+
+	public static InMemoryRepository createRepository(Map<Path, PersonIdent> identities, Graph<Path> baseDirs,
+			Path links) throws IOException {
 		checkArgument(!Graphs.hasCycle(baseDirs));
+		checkArgument(identities.keySet().equals(baseDirs.nodes()));
+
 		final ImmutableSet<Path> starters = baseDirs.nodes().stream().filter(p -> baseDirs.predecessors(p).size() == 0)
 				.collect(ImmutableSet.toImmutableSet());
 		LOGGER.debug("Visiting from {}.", starters);
@@ -71,7 +80,7 @@ public class JGit {
 				final Set<Path> parentPaths = baseDirs.predecessors(source);
 				final ImmutableList<ObjectId> parents = parentPaths.stream().map(p -> commitsBuilder.get(p))
 						.collect(ImmutableSet.toImmutableSet()).asList();
-				final ObjectId oId = insertCommit(inserter, personIdent, source, parents, "First commit");
+				final ObjectId oId = insertCommit(inserter, identities.get(source), source, parents, "First commit");
 				commitsBuilder.put(source, oId);
 			}
 		}

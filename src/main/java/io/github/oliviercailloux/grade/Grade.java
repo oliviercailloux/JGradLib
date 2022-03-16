@@ -88,6 +88,41 @@ public class Grade {
 //		}
 	}
 
+	public static GradeAggregator integrateMaxesTODO(GradeAggregator original) {
+		if (original instanceof WeightingGradeAggregator w) {
+			return w;
+		}
+		final MarkAggregator a = original.getMarkAggregator();
+
+		if (a instanceof OwaWeighter && original.getSpecialSubAggregators().isEmpty()) {
+			return transformToPerCriterionWeighting(original.getDefaultSubAggregator());
+		}
+
+		/*
+		 * Note that switching, for example, from ParametricWeighter to
+		 * AbsoluteAggregator extends the admissible sub-trees.
+		 */
+		final ImmutableMap<Criterion, ? extends GradeAggregator> specialSubs = original.getSpecialSubAggregators();
+		/*
+		 * Some further pruning is possible (and might be welcome) as some of these
+		 * sub-aggregators will never be used: in parametric nodes, the weighting branch
+		 * will not be used as the corresponding marks tree is reduced to an absolute
+		 * mark; and max nodes treated here become terminal nodes in marks trees.
+		 */
+		final Map<Criterion, WeightingGradeAggregator> transformedSubs = Maps.transformValues(specialSubs,
+				Grade::transformToPerCriterionWeighting);
+		final PerCriterionWeighter newAggregator = (a instanceof PerCriterionWeighter c) ? c
+				: AbsoluteAggregator.INSTANCE;
+		return WeightingGradeAggregator.given(newAggregator, transformedSubs,
+				transformToPerCriterionWeighting(original.getDefaultSubAggregator()));
+
+		// return switch(original.getMarkAggregator()) {
+		// case ParametricWeighter w -> AbsoluteAggregator.INSTANCE;
+		// default -> throw new IllegalArgumentException("Unexpected value: " +
+		// original.getMarkAggregator());
+		// }
+	}
+
 	public static MarksTree adaptMarksForPerCriterionWeighting(Grade original) {
 		if (original.getWeightedSubMarks().isEmpty()) {
 			return original.toMarksTree();
@@ -106,6 +141,10 @@ public class Grade {
 			 * All these criteria are associated to dynamic weights (weights that depend on
 			 * the marks tree), that we thus can’t integrate into a static structure (an
 			 * aggregator that would not depend on the tree), so we must prune the tree.
+			 *
+			 * TODO include here the case of OWA with a non-unique non-zero value. And
+			 * consider keeping more of the structure by flattening the sub-criteria and
+			 * averaging them, if it makes sense.
 			 */
 			final ImmutableMap<SubMark, Double> weightedSubMarks = original.getWeightedSubMarks();
 			final ImmutableMap<Criterion, Mark> absoluteMarks = weightedSubMarks.keySet().stream()
@@ -133,6 +172,10 @@ public class Grade {
 			final ImmutableMap<SubMark, Double> weightedSubMarks = original.getWeightedSubMarks();
 			final Criterion criterionWithAllWeight = Maps.filterEntries(weightedSubMarks, e -> e.getValue() == 1d)
 					.keySet().stream().collect(MoreCollectors.onlyElement()).getCriterion();
+			/*
+			 * TODO this forgets the criterion, I suppose, therefore inducing a loss of
+			 * information.
+			 */
 			return adaptMarksForPerCriterionWeighting(original.getGrade(criterionWithAllWeight));
 		}
 		if (a instanceof CriteriaWeighter) {
