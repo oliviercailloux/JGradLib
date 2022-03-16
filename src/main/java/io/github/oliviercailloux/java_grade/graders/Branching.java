@@ -43,22 +43,6 @@ public class Branching implements Grader<IOException> {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(Branching.class);
 
-	public static MarksTree move(MarksTree tree, CriteriaPath from, CriteriaPath to) {
-		final MarksTree src = tree.getTree(from);
-
-	}
-
-	public static MarksTree remove(MarksTree tree, CriteriaPath from) {
-		checkArgument(!from.isRoot());
-		final Criterion head = from.getHead();
-		final CriteriaPath rest = from.withoutHead();
-		if (rest.isRoot()) {
-			final ImmutableMap<Criterion, MarksTree> subsSubset = tree.getCriteria().stream()
-					.filter(c -> !c.equals(head)).collect(ImmutableMap.toImmutableMap(c -> c, tree::getTree));
-			return MarksTree.composite(subsSubset);
-		}
-	}
-
 	public static final String PREFIX = "branching";
 
 	public static final ZonedDateTime DEADLINE = ZonedDateTime.parse("2022-03-09T14:11:00+01:00[Europe/Paris]");
