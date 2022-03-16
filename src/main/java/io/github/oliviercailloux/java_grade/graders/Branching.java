@@ -3,6 +3,7 @@ package io.github.oliviercailloux.java_grade.graders;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Verify.verify;
 
+import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
@@ -42,13 +43,29 @@ public class Branching implements Grader<IOException> {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(Branching.class);
 
+	public static MarksTree move(MarksTree tree, CriteriaPath from, CriteriaPath to) {
+		final MarksTree src = tree.getTree(from);
+
+	}
+
+	public static MarksTree remove(MarksTree tree, CriteriaPath from) {
+		checkArgument(!from.isRoot());
+		final Criterion head = from.getHead();
+		final CriteriaPath rest = from.withoutHead();
+		if (rest.isRoot()) {
+			final ImmutableMap<Criterion, MarksTree> subsSubset = tree.getCriteria().stream()
+					.filter(c -> !c.equals(head)).collect(ImmutableMap.toImmutableMap(c -> c, tree::getTree));
+			return MarksTree.composite(subsSubset);
+		}
+	}
+
 	public static final String PREFIX = "branching";
 
 	public static final ZonedDateTime DEADLINE = ZonedDateTime.parse("2022-03-09T14:11:00+01:00[Europe/Paris]");
 
 	public static final double USER_WEIGHT = 0.05d;
 
-	private static final boolean EXPAND = false;
+	private static final boolean EXPAND = true;
 
 	public static void main(String[] args) throws Exception {
 		final BatchGitHistoryGrader<RuntimeException> grader = BatchGitHistoryGrader
@@ -84,8 +101,11 @@ public class Branching implements Grader<IOException> {
 
 	private GitFileSystemHistory currentHistory;
 
+	private GitPathRoot startPath;
+
 	Branching() {
 		currentHistory = null;
+		startPath = null;
 	}
 
 	@Override
@@ -102,12 +122,42 @@ public class Branching implements Grader<IOException> {
 				String.format("Found %s commit%s, including the root ones", nbCommits, nbCommits == 1 ? "" : "s"), "");
 		final SubMarksTree subAny = SubMarksTree.given(C_ANY, anyCommitMark);
 
-		final Set<SubMarksTree> subs = ThrowingStream.of(commitsOrdered.stream(), IOException.class)
-				.filter(r -> currentHistory.getGraph().predecessors(r).size() <= 1)
-				.map(r -> subGrade(r, w -> gradeStart(w, true))).collect(ImmutableSet.toImmutableSet());
-		final SubMarksTree subStart = SubMarksTree.given(C_START, compositeOrZero(subs, "No commit"));
+		final SubMarksTree subStart = gradeStartFromCommits(commitsOrdered, EXPAND);
+		if (EXPAND) {
+			// return move(tree, CriteriaPath.from(ImmutableList.of(C_START, C_A)),
+			// CriteriaPath.from(ImmutableList.of(C_A)));
+			return MarksTree.composite(ImmutableSet.of(subAny, subStart));
+		}
 
-		return MarksTree.composite(ImmutableSet.of(subAny, subStart));
+		final SubMarksTree subA = gradeAFromStart(startPath, false);
+		return MarksTree.composite(ImmutableSet.of(subAny, subStart, subA));
+	}
+
+	private SubMarksTree gradeStartFromCommits(ImmutableSet<GitPathRoot> commitsOrdered, boolean expandLocally)
+			throws IOException {
+		final ImmutableBiMap<GitPathRoot, SubMarksTree> subs = ThrowingStream
+				.of(commitsOrdered.stream(), IOException.class)
+				.filter(r -> currentHistory.getGraph().predecessors(r).size() <= 1)
+				.collect(ImmutableBiMap.toImmutableBiMap(r -> r, r -> {
+					try {
+						return subGrade(r, w -> gradeStart(w, true));
+					} catch (NoSuchFileException e) {
+						throw new IllegalStateException(e);
+					} catch (IOException e) {
+						throw new IllegalStateException(e);
+					}
+				}));
+		final MarksTree tree = compositeOrZero(subs.values(), "No commit");
+		if (expandLocally) {
+			return SubMarksTree.given(C_START, tree);
+		}
+		final ImmutableMap<SubMark, Double> weightedSubMarks = Grade.given(startAggregatorExpanded(), tree)
+				.getWeightedSubMarks();
+		final Criterion bestPath = Maps.filterValues(weightedSubMarks, w -> w == 1d).keySet().stream()
+				.map(SubMark::getCriterion).collect(MoreCollectors.onlyElement());
+		startPath = Maps.filterValues(subs, s -> s.getCriterion().equals(bestPath)).keySet().stream()
+				.collect(MoreCollectors.onlyElement());
+		return SubMarksTree.given(C_START, gradeStart(startPath, false));
 	}
 
 	private MarksTree compositeOrZero(Set<SubMarksTree> subs, String commentIfEmpty) {
@@ -117,8 +167,14 @@ public class Branching implements Grader<IOException> {
 	private SubMarksTree subGrade(GitPathRoot gitPathRoot, Function<GitPathRoot, MarksTree, IOException> grader)
 			throws IOException, NoSuchFileException {
 		final String comment = "Using " + gitPathRoot.getCommit().getId().getName();
-		final Criterion criterion = Criterion.given(comment);
 		final MarksTree grade = grader.apply(gitPathRoot);
+		final MarksTree newTree = addComment(grade, comment);
+
+		final Criterion criterion = Criterion.given(comment);
+		return SubMarksTree.given(criterion, newTree);
+	}
+
+	private MarksTree addComment(MarksTree grade, String comment) {
 		final Criterion sub1 = grade.getCriteria().stream().findFirst().orElseThrow();
 		final MarksTree tree1 = grade.getTree(sub1);
 		verify(tree1.isMark());
@@ -128,7 +184,7 @@ public class Branching implements Grader<IOException> {
 		final LinkedHashMap<Criterion, MarksTree> subsNew = new LinkedHashMap<>(subs);
 		subsNew.put(sub1, Mark.given(mark1.getPoints(), comment));
 		final MarksTree newTree = MarksTree.composite(subsNew);
-		return SubMarksTree.given(criterion, newTree);
+		return newTree;
 	}
 
 	@Override
@@ -140,6 +196,18 @@ public class Branching implements Grader<IOException> {
 	}
 
 	private GradeAggregator getAggregatorExpanded() {
+		final GradeAggregator startAg = startAggregatorExpanded();
+		final GradeAggregator mainAg;
+		{
+			final ImmutableMap.Builder<Criterion, Double> builder = ImmutableMap.builder();
+			builder.put(C_ANY, 1d);
+			builder.put(C_START, 18d);
+			mainAg = GradeAggregator.staticAggregator(builder.build(), ImmutableMap.of(C_START, startAg));
+		}
+		return mainAg;
+	}
+
+	private GradeAggregator startAggregatorExpanded() {
 		final GradeAggregator aAg = aAggregatorExpanded();
 		final GradeAggregator startAg;
 		{
@@ -152,14 +220,7 @@ public class Branching implements Grader<IOException> {
 					ImmutableMap.of(C_A, aAg));
 			startAg = GradeAggregator.max(startAggregator);
 		}
-		final GradeAggregator mainAg;
-		{
-			final ImmutableMap.Builder<Criterion, Double> builder = ImmutableMap.builder();
-			builder.put(C_ANY, 1d);
-			builder.put(C_START, 18d);
-			mainAg = GradeAggregator.staticAggregator(builder.build(), ImmutableMap.of(C_START, startAg));
-		}
-		return mainAg;
+		return startAg;
 	}
 
 	private GradeAggregator aAggregatorExpanded() {
@@ -330,18 +391,28 @@ public class Branching implements Grader<IOException> {
 
 	private SubMarksTree gradeAFromStart(GitPathRoot commitStart, boolean expandLocally) throws IOException {
 		final Set<GitPathRoot> successors = currentHistory.getGraph().successors(commitStart);
-		final Set<SubMarksTree> subs = ThrowingStream.of(successors.stream(), IOException.class)
+		final ImmutableBiMap<GitPathRoot, SubMarksTree> subs = ThrowingStream.of(successors.stream(), IOException.class)
 				.filter(r -> currentHistory.getGraph().predecessors(r).size() == 1)
-				.map(r -> subGrade(r, w -> gradeA(w, true))).collect(ImmutableSet.toImmutableSet());
-		final MarksTree tree = compositeOrZero(subs, "No successor of Start");
+				.collect(ImmutableBiMap.toImmutableBiMap(r -> r, r -> {
+					try {
+						return subGrade(r, w -> gradeA(w, true));
+					} catch (NoSuchFileException e) {
+						throw new IllegalStateException(e);
+					} catch (IOException e) {
+						throw new IllegalStateException(e);
+					}
+				}));
+		final MarksTree tree = compositeOrZero(subs.values(), "No successor of Start");
 		if (expandLocally) {
 			return SubMarksTree.given(C_A, tree);
 		}
 		final ImmutableMap<SubMark, Double> weightedSubMarks = Grade.given(aAggregatorExpanded(), tree)
 				.getWeightedSubMarks();
-		final Criterion bestSubMark = Maps.filterValues(weightedSubMarks, w -> w == 1d).keySet().stream()
+		final Criterion bestPath = Maps.filterValues(weightedSubMarks, w -> w == 1d).keySet().stream()
 				.map(SubMark::getCriterion).collect(MoreCollectors.onlyElement());
-		return SubMarksTree.given(C_A, tree.getTree(bestSubMark));
+		final GitPathRoot bestSubMark = Maps.filterValues(subs, s -> s.getCriterion().equals(bestPath)).keySet()
+				.stream().collect(MoreCollectors.onlyElement());
+		return SubMarksTree.given(C_A, gradeA(bestSubMark, false));
 	}
 
 	private MarksTree gradeA(GitPathRoot commitA, boolean expandLocally) throws IOException {

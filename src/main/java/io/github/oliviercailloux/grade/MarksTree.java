@@ -17,6 +17,8 @@ import java.util.Set;
  * – Map<CritPath, Mark> // no extensions: no paths p1, p2 such that p2 extends
  * p1.
  * </p>
+ * TODO consider a Composite that is non empty and a MarksTree that can be
+ * empty.
  * <p>
  * Generally goes logically together with a GradeAggregator (because similar
  * structures are required for aggregation to be possible), but code may be
