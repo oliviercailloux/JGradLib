@@ -5,6 +5,7 @@ import static com.google.common.base.Verify.verify;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Maps;
 import com.google.common.collect.MoreCollectors;
 import com.google.common.graph.Graphs;
 import io.github.oliviercailloux.git.fs.GitPath;
@@ -14,10 +15,13 @@ import io.github.oliviercailloux.grade.Criterion;
 import io.github.oliviercailloux.grade.GitFileSystemHistory;
 import io.github.oliviercailloux.grade.GitFileSystemWithHistoryFetcherByPrefix;
 import io.github.oliviercailloux.grade.GitGrader.Predicates;
+import io.github.oliviercailloux.grade.Grade;
 import io.github.oliviercailloux.grade.GradeAggregator;
 import io.github.oliviercailloux.grade.Grader;
+import io.github.oliviercailloux.grade.IGrade.CriteriaPath;
 import io.github.oliviercailloux.grade.Mark;
 import io.github.oliviercailloux.grade.MarksTree;
+import io.github.oliviercailloux.grade.SubMark;
 import io.github.oliviercailloux.grade.SubMarksTree;
 import io.github.oliviercailloux.jaris.exceptions.Throwing.Function;
 import java.io.IOException;
@@ -27,6 +31,7 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZonedDateTime;
+import java.util.LinkedHashMap;
 import java.util.Set;
 import java.util.regex.Pattern;
 import name.falgout.jeffrey.throwing.stream.ThrowingStream;
@@ -99,7 +104,7 @@ public class Branching implements Grader<IOException> {
 
 		final Set<SubMarksTree> subs = ThrowingStream.of(commitsOrdered.stream(), IOException.class)
 				.filter(r -> currentHistory.getGraph().predecessors(r).size() <= 1)
-				.map(r -> subGrade(r, this::gradeStart)).collect(ImmutableSet.toImmutableSet());
+				.map(r -> subGrade(r, w -> gradeStart(w, true))).collect(ImmutableSet.toImmutableSet());
 		final SubMarksTree subStart = SubMarksTree.given(C_START, compositeOrZero(subs, "No commit"));
 
 		return MarksTree.composite(ImmutableSet.of(subAny, subStart));
@@ -111,8 +116,19 @@ public class Branching implements Grader<IOException> {
 
 	private SubMarksTree subGrade(GitPathRoot gitPathRoot, Function<GitPathRoot, MarksTree, IOException> grader)
 			throws IOException, NoSuchFileException {
-		final Criterion criterion = Criterion.given("Using " + gitPathRoot.getCommit().getId().getName());
-		return SubMarksTree.given(criterion, grader.apply(gitPathRoot));
+		final String comment = "Using " + gitPathRoot.getCommit().getId().getName();
+		final Criterion criterion = Criterion.given(comment);
+		final MarksTree grade = grader.apply(gitPathRoot);
+		final Criterion sub1 = grade.getCriteria().stream().findFirst().orElseThrow();
+		final MarksTree tree1 = grade.getTree(sub1);
+		verify(tree1.isMark());
+		final Mark mark1 = tree1.getMark(CriteriaPath.ROOT);
+		verify(mark1.getComment().isEmpty());
+		final ImmutableMap<Criterion, MarksTree> subs = Maps.toMap(grade.getCriteria(), grade::getTree);
+		final LinkedHashMap<Criterion, MarksTree> subsNew = new LinkedHashMap<>(subs);
+		subsNew.put(sub1, Mark.given(mark1.getPoints(), comment));
+		final MarksTree newTree = MarksTree.composite(subsNew);
+		return SubMarksTree.given(criterion, newTree);
 	}
 
 	@Override
@@ -124,6 +140,68 @@ public class Branching implements Grader<IOException> {
 	}
 
 	private GradeAggregator getAggregatorExpanded() {
+		final GradeAggregator aAg = aAggregatorExpanded();
+		final GradeAggregator startAg;
+		{
+			final ImmutableMap.Builder<Criterion, Double> builder = ImmutableMap.builder();
+			builder.put(C_ONE, 1d);
+			builder.put(C_EXISTS_START, 0.5d);
+			builder.put(C_CONTENTS_START, 0.5d);
+			builder.put(C_A, 16d);
+			final GradeAggregator startAggregator = GradeAggregator.staticAggregator(builder.build(),
+					ImmutableMap.of(C_A, aAg));
+			startAg = GradeAggregator.max(startAggregator);
+		}
+		final GradeAggregator mainAg;
+		{
+			final ImmutableMap.Builder<Criterion, Double> builder = ImmutableMap.builder();
+			builder.put(C_ANY, 1d);
+			builder.put(C_START, 18d);
+			mainAg = GradeAggregator.staticAggregator(builder.build(), ImmutableMap.of(C_START, startAg));
+		}
+		return mainAg;
+	}
+
+	private GradeAggregator aAggregatorExpanded() {
+		final GradeAggregator bAg = bAggregatorExpanded();
+		final GradeAggregator aAg;
+		{
+			final ImmutableMap.Builder<Criterion, Double> builder = ImmutableMap.builder();
+			builder.put(C_TWO, 1d);
+			builder.put(C_BR1, 1d);
+			builder.put(C_EXISTS_START, 0.5d);
+			builder.put(C_CONTENTS_START, 0.5d);
+			builder.put(C_EXISTS_FIRST, 0.5d);
+			builder.put(C_CONTENTS_FIRST, 0.5d);
+			builder.put(C_B, 12d);
+			final GradeAggregator aAggregator = GradeAggregator.staticAggregator(builder.build(),
+					ImmutableMap.of(C_B, bAg));
+			aAg = GradeAggregator.max(aAggregator);
+		}
+		return aAg;
+	}
+
+	private GradeAggregator bAggregatorExpanded() {
+		final GradeAggregator cAg = cAggregatorExpanded();
+		final GradeAggregator bAg;
+		{
+			final ImmutableMap.Builder<Criterion, Double> builder = ImmutableMap.builder();
+			builder.put(C_THREE, 1d);
+			builder.put(C_EXISTS_START, 0.5d);
+			builder.put(C_CONTENTS_START, 0.5d);
+			builder.put(C_EXISTS_FIRST, 0.5d);
+			builder.put(C_CONTENTS_FIRST, 0.5d);
+			builder.put(C_EXISTS_SOME, 0.5d);
+			builder.put(C_CONTENTS_SOME, 0.5d);
+			builder.put(C_C, 8d);
+			final GradeAggregator bAggregator = GradeAggregator.staticAggregator(builder.build(),
+					ImmutableMap.of(C_C, cAg));
+			bAg = GradeAggregator.max(bAggregator);
+		}
+		return bAg;
+	}
+
+	private GradeAggregator cAggregatorExpanded() {
 		final GradeAggregator dAg;
 		{
 			final ImmutableMap.Builder<Criterion, Double> builder = ImmutableMap.builder();
@@ -153,54 +231,7 @@ public class Branching implements Grader<IOException> {
 					ImmutableMap.of(C_D, dAg));
 			cAg = GradeAggregator.max(cAggregator);
 		}
-		final GradeAggregator bAg;
-		{
-			final ImmutableMap.Builder<Criterion, Double> builder = ImmutableMap.builder();
-			builder.put(C_THREE, 1d);
-			builder.put(C_EXISTS_START, 0.5d);
-			builder.put(C_CONTENTS_START, 0.5d);
-			builder.put(C_EXISTS_FIRST, 0.5d);
-			builder.put(C_CONTENTS_FIRST, 0.5d);
-			builder.put(C_EXISTS_SOME, 0.5d);
-			builder.put(C_CONTENTS_SOME, 0.5d);
-			builder.put(C_C, 8d);
-			final GradeAggregator bAggregator = GradeAggregator.staticAggregator(builder.build(),
-					ImmutableMap.of(C_C, cAg));
-			bAg = GradeAggregator.max(bAggregator);
-		}
-		final GradeAggregator aAg;
-		{
-			final ImmutableMap.Builder<Criterion, Double> builder = ImmutableMap.builder();
-			builder.put(C_TWO, 1d);
-			builder.put(C_BR1, 1d);
-			builder.put(C_EXISTS_START, 0.5d);
-			builder.put(C_CONTENTS_START, 0.5d);
-			builder.put(C_EXISTS_FIRST, 0.5d);
-			builder.put(C_CONTENTS_FIRST, 0.5d);
-			builder.put(C_B, 12d);
-			final GradeAggregator aAggregator = GradeAggregator.staticAggregator(builder.build(),
-					ImmutableMap.of(C_B, bAg));
-			aAg = GradeAggregator.max(aAggregator);
-		}
-		final GradeAggregator startAg;
-		{
-			final ImmutableMap.Builder<Criterion, Double> builder = ImmutableMap.builder();
-			builder.put(C_ONE, 1d);
-			builder.put(C_EXISTS_START, 0.5d);
-			builder.put(C_CONTENTS_START, 0.5d);
-			builder.put(C_A, 16d);
-			final GradeAggregator startAggregator = GradeAggregator.staticAggregator(builder.build(),
-					ImmutableMap.of(C_A, aAg));
-			startAg = GradeAggregator.max(startAggregator);
-		}
-		final GradeAggregator mainAg;
-		{
-			final ImmutableMap.Builder<Criterion, Double> builder = ImmutableMap.builder();
-			builder.put(C_ANY, 1d);
-			builder.put(C_START, 18d);
-			mainAg = GradeAggregator.staticAggregator(builder.build(), ImmutableMap.of(C_START, startAg));
-		}
-		return mainAg;
+		return cAg;
 	}
 
 	private GradeAggregator getAggregatorFlattened() {
@@ -275,7 +306,7 @@ public class Branching implements Grader<IOException> {
 		return mainAg;
 	}
 
-	private MarksTree gradeStart(GitPathRoot commitStart) throws IOException {
+	private MarksTree gradeStart(GitPathRoot commitStart, boolean expandLocally) throws IOException {
 		final long nbFiles = Files.find(commitStart, Integer.MAX_VALUE, (p, a) -> Files.isRegularFile(p)).count();
 		final boolean rightNb = nbFiles == 1;
 		final SubMarksTree subNb = SubMarksTree.given(C_ONE, Mark.binary(rightNb, "", "Found " + nbFiles + " files"));
@@ -288,19 +319,32 @@ public class Branching implements Grader<IOException> {
 		final SubMarksTree subExists = SubMarksTree.given(C_EXISTS_START, Mark.binary(startExists));
 		final SubMarksTree subMatches = SubMarksTree.given(C_CONTENTS_START, Mark.binary(startMatches));
 
-		final SubMarksTree subB = gradeAFromStart(commitStart);
-		return MarksTree.composite(ImmutableSet.of(subNb, subExists, subMatches, subB));
+		final ImmutableSet.Builder<SubMarksTree> builder = ImmutableSet.builder();
+		builder.add(subNb, subExists, subMatches);
+		if (expandLocally) {
+			final SubMarksTree subA = gradeAFromStart(commitStart, true);
+			builder.add(subA);
+		}
+		return MarksTree.composite(builder.build());
 	}
 
-	private SubMarksTree gradeAFromStart(GitPathRoot commitStart) throws IOException {
+	private SubMarksTree gradeAFromStart(GitPathRoot commitStart, boolean expandLocally) throws IOException {
 		final Set<GitPathRoot> successors = currentHistory.getGraph().successors(commitStart);
 		final Set<SubMarksTree> subs = ThrowingStream.of(successors.stream(), IOException.class)
-				.filter(r -> currentHistory.getGraph().predecessors(r).size() == 1).map(r -> subGrade(r, this::gradeA))
-				.collect(ImmutableSet.toImmutableSet());
-		return SubMarksTree.given(C_A, compositeOrZero(subs, "No successor of Start"));
+				.filter(r -> currentHistory.getGraph().predecessors(r).size() == 1)
+				.map(r -> subGrade(r, w -> gradeA(w, true))).collect(ImmutableSet.toImmutableSet());
+		final MarksTree tree = compositeOrZero(subs, "No successor of Start");
+		if (expandLocally) {
+			return SubMarksTree.given(C_A, tree);
+		}
+		final ImmutableMap<SubMark, Double> weightedSubMarks = Grade.given(aAggregatorExpanded(), tree)
+				.getWeightedSubMarks();
+		final Criterion bestSubMark = Maps.filterValues(weightedSubMarks, w -> w == 1d).keySet().stream()
+				.map(SubMark::getCriterion).collect(MoreCollectors.onlyElement());
+		return SubMarksTree.given(C_A, tree.getTree(bestSubMark));
 	}
 
-	private MarksTree gradeA(GitPathRoot commitA) throws IOException {
+	private MarksTree gradeA(GitPathRoot commitA, boolean expandLocally) throws IOException {
 		checkArgument(currentHistory.getGraph().predecessors(commitA).size() == 1);
 
 		final long nbFiles = Files.find(commitA, Integer.MAX_VALUE, (p, a) -> Files.isRegularFile(p)).count();
@@ -331,20 +375,24 @@ public class Branching implements Grader<IOException> {
 		final SubMarksTree subExists = SubMarksTree.given(C_EXISTS_FIRST, Mark.binary(firstExists));
 		final SubMarksTree subMatches = SubMarksTree.given(C_CONTENTS_FIRST, Mark.binary(firstMatches));
 
-		final SubMarksTree subB = gradeBFromA(commitA);
-		return MarksTree.composite(
-				ImmutableSet.of(subNb, subBranch, subStartExists, subStartMatches, subExists, subMatches, subB));
+		final ImmutableSet.Builder<SubMarksTree> builder = ImmutableSet.builder();
+		builder.add(subNb, subBranch, subStartExists, subStartMatches, subExists, subMatches);
+		if (expandLocally) {
+			final SubMarksTree subB = gradeBFromA(commitA);
+			builder.add(subB);
+		}
+		return MarksTree.composite(builder.build());
 	}
 
 	private SubMarksTree gradeBFromA(GitPathRoot commitA) throws IOException {
 		final Set<GitPathRoot> successors = currentHistory.getGraph().successors(commitA);
 		final Set<SubMarksTree> subs = ThrowingStream.of(successors.stream(), IOException.class)
-				.filter(r -> currentHistory.getGraph().predecessors(r).size() == 1).map(r -> subGrade(r, this::gradeB))
-				.collect(ImmutableSet.toImmutableSet());
+				.filter(r -> currentHistory.getGraph().predecessors(r).size() == 1)
+				.map(r -> subGrade(r, w -> gradeB(w, true))).collect(ImmutableSet.toImmutableSet());
 		return SubMarksTree.given(C_B, compositeOrZero(subs, "No successor of A"));
 	}
 
-	private MarksTree gradeB(GitPathRoot commitB) throws IOException {
+	private MarksTree gradeB(GitPathRoot commitB, boolean expandLocally) throws IOException {
 		checkArgument(currentHistory.getGraph().predecessors(commitB).size() == 1);
 		{
 			final GitPathRoot commitA = currentHistory.getGraph().predecessors(commitB).stream()
@@ -380,9 +428,13 @@ public class Branching implements Grader<IOException> {
 		final SubMarksTree subSomeExists = SubMarksTree.given(C_EXISTS_SOME, Mark.binary(someExists));
 		final SubMarksTree subSomeMatches = SubMarksTree.given(C_CONTENTS_SOME, Mark.binary(someMatches));
 
-		final SubMarksTree subC = gradeCFromB(commitB);
-		return MarksTree.composite(ImmutableSet.of(subNb, subStartExists, subStartMatches, subExists, subMatches,
-				subSomeExists, subSomeMatches, subC));
+		final ImmutableSet.Builder<SubMarksTree> builder = ImmutableSet.builder();
+		builder.add(subNb, subStartExists, subStartMatches, subExists, subMatches, subSomeExists, subSomeMatches);
+		if (expandLocally) {
+			final SubMarksTree subC = gradeCFromB(commitB);
+			builder.add(subC);
+		}
+		return MarksTree.composite(builder.build());
 	}
 
 	private SubMarksTree gradeCFromB(GitPathRoot commitB) throws IOException {
@@ -393,11 +445,11 @@ public class Branching implements Grader<IOException> {
 		final Set<GitPathRoot> siblingsOfA = currentHistory.getGraph().successors(start).stream()
 				.filter(r -> !r.equals(commitA)).collect(ImmutableSet.toImmutableSet());
 		final Set<SubMarksTree> subs = ThrowingStream.of(siblingsOfA.stream(), IOException.class)
-				.map(r -> subGrade(r, w -> gradeC(commitB, w))).collect(ImmutableSet.toImmutableSet());
+				.map(r -> subGrade(r, w -> gradeC(commitB, w, true))).collect(ImmutableSet.toImmutableSet());
 		return SubMarksTree.given(C_C, compositeOrZero(subs, "No sibling of A"));
 	}
 
-	private MarksTree gradeC(GitPathRoot commitB, GitPathRoot commitC) throws IOException {
+	private MarksTree gradeC(GitPathRoot commitB, GitPathRoot commitC, boolean expandLocally) throws IOException {
 		final long nbFiles = Files.find(commitC, Integer.MAX_VALUE, (p, a) -> Files.isRegularFile(p)).count();
 		final boolean rightNb = nbFiles == 2;
 		final SubMarksTree subNb = SubMarksTree.given(C_TWO, Mark.binary(rightNb, "", "Found " + nbFiles + " files"));
@@ -423,9 +475,13 @@ public class Branching implements Grader<IOException> {
 		final SubMarksTree subExists = SubMarksTree.given(C_EXISTS_FIRST, Mark.binary(firstExists));
 		final SubMarksTree subMatches = SubMarksTree.given(C_CONTENTS_FIRST, Mark.binary(firstMatches));
 
-		final SubMarksTree subD = gradeDFromBAndC(commitB, commitC);
-		return MarksTree.composite(
-				ImmutableSet.of(subNb, subBranch, subStartExists, subStartMatches, subExists, subMatches, subD));
+		final ImmutableSet.Builder<SubMarksTree> builder = ImmutableSet.builder();
+		builder.add(subNb, subBranch, subStartExists, subStartMatches, subExists, subMatches);
+		if (expandLocally) {
+			final SubMarksTree subD = gradeDFromBAndC(commitB, commitC);
+			builder.add(subD);
+		}
+		return MarksTree.composite(builder.build());
 	}
 
 	private SubMarksTree gradeDFromBAndC(GitPathRoot commitB, GitPathRoot commitC) throws IOException {
