@@ -9,7 +9,7 @@ import io.github.oliviercailloux.git.fs.GitPathRootSha;
 import java.nio.file.Path;
 import java.util.Comparator;
 
-public interface PathGrader<X extends Exception> extends Grader<X> {
+public interface PathGrader<X extends Exception> extends GitFsGrader<X> {
 	MarksTree gradeProject(Path project) throws X;
 
 	@Override

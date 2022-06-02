@@ -21,7 +21,7 @@ import io.github.oliviercailloux.grade.ByTimeGrader.PreparedGrader;
 import io.github.oliviercailloux.grade.CodeGrader;
 import io.github.oliviercailloux.grade.Criterion;
 import io.github.oliviercailloux.grade.DeadlineGrader.LinearPenalizer;
-import io.github.oliviercailloux.grade.ExtendedGrader;
+import io.github.oliviercailloux.grade.Grader;
 import io.github.oliviercailloux.grade.GitFileSystemHistory;
 import io.github.oliviercailloux.grade.GitFileSystemWithHistoryFetcher;
 import io.github.oliviercailloux.grade.GitFileSystemWithHistoryFetcherByPrefix;
@@ -48,7 +48,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class Grader421 implements CodeGrader<RuntimeException> {
-	public static class DoubleGrader implements ExtendedGrader<IOException> {
+	public static class DoubleGrader implements Grader<IOException> {
 
 		private static final Criterion C_DIFF = Criterion.given("diff");
 		private static final Criterion C_OLD = Criterion.given("old");

@@ -18,7 +18,7 @@ import io.github.oliviercailloux.grade.GitFileSystemWithHistoryFetcherByPrefix;
 import io.github.oliviercailloux.grade.GitGrader.Predicates;
 import io.github.oliviercailloux.grade.Grade;
 import io.github.oliviercailloux.grade.GradeAggregator;
-import io.github.oliviercailloux.grade.Grader;
+import io.github.oliviercailloux.grade.GitFsGrader;
 import io.github.oliviercailloux.grade.IGrade.CriteriaPath;
 import io.github.oliviercailloux.grade.Mark;
 import io.github.oliviercailloux.grade.MarksTree;
@@ -39,7 +39,7 @@ import name.falgout.jeffrey.throwing.stream.ThrowingStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class Branching implements Grader<IOException> {
+public class Branching implements GitFsGrader<IOException> {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(Branching.class);
 

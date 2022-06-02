@@ -28,7 +28,7 @@ public class BatchGitHistoryGraderTests {
 
 	private static final double USER_GRADE_WEIGHT = W_USER / W_TOT;
 
-	private static class MyGrader implements Grader<RuntimeException> {
+	private static class MyGrader implements GitFsGrader<RuntimeException> {
 		private static final Criterion C1 = Criterion.given("c1");
 		private static final Criterion C2 = Criterion.given("c2");
 		private static final Criterion C3 = Criterion.given("c3");

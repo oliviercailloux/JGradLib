@@ -20,7 +20,7 @@ import io.github.oliviercailloux.grade.GitFileSystemWithHistoryFetcherByPrefix;
 import io.github.oliviercailloux.grade.GitGrader.Functions;
 import io.github.oliviercailloux.grade.GitGrader.Predicates;
 import io.github.oliviercailloux.grade.GradeAggregator;
-import io.github.oliviercailloux.grade.Grader;
+import io.github.oliviercailloux.grade.GitFsGrader;
 import io.github.oliviercailloux.grade.Mark;
 import io.github.oliviercailloux.grade.MarksTree;
 import io.github.oliviercailloux.grade.SubMark;
@@ -43,7 +43,7 @@ import org.eclipse.jgit.diff.DiffEntry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class EclipseBis implements Grader<IOException> {
+public class EclipseBis implements GitFsGrader<IOException> {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(EclipseBis.class);
 

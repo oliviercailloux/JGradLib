@@ -14,7 +14,7 @@ import io.github.oliviercailloux.grade.GitFileSystemHistory;
 import io.github.oliviercailloux.grade.GitFileSystemWithHistoryFetcherByPrefix;
 import io.github.oliviercailloux.grade.Grade;
 import io.github.oliviercailloux.grade.GradeAggregator;
-import io.github.oliviercailloux.grade.Grader;
+import io.github.oliviercailloux.grade.GitFsGrader;
 import io.github.oliviercailloux.grade.Mark;
 import io.github.oliviercailloux.grade.MarksTree;
 import java.io.IOException;
@@ -28,7 +28,7 @@ import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class First implements Grader<RuntimeException> {
+public class First implements GitFsGrader<RuntimeException> {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(First.class);
 

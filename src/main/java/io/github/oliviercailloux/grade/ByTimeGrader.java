@@ -24,17 +24,17 @@ import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class ByTimeGrader<X extends Exception> implements ExtendedGrader<X> {
+public class ByTimeGrader<X extends Exception> implements Grader<X> {
 
 	public static class PreparedGrader<X extends Exception> {
 		private final GitFileSystemHistory whole;
-		private Grader<X> grader;
+		private GitFsGrader<X> grader;
 		private GitHubUsername author;
 		private final GradeModifier penalizerModifier;
 		private String commentGeneralCapped;
 		private ZonedDateTime deadline;
 
-		public PreparedGrader(Grader<X> grader, GitHubUsername author, GradeModifier modifier,
+		public PreparedGrader(GitFsGrader<X> grader, GitHubUsername author, GradeModifier modifier,
 				GitFileSystemHistory whole, String commentGeneralCapped, ZonedDateTime deadline) {
 			this.grader = grader;
 			this.author = author;
@@ -90,18 +90,18 @@ public class ByTimeGrader<X extends Exception> implements ExtendedGrader<X> {
 
 	public static final Criterion C_GRADE = Criterion.given("Grade");
 
-	public static <X extends Exception> ByTimeGrader<X> using(ZonedDateTime deadline, Grader<X> grader,
+	public static <X extends Exception> ByTimeGrader<X> using(ZonedDateTime deadline, GitFsGrader<X> grader,
 			GradeModifier penalizerModifier, double userGradeWeight) {
 		return new ByTimeGrader<>(deadline, grader, penalizerModifier, userGradeWeight);
 	}
 
 	private final ZonedDateTime deadline;
-	private final Grader<X> grader;
+	private final GitFsGrader<X> grader;
 	private final GradeModifier penalizerModifier;
 
 	private final double userGradeWeight;
 
-	private ByTimeGrader(ZonedDateTime deadline, Grader<X> grader, GradeModifier penalizerModifier,
+	private ByTimeGrader(ZonedDateTime deadline, GitFsGrader<X> grader, GradeModifier penalizerModifier,
 			double userGradeWeight) {
 		this.deadline = checkNotNull(deadline);
 		this.grader = checkNotNull(grader);
@@ -191,7 +191,7 @@ public class ByTimeGrader<X extends Exception> implements ExtendedGrader<X> {
 		return penalized;
 	}
 
-	private static GradeAggregator getUserNamedAggregator(Grader<?> grader, double userGradeWeight) {
+	private static GradeAggregator getUserNamedAggregator(GitFsGrader<?> grader, double userGradeWeight) {
 		final GradeAggregator basis = grader.getAggregator();
 		return GradeAggregator.staticAggregator(
 				ImmutableMap.of(ByTimeGrader.C_USER_NAME, userGradeWeight, ByTimeGrader.C_GRADE, 1d - userGradeWeight),
