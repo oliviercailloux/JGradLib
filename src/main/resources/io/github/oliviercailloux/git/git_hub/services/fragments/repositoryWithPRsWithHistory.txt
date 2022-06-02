@@ -1,0 +1,95 @@
+fragment repositoryWithIssuesWithHistory on Repository {
+  url
+  sshUrl
+  id
+  name
+  createdAt
+  owner {
+    login
+    url
+  }
+  masterObject: object(expression: "master:") {
+    __typename
+    ... on Tree {
+      entries {
+        name
+        type
+      }
+    }
+  }
+  pomObject: object(expression: "master:pom.xml") {
+    __typename
+    oid
+    commitUrl
+  }
+  pullRequests(
+    orderBy: {field: CREATED_AT, direction: ASC}
+    first: 100
+  ) {
+    totalCount
+    pageInfo {
+      hasNextPage
+    }
+    nodes {
+      title
+      milestone {
+        title
+      }
+      assignees(first: 100) {
+        totalCount
+        pageInfo {
+          hasNextPage
+        }
+        nodes {
+          login
+        }
+      }
+      url
+      repository {
+        homepageUrl
+        name
+        owner {
+          login
+          url
+        }
+      }
+      number
+      createdAt
+      closed
+      timeline(first: 100) {
+        totalCount
+        pageInfo {
+          hasNextPage
+        }
+        nodes {
+          __typename
+          ... on AssignedEvent {
+            createdAt
+            user {
+              login
+              url
+            }
+          }
+          ... on ClosedEvent {
+            createdAt
+          }
+          ... on ReopenedEvent {
+            createdAt
+          }
+          ... on RenamedTitleEvent {
+            createdAt
+            previousTitle
+            currentTitle
+          }
+          ... on UnassignedEvent {
+            createdAt
+            user {
+              login
+              url
+            }
+          }
+        }
+      }
+    }
+  }
+}

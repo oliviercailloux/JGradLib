@@ -446,9 +446,9 @@ public abstract class GitFileSystem extends FileSystem {
 
 	/**
 	 * Converts a path string, or a sequence of strings that when joined form a path
-	 * string, to a {@code GitPath}. If {@code first} starts with {@code /} (or
-	 * if {@code first} is empty and the first non-empty string in {@code more}
-	 * starts with {@code /}), this method behaves as if
+	 * string, to a {@code GitPath}. If {@code first} starts with {@code /} (or if
+	 * {@code first} is empty and the first non-empty string in {@code more} starts
+	 * with {@code /}), this method behaves as if
 	 * {@link #getAbsolutePath(String, String...)} had been called. Otherwise, it
 	 * behaves as if {@link #getRelativePath(String...)} had been called.
 	 * <p>
@@ -491,9 +491,9 @@ public abstract class GitFileSystem extends FileSystem {
 	 * including {@code first}, is considered to be a sequence of name elements (see
 	 * {@link Path}) and is joined to form a path string using {@code /} as
 	 * separator. If {@code first} does not end with {@code //} (but ends with
-	 * {@code /}, as required), and if {@code more} does not start with
-	 * {@code /}, then a {@code /} is added so that there will be two
-	 * slashes joining {@code first} to {@code more}.
+	 * {@code /}, as required), and if {@code more} does not start with {@code /},
+	 * then a {@code /} is added so that there will be two slashes joining
+	 * {@code first} to {@code more}.
 	 * </p>
 	 * <p>
 	 * For example, if {@code getAbsolutePath("/refs/heads/main/","foo","bar")} is
@@ -508,9 +508,8 @@ public abstract class GitFileSystem extends FileSystem {
 	 * @param first the string form of the root component, possibly followed by
 	 *              other path segments. Must start with <tt>/refs/</tt> or
 	 *              <tt>/heads/</tt> or <tt>/tags/</tt> or be a slash followed by a
-	 *              40-characters long sha-1; must contain at most once
-	 *              {@code //}; if does not contain {@code //}, must end
-	 *              with {@code /}.
+	 *              40-characters long sha-1; must contain at most once {@code //};
+	 *              if does not contain {@code //}, must end with {@code /}.
 	 * @param more  may start with {@code /}.
 	 * @return an absolute git path.
 	 * @throws InvalidPathException if {@code first} does not contain a syntaxically
@@ -559,7 +558,8 @@ public abstract class GitFileSystem extends FileSystem {
 		final ImmutableList<String> givenMore = Streams
 				.concat(Stream.of(internalPath1StartsRight), Stream.of(internalPath))
 				.collect(ImmutableList.toImmutableList());
-		return GitAbsolutePath.givenRoot(new GitPathRootSha(this, GitRev.commitId(commitId)), givenMore);
+		return GitAbsolutePath.givenRoot(new GitPathRootSha(this, GitRev.commitId(commitId), Optional.empty()),
+				givenMore);
 	}
 
 	/**
@@ -593,7 +593,7 @@ public abstract class GitFileSystem extends FileSystem {
 	 * @see GitPathRoot
 	 */
 	public GitPathRootSha getPathRoot(ObjectId commitId) {
-		return new GitPathRootSha(this, GitRev.commitId(commitId));
+		return new GitPathRootSha(this, GitRev.commitId(commitId), Optional.empty());
 	}
 
 	/**
@@ -637,8 +637,7 @@ public abstract class GitFileSystem extends FileSystem {
 
 	/**
 	 * Retrieve the set of all commits of this repository. Consider calling rather
-	 * {@code {@link #getCommitsGraph()}.getNodes()}, whose type is more
-	 * precise.
+	 * {@code {@link #getCommitsGraph()}.getNodes()}, whose type is more precise.
 	 *
 	 * @return absolute path roots referring to commit ids.
 	 * @throws UncheckedIOException if an I/O error occurs (I have no idea why the

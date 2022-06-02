@@ -3,15 +3,9 @@ package io.github.oliviercailloux.grade;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Verify.verify;
-import static io.github.oliviercailloux.jaris.exceptions.Unchecker.IO_UNCHECKER;
 
 import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.ImmutableSortedSet;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Streams;
-import io.github.oliviercailloux.git.fs.GitPathRoot;
 import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
 import io.github.oliviercailloux.grade.DeadlineGrader.LinearPenalizer;
 import io.github.oliviercailloux.grade.comm.StudentOnGitHub;
@@ -22,7 +16,6 @@ import io.github.oliviercailloux.grade.format.json.JsonSimpleGrade;
 import io.github.oliviercailloux.jaris.collections.CollectionUtils;
 import io.github.oliviercailloux.jaris.exceptions.Throwing;
 import io.github.oliviercailloux.jaris.throwing.TOptional;
-import io.github.oliviercailloux.java_grade.testers.JavaMarkHelper;
 import io.github.oliviercailloux.xml.XmlUtils;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -31,9 +24,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
-import java.util.Comparator;
 import java.util.LinkedHashMap;
-import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import org.slf4j.Logger;
@@ -50,33 +41,10 @@ public class BatchGitHistoryGrader<X extends Exception> {
 		return new BatchGitHistoryGrader<>(fetcherFactory);
 	}
 
-	private static final Criterion C_USER_NAME = Criterion.given("user.name");
-	private static final Criterion C_GRADE = Criterion.given("Grade");
-	private static final Criterion C_MAIN = Criterion.given("Main");
-	private static final Criterion C_LATENESS = Criterion.given("Timing");
 	private final Throwing.Supplier<GitFileSystemWithHistoryFetcher, X> fetcherFactory;
 
 	private BatchGitHistoryGrader(Throwing.Supplier<GitFileSystemWithHistoryFetcher, X> fetcherFactory) {
 		this.fetcherFactory = checkNotNull(fetcherFactory);
-	}
-
-	private GradeAggregator getUserNamedAggregator(Grader<?> grader, double userGradeWeight) {
-		final GradeAggregator basis = grader.getAggregator();
-		return GradeAggregator.staticAggregator(
-				ImmutableMap.of(C_USER_NAME, userGradeWeight, C_GRADE, 1d - userGradeWeight),
-				ImmutableMap.of(C_GRADE, basis));
-	}
-
-	private GradeAggregator getComplexStructure(Grader<?> grader, double userGradeWeight, boolean withTimePenalty) {
-		final GradeAggregator main = getUserNamedAggregator(grader, userGradeWeight);
-		final GradeAggregator penalized;
-		if (withTimePenalty) {
-			penalized = GradeAggregator.parametric(C_MAIN, C_LATENESS, main);
-		} else {
-			penalized = main;
-		}
-		final GradeAggregator maxAmongAttempts = GradeAggregator.max(penalized);
-		return maxAmongAttempts;
 	}
 
 	public <Y extends Exception> Exam getGrades(Grader<Y> grader, double userGradeWeight) throws X, Y, IOException {
@@ -103,6 +71,12 @@ public class BatchGitHistoryGrader<X extends Exception> {
 				docTitle);
 	}
 
+	public <Y extends Exception> Exam getAndWriteGrades(ExtendedGrader<Y> ext, Path outWithoutExtension,
+			String docTitle) throws X, Y, IOException {
+		checkArgument(!docTitle.isEmpty());
+		return getGrades(ext, TOptional.of(outWithoutExtension), docTitle);
+	}
+
 	private <Y extends Exception> Exam getGrades(ZonedDateTime deadline, Duration durationForZero, Grader<Y> grader,
 			double userGradeWeight, TOptional<Path> outWithoutExtensionOpt, String docTitle) throws X, Y, IOException {
 		checkArgument(deadline.equals(MAX_DEADLINE) == (durationForZero.getSeconds() == 0l));
@@ -110,145 +84,46 @@ public class BatchGitHistoryGrader<X extends Exception> {
 		checkArgument(userGradeWeight < 1d);
 		verify(outWithoutExtensionOpt.isPresent() == !docTitle.isEmpty());
 
-		final LinkedHashMap<GitHubUsername, MarksTree> builder = new LinkedHashMap<>();
 		final boolean withTimePenalty = !deadline.equals(MAX_DEADLINE);
-		final GradeAggregator whole = getComplexStructure(grader, userGradeWeight, withTimePenalty);
-		try (GitFileSystemWithHistoryFetcher fetcher = fetcherFactory.get()) {
+		final GradeModifier penalizerModifier;
+		if (!withTimePenalty) {
+			penalizerModifier = new EmptyModifier();
+		} else {
+			final LinearPenalizer penalizer = LinearPenalizer.proportionalToLateness(durationForZero);
+			penalizerModifier = GradePenalizer.using(penalizer, deadline.toInstant());
+		}
+		final ByTimeGrader<Y> byTimeGrader = ByTimeGrader.using(deadline, grader, penalizerModifier, userGradeWeight);
+		return getGrades(byTimeGrader, outWithoutExtensionOpt, docTitle);
+	}
 
-			for (GitHubUsername author : fetcher.getAuthors()) {
-				final ImmutableBiMap<Instant, MarksTree> byTime;
-
-				final String commentGeneralCapped;
-				final GitFileSystemHistory beforeCommitByGitHub;
-				{
+	private <Y extends Exception> Exam getGrades(ExtendedGrader<Y> ext, TOptional<Path> outWithoutExtensionOpt,
+				String docTitle) throws X, Y, IOException {
+			final GradeAggregator whole = ext.getAggregator();
+	
+			final LinkedHashMap<GitHubUsername, MarksTree> builder = new LinkedHashMap<>();
+			try (GitFileSystemWithHistoryFetcher fetcher = fetcherFactory.get()) {
+	
+				for (GitHubUsername author : fetcher.getAuthors()) {
 					final GitFileSystemHistory history = fetcher.goTo(author);
-					LOGGER.debug("Found {} commits (total).", history.getGraph().nodes().size());
-					checkTimes(history, deadline.toInstant());
-
-					/* GitHub creates the very first commit when importing from a template. */
-					final Optional<Instant> earliestTimeCommitByGitHub = history
-							.filter(JavaMarkHelper::committerIsGitHub).filter(c -> !history.getRoots().contains(c))
-							.asGitHistory().getTimestamps().values().stream().min(Comparator.naturalOrder());
-					beforeCommitByGitHub = TOptional.wrapping(earliestTimeCommitByGitHub)
-							.map(t -> history.filter(
-									c -> history.asGitHistory().getTimestamp(c.getCommit().getId()).isBefore(t), t))
-							.orElse(history);
-
-					commentGeneralCapped = earliestTimeCommitByGitHub.map(t -> "; ignored commits after "
-							+ t.atZone(deadline.getZone()).toString() + ", sent by GitHub").orElse("");
-				}
-
-				final ImmutableSortedSet<Instant> consideredTimestamps = getTimestamps(beforeCommitByGitHub,
-						deadline.toInstant());
-
-				final ImmutableBiMap.Builder<Instant, MarksTree> byTimeBuilder = ImmutableBiMap.builder();
-				for (Instant timeCap : consideredTimestamps) {
-					final GitFileSystemHistory capped = beforeCommitByGitHub
-							.filter(r -> !beforeCommitByGitHub.getCommitDate(r).isAfter(timeCap), timeCap);
-
-					final MarksTree grade = grader.grade(capped);
-
-					final Mark userGrade = DeadlineGrader.getUsernameGrade(beforeCommitByGitHub, author).asNew();
-					final MarksTree gradeWithUser = MarksTree
-							.composite(ImmutableMap.of(C_USER_NAME, userGrade, C_GRADE, grade));
-
-					final MarksTree perhapsPenalized;
-					if (!withTimePenalty) {
-						perhapsPenalized = gradeWithUser;
-					} else {
-						final Duration lateness = Duration.between(deadline.toInstant(), timeCap);
-						final LinearPenalizer penalizer = LinearPenalizer.proportionalToLateness(durationForZero);
-						final Mark remaining = penalizer.getFractionRemaining(lateness);
-						LOGGER.debug("Lateness from {} to {} equal to {}; remaining {}.", deadline.toInstant(), timeCap,
-								lateness, remaining);
-
-						perhapsPenalized = MarksTree
-								.composite(ImmutableMap.of(C_MAIN, gradeWithUser, C_LATENESS, remaining));
+	
+					final MarksTree byTimeGrade = ext.grade(author, history);
+					builder.put(author, byTimeGrade);
+					try {
+						Grade.given(whole, byTimeGrade);
+					} catch (AggregatorException e) {
+	//					Files.writeString(Path.of("Marks.json"), JsonSimpleGrade.toJson(byTimeGrade));
+	//					Files.writeString(Path.of("Aggregator.json"), JsonSimpleGrade.toJson(whole));
+						LOGGER.info("Failed aggregating at {}, obtained {} which fails with {}.", author, byTimeGrade,
+								whole);
+						throw e;
 					}
-					byTimeBuilder.put(timeCap, perhapsPenalized);
+	
+					outWithoutExtensionOpt
+							.ifPresent(o -> write(new Exam(whole, ImmutableMap.copyOf(builder)), o, docTitle));
 				}
-				byTime = byTimeBuilder.build();
-
-				final MarksTree byTimeGrade;
-				if (byTime.isEmpty()) {
-					byTimeGrade = Mark.zero(String.format("No commit found%s", commentGeneralCapped));
-				} else {
-					final ImmutableMap<Criterion, MarksTree> subsByTime = byTime.keySet().stream()
-							.collect(ImmutableMap.toImmutableMap(i -> {
-								final String cappingAt = i.equals(Instant.MAX) ? "No capping"
-										: i.equals(Instant.MIN) ? "Capping at MIN"
-												: ("Capping at " + i.atZone(deadline.getZone()).toString());
-								return Criterion.given(cappingAt + commentGeneralCapped);
-							}, byTime::get));
-					byTimeGrade = MarksTree.composite(subsByTime);
-				}
-				builder.put(author, byTimeGrade);
-				try {
-					Grade.given(whole, byTimeGrade);
-				} catch (AggregatorException e) {
-//					Files.writeString(Path.of("Marks.json"), JsonSimpleGrade.toJson(byTimeGrade));
-//					Files.writeString(Path.of("Aggregator.json"), JsonSimpleGrade.toJson(whole));
-					LOGGER.info("Failed aggregating at {}, obtained {} which fails with {}.", author, byTimeGrade,
-							whole);
-					throw e;
-				}
-
-				outWithoutExtensionOpt
-						.ifPresent(o -> write(new Exam(whole, ImmutableMap.copyOf(builder)), o, docTitle));
 			}
+			return new Exam(whole, ImmutableMap.copyOf(builder));
 		}
-		return new Exam(whole, ImmutableMap.copyOf(builder));
-	}
-
-	private void checkTimes(GitFileSystemHistory history, Instant deadline) {
-		/*
-		 * Check whether has put late branches on every ending commits: some leaf has a
-		 * pointer that is not main or master. And it is late. OR rather simply use
-		 * commit times and try to detect inconsistencies: commit time on time but push
-		 * date late.
-		 */
-		final ImmutableSet<GitPathRoot> refs = IO_UNCHECKER.getUsing(history::getRefs);
-		final ImmutableMap<GitPathRoot, Instant> commitDates = refs.stream().collect(ImmutableMap.toImmutableMap(p -> p,
-				IO_UNCHECKER.wrapFunction(p -> p.getCommit().getCommitterDate().toInstant())));
-		final ImmutableMap<GitPathRoot, Instant> pushDates = refs.stream()
-				.collect(ImmutableMap.toImmutableMap(p -> p, IO_UNCHECKER
-						.wrapFunction(p -> history.getPushDates().getOrDefault(p.getCommit().getId(), Instant.MIN))));
-		final Map<GitPathRoot, Instant> pushDatesLate = Maps.filterValues(pushDates, i -> i.isAfter(deadline));
-		final Map<GitPathRoot, Instant> commitsOnTime = Maps.filterValues(commitDates, i -> !i.isAfter(deadline));
-
-		final Map<GitPathRoot, Instant> contradictory = Maps.filterKeys(pushDatesLate,
-				r -> commitsOnTime.containsKey(r));
-		if (!contradictory.isEmpty()) {
-			LOGGER.info("Commit times: {}.", commitDates);
-			LOGGER.info("Push times: {}.", pushDates);
-			LOGGER.info("Pushed late but committed on time: {}; commit times {}.", contradictory,
-					Maps.filterKeys(commitsOnTime, r -> pushDatesLate.containsKey(r)));
-		}
-	}
-
-	/**
-	 * Considers as “commit time” every times given by the git history AND by the
-	 * push dates (something may be pushed at some date that does not appear in the
-	 * git history, as it may have being overwritten by later commits: in case the
-	 * commits were all pushed at some time but a branch was later put on some
-	 * commit not ending the series, for example).
-	 *
-	 * @param history
-	 * @return the latest commit time that is on time, that is, the latest commit
-	 *         time within [MIN, deadline], if it exists, and the late commit times,
-	 *         that is, every times of commits falling in the range (deadline, MAX].
-	 */
-	ImmutableSortedSet<Instant> getTimestamps(GitFileSystemHistory history, Instant deadline) {
-		final ImmutableSortedSet<Instant> timestamps = Streams
-				.concat(history.asGitHistory().getTimestamps().values().stream(),
-						history.getPushDates().values().stream())
-				.collect(ImmutableSortedSet.toImmutableSortedSet(Comparator.naturalOrder()));
-		final Instant latestCommitTimeOnTime = Optional.ofNullable(timestamps.floor(deadline)).orElse(Instant.MIN);
-		final ImmutableSortedSet<Instant> consideredTimestamps = timestamps.subSet(latestCommitTimeOnTime, true,
-				Instant.MAX, true);
-		verify(consideredTimestamps.isEmpty() == history.getGraph().nodes().isEmpty());
-		return consideredTimestamps;
-	}
 
 	private void write(Exam exam, Path outWithoutExtension, String docTitle) throws IOException {
 		Files.writeString(outWithoutExtension.resolveSibling(outWithoutExtension.getFileName() + ".json"),

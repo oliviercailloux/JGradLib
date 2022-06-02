@@ -51,9 +51,14 @@ public final class ParametricWeighter implements MarkAggregator {
 		final ImmutableSet<Criterion> criteria = marks.stream().map(SubMark::getCriterion)
 				.collect(ImmutableSet.toImmutableSet());
 		checkArgument(marks.size() == criteria.size());
-		checkCanAggregate(criteria.contains(multiplied), "Multiplied criterion not found");
-		checkCanAggregate(criteria.contains(weighting), "Weighting criterion not found");
 		checkCanAggregate(criteria.size() <= 3, "Too many criteria");
+
+		if (criteria.isEmpty()) {
+			return ImmutableMap.of();
+		}
+
+		checkCanAggregate(criteria.contains(multiplied), "Multiplied criterion not found among %s", marks);
+		checkCanAggregate(criteria.contains(weighting), "Weighting criterion not found");
 
 		final SubMark multipliedMark = marks.stream().filter(s -> s.getCriterion().equals(multiplied))
 				.collect(MoreCollectors.onlyElement());

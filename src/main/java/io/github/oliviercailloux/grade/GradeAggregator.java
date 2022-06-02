@@ -80,6 +80,10 @@ public class GradeAggregator {
 	public static final GradeAggregator MAX = new GradeAggregator(MaxAggregator.INSTANCE, ImmutableMap.of(),
 			WeightingGradeAggregator.trivial());
 
+	public static GradeAggregator min(GradeAggregator defaultSubAggregator) {
+		return new GradeAggregator(MinAggregator.INSTANCE, ImmutableMap.of(), defaultSubAggregator);
+	}
+
 	public static GradeAggregator max(Map<Criterion, GradeAggregator> subs) {
 		return new GradeAggregator(MaxAggregator.INSTANCE, subs, TRIVIAL);
 	}
@@ -109,6 +113,12 @@ public class GradeAggregator {
 			GradeAggregator multipliedAggregator) {
 		return new GradeAggregator(ParametricWeighter.given(multiplied, weighting),
 				ImmutableMap.of(multiplied, multipliedAggregator), TRIVIAL);
+	}
+
+	public static GradeAggregator parametric(Criterion multiplied, Criterion weighting,
+			GradeAggregator multipliedAggregator, GradeAggregator otherAggregator) {
+		return new GradeAggregator(ParametricWeighter.given(multiplied, weighting),
+				ImmutableMap.of(multiplied, multipliedAggregator), otherAggregator);
 	}
 
 	public static GradeAggregator staticAggregator(Map<Criterion, Double> weights,
@@ -172,9 +182,9 @@ public class GradeAggregator {
 	 */
 	public GradeAggregator getGradeAggregator(Criterion criterion) throws AggregatorException {
 		checkNotNull(criterion);
-		if (markAggregator instanceof StaticWeighter) {
-			final StaticWeighter staticWeighter = (StaticWeighter) markAggregator;
-			checkCanAggregate(staticWeighter.weights().containsKey(criterion), "Unknown criterion");
+		if (markAggregator instanceof StaticWeighter staticWeighter) {
+			checkCanAggregate(staticWeighter.weights().containsKey(criterion), "In %s, unknown criterion %s among %s",
+					toString(), criterion.getName(), staticWeighter.weights());
 		}
 		verify(defaultSubAggregator != null);
 		return subs.getOrDefault(criterion, defaultSubAggregator);

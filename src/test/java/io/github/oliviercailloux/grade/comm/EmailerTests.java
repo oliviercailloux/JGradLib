@@ -319,19 +319,28 @@ public class EmailerTests {
 			emailer.connectToStore(Emailer.getZohoImapSession(), EmailerDauphineHelper.USERNAME_OTHERS,
 					EmailerDauphineHelper.getZohoToken());
 			@SuppressWarnings("resource")
-			final Folder folder = emailer.getFolder("Tests");
+			final Folder folder = emailer.getFolder("Tests/To oliviercailloux");
 
 			final ImmutableSet<Message> all = emailer.searchIn(folder, ImapSearchPredicate.TRUE);
 			assertEquals(2, all.size());
 			logMessagesRecipients(all);
 
+			assertEquals(2,
+					emailer.searchIn(folder,
+							ImapSearchPredicate.recipientFullAddressContains(RecipientType.TO, "oliviercailloux"))
+							.size());
+			/*
+			 * I think this succeeded before. Failed at some point in March 2022 (seems it
+			 * was using personal instead of address). Back to working condition on the 30
+			 * March.
+			 */
 			assertEquals(1, emailer.searchIn(folder, ImapSearchPredicate.recipientAddressEquals(RecipientType.TO,
 					"olivier.cailloux@lamsade.dauphine.fr")).size());
 			assertEquals(0, emailer.searchIn(folder,
 					ImapSearchPredicate.recipientAddressEquals(RecipientType.TO, "olivier.cailloux@lamsade.dauphine"))
 					.size());
 
-			assertEquals(1, emailer
+			assertEquals(2, emailer
 					.searchIn(folder, ImapSearchPredicate.recipientFullAddressContains(RecipientType.TO, "olivier"))
 					.size());
 			assertEquals(1, emailer.searchIn(folder, ImapSearchPredicate.recipientFullAddressContains(RecipientType.TO,
@@ -369,17 +378,24 @@ public class EmailerTests {
 	}
 
 	@Test
-	void testZohoNoBug() throws Exception {
+	void testZohoGrades() throws Exception {
 		try (Emailer emailer = Emailer.instance()) {
 			emailer.connectToStore(Emailer.getZohoImapSession(), EmailerDauphineHelper.USERNAME_OTHERS,
 					EmailerDauphineHelper.getZohoToken());
 			@SuppressWarnings("resource")
 			final Folder folder = emailer.getFolder("Grades");
-
-			final Message[] asArray = folder.search(new SubjectTerm("grades git-br"));
-			final ImmutableSet<Message> found = ImmutableSet.copyOf(asArray);
-			/** Should be empty. */
-			assertTrue(found.isEmpty());
+			{
+				final Message[] asArray = folder.search(new SubjectTerm("grades git-br"));
+				final ImmutableSet<Message> found = ImmutableSet.copyOf(asArray);
+				/** Should be empty. */
+				assertTrue(found.isEmpty());
+			}
+			/* Failed at some point, temporarily, during March 2022. */
+			{
+				final Message[] asArray = folder.search(new SubjectTerm("Grade eclipse"));
+				final ImmutableSet<Message> found = ImmutableSet.copyOf(asArray);
+				assertFalse(found.isEmpty());
+			}
 		}
 	}
 

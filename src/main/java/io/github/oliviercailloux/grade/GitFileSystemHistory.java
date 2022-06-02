@@ -8,6 +8,7 @@ import com.google.common.base.MoreObjects;
 import com.google.common.collect.Comparators;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Maps;
 import com.google.common.graph.ImmutableGraph;
 import io.github.oliviercailloux.git.GitHistory;
 import io.github.oliviercailloux.git.fs.Commit;
@@ -268,7 +269,8 @@ public class GitFileSystemHistory {
 		final Predicate<GitPathRoot> wrappedPredicate = IO_UNCHECKER.wrapPredicate(predicate);
 		try {
 			return GitFileSystemHistory.create(gitFs, history.filter(o -> wrappedPredicate.test(gitFs.getPathRoot(o))),
-					pushDates, Comparators.min(furtherCap, andFurtherCap));
+					Maps.filterValues(pushDates, i -> !i.isAfter(andFurtherCap)),
+					Comparators.min(furtherCap, andFurtherCap));
 		} catch (UncheckedIOException e) {
 			throw e.getCause();
 		}

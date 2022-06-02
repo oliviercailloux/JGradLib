@@ -123,6 +123,21 @@ public class GitHubFetcherQL implements AutoCloseable {
 				.map((d) -> d.getJsonObject("repository")).map(RepositoryWithIssuesWithHistory::from);
 	}
 
+	public Optional<RepositoryWithIssuesWithHistory> getRepositoryWithPRs(RepositoryCoordinates coordinates) {
+		final JsonObject varsJson = jsonBuilderFactory.createObjectBuilder()
+				.add("repositoryName", coordinates.getRepositoryName()).add("repositoryOwner", coordinates.getOwner())
+				.build();
+		/**
+		 * TODO check why queryOpt is used here (thereby masking errors) instead of
+		 * query.
+		 */
+//		return queryOpt("repository", ImmutableList.of("repositoryWithPRsWithHistory"), varsJson)
+//				.map((d) -> d.getJsonObject("repository")).map(RepositoryWithIssuesWithHistory::from);
+		final JsonObject jsonObject = query("repository", ImmutableList.of("repositoryWithPRsWithHistory"), varsJson)
+				.getJsonObject("repository");
+		return Optional.of(RepositoryWithIssuesWithHistory.from(jsonObject));
+	}
+
 	public Optional<RepositoryWithFiles> getRepositoryWithFiles(RepositoryCoordinates coordinates, Path path) {
 		LOGGER.info("Getting files from {}, {}.", coordinates, path);
 		final String pathString = Streams.stream(path.iterator()).map(Path::toString).collect(Collectors.joining("/"));

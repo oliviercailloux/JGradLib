@@ -21,12 +21,16 @@
 		</encoder>
 	</appender>
 	
-	<logger name="org.eclipse.jgit.transport.PacketLineIn" level="INFO" />
 	<logger name="com.jcabi.http.request.BaseRequest" level="WARN" />
 	<logger name="io.github.oliviercailloux.grade.format.json.JsonGrade" level="INFO" />
 	<logger name="io.github.oliviercailloux.git.fs" level="INFO" />
-	<logger name="io.github.oliviercailloux.grade.CriterionGradeWeight" level="INFO" />
-	<logger name="io.github.oliviercailloux.grade.WeightingGrade" level="DEBUG" />
+	<logger name="io.github.oliviercailloux.grade.Grade" level="INFO" />
+	<logger name="io.github.oliviercailloux.grade.GradeAggregator" level="INFO" />
+	<logger name="org.eclipse.jgit" level="INFO" />
+	<logger name="org.apache.sshd" level="INFO" />
+	<logger name="io.github.oliviercailloux.git.git_hub.services.GitHubFetcherQL" level="INFO" />
+	<logger name="io.github.oliviercailloux.git.git_hub.services.GitHubFetcherV3" level="INFO" />
+	<logger name="io.github.oliviercailloux.git.git_hub.model.graph_ql.PushedDatesAnswer" level="INFO" />
 
 	<root level="DEBUG">
 		<appender-ref ref="STDOUT" />

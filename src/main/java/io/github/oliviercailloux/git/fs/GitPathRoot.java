@@ -8,6 +8,7 @@ import io.github.oliviercailloux.git.fs.GitFileSystem.GitObject;
 import java.io.IOException;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
+import java.util.Optional;
 import org.eclipse.jgit.lib.FileMode;
 import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.revwalk.RevCommit;
@@ -30,7 +31,7 @@ public abstract class GitPathRoot extends GitAbsolutePath {
 
 	static GitPathRoot given(GitFileSystem gitFs, GitRev gitRev) {
 		if (gitRev.isCommitId()) {
-			return new GitPathRootSha(gitFs, gitRev);
+			return new GitPathRootSha(gitFs, gitRev, Optional.empty());
 		}
 		return new GitPathRootRef(gitFs, gitRev);
 	}
@@ -148,8 +149,8 @@ public abstract class GitPathRoot extends GitAbsolutePath {
 	}
 
 	/**
-	 * Returns {@code true} iff the commit referred to (possibly indirectly) by
-	 * this git path root exists in the associated git file system.
+	 * Returns {@code true} iff the commit referred to (possibly indirectly) by this
+	 * git path root exists in the associated git file system.
 	 * <p>
 	 * Returns {@code false} when either:
 	 * </p>
@@ -217,6 +218,10 @@ public abstract class GitPathRoot extends GitAbsolutePath {
 	}
 
 	public abstract GitPathRootSha toSha() throws IOException, NoSuchFileException;
+
+	public GitPathRootShaCached toShaCached() throws IOException, NoSuchFileException {
+		return toSha().toShaCached();
+	}
 
 	@Override
 	GitObject getGitObject(FollowLinksBehavior behavior) throws NoSuchFileException, IOException {

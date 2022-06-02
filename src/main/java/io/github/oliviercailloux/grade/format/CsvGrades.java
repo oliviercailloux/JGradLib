@@ -409,7 +409,7 @@ public class CsvGrades<K> {
 		{
 			writer.addValue(firstHeader, "Nb MAX");
 			allPaths.stream().forEach(p -> writer.addValue(CsvGrades.shorten(p),
-					formatter.format(exam.points(p).filter(v -> v == 1d).count())));
+					formatter.format(exam.points(p).filter(v -> v > 1d - 1e-6d).count())));
 			writer.writeValuesToRow();
 		}
 

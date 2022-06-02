@@ -256,7 +256,7 @@ public class GitHubFetcherV3 implements AutoCloseable {
 		final Optional<BinaryOperator<JsonObject>> accumulator = Optional.of((v1, v2) -> {
 			final JsonObject v1NoItems = Json.createObjectBuilder(v1).remove("items").build();
 			final JsonObject v2NoItems = Json.createObjectBuilder(v2).remove("items").build();
-			verify(v1NoItems.equals(v2NoItems));
+			verify(v1NoItems.equals(v2NoItems), v1NoItems.toString() + " VS " + v2NoItems.toString());
 			final JsonArray v1Items = v1.getJsonArray("items");
 			final JsonArray v2Items = v2.getJsonArray("items");
 			final JsonArray allItems = Json.createArrayBuilder(v1Items).addAll(Json.createArrayBuilder(v2Items))

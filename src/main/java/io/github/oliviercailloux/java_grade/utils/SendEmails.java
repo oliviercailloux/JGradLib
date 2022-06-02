@@ -22,7 +22,6 @@ import io.github.oliviercailloux.grade.comm.EmailerDauphineHelper;
 import io.github.oliviercailloux.grade.comm.GradesInEmails;
 import io.github.oliviercailloux.grade.comm.json.JsonStudents;
 import io.github.oliviercailloux.grade.format.json.JsonSimpleGrade;
-import io.github.oliviercailloux.java_grade.graders.First;
 import io.github.oliviercailloux.xml.XmlUtils;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -39,7 +38,8 @@ public class SendEmails {
 	private static final Path WORK_DIR = Path.of("");
 
 	public static void main(String[] args) throws Exception {
-		final String prefix = First.PREFIX;
+//		final String prefix = Grader421.PREFIX;
+		final String prefix = "Itération 1 Java";
 
 		final JsonStudents students = JsonStudents.from(Files.readString(WORK_DIR.resolve("usernames.json")));
 
@@ -82,6 +82,8 @@ public class SendEmails {
 			gradesInEmails.filterRecipients(addresses);
 			final ImmutableMap<EmailAddress, Grade> lastGrades = gradesInEmails.getLastGrades(prefix);
 			LOGGER.debug("Searching grades sent to {}, got those sent to {}.", addresses, lastGrades.keySet());
+
+//			checkState(!lastGrades.isEmpty());
 
 			for (EmailAddressAndPersonal address : gradesByEmail.keySet()) {
 				if (!lastGrades.containsKey(address.getAddress())) {

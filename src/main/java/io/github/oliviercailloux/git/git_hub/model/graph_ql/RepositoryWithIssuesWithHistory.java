@@ -50,7 +50,8 @@ public class RepositoryWithIssuesWithHistory {
 	private RepositoryWithIssuesWithHistory(JsonObject json) {
 		LOGGER.debug(PrintableJsonObjectFactory.wrapObject(json).toString());
 		repository = Repository.from(json);
-		final JsonObject issuesConnection = json.getJsonObject("issues");
+		final JsonObject issuesConnection = Optional.ofNullable(json.getJsonObject("issues"))
+				.or(() -> Optional.ofNullable(json.getJsonObject("pullRequests"))).orElseThrow();
 		/**
 		 * We have to possibly account for incomplete issues list: some repository may
 		 * match some search criteria of ours while being a huge repository with many

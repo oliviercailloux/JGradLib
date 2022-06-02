@@ -14,17 +14,23 @@ import org.slf4j.LoggerFactory;
 public class GitPathRootSha extends GitPathRoot {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(GitPathRootSha.class);
-	private Optional<RevCommit> revCommit;
 
-	protected GitPathRootSha(GitFileSystem fileSystem, GitRev gitRev) {
+	protected Optional<RevCommit> revCommit;
+
+	protected GitPathRootSha(GitFileSystem fileSystem, GitRev gitRev, Optional<RevCommit> commit) {
 		super(fileSystem, gitRev);
 		checkArgument(gitRev.isCommitId());
-		revCommit = null;
+		revCommit = commit.isPresent() ? commit : null;
 	}
 
 	@Override
 	public GitPathRootSha toSha() {
 		return this;
+	}
+
+	@Override
+	public GitPathRootShaCached toShaCached() throws IOException, NoSuchFileException {
+		return new GitPathRootShaCached(getFileSystem(), toStaticRev(), getRevCommit());
 	}
 
 	/**
@@ -41,7 +47,7 @@ public class GitPathRootSha extends GitPathRoot {
 			} catch (IncorrectObjectTypeException e) {
 				LOGGER.info("Tried to access a non-commit as a commit: " + e + ".");
 				revCommit = Optional.empty();
-			} catch (@SuppressWarnings("unused") MissingObjectException e) {
+			} catch (MissingObjectException e) {
 				LOGGER.info("Tried to access a missing commit: " + e + ".");
 				revCommit = Optional.empty();
 			}

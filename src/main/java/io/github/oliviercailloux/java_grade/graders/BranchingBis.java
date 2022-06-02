@@ -11,6 +11,7 @@ import com.google.common.collect.MoreCollectors;
 import com.google.common.graph.Graphs;
 import io.github.oliviercailloux.git.fs.GitPath;
 import io.github.oliviercailloux.git.fs.GitPathRoot;
+import io.github.oliviercailloux.git.fs.GitPathRootShaCached;
 import io.github.oliviercailloux.grade.BatchGitHistoryGrader;
 import io.github.oliviercailloux.grade.Criterion;
 import io.github.oliviercailloux.grade.GitFileSystemHistory;
@@ -39,22 +40,59 @@ import name.falgout.jeffrey.throwing.stream.ThrowingStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class Branching implements Grader<IOException> {
+public class BranchingBis implements Grader<IOException> {
+	@Deprecated
+	public static SubMarksTree subGrade(GitPathRoot gitPathRoot, Function<GitPathRoot, MarksTree, IOException> grader)
+			throws IOException, NoSuchFileException {
+		final MarksTree grade = grader.apply(gitPathRoot);
+		return subGrade(gitPathRoot, grade);
+	}
+
+	public static SubMarksTree subGrade(GitPathRoot gitPathRoot, MarksTree grade)
+			throws IOException, NoSuchFileException {
+		final String comment = "Using " + gitPathRoot.getCommit().getId().getName();
+		final MarksTree newTree = addComment(grade, comment);
+
+		final Criterion criterion = Criterion.given(comment);
+		return SubMarksTree.given(criterion, newTree);
+	}
+
+	public static SubMarksTree subGrade(GitPathRootShaCached gitPathRoot, MarksTree grade) {
+		final String comment = "Using " + gitPathRoot.getCommit().getId().getName();
+		final MarksTree newTree = addComment(grade, comment);
+
+		final Criterion criterion = Criterion.given(comment);
+		return SubMarksTree.given(criterion, newTree);
+	}
+
+	public static MarksTree addComment(MarksTree grade, String comment) {
+		final Criterion sub1 = grade.getCriteria().stream().findFirst().orElseThrow();
+		final MarksTree tree1 = grade.getTree(sub1);
+		verify(tree1.isMark());
+		final Mark mark1 = tree1.getMark(CriteriaPath.ROOT);
+		final String commentOriginal = mark1.getComment();
+		final ImmutableMap<Criterion, MarksTree> subs = Maps.toMap(grade.getCriteria(), grade::getTree);
+		final LinkedHashMap<Criterion, MarksTree> subsNew = new LinkedHashMap<>(subs);
+		final String newComment = commentOriginal.isEmpty() ? comment : commentOriginal + " (" + comment + ")";
+		subsNew.put(sub1, Mark.given(mark1.getPoints(), newComment));
+		return MarksTree.composite(subsNew);
+	}
+
 	@SuppressWarnings("unused")
-	private static final Logger LOGGER = LoggerFactory.getLogger(Branching.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(BranchingBis.class);
 
-	public static final String PREFIX = "branching";
+	public static final String PREFIX = "branching-bis";
 
-	public static final ZonedDateTime DEADLINE = ZonedDateTime.parse("2022-03-09T14:11:00+01:00[Europe/Paris]");
+	public static final ZonedDateTime DEADLINE = ZonedDateTime.parse("2022-03-21T14:05:00+01:00[Europe/Paris]");
 
-	public static final double USER_WEIGHT = 0.05d;
+	public static final double USER_WEIGHT = 0.01d;
 
-	private static final boolean EXPAND = true;
+	private static final boolean EXPAND = false;
 
 	public static void main(String[] args) throws Exception {
 		final BatchGitHistoryGrader<RuntimeException> grader = BatchGitHistoryGrader
-				.given(() -> GitFileSystemWithHistoryFetcherByPrefix.getRetrievingByPrefixAndUsingCommitDates(PREFIX));
-		grader.getAndWriteGrades(DEADLINE, Duration.ofMinutes(5), new Branching(), USER_WEIGHT,
+				.given(() -> GitFileSystemWithHistoryFetcherByPrefix.getRetrievingByPrefix(PREFIX));
+		grader.getAndWriteGrades(DEADLINE, Duration.ofMinutes(5), new BranchingBis(), USER_WEIGHT,
 				Path.of("grades " + PREFIX), PREFIX + " " + Instant.now().atZone(DEADLINE.getZone()));
 	}
 
@@ -90,7 +128,7 @@ public class Branching implements Grader<IOException> {
 	private GitPathRoot bPath;
 	private GitPathRoot cPath;
 
-	Branching() {
+	BranchingBis() {
 		currentHistory = null;
 		startPath = null;
 		aPath = null;
@@ -133,29 +171,6 @@ public class Branching implements Grader<IOException> {
 		return subs.isEmpty() ? Mark.zero(commentIfEmpty) : MarksTree.composite(subs);
 	}
 
-	private SubMarksTree subGrade(GitPathRoot gitPathRoot, Function<GitPathRoot, MarksTree, IOException> grader)
-			throws IOException, NoSuchFileException {
-		final String comment = "Using " + gitPathRoot.getCommit().getId().getName();
-		final MarksTree grade = grader.apply(gitPathRoot);
-		final MarksTree newTree = addComment(grade, comment);
-
-		final Criterion criterion = Criterion.given(comment);
-		return SubMarksTree.given(criterion, newTree);
-	}
-
-	private MarksTree addComment(MarksTree grade, String comment) {
-		final Criterion sub1 = grade.getCriteria().stream().findFirst().orElseThrow();
-		final MarksTree tree1 = grade.getTree(sub1);
-		verify(tree1.isMark());
-		final Mark mark1 = tree1.getMark(CriteriaPath.ROOT);
-		final String commentOriginal = mark1.getComment();
-		final ImmutableMap<Criterion, MarksTree> subs = Maps.toMap(grade.getCriteria(), grade::getTree);
-		final LinkedHashMap<Criterion, MarksTree> subsNew = new LinkedHashMap<>(subs);
-		final String newComment = commentOriginal.isEmpty() ? comment : commentOriginal + " (" + comment + ")";
-		subsNew.put(sub1, Mark.given(mark1.getPoints(), newComment));
-		return MarksTree.composite(subsNew);
-	}
-
 	private ImmutableMap.Builder<Criterion, Double> startWeightsBuilder() {
 		final ImmutableMap.Builder<Criterion, Double> builder = ImmutableMap.builder();
 		builder.put(C_ONE, 1d);
@@ -166,12 +181,12 @@ public class Branching implements Grader<IOException> {
 
 	private ImmutableMap.Builder<Criterion, Double> aWeightsBuilder() {
 		final ImmutableMap.Builder<Criterion, Double> builder = ImmutableMap.builder();
-		builder.put(C_TWO, 0.5d);
-		builder.put(C_BR1, 1.5d);
-		builder.put(C_EXISTS_START, 0.5d);
-		builder.put(C_CONTENTS_START, 0.5d);
-		builder.put(C_EXISTS_FIRST, 0.5d);
-		builder.put(C_CONTENTS_FIRST, 0.5d);
+		builder.put(C_TWO, 0.2d);
+		builder.put(C_BR1, 3.0d);
+		builder.put(C_EXISTS_START, 0.15d);
+		builder.put(C_CONTENTS_START, 0.35d);
+		builder.put(C_EXISTS_FIRST, 0.15d);
+		builder.put(C_CONTENTS_FIRST, 0.35d);
 		return builder;
 	}
 
@@ -189,12 +204,12 @@ public class Branching implements Grader<IOException> {
 
 	private ImmutableMap.Builder<Criterion, Double> cWeightsBuilder() {
 		final ImmutableMap.Builder<Criterion, Double> builder = ImmutableMap.builder();
-		builder.put(C_TWO, 0.5d);
-		builder.put(C_BR2, 1.5d);
-		builder.put(C_EXISTS_START, 0.5d);
-		builder.put(C_CONTENTS_START, 0.5d);
-		builder.put(C_EXISTS_FIRST, 0.5d);
-		builder.put(C_CONTENTS_FIRST, 0.5d);
+		builder.put(C_TWO, 0.2d);
+		builder.put(C_BR2, 3.0d);
+		builder.put(C_EXISTS_START, 0.15d);
+		builder.put(C_CONTENTS_START, 0.35d);
+		builder.put(C_EXISTS_FIRST, 0.15d);
+		builder.put(C_CONTENTS_FIRST, 0.35d);
 		return builder;
 	}
 
@@ -202,15 +217,15 @@ public class Branching implements Grader<IOException> {
 		final GradeAggregator dAg;
 		{
 			final ImmutableMap.Builder<Criterion, Double> builder = ImmutableMap.builder();
-			builder.put(C_THREE, 0.5d);
-			builder.put(C_BR3, 0.5d);
-			builder.put(C_EXISTS_START, 0.15d);
-			builder.put(C_CONTENTS_START, 0.15d);
-			builder.put(C_EXISTS_FIRST, 0.4d);
-			builder.put(C_CONTENTS_FIRST, 1d);
-			builder.put(C_EXISTS_SOME, 0.15d);
-			builder.put(C_CONTENTS_SOME, 0.15d);
-			builder.put(C_PARENTS, 1d);
+			builder.put(C_THREE, 0.1d);
+			builder.put(C_BR3, 3.0d);
+			builder.put(C_EXISTS_START, 0.05d);
+			builder.put(C_CONTENTS_START, 0.05d);
+			builder.put(C_EXISTS_FIRST, 0.1d);
+			builder.put(C_CONTENTS_FIRST, 0.9d);
+			builder.put(C_EXISTS_SOME, 0.05d);
+			builder.put(C_CONTENTS_SOME, 0.05d);
+			builder.put(C_PARENTS, 0.1d);
 			dAg = GradeAggregator.staticAggregator(builder.build(), ImmutableMap.of());
 		}
 		return dAg;
@@ -230,7 +245,7 @@ public class Branching implements Grader<IOException> {
 		{
 			final ImmutableMap.Builder<Criterion, Double> builder = ImmutableMap.builder();
 			builder.put(C_ANY, 1d);
-			builder.put(C_START, 18d);
+			builder.put(C_START, 18.8d);
 			mainAg = GradeAggregator.staticAggregator(builder.build(), ImmutableMap.of(C_START, startAg));
 		}
 		return mainAg;
@@ -241,7 +256,7 @@ public class Branching implements Grader<IOException> {
 		final GradeAggregator startAg;
 		{
 			final ImmutableMap.Builder<Criterion, Double> builder = startWeightsBuilder();
-			builder.put(C_A, 16d);
+			builder.put(C_A, 16.8d);
 			final GradeAggregator startAggregator = GradeAggregator.staticAggregator(builder.build(),
 					ImmutableMap.of(C_A, aAg));
 			startAg = GradeAggregator.max(startAggregator);
@@ -254,7 +269,7 @@ public class Branching implements Grader<IOException> {
 		final GradeAggregator aAg;
 		{
 			final ImmutableMap.Builder<Criterion, Double> builder = aWeightsBuilder();
-			builder.put(C_B, 12d);
+			builder.put(C_B, 12.6d);
 			final GradeAggregator aAggregator = GradeAggregator.staticAggregator(builder.build(),
 					ImmutableMap.of(C_B, bAg));
 			aAg = GradeAggregator.max(aAggregator);
@@ -267,7 +282,7 @@ public class Branching implements Grader<IOException> {
 		final GradeAggregator bAg;
 		{
 			final ImmutableMap.Builder<Criterion, Double> builder = bWeightsBuilder();
-			builder.put(C_C, 8d);
+			builder.put(C_C, 8.6d);
 			final GradeAggregator bAggregator = GradeAggregator.staticAggregator(builder.build(),
 					ImmutableMap.of(C_C, cAg));
 			bAg = GradeAggregator.max(bAggregator);
@@ -280,7 +295,7 @@ public class Branching implements Grader<IOException> {
 		final GradeAggregator cAg;
 		{
 			final ImmutableMap.Builder<Criterion, Double> builder = cWeightsBuilder();
-			builder.put(C_D, 4d);
+			builder.put(C_D, 4.4d);
 			final GradeAggregator cAggregator = GradeAggregator.staticAggregator(builder.build(),
 					ImmutableMap.of(C_D, dAg));
 			cAg = GradeAggregator.max(cAggregator);
@@ -319,10 +334,10 @@ public class Branching implements Grader<IOException> {
 			final ImmutableMap.Builder<Criterion, Double> builder = ImmutableMap.builder();
 			builder.put(C_ANY, 1d);
 			builder.put(C_START, 2d);
-			builder.put(C_A, 4d);
-			builder.put(C_B, 4d);
-			builder.put(C_C, 4d);
-			builder.put(C_D, 4d);
+			builder.put(C_A, 4.2d);
+			builder.put(C_B, 4.0d);
+			builder.put(C_C, 4.2d);
+			builder.put(C_D, 4.4d);
 			mainAg = GradeAggregator.staticAggregator(builder.build(),
 					ImmutableMap.of(C_START, startAg, C_A, aAg, C_B, bAg, C_C, cAg, C_D, dAg));
 		}
@@ -361,7 +376,7 @@ public class Branching implements Grader<IOException> {
 		final boolean rightNb = nbFiles == 1;
 		final SubMarksTree subNb = SubMarksTree.given(C_ONE, Mark.binary(rightNb, "", "Found " + nbFiles + " files"));
 
-		final GitPath startFilePath = commitStart.resolve("start.txt");
+		final GitPath startFilePath = commitStart.resolve("starting point.txt");
 		final boolean startExists = Files.exists(startFilePath);
 		final String startContent = startExists ? Files.readString(startFilePath) : "";
 		final Pattern pattern = Pattern.compile("A starting point\\v*");
@@ -420,7 +435,7 @@ public class Branching implements Grader<IOException> {
 				.map(GitPathRoot::getGitRef).anyMatch(r -> Predicates.isBranch(r, "br1"));
 		final SubMarksTree subBranch = SubMarksTree.given(C_BR1, Mark.binary(isBranch));
 
-		final GitPath startFilePath = commitA.resolve("start.txt");
+		final GitPath startFilePath = commitA.resolve("starting point.txt");
 		final boolean startExists = Files.exists(startFilePath);
 		final String startContent = startExists ? Files.readString(startFilePath) : "";
 		final Pattern patternStart = Pattern.compile("A starting point\\v*");
@@ -428,13 +443,13 @@ public class Branching implements Grader<IOException> {
 		final SubMarksTree subStartExists = SubMarksTree.given(C_EXISTS_START, Mark.binary(startExists));
 		final SubMarksTree subStartMatches = SubMarksTree.given(C_CONTENTS_START, Mark.binary(startMatches));
 
-		final GitPath firstPath = commitA.resolve("first.txt");
+		final GitPath firstPath = commitA.resolve("first file.txt");
 		final boolean firstExists = Files.exists(firstPath);
 		final String firstContent = firstExists ? Files.readString(firstPath) : "";
-		final Pattern patternFirst = Pattern.compile("Hello world\\v*");
-		verify(patternFirst.matcher("Hello world").matches());
-		verify(patternFirst.matcher("Hello world\n").matches());
-		verify(!patternFirst.matcher("hello world").matches());
+		final Pattern patternFirst = Pattern.compile("Hello\\h?!\\v*");
+		verify(patternFirst.matcher("Hello!").matches());
+		verify(patternFirst.matcher("Hello !\n").matches());
+		verify(!patternFirst.matcher("Hello").matches());
 		final boolean firstMatches = patternFirst.matcher(firstContent).matches();
 		final SubMarksTree subExists = SubMarksTree.given(C_EXISTS_FIRST, Mark.binary(firstExists));
 		final SubMarksTree subMatches = SubMarksTree.given(C_CONTENTS_FIRST, Mark.binary(firstMatches));
@@ -490,7 +505,7 @@ public class Branching implements Grader<IOException> {
 		final boolean rightNb = nbFiles == 3;
 		final SubMarksTree subNb = SubMarksTree.given(C_THREE, Mark.binary(rightNb, "", "Found " + nbFiles + " files"));
 
-		final GitPath startFilePath = commitB.resolve("start.txt");
+		final GitPath startFilePath = commitB.resolve("starting point.txt");
 		final boolean startExists = Files.exists(startFilePath);
 		final String startContent = startExists ? Files.readString(startFilePath) : "";
 		final Pattern patternStart = Pattern.compile("A starting point\\v*");
@@ -498,18 +513,18 @@ public class Branching implements Grader<IOException> {
 		final SubMarksTree subStartExists = SubMarksTree.given(C_EXISTS_START, Mark.binary(startExists));
 		final SubMarksTree subStartMatches = SubMarksTree.given(C_CONTENTS_START, Mark.binary(startMatches));
 
-		final GitPath firstPath = commitB.resolve("first.txt");
+		final GitPath firstPath = commitB.resolve("first file.txt");
 		final boolean firstExists = Files.exists(firstPath);
 		final String firstContent = firstExists ? Files.readString(firstPath) : "";
-		final Pattern patternFirst = Pattern.compile("Hello world\\v*");
+		final Pattern patternFirst = Pattern.compile("Hello\\h?!\\v*");
 		final boolean firstMatches = patternFirst.matcher(firstContent).matches();
 		final SubMarksTree subExists = SubMarksTree.given(C_EXISTS_FIRST, Mark.binary(firstExists));
 		final SubMarksTree subMatches = SubMarksTree.given(C_CONTENTS_FIRST, Mark.binary(firstMatches));
 
-		final GitPath somePath = commitB.resolve("a/some file.txt");
+		final GitPath somePath = commitB.resolve("My folder/second file.txt");
 		final boolean someExists = Files.exists(somePath);
 		final String someContent = someExists ? Files.readString(somePath) : "";
-		final Pattern somePattern = Pattern.compile("Hey\\v*");
+		final Pattern somePattern = Pattern.compile("Second\\v*");
 		final boolean someMatches = somePattern.matcher(someContent).matches();
 		final SubMarksTree subSomeExists = SubMarksTree.given(C_EXISTS_SOME, Mark.binary(someExists));
 		final SubMarksTree subSomeMatches = SubMarksTree.given(C_CONTENTS_SOME, Mark.binary(someMatches));
@@ -567,7 +582,7 @@ public class Branching implements Grader<IOException> {
 				.map(GitPathRoot::getGitRef).anyMatch(r -> Predicates.isBranch(r, "br2"));
 		final SubMarksTree subBranch = SubMarksTree.given(C_BR2, Mark.binary(isBranch));
 
-		final GitPath startFilePath = commitC.resolve("start.txt");
+		final GitPath startFilePath = commitC.resolve("starting point.txt");
 		final boolean startExists = Files.exists(startFilePath);
 		final String startContent = startExists ? Files.readString(startFilePath) : "";
 		final Pattern patternStart = Pattern.compile("A starting point\\v*");
@@ -575,10 +590,10 @@ public class Branching implements Grader<IOException> {
 		final SubMarksTree subStartExists = SubMarksTree.given(C_EXISTS_START, Mark.binary(startExists));
 		final SubMarksTree subStartMatches = SubMarksTree.given(C_CONTENTS_START, Mark.binary(startMatches));
 
-		final GitPath firstPath = commitC.resolve("first.txt");
+		final GitPath firstPath = commitC.resolve("first file.txt");
 		final boolean firstExists = Files.exists(firstPath);
 		final String firstContent = firstExists ? Files.readString(firstPath) : "";
-		final Pattern pattern = Pattern.compile("Coucou monde\\v*");
+		final Pattern pattern = Pattern.compile("Coucou\\h?!\\v*");
 		final boolean firstMatches = pattern.matcher(firstContent).matches();
 		final SubMarksTree subExists = SubMarksTree.given(C_EXISTS_FIRST, Mark.binary(firstExists));
 		final SubMarksTree subMatches = SubMarksTree.given(C_CONTENTS_FIRST, Mark.binary(firstMatches));
@@ -601,15 +616,19 @@ public class Branching implements Grader<IOException> {
 		final Set<GitPathRoot> successors = currentHistory.getGraph().successors(commitC);
 		final ImmutableBiMap<GitPathRoot, SubMarksTree> subs = ThrowingStream.of(successors.stream(), IOException.class)
 				.filter(r -> currentHistory.getGraph().predecessors(r).size() == 2)
-				.collect(ImmutableBiMap.toImmutableBiMap(r -> r, r -> {
-					try {
-						return subGrade(r, w -> gradeD(commitB, w));
-					} catch (NoSuchFileException e) {
-						throw new IllegalStateException(e);
-					} catch (IOException e) {
-						throw new IllegalStateException(e);
-					}
-				}));
+				.map(r -> new RootedMarksTree(r.toShaCached(), gradeD(commitB, r)))
+				.collect(ImmutableBiMap.toImmutableBiMap(RootedMarksTree::root, RootedMarksTree::commented));
+//		final ImmutableBiMap<GitPathRoot, SubMarksTree> subs = ThrowingStream.of(successors.stream(), IOException.class)
+//				.filter(r -> currentHistory.getGraph().predecessors(r).size() == 2)
+//				.collect(ImmutableBiMap.toImmutableBiMap(r -> r, r -> {
+//					try {
+//						return subGrade(r, w -> gradeD(commitB, w));
+//					} catch (NoSuchFileException e) {
+//						throw new IllegalStateException(e);
+//					} catch (IOException e) {
+//						throw new IllegalStateException(e);
+//					}
+//				}));
 		final MarksTree tree = compositeOrZero(subs.values(), "No successor of C merging two commits");
 		if (expandLocally || tree.isMark()) {
 			return SubMarksTree.given(C_D, tree);
@@ -633,7 +652,7 @@ public class Branching implements Grader<IOException> {
 				.map(GitPathRoot::getGitRef).anyMatch(r -> Predicates.isBranch(r, "br3"));
 		final SubMarksTree subBranch = SubMarksTree.given(C_BR3, Mark.binary(isBranch));
 
-		final GitPath startFilePath = commitD.resolve("start.txt");
+		final GitPath startFilePath = commitD.resolve("starting point.txt");
 		final boolean startExists = Files.exists(startFilePath);
 		final String startContent = startExists ? Files.readString(startFilePath) : "";
 		final Pattern patternStart = Pattern.compile("A starting point\\v*");
@@ -641,22 +660,22 @@ public class Branching implements Grader<IOException> {
 		final SubMarksTree subStartExists = SubMarksTree.given(C_EXISTS_START, Mark.binary(startExists));
 		final SubMarksTree subStartMatches = SubMarksTree.given(C_CONTENTS_START, Mark.binary(startMatches));
 
-		final GitPath firstPath = commitD.resolve("first.txt");
+		final GitPath firstPath = commitD.resolve("first file.txt");
 		final boolean firstExists = Files.exists(firstPath);
 		final String firstContent = firstExists ? Files.readString(firstPath) : "";
-		final Pattern patternFirst = Pattern.compile("Hello world\\v+Coucou monde\\v*");
-		verify(patternFirst.matcher("Hello world\nCoucou monde").matches());
-		verify(patternFirst.matcher("Hello world\n\nCoucou monde\n").matches());
-		verify(!patternFirst.matcher("Hello world").matches());
-		verify(!patternFirst.matcher("Hello world\nCoucou ").matches());
+		final Pattern patternFirst = Pattern.compile("Hello\\h?!\\v+Coucou\\h?!\\v*");
+		verify(patternFirst.matcher("Hello!\nCoucou !").matches());
+		verify(patternFirst.matcher("Hello !\n\nCoucou!\n").matches());
+		verify(!patternFirst.matcher("Hello!").matches());
+		verify(!patternFirst.matcher("Hello!\nCoucou").matches());
 		final boolean firstMatches = patternFirst.matcher(firstContent).matches();
 		final SubMarksTree subFirstExists = SubMarksTree.given(C_EXISTS_FIRST, Mark.binary(firstExists));
 		final SubMarksTree subFirstMatches = SubMarksTree.given(C_CONTENTS_FIRST, Mark.binary(firstMatches));
 
-		final GitPath somePath = commitD.resolve("a/some file.txt");
+		final GitPath somePath = commitD.resolve("My folder/second file.txt");
 		final boolean someExists = Files.exists(somePath);
 		final String someContent = someExists ? Files.readString(somePath) : "";
-		final Pattern somePattern = Pattern.compile("Hey\\v*");
+		final Pattern somePattern = Pattern.compile("Second\\v*");
 		final boolean someMatches = somePattern.matcher(someContent).matches();
 		final SubMarksTree subSomeExists = SubMarksTree.given(C_EXISTS_SOME, Mark.binary(someExists));
 		final SubMarksTree subSomeMatches = SubMarksTree.given(C_CONTENTS_SOME, Mark.binary(someMatches));

@@ -30,10 +30,16 @@ import java.util.Set;
 public interface MarksTree {
 
 	public static MarksTree composite(Set<? extends SubMarksTree> subGrades) {
+		if (subGrades.isEmpty()) {
+			return Mark.zero();
+		}
 		return CompositeMarksTree.givenSubGrades(subGrades);
 	}
 
 	public static MarksTree composite(Map<Criterion, ? extends MarksTree> subGrades) {
+		if (subGrades.isEmpty()) {
+			return Mark.zero();
+		}
 		return CompositeMarksTree.givenGrades(subGrades);
 	}
 

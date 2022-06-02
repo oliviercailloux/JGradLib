@@ -53,7 +53,7 @@ import org.slf4j.LoggerFactory;
  */
 public class DeadlineGrader {
 	@SuppressWarnings("unused")
-	private static final Logger LOGGER = LoggerFactory.getLogger(DeadlineGrader.class);
+	static final Logger LOGGER = LoggerFactory.getLogger(DeadlineGrader.class);
 
 	private static class PathToGitGrader {
 

@@ -6,6 +6,8 @@ import static io.github.oliviercailloux.jaris.exceptions.Unchecker.IO_UNCHECKER;
 import com.google.common.collect.ImmutableList;
 import io.github.oliviercailloux.grade.GradingException;
 import io.github.oliviercailloux.grade.IGrade;
+import io.github.oliviercailloux.grade.MarksTree;
+import io.github.oliviercailloux.jaris.exceptions.Throwing;
 import io.github.oliviercailloux.jaris.exceptions.TryCatchAll;
 import io.github.oliviercailloux.java_grade.bytecode.Instanciator;
 import io.github.oliviercailloux.java_grade.bytecode.RestrictingClassLoader;
@@ -103,6 +105,20 @@ public class JavaGradeUtils {
 			final Instanciator instanciator = Instanciator.given(loader);
 			implGrade = gradeFunction.apply(instanciator);
 		} catch (IOException e) {
+			throw new UncheckedIOException(e);
+		}
+		return implGrade;
+	}
+
+	public static <X extends Exception> MarksTree markSecurely(Path classPathRoot,
+			Throwing.Function<Instanciator, MarksTree, X> gradeFunction) throws X {
+		final MarksTree implGrade;
+		try (URLClassLoader loader = RestrictingClassLoader.noPermissions(classPathRoot.toUri().toURL(),
+				gradeFunction.getClass().getClassLoader())) {
+			final Instanciator instanciator = Instanciator.given(loader);
+			implGrade = gradeFunction.apply(instanciator);
+		} catch (IOException e) {
+			/* TODO we don’t want to wrap the given function. */
 			throw new UncheckedIOException(e);
 		}
 		return implGrade;
