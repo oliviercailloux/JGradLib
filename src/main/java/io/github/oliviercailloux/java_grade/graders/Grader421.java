@@ -12,11 +12,15 @@ import io.github.oliviercailloux.grade.Criterion;
 import io.github.oliviercailloux.grade.DoubleGrader;
 import io.github.oliviercailloux.grade.GitFileSystemWithHistoryFetcher;
 import io.github.oliviercailloux.grade.GitFileSystemWithHistoryFetcherByPrefix;
+import io.github.oliviercailloux.grade.GitFsGraderUsingLast;
 import io.github.oliviercailloux.grade.GradeAggregator;
 import io.github.oliviercailloux.grade.Mark;
 import io.github.oliviercailloux.grade.MarksTree;
+import io.github.oliviercailloux.grade.MavenCodeGrader;
 import io.github.oliviercailloux.jaris.exceptions.TryCatchAll;
 import io.github.oliviercailloux.java_grade.bytecode.Instanciator;
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.lang.reflect.InvocationTargetException;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -35,26 +39,47 @@ public class Grader421 implements CodeGrader<RuntimeException> {
 	public static final String PREFIX = "421";
 
 	public static final ZonedDateTime DEADLINE_ORIGINAL = ZonedDateTime
-			.parse("2022-04-08T14:17:00+01:00[Europe/Paris]");
-	public static final Instant CAP_ORIGINAL = DEADLINE_ORIGINAL.toInstant().plus(Duration.ofDays(2));
+			.parse("2022-04-08T14:17:00+02:00[Europe/Paris]");
+	public static final Instant CAP_ORIGINAL = DEADLINE_ORIGINAL.toInstant().plus(Duration.ofMinutes(10));
 
 	public static final ZonedDateTime DEADLINE_SECOND_CHANCE = ZonedDateTime
-			.parse("2022-05-09T00:00:00+01:00[Europe/Paris]");
+			.parse("2022-06-17T00:00:00+01:00[Europe/Paris]");
 
 	public static final double USER_WEIGHT = 0.025d;
 
 	public static void main(String[] args) throws Exception {
-		final GitFileSystemWithHistoryFetcher subFetcher = GitFileSystemWithHistoryFetcherByPrefix
+//		original();
+		second();
+	}
+
+	public static void original() throws IOException {
+		final GitFileSystemWithHistoryFetcher fetcher = GitFileSystemWithHistoryFetcherByPrefix
 				.getRetrievingByPrefix(PREFIX);
-		final BatchGitHistoryGrader<RuntimeException> batchGrader = BatchGitHistoryGrader.given(() -> subFetcher);
+		final BatchGitHistoryGrader<RuntimeException> batchGrader = BatchGitHistoryGrader.given(() -> fetcher);
 
 		final Grader421 grader421 = new Grader421();
-		final DoubleGrader doubleGrader = new DoubleGrader(grader421);
+		final MavenCodeGrader<RuntimeException> m = MavenCodeGrader.basic(grader421, UncheckedIOException::new);
 
-		batchGrader.getAndWriteGrades(doubleGrader, Path.of("grades " + PREFIX),
-				PREFIX + " " + Instant.now().atZone(DEADLINE_SECOND_CHANCE.getZone()));
+		batchGrader.getAndWriteGrades(DEADLINE_ORIGINAL, Duration.ofMinutes(5), GitFsGraderUsingLast.using(m),
+				USER_WEIGHT, Path.of("grades " + PREFIX + " original"),
+				PREFIX + " original " + Instant.now().atZone(DEADLINE_ORIGINAL.getZone()));
 		grader421.close();
-		LOGGER.info("Done, closed.");
+		LOGGER.info("Done original, closed.");
+	}
+
+	public static void second() throws IOException {
+		final GitFileSystemWithHistoryFetcher fetcher = GitFileSystemWithHistoryFetcherByPrefix
+				.getRetrievingByPrefix(PREFIX);
+		final BatchGitHistoryGrader<RuntimeException> batchGrader = BatchGitHistoryGrader.given(() -> fetcher);
+
+		final Grader421 grader421 = new Grader421();
+		final MavenCodeGrader<RuntimeException> m = MavenCodeGrader.basic(grader421, UncheckedIOException::new);
+		final DoubleGrader doubleGrader = new DoubleGrader(m);
+
+		batchGrader.getAndWriteGrades(doubleGrader, Path.of("grades " + PREFIX + " second"),
+				PREFIX + " second " + Instant.now().atZone(DEADLINE_SECOND_CHANCE.getZone()));
+		grader421.close();
+		LOGGER.info("Done second, closed.");
 	}
 
 	private static final Criterion C_STATE_0 = Criterion.given("Illegal state (0)");

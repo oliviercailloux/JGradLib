@@ -72,7 +72,7 @@ public class GitFileFileSystem extends GitFileSystem {
 	 * that obtains its data by reading from the same git directory, in a new VM
 	 * instance or after this one has been closed. (This identifier should not
 	 * however be considered stable accross releases of this library. Please open an
-	 * issue if this is considered a problem.)
+	 * issue if this creates a problem.)
 	 * </p>
 	 *
 	 * @return the URI that identifies this git file system.

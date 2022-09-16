@@ -49,38 +49,39 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
 
-public class SummarizeEmails {
+public class SummarizeJava {
 	@SuppressWarnings("unused")
-	private static final Logger LOGGER = LoggerFactory.getLogger(SummarizeEmails.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(SummarizeJava.class);
 
 	private static final Criterion C_CC = Criterion.given("CC");
 
-	private static final Criterion C_CC_1 = Criterion.given("first");
+	private static final Criterion C_CC_1 = Criterion.given("fake");
 
-	private static final Criterion C_CC_2 = Criterion.given("branching-bis");
+	private static final Criterion C_CC_2 = Criterion.given("branching");
+
+	private static final Criterion C_CC_3 = Criterion.given("eclipse");
+
+	private static final Criterion C_CC_4 = Criterion.given("421");
+
+	private static final Criterion C_CC_5 = Criterion.given("dice-roller");
+
+	private static final Criterion C_CC_6 = Criterion.given("various");
 
 	private static final Criterion C_PROJECT = Criterion.given("Project");
 
-	private static final Criterion C_PROJECT_MAIN = Criterion.given("Project main");
+	private static final Criterion C_PROJECT_1 = Criterion.given("Itération 1 Java");
 
-	private static final Criterion C_PROJECT_1 = Criterion.given("Itération 1 UML");
+	private static final Criterion C_PROJECT_2 = Criterion.given("Itération 2 Java");
 
-	private static final Criterion C_PROJECT_2 = Criterion.given("Itération 2 UML");
+	private static final Criterion C_PROJECT_3 = Criterion.given("Itération 3 Java");
 
-	private static final Criterion C_PROJECT_3 = Criterion.given("Itération 3 UML");
-
-	private static final Criterion C_PROJECT_PRES = Criterion.given("Présentation");
-
-	private static final Criterion C_PROJECT_4 = Criterion.given("Itération 4 UML");
-
+	/**
+	 * TODO pbl when a student is excused for one of these grades, this breaks the
+	 * common aggregation. [Probably best thing to do here is to consider its grade
+	 * as an average of the other grades, but I am not sure of the impact on the
+	 * OWA.]
+	 */
 	public static void main(String[] args) throws Exception {
-		final ImmutableMap<GitHubUsername, MarksTree> it4 = JsonSimpleGrade
-				.asExam(Files.readString(Path.of("Bonus Itération 4 UML.json"))).grades();
-
-		final JsonStudents students = JsonStudents.from(Files.readString(Path.of("usernames.json")));
-		final ImmutableMap<EmailAddress, StudentOnGitHubKnown> usernames = students.getStudentsKnownByGitHubUsername()
-				.values().stream().collect(ImmutableBiMap.toImmutableBiMap(s -> s.getEmail().getAddress(), s -> s));
-
 		final ImmutableTable<EmailAddress, String, Grade> lastGrades;
 		try (GradesInEmails gradesInEmails = GradesInEmails.newInstance()) {
 			@SuppressWarnings("resource")
@@ -96,25 +97,26 @@ public class SummarizeEmails {
 		}
 
 		final ImmutableMap.Builder<Criterion, Double> weightsCcBuilder = ImmutableMap.builder();
-		weightsCcBuilder.put(C_CC_1, 1d);
+//		weightsCcBuilder.put(C_CC_1, 0d);
 		weightsCcBuilder.put(C_CC_2, 1d);
-		weightsCcBuilder.put(C_PROJECT_1, 1d);
-		weightsCcBuilder.put(C_PROJECT_2, 1d);
+		weightsCcBuilder.put(C_CC_3, 1d);
+		weightsCcBuilder.put(C_CC_4, 1d);
+		weightsCcBuilder.put(C_CC_5, 1d);
+//		weightsCcBuilder.put(C_CC_6, 2d);
 		final ImmutableMap<Criterion, Double> weightsCc = weightsCcBuilder.build();
 		final ImmutableSet<Criterion> ccs = weightsCc.keySet();
-//		final ImmutableMap<Criterion, Double> weightsProject = ImmutableMap.of(C_PROJECT_2, 1d, C_PROJECT_3, 1d);
-		final ImmutableList<Double> owaWeightsProjectMain = ImmutableList.of(1d, 1d, 1d, 0.75d);
-		final ImmutableSet<Criterion> critsProjectMain = ImmutableSet.of(C_PROJECT_1, C_PROJECT_2, C_PROJECT_3,
-				C_PROJECT_PRES);
+		final ImmutableMap<Criterion, Double> weightsProject = ImmutableMap.of(C_PROJECT_1, 1d, C_PROJECT_2, 1d,
+				C_PROJECT_3, 1.5d);
 
 		final ImmutableSet<EmailAddress> addresses = lastGrades.rowKeySet();
 		final ImmutableMap<EmailAddress, MarksTree> grades = addresses.stream()
-				.collect(ImmutableMap.toImmutableMap(a -> a,
-						a -> spread(
-								Maps.transformValues(CollectionUtils.transformKeys(lastGrades.row(a), Criterion::given),
-										Grade::toMarksTree),
-								ccs, critsProjectMain,
-								it4.getOrDefault(usernames.get(a).getGitHubUsername(), Mark.zero("No bonus")))));
+				.collect(
+						ImmutableMap
+								.toImmutableMap(a -> a,
+										a -> spread(
+												Maps.transformValues(CollectionUtils.transformKeys(lastGrades.row(a),
+														Criterion::given), Grade::toMarksTree),
+												ccs, weightsProject.keySet())));
 
 		final ImmutableMap<Criterion, Set<GradeAggregator>> allAggregators = lastGrades.columnKeySet().stream()
 				.collect(ImmutableMap.toImmutableMap(Criterion::given, s -> lastGrades.column(s).values().stream()
@@ -136,19 +138,24 @@ public class SummarizeEmails {
 //				.collect(ImmutableMap.toImmutableMap(Criterion::given, s -> 1d));
 //		final ImmutableMap<Criterion, GradeAggregator> aggregators = grades.keySet().stream()
 //				.collect(ImmutableMap.toImmutableMap(Criterion::given, k -> grades.get(k).toAggregator()));
-		final GradeAggregator ccAggregator = GradeAggregator.staticAggregator(weightsCc,
+//		final GradeAggregator ccAggregator = GradeAggregator.staticAggregator(weightsCc,
+//				Maps.filterKeys(aggregators, weightsCc::containsKey));
+		final GradeAggregator ccAggregator = GradeAggregator.owa(ImmutableList.of(2.5d, 2d, 2d, 0.5d),
 				Maps.filterKeys(aggregators, weightsCc::containsKey));
-		final GradeAggregator prjMainAggregator = GradeAggregator.owa(owaWeightsProjectMain,
-				Maps.filterKeys(aggregators, critsProjectMain::contains));
-		final GradeAggregator prjAggregator = GradeAggregator
-				.absolute(ImmutableMap.of(C_PROJECT_MAIN, prjMainAggregator), GradeAggregator.TRIVIAL);
+		final GradeAggregator prjAggregator = GradeAggregator.staticAggregator(weightsProject,
+				Maps.filterKeys(aggregators, weightsProject::containsKey));
 		final GradeAggregator bigAggregator = GradeAggregator.staticAggregator(
-				ImmutableMap.of(C_CC, 10d, C_PROJECT, 10d),
-				ImmutableMap.of(C_CC, ccAggregator, C_PROJECT, prjAggregator));
+				ImmutableMap.of(C_CC, 7d, C_CC_6, 3d, C_PROJECT, 10d),
+				ImmutableMap.of(C_CC, ccAggregator, C_CC_6, aggregators.get(C_CC_6), C_PROJECT, prjAggregator));
 
 		// final ImmutableMap<EmailAddress, IGrade> grades = Maps.toMap(addresses,
 //				a -> getWeightingGradeUML(lastGrades.row(a), a));
 //		final ImmutableMap<EmailAddress, Grade> grades = lastGrades.column("various");
+
+		final JsonStudents students = JsonStudents.from(Files.readString(Path.of("usernames.json")));
+
+		final ImmutableMap<EmailAddress, StudentOnGitHubKnown> usernames = students.getStudentsKnownByGitHubUsername()
+				.values().stream().collect(ImmutableBiMap.toImmutableBiMap(s -> s.getEmail().getAddress(), s -> s));
 
 		final ImmutableMap<String, MarksTree> treesByUsername = transformKeys(grades,
 				a -> usernames.get(a).getGitHubUsername().getUsername());
@@ -162,13 +169,13 @@ public class SummarizeEmails {
 		final Map<String, Grade> gradesByUsername = Maps.transformValues(treesByUsername,
 				t -> Grade.given(bigAggregator, t));
 
-		Files.writeString(Path.of("grades UML.json"), JsonSimpleGrade.toJson(
+		Files.writeString(Path.of("grades recap Java.json"), JsonSimpleGrade.toJson(
 				new Exam(bigAggregator, CollectionUtils.transformKeys(treesByUsername, GitHubUsername::given))));
 		// JsonbUtils.toJsonValue(gradesByUsername, JsonGrade.asAdapter()).toString());
 		final Document doc = HtmlGrades.asHtmlGrades(gradesByUsername, "All grades recap", 20d);
-		Files.writeString(Path.of("grades UML.html"), XmlUtils.asString(doc));
+		Files.writeString(Path.of("grades recap Java.html"), XmlUtils.asString(doc));
 
-		Files.writeString(Path.of("grades UML.csv"),
+		Files.writeString(Path.of("grades recap Java.csv"),
 				CsvGrades.<String>newInstance(k -> ImmutableMap.of("name", k.toString()), CsvGrades.DEFAULT_DENOMINATOR)
 						.gradesToCsv(bigAggregator, treesByUsername));
 	}
@@ -385,18 +392,17 @@ public class SummarizeEmails {
 	}
 
 	public static MarksTree spread(Map<Criterion, MarksTree> marks, ImmutableSet<Criterion> ccs,
-			ImmutableSet<Criterion> projects, MarksTree it4) {
+			ImmutableSet<Criterion> projects) {
 		final ImmutableSet<SubMarksTree> marksCC = ccs.stream()
 				.map(c -> SubMarksTree.given(c, marks.getOrDefault(c, Mark.zero("No such grade"))))
 				.collect(ImmutableSet.toImmutableSet());
-		final ImmutableSet<SubMarksTree> marksPrj = projects.stream()
-				.map(c -> SubMarksTree.given(c, marks.getOrDefault(c, Mark.zero("No such grade"))))
+		final ImmutableSet<SubMarksTree> marksPrj = projects.stream().map(c -> SubMarksTree.given(c, marks.get(c)))
 				.collect(ImmutableSet.toImmutableSet());
+//		final Criterion cFake = Criterion.given("fake");
+//		final SubMarksTree fake = SubMarksTree.given(cFake, grades.get(cFake));
 		final SubMarksTree cc = SubMarksTree.given(C_CC, MarksTree.composite(marksCC));
-		final SubMarksTree main = SubMarksTree.given(C_PROJECT_MAIN, MarksTree.composite(marksPrj));
-		final SubMarksTree it4sub = SubMarksTree.given(C_PROJECT_4, it4);
-		final SubMarksTree prj = SubMarksTree.given(C_PROJECT, MarksTree.composite(ImmutableSet.of(main, it4sub)));
-		return MarksTree.composite(ImmutableSet.of(cc, prj));
+		final SubMarksTree prj = SubMarksTree.given(C_PROJECT, MarksTree.composite(marksPrj));
+		return MarksTree.composite(ImmutableSet.of(cc, SubMarksTree.given(C_CC_6, marks.get(C_CC_6)), prj));
 	}
 
 }

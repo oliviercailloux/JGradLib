@@ -5,6 +5,8 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Verify.verify;
 import static io.github.oliviercailloux.email.UncheckedMessagingException.MESSAGING_UNCHECKER;
 
+import com.google.common.base.MoreObjects;
+import com.google.common.base.MoreObjects.ToStringHelper;
 import com.google.common.base.Predicates;
 import com.google.common.base.VerifyException;
 import com.google.common.collect.ImmutableList;
@@ -17,6 +19,7 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.function.Predicate;
 import javax.mail.Message;
 import javax.mail.Message.RecipientType;
@@ -30,6 +33,7 @@ import javax.mail.search.RecipientStringTerm;
 import javax.mail.search.RecipientTerm;
 import javax.mail.search.SearchTerm;
 import javax.mail.search.SentDateTerm;
+import javax.mail.search.StringTerm;
 import javax.mail.search.SubjectTerm;
 
 /**
@@ -256,5 +260,29 @@ public class ImapSearchPredicate implements Predicate<Message> {
 		}
 
 		return new ImapSearchPredicate(new OrTerm(term, other.term), predicate.or(other.predicate));
+	}
+
+	@Override
+	public boolean equals(Object o2) {
+		if (!(o2 instanceof ImapSearchPredicate)) {
+			return false;
+		}
+		final ImapSearchPredicate t2 = (ImapSearchPredicate) o2;
+		return term.equals(t2.term);
+	}
+
+	@Override
+	public int hashCode() {
+		return Objects.hash(term);
+	}
+
+	@Override
+	public String toString() {
+		final ToStringHelper helper = MoreObjects.toStringHelper(this);
+		helper.add("Term", term);
+		if (term instanceof StringTerm s) {
+			helper.add("Pattern", s.getPattern());
+		}
+		return helper.toString();
 	}
 }

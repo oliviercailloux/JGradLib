@@ -15,6 +15,8 @@ import static io.github.oliviercailloux.grade.CriterionTestsHelper.c22;
 import static io.github.oliviercailloux.grade.CriterionTestsHelper.c3;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import com.google.common.collect.ImmutableBiMap;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.junit.jupiter.api.Test;
 
@@ -45,10 +47,63 @@ public class GradeTests {
 	}
 
 	@Test
+	void testAggregateOwaAndStatic() throws Exception {
+		final GradeAggregator c1A = GradeAggregator.owa(ImmutableList.of(1d, 3d));
+		final GradeAggregator c2A = GradeAggregator.staticAggregator(ImmutableMap.of(c21, 1d, c22, 2d),
+				ImmutableMap.of());
+		final GradeAggregator aggregator = GradeAggregator.max(ImmutableMap.of(c1, c1A, c2, c2A));
+		final MarksTree marks = MarksTreeTestsHelper.get1_11And1_12And2_21And2_22();
+		final Grade grade = Grade.given(aggregator, marks);
+
+		assertEquals(1d, grade.getGrade(p11).mark().getPoints());
+		assertEquals(0d, grade.getGrade(p12).mark().getPoints());
+		assertEquals(1d / 4d, grade.getGrade(c1).mark().getPoints(), 1e-6d);
+		assertEquals(1d / 4d, grade.getGrade(p1).mark().getPoints(), 1e-6d);
+		assertEquals(1d, grade.getGrade(p21).mark().getPoints());
+		assertEquals(0d, grade.getGrade(p22).mark().getPoints());
+		assertEquals(1d / 3d, grade.getGrade(c2).mark().getPoints(), 1e-6d);
+		assertEquals(1d / 3d, grade.getGrade(p2).mark().getPoints(), 1e-6d);
+		assertEquals(1d / 3d, grade.mark().getPoints(), 1e-6d);
+
+		final ImmutableMap<SubMark, Double> weightedSubMarks = grade.getWeightedSubMarks();
+		final ImmutableBiMap<Criterion, SubMark> byCrit = weightedSubMarks.keySet().stream()
+				.collect(ImmutableBiMap.toImmutableBiMap(SubMark::getCriterion, s -> s));
+		final SubMark s1 = byCrit.get(c1);
+		final double ws1 = weightedSubMarks.get(s1);
+		final SubMark s2 = byCrit.get(c2);
+		final double ws2 = weightedSubMarks.get(s2);
+		assertEquals(1d / 4d, s1.getPoints());
+		assertEquals(0d, ws1);
+		assertEquals(1d / 3d, s2.getPoints());
+		assertEquals(1d, ws2);
+		final ImmutableMap<SubMark, Double> expectedWeightedSubMarks = ImmutableMap
+				.of(SubMark.given(c1, Mark.given(1d / 4d, "")), 0d, SubMark.given(c2, Mark.given(1d / 3d, "")), 1d);
+		assertEquals(expectedWeightedSubMarks, weightedSubMarks);
+	}
+
+	@Test
 	void testParametricAndAbsolute() throws Exception {
 		final GradeAggregator c1A = GradeAggregator.parametric(c11, c12, GradeAggregator.TRIVIAL);
 		final GradeAggregator c2A = GradeAggregator.ABSOLUTE;
 		final GradeAggregator aggregator = GradeAggregator.parametric(c1, c2, ImmutableMap.of(c1, c1A, c2, c2A));
+		final MarksTree marks = MarksTreeTestsHelper.get1_11And1_12And2_21And2_22();
+		final Grade grade = Grade.given(aggregator, marks);
+		assertEquals(1d, grade.getGrade(p11).mark().getPoints());
+		assertEquals(0d, grade.getGrade(p12).mark().getPoints());
+		assertEquals(0d, grade.getGrade(c1).mark().getPoints());
+		assertEquals(0d, grade.getGrade(p1).mark().getPoints());
+		assertEquals(1d, grade.getGrade(p21).mark().getPoints());
+		assertEquals(0d, grade.getGrade(p22).mark().getPoints());
+		assertEquals(1d, grade.getGrade(c2).mark().getPoints(), 1e-6d);
+		assertEquals(1d, grade.getGrade(p2).mark().getPoints(), 1e-6d);
+		assertEquals(0d, grade.mark().getPoints());
+	}
+
+	@Test
+	void testParametricCascadeDraft() throws Exception {
+		final GradeAggregator c1A = GradeAggregator.parametric(c11, c12, GradeAggregator.TRIVIAL);
+		final GradeAggregator c2A = GradeAggregator.ABSOLUTE;
+		final GradeAggregator aggregator = GradeAggregator.parametric(c1, c2, c1A, c2A);
 		final MarksTree marks = MarksTreeTestsHelper.get1_11And1_12And2_21And2_22();
 		final Grade grade = Grade.given(aggregator, marks);
 		assertEquals(1d, grade.getGrade(p11).mark().getPoints());

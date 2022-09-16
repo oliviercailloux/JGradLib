@@ -79,7 +79,7 @@ public class GitCloner {
 	}
 
 	public FileRepository download(GitUri uri, Path workTree) {
-		for (int i = 0; i < 5; ++i) {
+		for (int i = 0; i < 1; ++i) {
 			try {
 				return download(uri, workTree, false);
 			} catch (GitAPIException e) {

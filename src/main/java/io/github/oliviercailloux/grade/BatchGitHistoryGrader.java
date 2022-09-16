@@ -47,7 +47,8 @@ public class BatchGitHistoryGrader<X extends Exception> {
 		this.fetcherFactory = checkNotNull(fetcherFactory);
 	}
 
-	public <Y extends Exception> Exam getGrades(GitFsGrader<Y> grader, double userGradeWeight) throws X, Y, IOException {
+	public <Y extends Exception> Exam getGrades(GitFsGrader<Y> grader, double userGradeWeight)
+			throws X, Y, IOException {
 		return getGrades(MAX_DEADLINE, Duration.ofMinutes(0), grader, userGradeWeight, TOptional.empty(), "");
 	}
 
@@ -71,14 +72,15 @@ public class BatchGitHistoryGrader<X extends Exception> {
 				docTitle);
 	}
 
-	public <Y extends Exception> Exam getAndWriteGrades(Grader<Y> ext, Path outWithoutExtension,
-			String docTitle) throws X, Y, IOException {
+	public <Y extends Exception> Exam getAndWriteGrades(Grader<Y> ext, Path outWithoutExtension, String docTitle)
+			throws X, Y, IOException {
 		checkArgument(!docTitle.isEmpty());
 		return getGrades(ext, TOptional.of(outWithoutExtension), docTitle);
 	}
 
-	private <Y extends Exception> Exam getGrades(ZonedDateTime deadline, Duration durationForZero, GitFsGrader<Y> grader,
-			double userGradeWeight, TOptional<Path> outWithoutExtensionOpt, String docTitle) throws X, Y, IOException {
+	private <Y extends Exception> Exam getGrades(ZonedDateTime deadline, Duration durationForZero,
+			GitFsGrader<Y> grader, double userGradeWeight, TOptional<Path> outWithoutExtensionOpt, String docTitle)
+			throws X, Y, IOException {
 		checkArgument(deadline.equals(MAX_DEADLINE) == (durationForZero.getSeconds() == 0l));
 		checkArgument(userGradeWeight > 0d);
 		checkArgument(userGradeWeight < 1d);
@@ -92,38 +94,41 @@ public class BatchGitHistoryGrader<X extends Exception> {
 			final LinearPenalizer penalizer = LinearPenalizer.proportionalToLateness(durationForZero);
 			penalizerModifier = GradePenalizer.using(penalizer, deadline.toInstant());
 		}
-		final ByTimeGrader<Y> byTimeGrader = ByTimeGrader.using(deadline, grader, penalizerModifier, userGradeWeight);
-		return getGrades(byTimeGrader, outWithoutExtensionOpt, docTitle);
+//		final ByTimeGrader<Y> byTimeGrader = ByTimeGrader.using(deadline, grader, penalizerModifier, userGradeWeight);
+//		return getGrades(byTimeGrader, outWithoutExtensionOpt, docTitle);
+		final ComplexGrader<Y> complexGrader = ComplexGrader.using(grader, penalizerModifier, userGradeWeight);
+		final ByTimeAndGitHubIgnoringGrader<Y> internalGrader = new ByTimeAndGitHubIgnoringGrader<>(deadline,
+				complexGrader);
+		return getGrades(internalGrader, outWithoutExtensionOpt, docTitle);
 	}
 
-	private <Y extends Exception> Exam getGrades(Grader<Y> ext, TOptional<Path> outWithoutExtensionOpt,
-				String docTitle) throws X, Y, IOException {
-			final GradeAggregator whole = ext.getAggregator();
-	
-			final LinkedHashMap<GitHubUsername, MarksTree> builder = new LinkedHashMap<>();
-			try (GitFileSystemWithHistoryFetcher fetcher = fetcherFactory.get()) {
-	
-				for (GitHubUsername author : fetcher.getAuthors()) {
-					final GitFileSystemHistory history = fetcher.goTo(author);
-	
-					final MarksTree byTimeGrade = ext.grade(author, history);
-					builder.put(author, byTimeGrade);
-					try {
-						Grade.given(whole, byTimeGrade);
-					} catch (AggregatorException e) {
-	//					Files.writeString(Path.of("Marks.json"), JsonSimpleGrade.toJson(byTimeGrade));
-	//					Files.writeString(Path.of("Aggregator.json"), JsonSimpleGrade.toJson(whole));
-						LOGGER.info("Failed aggregating at {}, obtained {} which fails with {}.", author, byTimeGrade,
-								whole);
-						throw e;
-					}
-	
-					outWithoutExtensionOpt
-							.ifPresent(o -> write(new Exam(whole, ImmutableMap.copyOf(builder)), o, docTitle));
+	private <Y extends Exception> Exam getGrades(Grader<Y> ext, TOptional<Path> outWithoutExtensionOpt, String docTitle)
+			throws X, Y, IOException {
+		final GradeAggregator whole = ext.getAggregator();
+
+		final LinkedHashMap<GitHubUsername, MarksTree> builder = new LinkedHashMap<>();
+		try (GitFileSystemWithHistoryFetcher fetcher = fetcherFactory.get()) {
+
+			for (GitHubUsername author : fetcher.getAuthors()) {
+				final GitFileSystemHistory history = fetcher.goTo(author);
+				final MarksTree byTimeGrade = ext.grade(author, history);
+				builder.put(author, byTimeGrade);
+				try {
+					Grade.given(whole, byTimeGrade);
+				} catch (AggregatorException e) {
+//					Files.writeString(Path.of("Marks.json"), JsonSimpleGrade.toJson(byTimeGrade));
+//					Files.writeString(Path.of("Aggregator.json"), JsonSimpleGrade.toJson(whole));
+					LOGGER.info("Failed aggregating at {}, obtained {} which fails with {}.", author, byTimeGrade,
+							whole);
+					throw e;
 				}
+
+				outWithoutExtensionOpt
+						.ifPresent(o -> write(new Exam(whole, ImmutableMap.copyOf(builder)), o, docTitle));
 			}
-			return new Exam(whole, ImmutableMap.copyOf(builder));
 		}
+		return new Exam(whole, ImmutableMap.copyOf(builder));
+	}
 
 	private void write(Exam exam, Path outWithoutExtension, String docTitle) throws IOException {
 		Files.writeString(outWithoutExtension.resolveSibling(outWithoutExtension.getFileName() + ".json"),

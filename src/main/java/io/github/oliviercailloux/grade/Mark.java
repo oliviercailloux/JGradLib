@@ -57,7 +57,7 @@ public class Mark implements MarksTree {
 	public Mark(double points, String comment) {
 		checkArgument(Double.isFinite(points));
 		checkArgument(points >= -1);
-		checkArgument(points <= 1);
+		checkArgument(points <= 1, points);
 		this.points = points;
 		this.comment = checkNotNull(comment);
 	}

@@ -5,6 +5,7 @@ import static com.google.common.base.Verify.verifyNotNull;
 
 import com.google.common.base.Predicates;
 import com.google.common.base.VerifyException;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
@@ -21,6 +22,7 @@ import io.github.oliviercailloux.grade.MarksTree;
 import io.github.oliviercailloux.grade.MaxAggregator;
 import io.github.oliviercailloux.grade.MinAggregator;
 import io.github.oliviercailloux.grade.NormalizingStaticWeighter;
+import io.github.oliviercailloux.grade.OwaAggregator;
 import io.github.oliviercailloux.grade.ParametricWeighter;
 import io.github.oliviercailloux.grade.StaticWeighter;
 import io.github.oliviercailloux.grade.VoidAggregator;
@@ -33,8 +35,10 @@ import jakarta.json.bind.Jsonb;
 import jakarta.json.bind.adapter.JsonbAdapter;
 import jakarta.json.bind.annotation.JsonbCreator;
 import jakarta.json.bind.annotation.JsonbPropertyOrder;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,44 +48,54 @@ public class JsonSimpleGrade {
 
 	public static enum MarkAggregatorType {
 		ParametricWeighter, VoidAggregator, NormalizingStaticWeighter, StaticWeighter, AbsoluteAggregator,
-		MinAggregator, MaxAggregator;
+		MinAggregator, MaxAggregator, OwaAggregator;
 	}
 
 	@JsonbPropertyOrder({ "type", "multiplied", "weighting", "weights" })
 	public static record GenericMarkAggregator(MarkAggregatorType type, Optional<Criterion> multiplied,
-			Optional<Criterion> weighting, Optional<Map<Criterion, Double>> weights) {
+			Optional<Criterion> weighting, Optional<Map<Criterion, Double>> weights,
+			/**
+			 * Should think about coherence with map (which is optional instead of empty to
+			 * mark absence); Eclipse does not like an Optional here.
+			 */
+			List<Double> simpleWeights) {
+
 		@JsonbCreator
 		public GenericMarkAggregator(MarkAggregatorType type, Optional<Criterion> multiplied,
-				Optional<Criterion> weighting, Optional<Map<Criterion, Double>> weights) {
+				Optional<Criterion> weighting, Optional<Map<Criterion, Double>> weights, List<Double> simpleWeights) {
 			this.type = type;
 			this.multiplied = multiplied;
 			this.weighting = weighting;
 			this.weights = weights;
+			this.simpleWeights = simpleWeights;
 
 			final boolean hasTwoCrits = (multiplied.isPresent() && weighting.isPresent());
 			final boolean hasNoCrits = (multiplied.isEmpty() && weighting.isEmpty());
 			final boolean hasWeights = weights.isPresent();
+			final boolean hasSimpleWeights = simpleWeights != null && !simpleWeights.isEmpty();
 
 			checkArgument((type == MarkAggregatorType.ParametricWeighter) == hasTwoCrits);
 			checkArgument((type != MarkAggregatorType.ParametricWeighter) == hasNoCrits);
 			checkArgument((type == MarkAggregatorType.NormalizingStaticWeighter
 					|| type == MarkAggregatorType.StaticWeighter) == hasWeights);
-			checkArgument((type == MarkAggregatorType.VoidAggregator || type == MarkAggregatorType.AbsoluteAggregator
-					|| type == MarkAggregatorType.MinAggregator
-					|| type == MarkAggregatorType.MaxAggregator) == (!hasWeights && hasNoCrits));
+			checkArgument((type == MarkAggregatorType.OwaAggregator) == hasSimpleWeights);
 		}
 
 		public GenericMarkAggregator(MarkAggregatorType type) {
-			this(type, Optional.empty(), Optional.empty(), Optional.empty());
+			this(type, Optional.empty(), Optional.empty(), Optional.empty(), ImmutableList.of());
 		}
 
 		public GenericMarkAggregator(Criterion multiplied, Criterion weighting) {
 			this(MarkAggregatorType.ParametricWeighter, Optional.of(multiplied), Optional.of(weighting),
-					Optional.empty());
+					Optional.empty(), ImmutableList.of());
 		}
 
 		public GenericMarkAggregator(MarkAggregatorType type, Map<Criterion, Double> weights) {
-			this(type, Optional.empty(), Optional.empty(), Optional.of(weights));
+			this(type, Optional.empty(), Optional.empty(), Optional.of(weights), ImmutableList.of());
+		}
+
+		public GenericMarkAggregator(List<Double> simpleWeights) {
+			this(MarkAggregatorType.OwaAggregator, Optional.empty(), Optional.empty(), Optional.empty(), simpleWeights);
 		}
 	}
 
@@ -222,6 +236,9 @@ public class JsonSimpleGrade {
 			if (aggregator instanceof MaxAggregator) {
 				return new GenericMarkAggregator(MarkAggregatorType.MaxAggregator);
 			}
+			if (aggregator instanceof OwaAggregator o) {
+				return new GenericMarkAggregator(o.weights());
+			}
 			throw new VerifyException();
 		}
 
@@ -236,6 +253,7 @@ public class JsonSimpleGrade {
 			case AbsoluteAggregator -> AbsoluteAggregator.INSTANCE;
 			case MinAggregator -> MinAggregator.INSTANCE;
 			case MaxAggregator -> MaxAggregator.INSTANCE;
+			case OwaAggregator -> OwaAggregator.given(from.simpleWeights);
 			};
 		}
 	}
@@ -280,6 +298,12 @@ public class JsonSimpleGrade {
 		final Jsonb jsonb = JsonHelper.getJsonb(new JsonCriterionToString(), new JsonMapAdapter<Double>() {
 		}, new JsonAdapterMarkAggregator(), new JsonAdapterGradeAggregator());
 		return jsonb.toJson(aggregator);
+	}
+
+	public static String toJson(Set<GradeAggregator> aggregators) {
+		final Jsonb jsonb = JsonHelper.getJsonb(new JsonCriterionToString(), new JsonMapAdapter<Double>() {
+		}, new JsonAdapterMarkAggregator(), new JsonAdapterGradeAggregator());
+		return jsonb.toJson(aggregators);
 	}
 
 	public static GradeAggregator asAggregator(String aggregatorString) {

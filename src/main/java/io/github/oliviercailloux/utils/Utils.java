@@ -3,6 +3,7 @@ package io.github.oliviercailloux.utils;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
+import static com.google.common.base.Verify.verify;
 import static io.github.oliviercailloux.jaris.exceptions.Unchecker.IO_UNCHECKER;
 
 import com.google.common.base.Strings;
@@ -50,6 +51,7 @@ import java.util.ListIterator;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Queue;
+import java.util.Random;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -99,7 +101,10 @@ public class Utils {
 	}
 
 	public static Path getTempUniqueDirectory(String prefix) {
-		return getTempDirectory().resolve(prefix + " " + Utils.ISO_BASIC_UTC_FORMATTER.format(Instant.now()));
+		final Path resolved = getTempDirectory().resolve(
+				prefix + " " + Utils.ISO_BASIC_UTC_FORMATTER.format(Instant.now()) + " " + new Random().nextInt());
+		verify(!Files.exists(resolved));
+		return resolved;
 	}
 
 	public static <E, F extends E> Graph<E> asGraph(SuccessorsFunction<F> successorsFunction, Set<F> roots) {

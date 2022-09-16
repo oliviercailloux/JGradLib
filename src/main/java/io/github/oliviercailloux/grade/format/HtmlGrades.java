@@ -2,9 +2,12 @@ package io.github.oliviercailloux.grade.format;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Verify.verify;
 
 import com.google.common.base.VerifyException;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.MoreCollectors;
 import com.google.common.math.Stats;
 import io.github.oliviercailloux.grade.AbsoluteAggregator;
 import io.github.oliviercailloux.grade.CriteriaWeighter;
@@ -14,6 +17,7 @@ import io.github.oliviercailloux.grade.Mark;
 import io.github.oliviercailloux.grade.MarkAggregator;
 import io.github.oliviercailloux.grade.MaxAggregator;
 import io.github.oliviercailloux.grade.MinAggregator;
+import io.github.oliviercailloux.grade.OwaAggregator;
 import io.github.oliviercailloux.grade.OwaWeighter;
 import io.github.oliviercailloux.grade.ParametricWeighter;
 import io.github.oliviercailloux.grade.StaticWeighter;
@@ -23,6 +27,7 @@ import java.net.URI;
 import java.text.NumberFormat;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import org.w3c.dom.Document;
 import org.w3c.dom.DocumentFragment;
 import org.w3c.dom.Element;
@@ -73,18 +78,20 @@ public class HtmlGrades {
 		return document.getDocument();
 	}
 
-	private static DocumentFragment getDescription(SubGrade subGrade, HtmlDocument document, double denominator) {
-		checkNotNull(subGrade);
+	private static DocumentFragment getDescription(SubGrade critGrade, HtmlDocument document, double denominator) {
+		checkNotNull(critGrade);
 		checkNotNull(document);
 		final DocumentFragment fragment = document.getDocument().createDocumentFragment();
 
-		final Criterion criterion = subGrade.criterion();
-		final Grade grade = subGrade.grade();
+		final Criterion criterion = critGrade.criterion();
+		final Grade grade = critGrade.grade();
 
 		final Mark mark = grade.mark();
 		final String comment = mark.getComment();
 		final String overDenominator = denominator == 100d ? "%" : " / " + FORMATTER.format(denominator);
-		final String pointsText = FORMATTER.format(mark.getPoints() * denominator) + overDenominator;
+		final String pointsText = FORMATTER.format(mark.getPoints() * denominator)
+				/* TODO */
+				+ (criterion.getName().equals("Itération 4 UML") ? "" : overDenominator);
 
 		final boolean isMark = grade.toMarksTree().isMark();
 		final String explanation;
@@ -93,14 +100,20 @@ public class HtmlGrades {
 		} else {
 			checkArgument(comment.isEmpty(), comment);
 			final MarkAggregator aggregator = grade.getMarkAggregator();
-			if (aggregator instanceof ParametricWeighter) {
-				final ParametricWeighter a = (ParametricWeighter) aggregator;
+			if (aggregator instanceof ParametricWeighter a) {
 				final Grade multipliedGrade = grade.getGrade(a.multipliedCriterion());
 				final Grade weightingGrade = grade.getGrade(a.weightingCriterion());
 				final String basePointsText = FORMATTER.format(multipliedGrade.mark().getPoints() * denominator)
 						+ overDenominator;
-//				explanation = basePointsText + " × [" + a.weightingCriterion().getName() + "] = " + pointsText;
-				explanation = basePointsText + " × " + FORMATTER.format(weightingGrade.mark().getPoints() * 100) + "%";
+				final String baseFactor = " × " + FORMATTER.format(weightingGrade.mark().getPoints() * 100) + "%";
+
+				final Optional<Grade> unknownGrade = unknown(grade).map(grade::getGrade);
+				final String unknownFactor = " × " + FORMATTER.format(100d - weightingGrade.mark().getPoints() * 100)
+						+ "%";
+				final Optional<String> unknownPoints = unknownGrade.map(g -> " + "
+						+ FORMATTER.format(g.mark().getPoints() * denominator) + overDenominator + unknownFactor);
+
+				explanation = basePointsText + baseFactor + unknownPoints.orElse("");
 			} else if (aggregator instanceof AbsoluteAggregator) {
 				explanation = "Sum";
 			} else if (aggregator instanceof StaticWeighter) {
@@ -109,6 +122,9 @@ public class HtmlGrades {
 				explanation = "Min";
 			} else if (aggregator instanceof MaxAggregator) {
 				explanation = "Max";
+			} else if (aggregator instanceof OwaAggregator o) {
+				/* TODO */
+				explanation = "Ordered weighted average with weights %s".formatted(o.weights());
 			} else {
 				throw new VerifyException();
 			}
@@ -123,51 +139,73 @@ public class HtmlGrades {
 			final MarkAggregator aggregator = grade.getMarkAggregator();
 			if (aggregator instanceof ParametricWeighter) {
 				final ParametricWeighter a = (ParametricWeighter) aggregator;
+				final Optional<Criterion> unknown = unknown(grade);
 				{
-					final Element li = document.createXhtmlElement("li");
-					ul.appendChild(li);
-
 					final Criterion subCriterion = a.multipliedCriterion();
-					final DocumentFragment description = getDescription(
-							new SubGrade(subCriterion, grade.getGrade(subCriterion)), document, denominator);
+					final Grade subGradeAsGrade = grade.getGrade(subCriterion);
+					final SubGrade subGrade = new SubGrade(subCriterion, subGradeAsGrade);
+					final DocumentFragment description = getDescription(subGrade, document, denominator);
+					final Element li = document.createXhtmlElement("li");
 					li.appendChild(description);
+
+					ul.appendChild(li);
 				}
 				{
-					final Element li = document.createXhtmlElement("li");
-					ul.appendChild(li);
-
 					final Criterion subCriterion = a.weightingCriterion();
-					final Grade subSubGrade = grade.getGrade(subCriterion);
-					checkArgument(subSubGrade.toMarksTree().isMark());
-					final DocumentFragment description = getDescription(new SubGrade(subCriterion, subSubGrade),
-							document, 100d);
-					li.appendChild(description);
-				}
-			} else if (aggregator instanceof CriteriaWeighter) {
-				for (Criterion subCriterion : grade.toMarksTree().getCriteria()) {
+					final Grade subGradeAsGrade = grade.getGrade(subCriterion);
+					checkArgument(subGradeAsGrade.toMarksTree().isMark());
+					final SubGrade subGrade = new SubGrade(subCriterion, subGradeAsGrade);
+					final DocumentFragment description = getDescription(subGrade, document, 100d);
 					final Element li = document.createXhtmlElement("li");
-					ul.appendChild(li);
-
-					final double subWeight = grade.getWeight(subCriterion);
-					final DocumentFragment description = getDescription(
-							new SubGrade(subCriterion, grade.getGrade(subCriterion)), document,
-							denominator * subWeight);
 					li.appendChild(description);
+
+					ul.appendChild(li);
+				}
+				if (unknown.isPresent()) {
+					final Criterion subCriterion = unknown.orElseThrow();
+					final Grade subGradeAsGrade = grade.getGrade(subCriterion);
+					final SubGrade subGrade = new SubGrade(subCriterion, subGradeAsGrade);
+					final DocumentFragment description = getDescription(subGrade, document, denominator);
+					final Element li = document.createXhtmlElement("li");
+					li.appendChild(description);
+
+					ul.appendChild(li);
+				}
+			} else if (aggregator instanceof CriteriaWeighter || aggregator instanceof OwaAggregator) {
+				for (Criterion subCriterion : grade.toMarksTree().getCriteria()) {
+					final Grade subGradeAsGrade = grade.getGrade(subCriterion);
+					final SubGrade subGrade = new SubGrade(subCriterion, subGradeAsGrade);
+					final double subWeight = grade.getWeight(subCriterion);
+					final DocumentFragment description = getDescription(subGrade, document, denominator * subWeight);
+					final Element li = document.createXhtmlElement("li");
+					li.appendChild(description);
+
+					ul.appendChild(li);
 				}
 			} else if (aggregator instanceof OwaWeighter) {
 				for (Criterion subCriterion : grade.toMarksTree().getCriteria()) {
-					final Element li = document.createXhtmlElement("li");
-					ul.appendChild(li);
-
 					final DocumentFragment description = getDescription(
 							new SubGrade(subCriterion, grade.getGrade(subCriterion)), document, denominator);
+					final Element li = document.createXhtmlElement("li");
 					li.appendChild(description);
+
+					ul.appendChild(li);
 				}
 			} else {
 				throw new VerifyException();
 			}
 		}
 		return fragment;
+	}
+
+	private static Optional<Criterion> unknown(Grade grade) {
+		final MarkAggregator aggregator = grade.getMarkAggregator();
+		final ParametricWeighter a = (ParametricWeighter) aggregator;
+		final ImmutableSet<Criterion> subCriteria = grade.toMarksTree().getCriteria();
+		verify(grade.toMarksTree().getCriteria().size() == 2 || grade.toMarksTree().getCriteria().size() == 3);
+		final ImmutableSet<Criterion> known = ImmutableSet.of(a.multipliedCriterion(), a.weightingCriterion());
+		verify(grade.toMarksTree().getCriteria().containsAll(known));
+		return subCriteria.stream().filter(c -> !known.contains(c)).collect(MoreCollectors.toOptional());
 	}
 
 	private String title;

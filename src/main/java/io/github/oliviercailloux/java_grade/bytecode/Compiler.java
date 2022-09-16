@@ -264,7 +264,59 @@ public class Compiler {
 		return new CompilationResult(compiled, out.toString(), err.toString());
 	}
 
+	public static class CompilationResultExt {
+		public static CompilationResultExt given(boolean compiled, String out, String err, int s) {
+			return new CompilationResultExt(compiled, out, err, s);
+		}
+
+		public static CompilationResultExt compiled(String out, int s) {
+			return new CompilationResultExt(true, out, "", s);
+		}
+
+		public static CompilationResultExt failed(String out, String err, int s) {
+			return new CompilationResultExt(false, out, err, s);
+		}
+
+		public boolean compiled;
+		public String out;
+		public String err;
+		public int nbSuppressWarnings;
+
+		private CompilationResultExt(boolean compiled, String out, String err, int s) {
+			this.compiled = compiled;
+			this.out = out;
+			this.err = err;
+			this.nbSuppressWarnings = s;
+			checkArgument(compiled == (countErrors() == 0), err);
+		}
+
+		public int countWarnings() {
+			/** See https://github.com/google/guava/issues/877 */
+			return Splitter.on("WARNING ").splitToStream(err).mapToInt(e -> 1).sum() - 1;
+		}
+
+		public int countErrors() {
+			return Splitter.on("ERROR ").splitToStream(err).mapToInt(e -> 1).sum() - 1;
+		}
+
+		public int nbWarningsTot() {
+			return countWarnings() + nbSuppressWarnings;
+		}
+	}
+
 	public static class CompilationResult {
+		public static CompilationResult given(boolean compiled, String out, String err) {
+			return new CompilationResult(compiled, out, err);
+		}
+
+		public static CompilationResult compiled(String out) {
+			return new CompilationResult(true, out, "");
+		}
+
+		public static CompilationResult failed(String out, String err) {
+			return new CompilationResult(false, out, err);
+		}
+
 		public boolean compiled;
 		public String out;
 		public String err;

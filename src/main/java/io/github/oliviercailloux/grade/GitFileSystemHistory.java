@@ -240,6 +240,20 @@ public class GitFileSystemHistory {
 	}
 
 	/**
+	 * @return the nodes of the {@link #getGraph() graph} that have no children (no
+	 *         successor); equivalently, the smallest set of nodes such that
+	 *         starting from any node and following the “successors” (children)
+	 *         relation necessarily ends in the set.
+	 *
+	 * @return empty iff the graph is empty.
+	 */
+	public ImmutableSet<GitPathRootSha> getFilteredLeaves() {
+		return history.getLeaves().stream().map(gitFs::getPathRoot)
+				.filter(r -> !IO_UNCHECKER.getUsing(() -> getCommitDate(r)).isAfter(furtherCap))
+				.collect(ImmutableSet.toImmutableSet());
+	}
+
+	/**
 	 * @throws IOException
 	 * @throws NoSuchFileException
 	 */

@@ -11,36 +11,74 @@ import io.github.oliviercailloux.jaris.io.PathUtils;
 import io.github.oliviercailloux.java_grade.JavaGradeUtils;
 import io.github.oliviercailloux.java_grade.bytecode.Compiler;
 import io.github.oliviercailloux.java_grade.bytecode.Compiler.CompilationResult;
+import io.github.oliviercailloux.java_grade.bytecode.Compiler.CompilationResultExt;
+import io.github.oliviercailloux.java_grade.bytecode.MyCompiler;
 import io.github.oliviercailloux.utils.Utils;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Set;
+import java.util.function.Function;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 public class MavenCodeGrader<X extends Exception> implements PathGrader<X> {
+	public static <X extends Exception> MavenCodeGrader<X> basic(CodeGrader<X> g, Function<IOException, X> wrapper) {
+		return new MavenCodeGrader<>(g, wrapper, true, new BasicCompiler());
+	}
+
+	public static <X extends Exception> MavenCodeGrader<X> complex(CodeGrader<X> g,
+			Function<IOException, ? extends X> wrapper, boolean considerSuppressed, MyCompiler compiler) {
+		return new MavenCodeGrader<>(g, wrapper, considerSuppressed, compiler);
+	}
+
+	public static class BasicCompiler implements MyCompiler {
+
+		@Override
+		public CompilationResultExt compile(Path compiledDir, Set<Path> javaPaths) throws IOException {
+			final CompilationResult eclipseResult = Compiler.eclipseCompileUsingOurClasspath(javaPaths, compiledDir);
+			final Pattern pathPattern = Pattern.compile("/tmp/sources[0-9]*/");
+			final String eclipseStr = pathPattern.matcher(eclipseResult.err).replaceAll("/…/");
+			final int nbSuppressed = (int) CheckedStream.<Path, IOException>wrapping(javaPaths.stream())
+					.map(p -> Files.readString(p))
+					.flatMap(s -> Pattern.compile("@SuppressWarnings").matcher(s).results()).count();
+			final CompilationResultExt transformedResult = Compiler.CompilationResultExt.given(eclipseResult.compiled,
+					eclipseResult.out, eclipseStr, nbSuppressed);
+			return transformedResult;
+		}
+
+	}
+
 	private final CodeGrader<X> g;
+	private final Function<IOException, ? extends X> wrapper;
+
 	public static final Criterion WARNING_CRITERION = Criterion.given("Warnings");
 	public static final Criterion CODE_CRITERION = Criterion.given("Code");
 	private ImmutableMap<Path, MarksTree> gradedProjects;
+	private final boolean considerSuppressed;
+	private final MyCompiler basicCompiler;
 
-	public MavenCodeGrader(CodeGrader<X> g) {
+	private MavenCodeGrader(CodeGrader<X> g, Function<IOException, ? extends X> wrapper, boolean considerSuppressed,
+			MyCompiler basicCompiler) {
 		this.g = g;
 		gradedProjects = null;
+		this.wrapper = wrapper;
+		this.considerSuppressed = considerSuppressed;
+		this.basicCompiler = basicCompiler;
 	}
 
 	@Override
-	public MarksTree gradeProject(Path projectPath) throws X {
+	public MarksTree grade(Path workDir) throws X {
 		try {
-			final ImmutableSet<Path> possibleDirs = MavenCodeGrader.possibleDirs(projectPath);
+			final ImmutableSet<Path> possibleDirs = MavenCodeGrader.possibleDirs(workDir);
 			gradedProjects = CollectionUtils.toMap(possibleDirs, this::gradePomProjectWrapping);
 			verify(!gradedProjects.isEmpty());
 			final ImmutableMap<Criterion, MarksTree> gradedProjectsByCrit = CollectionUtils
 					.transformKeys(gradedProjects, p -> Criterion.given("Using project dir " + p.toString()));
 			return MarksTree.composite(gradedProjectsByCrit);
 		} catch (IOException e) {
-			throw new UncheckedIOException(e);
+			throw wrapper.apply(e);
 		}
 	}
 
@@ -65,39 +103,34 @@ public class MavenCodeGrader<X extends Exception> implements PathGrader<X> {
 		final ImmutableSet<Path> javaPaths = Files.exists(srcDir)
 				? PathUtils.getMatchingChildren(srcDir, p -> String.valueOf(p.getFileName()).endsWith(".java"))
 				: ImmutableSet.of();
-		final CompilationResult eclipseResult = Compiler.eclipseCompileUsingOurClasspath(javaPaths, compiledDir);
-		final Pattern pathPattern = Pattern.compile("/tmp/sources[0-9]*/");
-		final String eclipseStr = pathPattern.matcher(eclipseResult.err).replaceAll("/…/");
+		final CompilationResultExt result = basicCompiler.compile(compiledDir, javaPaths);
+
 		final MarksTree projectGrade;
-		if (eclipseResult.countErrors() > 0) {
-			projectGrade = Mark.zero(eclipseStr);
+		if (result.countErrors() > 0) {
+			projectGrade = Mark.zero(result.err);
 		} else if (javaPaths.isEmpty()) {
 			LOGGER.debug("No java files at {}.", srcDir);
 			projectGrade = Mark.zero("No java files found");
 		} else {
-			final int nbSuppressed = (int) CheckedStream.<Path, IOException>wrapping(javaPaths.stream())
-					.map(p -> Files.readString(p))
-					.flatMap(s -> Pattern.compile("@SuppressWarnings").matcher(s).results()).count();
-
-			final int nbWarningsTot = eclipseResult.countWarnings() + nbSuppressed;
-			final MarksTree codeGrade = JavaGradeUtils.markSecurely(compiledDir, g::gradeCode);
 			final Mark weightingMark;
 			{
+				final int nbCountedSW = considerSuppressed ? result.nbSuppressWarnings : 0;
 				final String comment;
 				{
 					final ImmutableSet.Builder<String> commentsBuilder = ImmutableSet.builder();
-					if (eclipseResult.countWarnings() > 0) {
-						commentsBuilder.add(eclipseStr);
+					if (result.countWarnings() > 0) {
+						commentsBuilder.add(result.err);
 					}
-					if (nbSuppressed > 0) {
-						commentsBuilder.add("Found " + nbSuppressed + " suppressed warnings");
+					if (nbCountedSW > 0) {
+						commentsBuilder.add("Found " + result.nbSuppressWarnings + " suppressed warnings");
 					}
 					comment = commentsBuilder.build().stream().collect(Collectors.joining(". "));
 				}
-				final double penalty = Math.min(nbWarningsTot * 0.05d, 0.1d);
+				final double penalty = Math.min((result.countWarnings() + nbCountedSW) * 0.05d, 0.1d);
 				final double weightingScore = 1d - penalty;
 				weightingMark = Mark.given(weightingScore, comment);
 			}
+			final MarksTree codeGrade = JavaGradeUtils.markSecurely(compiledDir, g::gradeCode);
 			projectGrade = MarksTree
 					.composite(ImmutableMap.of(WARNING_CRITERION, weightingMark, CODE_CRITERION, codeGrade));
 		}

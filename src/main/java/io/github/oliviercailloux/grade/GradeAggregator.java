@@ -9,6 +9,7 @@ import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import io.github.oliviercailloux.grade.IGrade.CriteriaPath;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -96,6 +97,14 @@ public class GradeAggregator {
 		return new GradeAggregator(MaxAggregator.INSTANCE, ImmutableMap.of(), defaultSubAggregator);
 	}
 
+	public static GradeAggregator owa(List<Double> weights) {
+		return new GradeAggregator(OwaAggregator.given(weights), ImmutableMap.of(), TRIVIAL);
+	}
+
+	public static GradeAggregator owa(List<Double> weights, Map<Criterion, GradeAggregator> subs) {
+		return new GradeAggregator(OwaAggregator.given(weights), subs, TRIVIAL);
+	}
+
 	public static GradeAggregator absolute(Map<Criterion, GradeAggregator> subs, GradeAggregator defaultSubAggregator) {
 		return new GradeAggregator(AbsoluteAggregator.INSTANCE, subs, defaultSubAggregator);
 	}
@@ -107,6 +116,11 @@ public class GradeAggregator {
 	public static GradeAggregator parametric(Criterion multiplied, Criterion weighting,
 			Map<Criterion, GradeAggregator> subs) {
 		return new GradeAggregator(ParametricWeighter.given(multiplied, weighting), subs, TRIVIAL);
+	}
+
+	public static GradeAggregator parametric(Criterion multiplied, Criterion weighting,
+			Map<Criterion, GradeAggregator> subs, GradeAggregator defaultSubAggregator) {
+		return new GradeAggregator(ParametricWeighter.given(multiplied, weighting), subs, defaultSubAggregator);
 	}
 
 	public static GradeAggregator parametric(Criterion multiplied, Criterion weighting,

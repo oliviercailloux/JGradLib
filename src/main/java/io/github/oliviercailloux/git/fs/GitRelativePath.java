@@ -37,7 +37,7 @@ abstract class GitRelativePath extends GitPath {
 		return internalPath;
 	}
 
-	static GitPath relative(GitFileSystem fs, List<String> names) throws InvalidPathException {
+	static GitRelativePath relative(GitFileSystem fs, List<String> names) throws InvalidPathException {
 		final Path internalPath = toJimFsRelativePath(names);
 		return relative(fs, internalPath);
 	}

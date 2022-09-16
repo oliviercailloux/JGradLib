@@ -28,11 +28,12 @@ public class PrsImport {
 		public CsvEntry(Record r) {
 			this(GitHubUsername.given(r.getString("GitHub username")),
 					Mark.given(r.getDouble("Note") / 20d, r.getString("Commentaire")));
+			LOGGER.debug("Parsing {}.", r);
 		}
 	}
 
 	public static void main(String[] args) throws Exception {
-		final String prsString = Files.readString(Path.of("Prs.csv"));
+		final String prsString = Files.readString(Path.of("Itération 4 UML.csv"));
 		final CsvParserSettings settings = new CsvParserSettings();
 		settings.setHeaderExtractionEnabled(true);
 		final CsvParser parser = new CsvParser(settings);
@@ -44,6 +45,6 @@ public class PrsImport {
 				.collect(ImmutableMap.toImmutableMap(CsvEntry::username, CsvEntry::mark));
 		final Exam exam = new Exam(GradeAggregator.TRIVIAL, marksByUsername);
 		final String json = JsonSimpleGrade.toJson(exam);
-		Files.writeString(Path.of("Prs.json"), json);
+		Files.writeString(Path.of("Bonus Itération 4 UML.json"), json);
 	}
 }

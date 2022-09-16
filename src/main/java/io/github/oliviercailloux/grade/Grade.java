@@ -60,7 +60,8 @@ public class Grade {
 		}
 		final MarkAggregator a = original.getMarkAggregator();
 
-		if (a instanceof OwaWeighter && original.getSpecialSubAggregators().isEmpty()) {
+		if ((a instanceof MaxAggregator || a instanceof MinAggregator)
+				&& original.getSpecialSubAggregators().isEmpty()) {
 			return transformToPerCriterionWeighting(original.getDefaultSubAggregator());
 		}
 
@@ -131,12 +132,18 @@ public class Grade {
 		final GradeAggregator originalAggregator = original.toAggregator();
 		final MarksTree originalMarks = original.toMarksTree();
 		final MarkAggregator a = originalAggregator.getMarkAggregator();
-		final boolean owaAndMultipleSubs = (a instanceof OwaWeighter)
-				&& !originalAggregator.getSpecialSubAggregators().isEmpty();
 		final boolean parametricWeightedSum = (a instanceof ParametricWeighter p)
 				&& originalMarks.getCriteria().size() == 3;
+//		final boolean owaAndMultipleSubs = (a instanceof OwaWeighter)
+//				&& !originalAggregator.getSpecialSubAggregators().isEmpty();
+//		final boolean reducibleOwa = (a instanceof OwaAggregator o)
+//				&& o.weights().stream().filter(w -> w != 0d).count() == 1
+//				&& originalAggregator.getSpecialSubAggregators().isEmpty();
+		final boolean reducibleOwa = (a instanceof MaxAggregator || a instanceof MinAggregator)
+				&& originalAggregator.getSpecialSubAggregators().isEmpty();
+		final boolean nonReducibleOwa = (a instanceof OwaWeighter) && !reducibleOwa;
 
-		if (owaAndMultipleSubs || parametricWeightedSum || (a instanceof NormalizingStaticWeighter)) {
+		if (nonReducibleOwa || parametricWeightedSum || (a instanceof NormalizingStaticWeighter)) {
 			/*
 			 * All these criteria are associated to dynamic weights (weights that depend on
 			 * the marks tree), that we thus can’t integrate into a static structure (an
@@ -168,9 +175,9 @@ public class Grade {
 					adaptMarksForPerCriterionWeighting(original.getGrade(multipliedCriterion)));
 			return MarksTree.composite(newMarks);
 		}
-		if ((a instanceof OwaWeighter) && originalAggregator.getSpecialSubAggregators().isEmpty()) {
+		if (reducibleOwa) {
 			final ImmutableMap<SubMark, Double> weightedSubMarks = original.getWeightedSubMarks();
-			final Criterion criterionWithAllWeight = Maps.filterEntries(weightedSubMarks, e -> e.getValue() == 1d)
+			final Criterion criterionWithAllWeight = Maps.filterEntries(weightedSubMarks, e -> e.getValue() != 0d)
 					.keySet().stream().collect(MoreCollectors.onlyElement()).getCriterion();
 			/*
 			 * TODO this forgets the criterion, I suppose, therefore inducing a loss of
@@ -184,7 +191,7 @@ public class Grade {
 					ImmutableMap.toImmutableMap(c -> c, c -> adaptMarksForPerCriterionWeighting(original.getGrade(c))));
 			return MarksTree.composite(subTrees);
 		}
-		throw new VerifyException();
+		throw new VerifyException(a.toString());
 	}
 
 	public static Grade given(GradeAggregator aggregator, MarksTree marks) {

@@ -13,7 +13,7 @@ public class ShowEvents {
 	private static final Logger LOGGER = LoggerFactory.getLogger(ShowEvents.class);
 
 	public static void main(String[] args) throws IllegalStateException {
-		final RepositoryCoordinates repo = RepositoryCoordinates.from("oliviercailloux-org", "extractor-aitalibraham");
+		final RepositoryCoordinates repo = RepositoryCoordinates.from("oliviercailloux-org", "extractor-username");
 		try (GitHubFetcherV3 fetcher = GitHubFetcherV3.using(GitHubToken.getRealInstance())) {
 			final ImmutableList<Event> events = fetcher.getEvents(repo);
 			LOGGER.info("Events: {}.", events);

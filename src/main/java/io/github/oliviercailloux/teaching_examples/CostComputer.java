@@ -1,37 +1,32 @@
 package io.github.oliviercailloux.teaching_examples;
 
-import java.io.IOException;
+import java.util.LinkedHashSet;
+import java.util.Set;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class CostComputer {
+
+	@SuppressWarnings("unused")
+	private static final Logger LOGGER = LoggerFactory.getLogger(CostComputer.class);
+
 	public static void main(String[] args) throws Exception {
-		GenericHeater<String> g = new GenericHeater<>();
+		LOGGER.info("Starting.");
 
-		GenericHeater<Integer> g2 = new GenericHeater<>();
+		Set<Heater> heaters = new LinkedHashSet<>();
 
-		String id1 = g.getIdentifier();
+		LOGGER.info("Adding heaters.");
+		heaters.add(Heater.standard(1, "id1"));
+		heaters.add(Heater.standard(2, "id2"));
+		heaters.add(Heater.standard(3, "id3"));
+		// …
+		heaters.add(Heater.standard(1, "id1"));
+		LOGGER.info("Added heaters.");
 
-		Integer id2 = g2.getIdentifier();
+		// heaters.add(Heater.LG());
+//		heaters.add(Heater.LG());
 
-		CostlyThing defaultHeater;
-		defaultHeater = new Heater();
-		defaultHeater.toString();
-
-		defaultHeater = new Elephant(true);
-
-		Heater otherHeater = new Heater(2000);
-
-		Elephant greedyElephant = new Elephant(true);
-
-		boolean a = true;
-
-		if (a) {
-			throw new IOException();
-		}
-
-		CostManager.cost();
-		CostManager.cost(defaultHeater);
-		CostManager.cost(defaultHeater, otherHeater);
-		CostManager.cost(defaultHeater, greedyElephant);
+		LOGGER.info("Nb of heaters: {}.", heaters.size());
 	}
 
 }

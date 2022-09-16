@@ -38,8 +38,9 @@ public class SendEmails {
 	private static final Path WORK_DIR = Path.of("");
 
 	public static void main(String[] args) throws Exception {
-//		final String prefix = Grader421.PREFIX;
-		final String prefix = "Itération 1 Java";
+//		final String prefix = "Présentation";
+//		final String prefix = GraderDiceRoller.PREFIX;
+		final String prefix = "recap Java";
 
 		final JsonStudents students = JsonStudents.from(Files.readString(WORK_DIR.resolve("usernames.json")));
 

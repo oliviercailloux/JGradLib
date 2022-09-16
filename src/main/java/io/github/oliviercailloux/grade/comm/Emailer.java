@@ -256,7 +256,7 @@ public class Emailer implements AutoCloseable {
 
 		final Message[] asArray = MESSAGING_UNCHECKER.getUsing(() -> folder.search(term.getTerm()));
 		final ImmutableSet<Message> found = ImmutableSet.copyOf(asArray);
-		LOGGER.info("Searched, got: {}.", found.size());
+		LOGGER.info("Searched for {}, got: {}.", term, found.size());
 		fetchHeaders(folder, found);
 
 		/* TODO Searching for "Grade Java" finds "Grade Projet Java". */

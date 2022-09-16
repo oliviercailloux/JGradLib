@@ -589,7 +589,7 @@ public abstract class GitFileSystem extends FileSystem {
 	 * performed to ensure that the commit exists.
 	 *
 	 * @param commitId the commit to refer to
-	 * @return an git path root
+	 * @return a git path root
 	 * @see GitPathRoot
 	 */
 	public GitPathRootSha getPathRoot(ObjectId commitId) {

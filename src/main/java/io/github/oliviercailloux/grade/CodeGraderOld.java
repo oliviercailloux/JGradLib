@@ -28,7 +28,7 @@ public interface CodeGraderOld<X extends Exception> extends PathGrader<X> {
 	MarksTree gradeCode(Instanciator project) throws X;
 
 	@Override
-	default MarksTree gradeProject(Path projectPath) throws X {
+	default MarksTree grade(Path projectPath) throws X {
 		try {
 			final ImmutableSet<Path> possibleDirs = possibleDirs(projectPath);
 			final ImmutableMap<Path, MarksTree> gradedProjects = CollectionUtils.toMap(possibleDirs,
