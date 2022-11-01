@@ -9,13 +9,13 @@ import com.google.common.collect.ImmutableSet;
 import io.github.oliviercailloux.git.GitCloner;
 import io.github.oliviercailloux.git.GitHistory;
 import io.github.oliviercailloux.git.GitHubHistory;
-import io.github.oliviercailloux.git.fs.GitFileSystem;
-import io.github.oliviercailloux.git.fs.GitFileSystemProvider;
-import io.github.oliviercailloux.git.fs.GitPathRoot;
 import io.github.oliviercailloux.git.git_hub.model.GitHubToken;
 import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinatesWithPrefix;
 import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherQL;
+import io.github.oliviercailloux.gitjfs.GitFileSystem;
+import io.github.oliviercailloux.gitjfs.GitFileSystemProvider;
+import io.github.oliviercailloux.gitjfs.GitPathRoot;
 import io.github.oliviercailloux.grade.format.json.JsonGrade;
 import io.github.oliviercailloux.java_grade.testers.JavaMarkHelper;
 import io.github.oliviercailloux.json.JsonbUtils;
@@ -121,7 +121,7 @@ public class GitGeneralGrader {
 				}
 				pushHistory = gitHubHistory.getConsistentPushHistory();
 				verify(pushHistory.getGraph().equals(Utils.asImmutableGraph(gitFs.getCommitsGraph(),
-						IO_UNCHECKER.wrapFunction(r -> r.getCommit().getId()))));
+						IO_UNCHECKER.wrapFunction(r -> r.getCommit().id()))));
 				LOGGER.debug("Push history: {}.", pushHistory);
 			}
 
@@ -135,7 +135,7 @@ public class GitGeneralGrader {
 		if (fromDir) {
 			return (FileRepository) new FileRepositoryBuilder().setWorkTree(dir.toFile()).build();
 		}
-		return GitCloner.create().setCheckCommonRefsAgree(false).download(coordinates.asGitUri(), dir);
+		return GitCloner.create().download(coordinates.asGitUri(), dir);
 	}
 
 	IGrade grade(GitWork work) throws IOException {
@@ -152,7 +152,7 @@ public class GitGeneralGrader {
 		}
 
 		final GitFileSystemHistory filteredHistory = manual
-				.filter(r -> !excludedAuthors.contains(r.getCommit().getAuthorName()));
+				.filter(r -> !excludedAuthors.contains(r.getCommit().authorName()));
 		final IGrade grade = deadlineGrader.grade(GitWork.given(work.getAuthor(), filteredHistory));
 		final String spaceBefore = grade.getComment().isEmpty() ? "" : " ";
 		final String added = excludedByGitHub.isEmpty() ? ""

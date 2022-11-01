@@ -10,9 +10,9 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Streams;
-import io.github.oliviercailloux.git.fs.GitPathRoot;
-import io.github.oliviercailloux.git.fs.GitPathRootSha;
 import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
+import io.github.oliviercailloux.gitjfs.GitPathRoot;
+import io.github.oliviercailloux.gitjfs.GitPathRootSha;
 import io.github.oliviercailloux.jaris.throwing.TOptional;
 import io.github.oliviercailloux.java_grade.testers.JavaMarkHelper;
 import java.io.IOException;
@@ -147,7 +147,7 @@ public class ByTimeGrader<X extends Exception> implements Grader<X> {
 		checkTimes(history, deadline.toInstant());
 		final Optional<Instant> earliestTimeCommitByGitHub = earliestTimeCommitByGitHub(history);
 		final GitFileSystemHistory beforeCommitByGitHub = TOptional.wrapping(earliestTimeCommitByGitHub).map(
-				t -> history.filter(c -> history.asGitHistory().getTimestamp(c.getCommit().getId()).isBefore(t), t))
+				t -> history.filter(c -> history.asGitHistory().getTimestamp(c.getCommit().id()).isBefore(t), t))
 				.orElse(history);
 		final String commentGeneralCapped = earliestTimeCommitByGitHub
 				.map(t -> "; ignored commits after " + t.atZone(deadline.getZone()).toString() + ", sent by GitHub")
@@ -231,10 +231,10 @@ public class ByTimeGrader<X extends Exception> implements Grader<X> {
 		 */
 		final ImmutableSet<GitPathRoot> refs = IO_UNCHECKER.getUsing(history::getRefs);
 		final ImmutableMap<GitPathRoot, Instant> commitDates = refs.stream().collect(ImmutableMap.toImmutableMap(p -> p,
-				IO_UNCHECKER.wrapFunction(p -> p.getCommit().getCommitterDate().toInstant())));
+				IO_UNCHECKER.wrapFunction(p -> p.getCommit().committerDate().toInstant())));
 		final ImmutableMap<GitPathRoot, Instant> pushDates = refs.stream()
 				.collect(ImmutableMap.toImmutableMap(p -> p, IO_UNCHECKER
-						.wrapFunction(p -> history.getPushDates().getOrDefault(p.getCommit().getId(), Instant.MIN))));
+						.wrapFunction(p -> history.getPushDates().getOrDefault(p.getCommit().id(), Instant.MIN))));
 		final Map<GitPathRoot, Instant> pushDatesLate = Maps.filterValues(pushDates, i -> i.isAfter(deadline));
 		final Map<GitPathRoot, Instant> commitsOnTime = Maps.filterValues(commitDates, i -> !i.isAfter(deadline));
 
@@ -284,9 +284,9 @@ public class ByTimeGrader<X extends Exception> implements Grader<X> {
 		try {
 //			GitFileSystemHistory.create(history.)
 			final GitFileSystemHistory filtered = history.filter(
-					r -> (!history.getCommitDate(r).isAfter(c) && !r.getCommit().getAuthorDate().toInstant().isAfter(c))
-							|| (history.getPushDates().get(r.getCommit().getId()) != null
-									&& !history.getPushDates().get(r.getCommit().getId()).isAfter(c)),
+					r -> (!history.getCommitDate(r).isAfter(c) && !r.getCommit().authorDate().toInstant().isAfter(c))
+							|| (history.getPushDates().get(r.getCommit().id()) != null
+									&& !history.getPushDates().get(r.getCommit().id()).isAfter(c)),
 					c);
 //			final GitPathRootSha last = ByTimeGrader.last(filtered);
 			final Instant last = ByTimeGrader.cappedAt(filtered);

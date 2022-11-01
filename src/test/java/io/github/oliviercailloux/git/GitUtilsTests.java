@@ -70,7 +70,7 @@ class GitUtilsTests {
 	void testUsingBareClone() throws Exception {
 		final GitUri testRel = GitUri.fromUri(URI.create("ssh://git@github.com/oliviercailloux/testrel.git"));
 		final Path repoBarePath = Utils.getTempUniqueDirectory("testrel cloned bare");
-		new GitCloner().downloadBare(testRel, repoBarePath).close();
+		GitCloner.create().downloadBare(testRel, repoBarePath).close();
 		final GitHistory history = getHistory(repoBarePath.toFile());
 		assertTrue(history.getGraph().nodes().size() >= 2);
 //		new GitCloner().downloadBare(testRel, repoBarePath).close();
@@ -84,10 +84,10 @@ class GitUtilsTests {
 		final GitUri testRel = GitUri.fromUri(URI.create("ssh://git@github.com/oliviercailloux/testrel.git"));
 		final Path workTreePath = Utils.getTempUniqueDirectory("testrel cloned");
 		final Path gitDir = workTreePath.resolve(".git");
-		new GitCloner().download(testRel, workTreePath).close();
+		GitCloner.create().download(testRel, workTreePath).close();
 		final GitHistory history = getHistory(gitDir.toFile());
 		assertTrue(history.getGraph().nodes().size() >= 2);
-		new GitCloner().download(testRel, workTreePath).close();
+		GitCloner.create().download(testRel, workTreePath).close();
 		assertEquals(history, getHistory(gitDir.toFile()));
 //		new GitCloner().downloadBare(testRel, gitDir).close();
 //		assertEquals(history, getHistory(gitDir.toFile()));

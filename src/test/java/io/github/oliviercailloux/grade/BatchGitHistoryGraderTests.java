@@ -4,11 +4,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.google.common.collect.ImmutableMap;
 import io.github.oliviercailloux.git.GitUtils;
-import io.github.oliviercailloux.git.JGit;
-import io.github.oliviercailloux.git.fs.GitFileSystem;
-import io.github.oliviercailloux.git.fs.GitFileSystemProvider;
 import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
+import io.github.oliviercailloux.gitjfs.GitFileSystem;
+import io.github.oliviercailloux.gitjfs.GitFileSystemProvider;
 import io.github.oliviercailloux.grade.format.json.JsonSimpleGrade;
+import io.github.oliviercailloux.jgit.JGit;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;

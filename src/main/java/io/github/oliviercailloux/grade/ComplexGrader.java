@@ -9,8 +9,8 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Streams;
-import io.github.oliviercailloux.git.fs.GitPathRoot;
 import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
+import io.github.oliviercailloux.gitjfs.GitPathRoot;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.time.Instant;
@@ -97,10 +97,10 @@ public class ComplexGrader<X extends Exception> implements Grader<X> {
 		 */
 		final ImmutableSet<GitPathRoot> refs = IO_UNCHECKER.getUsing(history::getRefs);
 		final ImmutableMap<GitPathRoot, Instant> commitDates = refs.stream().collect(ImmutableMap.toImmutableMap(p -> p,
-				IO_UNCHECKER.wrapFunction(p -> p.getCommit().getCommitterDate().toInstant())));
+				IO_UNCHECKER.wrapFunction(p -> p.getCommit().committerDate().toInstant())));
 		final ImmutableMap<GitPathRoot, Instant> pushDates = refs.stream()
 				.collect(ImmutableMap.toImmutableMap(p -> p, IO_UNCHECKER
-						.wrapFunction(p -> history.getPushDates().getOrDefault(p.getCommit().getId(), Instant.MIN))));
+						.wrapFunction(p -> history.getPushDates().getOrDefault(p.getCommit().id(), Instant.MIN))));
 		final Map<GitPathRoot, Instant> pushDatesLate = Maps.filterValues(pushDates, i -> i.isAfter(deadline));
 		final Map<GitPathRoot, Instant> commitsOnTime = Maps.filterValues(commitDates, i -> !i.isAfter(deadline));
 

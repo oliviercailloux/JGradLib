@@ -14,12 +14,12 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.MoreCollectors;
 import com.google.common.graph.GraphBuilder;
 import com.google.common.graph.Traverser;
-import io.github.oliviercailloux.git.fs.GitFileSystem;
-import io.github.oliviercailloux.git.fs.GitFileSystemProvider;
 import io.github.oliviercailloux.git.git_hub.model.GitHubToken;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.git.git_hub.model.v3.CommitGitHubDescription;
 import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherV3;
+import io.github.oliviercailloux.gitjfs.GitFileSystem;
+import io.github.oliviercailloux.gitjfs.GitFileSystemProvider;
 import io.github.oliviercailloux.utils.Utils;
 import java.net.URI;
 import java.nio.file.Files;
@@ -59,7 +59,7 @@ class GitClonerTests {
 			shas = commits.stream().map(CommitGitHubDescription::getSha).collect(ImmutableList.toImmutableList());
 		}
 
-		final GitCloner cloner = new GitCloner();
+		final GitCloner cloner = GitCloner.create();
 
 		final Path httpsPath = Utils.getTempDirectory()
 				.resolve("testrel cloned using https " + Utils.ISO_BASIC_UTC_FORMATTER.format(Instant.now()));
@@ -138,7 +138,7 @@ class GitClonerTests {
 	void testCloneBare() throws Exception {
 		final Path gitDirPath = Utils.getTempDirectory()
 				.resolve("testrel cloned " + Utils.ISO_BASIC_UTC_FORMATTER.format(Instant.now()));
-		new GitCloner().downloadBare(GitUri.fromGitUrl("git@github.com:oliviercailloux/testrel.git"), gitDirPath)
+		GitCloner.create().downloadBare(GitUri.fromGitUrl("git@github.com:oliviercailloux/testrel.git"), gitDirPath)
 				.close();
 		assertTrue(Files.exists(gitDirPath.resolve("refs")));
 		assertFalse(Files.exists(gitDirPath.resolve(".git")));
@@ -167,7 +167,7 @@ class GitClonerTests {
 			LOGGER.info("Cloning from {}.", uri);
 			final Path clonedTo = Utils.getTempDirectory()
 					.resolve("Just cloned using .git " + Utils.ISO_BASIC_UTC_FORMATTER.format(Instant.now()));
-			new GitCloner().download(GitUri.fromUri(uri), clonedTo).close();
+			GitCloner.create().download(GitUri.fromUri(uri), clonedTo).close();
 			assertTrue(Files.exists(clonedTo.resolve(".git")));
 			assertTrue(Files.exists(clonedTo.resolve(".git").resolve("refs")));
 		}
@@ -176,7 +176,7 @@ class GitClonerTests {
 		LOGGER.info("Cloning from {}.", uri);
 		final Path clonedTo = Utils.getTempDirectory()
 				.resolve("Just cloned " + Utils.ISO_BASIC_UTC_FORMATTER.format(Instant.now()));
-		new GitCloner().download(GitUri.fromUri(uri), clonedTo).close();
+		GitCloner.create().download(GitUri.fromUri(uri), clonedTo).close();
 		assertTrue(Files.exists(clonedTo.resolve(".git")));
 		assertTrue(Files.exists(clonedTo.resolve(".git").resolve("refs")));
 	}
@@ -189,7 +189,7 @@ class GitClonerTests {
 		Git.init().setDirectory(workTreePath.toFile()).call().close();
 
 		final URI uri = gitDirPath.toUri();
-		assertThrows(IllegalStateException.class, () -> new GitCloner().download(GitUri.fromUri(uri), workTreePath));
+		assertThrows(IllegalStateException.class, () -> GitCloner.create().download(GitUri.fromUri(uri), workTreePath));
 	}
 
 	@Test
@@ -205,7 +205,8 @@ class GitClonerTests {
 			// new
 			// GitCloner().clone(GitUri.fromGitUri(URI.create("https://github.com/github/testrepo.git")),
 			// repo);
-			new GitCloner().clone(GitUri.fromUri(URI.create("https://github.com/oliviercailloux/testrel.git")), repo);
+			GitCloner.create().clone(GitUri.fromUri(URI.create("https://github.com/oliviercailloux/testrel.git")),
+					repo);
 			final Ref head = repo.findRef(Constants.HEAD);
 			assertNotNull(head);
 //			assertEquals("e26c142665bb9f560d59b18fd80763ef45e29324", head.getLeaf().getObjectId().getName());
@@ -231,7 +232,8 @@ class GitClonerTests {
 //		Git.init().setBare(true).setDirectory(gitDir.toFile()).call();
 		try (Repository repo = new FileRepository(gitDir.toString())) {
 			repo.create(true);
-			new GitCloner().clone(GitUri.fromUri(URI.create("https://github.com/oliviercailloux/testrel.git")), repo);
+			GitCloner.create().clone(GitUri.fromUri(URI.create("https://github.com/oliviercailloux/testrel.git")),
+					repo);
 			final Ref head = repo.findRef("HEAD");
 //			assertEquals("e26c142665bb9f560d59b18fd80763ef45e29324", head.getLeaf().getObjectId().getName());
 			assertNotNull(head.getLeaf().getObjectId().getName());
@@ -264,7 +266,8 @@ class GitClonerTests {
 			assertFalse(repository.getRefDatabase().hasRefs());
 		}
 		final GitUri emptyUri = GitUri.fromUri(URI.create("ssh://git@github.com/oliviercailloux/empty.git"));
-		try (Repository repository = new GitCloner().download(emptyUri, Utils.getTempUniqueDirectory("cloned empty"))) {
+		try (Repository repository = GitCloner.create().download(emptyUri,
+				Utils.getTempUniqueDirectory("cloned empty"))) {
 			assertTrue(repository.getObjectDatabase().exists());
 			assertFalse(repository.getRefDatabase().hasRefs());
 		}
@@ -276,14 +279,14 @@ class GitClonerTests {
 		try (Repository repository = new FileRepositoryBuilder().setGitDir(Path.of("inexistent").toFile()).build()) {
 			assertFalse(repository.getObjectDatabase().exists());
 			assertFalse(repository.getRefDatabase().hasRefs());
-			assertThrows(IllegalArgumentException.class, () -> new GitCloner().clone(emptyUri, repository));
+			assertThrows(IllegalArgumentException.class, () -> GitCloner.create().clone(emptyUri, repository));
 			assertThrows(IllegalArgumentException.class, () -> GitUtils.getHistory(repository));
 		}
 
 		try (DfsRepository repository = new InMemoryRepository(new DfsRepositoryDescription("myrepo"))) {
 			assertTrue(repository.getObjectDatabase().exists());
 			assertFalse(repository.getRefDatabase().hasRefs());
-			new GitCloner().setCheckCommonRefsAgree(false).clone(emptyUri, repository);
+			GitCloner.create().clone(emptyUri, repository);
 			assertEquals(GitHistory.create(GraphBuilder.directed().build(), ImmutableMap.of()),
 					GitUtils.getHistory(repository));
 		}

@@ -8,8 +8,8 @@ import static io.github.oliviercailloux.grade.GitGrader.Predicates.isBranch;
 import static io.github.oliviercailloux.grade.GitGrader.Predicates.isFileNamed;
 
 import com.google.common.collect.ImmutableSet;
-import io.github.oliviercailloux.git.fs.GitPathRoot;
 import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
+import io.github.oliviercailloux.gitjfs.GitPathRoot;
 import io.github.oliviercailloux.grade.Criterion;
 import io.github.oliviercailloux.grade.CriterionGradeWeight;
 import io.github.oliviercailloux.grade.DeadlineGrader;

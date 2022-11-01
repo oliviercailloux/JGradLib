@@ -12,10 +12,10 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Iterables;
 import io.github.oliviercailloux.git.GitHistory;
-import io.github.oliviercailloux.git.fs.Commit;
-import io.github.oliviercailloux.git.fs.GitPathRoot;
-import io.github.oliviercailloux.git.fs.GitPathRootSha;
 import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
+import io.github.oliviercailloux.gitjfs.Commit;
+import io.github.oliviercailloux.gitjfs.GitPathRoot;
+import io.github.oliviercailloux.gitjfs.GitPathRootSha;
 import io.github.oliviercailloux.grade.old.Mark;
 import io.github.oliviercailloux.jaris.collections.CollectionUtils;
 import io.github.oliviercailloux.jaris.exceptions.CheckedStream;
@@ -105,9 +105,9 @@ public class DeadlineGrader {
 			// c.getCommit().getCommitterDate().toInstant().equals(latestCommittedDate));
 
 			final Comparator<GitPathRootSha> byAuthorDate = Comparator
-					.comparing(c -> IO_UNCHECKER.getUsing(() -> c.getCommit()).getAuthorDate());
+					.comparing(c -> IO_UNCHECKER.getUsing(() -> c.getCommit()).authorDate());
 			final Comparator<GitPathRootSha> byCommitDate = Comparator
-					.comparing(c -> IO_UNCHECKER.getUsing(() -> c.getCommit()).getCommitterDate());
+					.comparing(c -> IO_UNCHECKER.getUsing(() -> c.getCommit()).committerDate());
 			final Throwing.Comparator<GitPathRootSha, IOException> byDate = (t1, t2) -> byAuthorDate
 					.thenComparing(byCommitDate).compare(t1, t2);
 			return Utils.<GitPathRootSha, IOException>getMaximalElements(leaves, byDate);
@@ -325,7 +325,7 @@ public class DeadlineGrader {
 			throws IOException {
 		final CheckedStream<GitPathRoot, IOException> checkedCommits = CheckedStream
 				.wrapping(history.getGraph().nodes().stream());
-		final ImmutableSet<String> authors = checkedCommits.map(GitPathRoot::getCommit).map(Commit::getAuthorName)
+		final ImmutableSet<String> authors = checkedCommits.map(GitPathRoot::getCommit).map(Commit::authorName)
 				.filter(s -> !s.equals("github-classroom[bot]")).collect(ImmutableSet.toImmutableSet());
 		final ImmutableSet<String> authorsShow = authors.stream().map(s -> "‘" + s + "’")
 				.collect(ImmutableSet.toImmutableSet());

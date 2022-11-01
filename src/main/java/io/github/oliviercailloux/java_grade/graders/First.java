@@ -6,8 +6,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import com.google.common.graph.Graphs;
-import io.github.oliviercailloux.git.fs.GitPath;
-import io.github.oliviercailloux.git.fs.GitPathRoot;
+import io.github.oliviercailloux.gitjfs.GitPath;
+import io.github.oliviercailloux.gitjfs.GitPathRoot;
 import io.github.oliviercailloux.grade.BatchGitHistoryGrader;
 import io.github.oliviercailloux.grade.Criterion;
 import io.github.oliviercailloux.grade.GitFileSystemHistory;
@@ -108,7 +108,7 @@ public class First implements GitFsGrader<RuntimeException> {
 			verify(patternS.matcher("A file!\nMore content!\n").matches());
 			verify(patternS.matcher("A file!\n\nMore content!\n").matches());
 			final boolean rightA = contentA.matches("More content!\\v*");
-			final String id = root.getCommit().getId().getName().substring(0, 6);
+			final String id = root.getCommit().id().getName().substring(0, 6);
 			final String comment = "Using commit " + id;
 			final MarksTree mark = MarksTree.composite(ImmutableMap.of(C_TWO, Mark.binary(exactlyTwo, comment, comment),
 					C_EXISTS_S, Mark.binary(existsS), C_EXISTS_A, Mark.binary(existsA), C_CONTENTS_S,
@@ -147,7 +147,7 @@ public class First implements GitFsGrader<RuntimeException> {
 			final boolean rightA = contentA.matches("More content!\\v*");
 			final String contentThird = existsThird ? Files.readString(pathThird) : "";
 			final boolean rightThird = contentThird.matches("Hello\\v*");
-			final String comment = "Using commit " + root.getCommit().getId().getName().substring(0, 6);
+			final String comment = "Using commit " + root.getCommit().id().getName().substring(0, 6);
 			final ImmutableMap.Builder<Criterion, MarksTree> builder = ImmutableMap.builder();
 			builder.put(C_THREE, Mark.binary(exactlyThree, comment, comment));
 			builder.put(C_EXISTS_S, Mark.binary(existsS));

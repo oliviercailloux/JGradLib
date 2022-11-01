@@ -9,9 +9,9 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.graph.Graph;
 import com.google.common.graph.Graphs;
 import com.google.common.graph.ImmutableGraph;
-import io.github.oliviercailloux.git.fs.GitFileSystem;
-import io.github.oliviercailloux.git.fs.GitPathRoot;
-import io.github.oliviercailloux.git.fs.GitPathRootSha;
+import io.github.oliviercailloux.gitjfs.GitFileSystem;
+import io.github.oliviercailloux.gitjfs.GitPathRoot;
+import io.github.oliviercailloux.gitjfs.GitPathRootSha;
 import io.github.oliviercailloux.utils.Utils;
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -105,7 +105,7 @@ public class GitUtils {
 		final ImmutableGraph<GitPathRootSha> graphOfPaths = gitFs.getCommitsGraph();
 
 		final Function<GitPathRoot, Instant> getDate = IO_UNCHECKER
-				.wrapFunction(p -> p.getCommit().getCommitterDate().toInstant());
+				.wrapFunction(p -> p.getCommit().committerDate().toInstant());
 
 		try {
 			final ImmutableGraph<ObjectId> graphOfIds = Utils.asImmutableGraph(graphOfPaths,

@@ -1,16 +1,7 @@
 package io.github.oliviercailloux.git;
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkState;
-import static io.github.oliviercailloux.jaris.exceptions.Unchecker.IO_UNCHECKER;
-
 import com.google.common.base.MoreObjects;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.ImmutableTable;
 import com.google.common.collect.MoreCollectors;
-import com.google.common.collect.Sets;
-import com.google.common.collect.Sets.SetView;
 import io.github.oliviercailloux.jaris.exceptions.Unchecker;
 import java.io.File;
 import java.io.IOException;
@@ -19,17 +10,12 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import org.eclipse.jgit.api.CloneCommand;
 import org.eclipse.jgit.api.Git;
-import org.eclipse.jgit.api.ListBranchCommand.ListMode;
 import org.eclipse.jgit.api.PullResult;
 import org.eclipse.jgit.api.Status;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.internal.storage.file.FileRepository;
-import org.eclipse.jgit.lib.Constants;
-import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.lib.Ref;
 import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
@@ -50,29 +36,12 @@ public class GitCloner {
 		return new GitCloner();
 	}
 
-	private ImmutableTable<String, String, ObjectId> remoteRefs;
-	private ImmutableMap<String, ObjectId> localRefs;
-	private boolean checkCommonRefsAgree;
-
-	public GitCloner() {
-		remoteRefs = null;
-		localRefs = null;
-		checkCommonRefsAgree = true;
-	}
-
-	public boolean checksCommonRefsAgree() {
-		return checkCommonRefsAgree;
-	}
-
-	public GitCloner setCheckCommonRefsAgree(boolean checkCommonRefsAgree) {
-		this.checkCommonRefsAgree = checkCommonRefsAgree;
-		return this;
+	private GitCloner() {
 	}
 
 	public void clone(GitUri gitUri, Repository repo) {
 		try (Git git = Git.wrap(repo)) {
 			git.fetch().setRemote(gitUri.asString()).setRefSpecs(new RefSpec("+refs/heads/*:refs/heads/*")).call();
-			maybeCheckCommonRefs(git);
 		} catch (GitAPIException e) {
 			throw new IllegalStateException(e);
 		}
@@ -115,8 +84,6 @@ public class GitCloner {
 	 * @throws GitAPIException
 	 */
 	private FileRepository download(GitUri uri, Path repositoryDirectory, boolean allowBare) throws GitAPIException {
-		localRefs = null;
-		remoteRefs = null;
 		final FileRepository repository;
 		final boolean exists = Files.exists(repositoryDirectory);
 		LOGGER.info("Downloading to {}, exists? {}.", repositoryDirectory, exists);
@@ -134,7 +101,6 @@ public class GitCloner {
 //			}
 //			try (Git git = Git.open(repositoryDirectory.toFile())) {
 			Git git = cloneCmd.call();
-			maybeCheckCommonRefs(git);
 			repository = (FileRepository) git.getRepository();
 		} else {
 			try {
@@ -192,67 +158,11 @@ public class GitCloner {
 				} else {
 					throw new IllegalStateException("Unexpected remote: " + remoteList);
 				}
-
-				maybeCheckCommonRefs(git);
 			} catch (IOException e) {
 				throw new UncheckedIOException(e);
 			}
 		}
 		return repository;
-	}
-
-	private void maybeCheckCommonRefs(Git git) throws GitAPIException {
-		if (checkCommonRefsAgree) {
-			/** Seems like this also includes HEAD when detached. */
-			final List<Ref> branches = git.branchList().setListMode(ListMode.ALL).call();
-			final List<Ref> allRefs = IO_UNCHECKER.getUsing(() -> git.getRepository().getRefDatabase().getRefs());
-			LOGGER.debug("All refs: {}, branches: {}.", allRefs, branches);
-
-			parse(branches);
-
-			final Ref head = IO_UNCHECKER.getUsing(() -> git.getRepository().findRef(Constants.HEAD));
-			checkArgument(head != null, "Did you forget to create the repository?");
-			final String headRef = head.getTarget().getName();
-			checkArgument(headRef.equals("refs/heads/master") || headRef.equals("refs/heads/main"), headRef);
-
-			final ImmutableMap<String, ObjectId> originRefs = remoteRefs.row("origin");
-			final SetView<String> commonRefShortNames = Sets.intersection(originRefs.keySet(), localRefs.keySet());
-			final ImmutableSet<String> disagreeingRefShortNames = commonRefShortNames.stream()
-					.filter((s) -> !originRefs.get(s).equals(localRefs.get(s))).collect(ImmutableSet.toImmutableSet());
-			checkArgument(disagreeingRefShortNames.isEmpty(),
-					String.format("Disagreeing: %s. Origin refs: %s; local refs: %s.", disagreeingRefShortNames,
-							originRefs, localRefs));
-		}
-	}
-
-	private void parse(List<Ref> branches) {
-		final ImmutableTable.Builder<String, String, ObjectId> remoteRefsBuilder = ImmutableTable.builder();
-		final ImmutableMap.Builder<String, ObjectId> localRefsBuilder = ImmutableMap.builder();
-		for (Ref branch : branches) {
-			final String fullName = branch.getName();
-			final Pattern refPattern = Pattern
-					.compile("refs/(?<kind>[^/]+)(/(?<remoteName>[^/]+))?/(?<shortName>[^/]+)");
-			final Matcher matcher = refPattern.matcher(fullName);
-			checkArgument(matcher.matches(), fullName);
-			final String kind = matcher.group("kind");
-			final String remoteName = matcher.group("remoteName");
-			final String shortName = matcher.group("shortName");
-			final ObjectId objectId = branch.getObjectId();
-			switch (kind) {
-			case "remotes":
-				checkState(remoteName.length() >= 1);
-				remoteRefsBuilder.put(remoteName, shortName, objectId);
-				break;
-			case "heads":
-				checkState(remoteName == null, fullName);
-				localRefsBuilder.put(shortName, objectId);
-				break;
-			default:
-				throw new IllegalArgumentException("Unknown ref kind: " + kind);
-			}
-		}
-		remoteRefs = remoteRefsBuilder.build();
-		localRefs = localRefsBuilder.build();
 	}
 
 	private String toString(Status status) {

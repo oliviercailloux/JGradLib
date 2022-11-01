@@ -9,9 +9,9 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import com.google.common.collect.MoreCollectors;
 import com.google.common.graph.Graphs;
-import io.github.oliviercailloux.git.fs.GitPath;
-import io.github.oliviercailloux.git.fs.GitPathRoot;
-import io.github.oliviercailloux.git.fs.GitPathRootShaCached;
+import io.github.oliviercailloux.gitjfs.GitPath;
+import io.github.oliviercailloux.gitjfs.GitPathRoot;
+import io.github.oliviercailloux.gitjfs.GitPathRootShaCached;
 import io.github.oliviercailloux.grade.BatchGitHistoryGrader;
 import io.github.oliviercailloux.grade.Criterion;
 import io.github.oliviercailloux.grade.GitFileSystemHistory;
@@ -50,7 +50,7 @@ public class BranchingBis implements GitFsGrader<IOException> {
 
 	public static SubMarksTree subGrade(GitPathRoot gitPathRoot, MarksTree grade)
 			throws IOException, NoSuchFileException {
-		final String comment = "Using " + gitPathRoot.getCommit().getId().getName();
+		final String comment = "Using " + gitPathRoot.getCommit().id().getName();
 		final MarksTree newTree = addComment(grade, comment);
 
 		final Criterion criterion = Criterion.given(comment);
@@ -58,7 +58,7 @@ public class BranchingBis implements GitFsGrader<IOException> {
 	}
 
 	public static SubMarksTree subGrade(GitPathRootShaCached gitPathRoot, MarksTree grade) {
-		final String comment = "Using " + gitPathRoot.getCommit().getId().getName();
+		final String comment = "Using " + gitPathRoot.getCommit().id().getName();
 		final MarksTree newTree = addComment(grade, comment);
 
 		final Criterion criterion = Criterion.given(comment);

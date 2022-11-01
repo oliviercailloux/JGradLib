@@ -9,8 +9,8 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import com.google.common.collect.MoreCollectors;
 import com.google.common.graph.Graphs;
-import io.github.oliviercailloux.git.fs.GitPath;
-import io.github.oliviercailloux.git.fs.GitPathRoot;
+import io.github.oliviercailloux.gitjfs.GitPath;
+import io.github.oliviercailloux.gitjfs.GitPathRoot;
 import io.github.oliviercailloux.grade.BatchGitHistoryGrader;
 import io.github.oliviercailloux.grade.Criterion;
 import io.github.oliviercailloux.grade.GitFileSystemHistory;
@@ -135,7 +135,7 @@ public class Branching implements GitFsGrader<IOException> {
 
 	private SubMarksTree subGrade(GitPathRoot gitPathRoot, Function<GitPathRoot, MarksTree, IOException> grader)
 			throws IOException, NoSuchFileException {
-		final String comment = "Using " + gitPathRoot.getCommit().getId().getName();
+		final String comment = "Using " + gitPathRoot.getCommit().id().getName();
 		final MarksTree grade = grader.apply(gitPathRoot);
 		final MarksTree newTree = addComment(grade, comment);
 

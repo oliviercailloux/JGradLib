@@ -6,6 +6,9 @@ import io.github.oliviercailloux.git.GitUri;
 import jakarta.json.JsonObject;
 import java.net.URI;
 
+/**
+ * TODO replace with the gitfs version
+ */
 public class RepositoryCoordinates {
 	public static RepositoryCoordinates from(String owner, String repo) {
 		return new RepositoryCoordinates(owner, repo);

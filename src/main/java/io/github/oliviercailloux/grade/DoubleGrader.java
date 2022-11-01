@@ -8,8 +8,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
-import io.github.oliviercailloux.git.fs.GitPathRootSha;
 import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
+import io.github.oliviercailloux.gitjfs.GitPathRootSha;
 import io.github.oliviercailloux.grade.DeadlineGrader.LinearPenalizer;
 import io.github.oliviercailloux.jaris.throwing.TOptional;
 import io.github.oliviercailloux.java_grade.graders.Grader421;
@@ -56,7 +56,7 @@ public class DoubleGrader implements Grader<IOException> {
 		try {
 			earliestTimeCommitByGitHub = ByTimeGrader.earliestTimeCommitByGitHub(data);
 			beforeCommitByGitHub = TOptional.wrapping(earliestTimeCommitByGitHub)
-					.map(t -> data.filter(c -> data.asGitHistory().getTimestamp(c.getCommit().getId()).isBefore(t), t))
+					.map(t -> data.filter(c -> data.asGitHistory().getTimestamp(c.getCommit().id()).isBefore(t), t))
 					.orElse(data);
 		} catch (IOException e) {
 			throw new IllegalStateException(e);

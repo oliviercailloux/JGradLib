@@ -2,19 +2,16 @@ package io.github.oliviercailloux.utils;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
-import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.base.Verify.verify;
 import static io.github.oliviercailloux.jaris.exceptions.Unchecker.IO_UNCHECKER;
 
 import com.google.common.base.Strings;
 import com.google.common.base.Verify;
-import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.PeekingIterator;
 import com.google.common.collect.Streams;
-import com.google.common.collect.UnmodifiableIterator;
 import com.google.common.graph.EndpointPair;
 import com.google.common.graph.Graph;
 import com.google.common.graph.GraphBuilder;
@@ -38,11 +35,8 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.AbstractMap.SimpleImmutableEntry;
-import java.util.AbstractSet;
-import java.util.ArrayDeque;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
@@ -107,6 +101,9 @@ public class Utils {
 		return resolved;
 	}
 
+	/**
+	 * @deprecated use the jaris version
+	 */
 	public static <E, F extends E> Graph<E> asGraph(SuccessorsFunction<F> successorsFunction, Set<F> roots) {
 		checkNotNull(successorsFunction);
 		checkNotNull(roots);
@@ -141,6 +138,9 @@ public class Utils {
 		return asImmutableGraph(graph, transformer);
 	}
 
+	/**
+	 * @deprecated see the Jaris version
+	 */
 	public static <E, F> ImmutableGraph<F> asImmutableGraph(Graph<E> graph, Function<E, F> transformer) {
 		final GraphBuilder<Object> startBuilder = graph.isDirected() ? GraphBuilder.directed()
 				: GraphBuilder.undirected();
@@ -196,6 +196,9 @@ public class Utils {
 		});
 	}
 
+	/**
+	 * @deprecated use the Jaris version
+	 */
 	public static <E> ImmutableGraph<E> asGraph(List<E> elements) {
 		final MutableGraph<E> builder = GraphBuilder.directed().allowsSelfLoops(false).build();
 		final ListIterator<E> iterator = elements.listIterator();
@@ -208,69 +211,6 @@ public class Utils {
 			}
 		}
 		return ImmutableGraph.copyOf(builder);
-	}
-
-	/**
-	 * From jbduncan at https://github.com/jrtom/jung/pull/174
-	 */
-	public static <N> Set<N> topologicallySortedNodes(Graph<N> graph) {
-		return new TopologicallySortedNodes<>(graph);
-	}
-
-	private static class TopologicallySortedNodes<N> extends AbstractSet<N> {
-		private final Graph<N> graph;
-
-		private TopologicallySortedNodes(Graph<N> graph) {
-			this.graph = checkNotNull(graph, "graph");
-		}
-
-		@Override
-		public UnmodifiableIterator<N> iterator() {
-			return new TopologicalOrderIterator<>(graph);
-		}
-
-		@Override
-		public int size() {
-			return graph.nodes().size();
-		}
-
-		@Override
-		public boolean remove(Object o) {
-			throw new UnsupportedOperationException();
-		}
-	}
-
-	private static class TopologicalOrderIterator<N> extends AbstractIterator<N> {
-		private final Graph<N> graph;
-		private final Queue<N> roots;
-		private final Map<N, Integer> nonRootsToInDegree;
-
-		private TopologicalOrderIterator(Graph<N> graph) {
-			this.graph = checkNotNull(graph, "graph");
-			this.roots = graph.nodes().stream().filter(node -> graph.inDegree(node) == 0)
-					.collect(Collectors.toCollection(ArrayDeque::new));
-			this.nonRootsToInDegree = graph.nodes().stream().filter(node -> graph.inDegree(node) > 0)
-					.collect(Collectors.toMap(node -> node, graph::inDegree, (a, b) -> a, HashMap::new));
-		}
-
-		@Override
-		protected N computeNext() {
-			// Kahn's algorithm
-			if (!roots.isEmpty()) {
-				N next = roots.remove();
-				for (N successor : graph.successors(next)) {
-					int newInDegree = nonRootsToInDegree.get(successor) - 1;
-					nonRootsToInDegree.put(successor, newInDegree);
-					if (newInDegree == 0) {
-						nonRootsToInDegree.remove(successor);
-						roots.add(successor);
-					}
-				}
-				return next;
-			}
-			checkState(nonRootsToInDegree.isEmpty(), "graph has at least one cycle");
-			return endOfData();
-		}
 	}
 
 	public static <T, X extends Exception> ImmutableSet<T> getMaximalElements(Iterable<T> iterable,

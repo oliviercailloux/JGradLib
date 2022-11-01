@@ -55,7 +55,7 @@ public class FindEnds {
 		final Path projectsBaseDir = WORK_DIR.resolve(prefix);
 		final Path projectDir = projectsBaseDir.resolve(coord.getRepositoryName());
 		/* False because sometimes the main branch has a strange name. */
-		new GitCloner().setCheckCommonRefsAgree(false).download(GitUri.fromUri(coord.asURI()), projectDir).close();
+		GitCloner.create().download(GitUri.fromUri(coord.asURI()), projectDir).close();
 
 		try (Git git = IO_UNCHECKER.getUsing(() -> Git.open(projectDir.resolve(".git").toFile()))) {
 			final List<Ref> remoteRefs = Unchecker.wrappingWith(IllegalStateException::new)

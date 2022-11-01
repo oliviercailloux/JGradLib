@@ -7,12 +7,12 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.MoreCollectors;
 import io.github.oliviercailloux.git.GitCloner;
-import io.github.oliviercailloux.git.fs.GitFileSystem;
-import io.github.oliviercailloux.git.fs.GitFileSystemProvider;
 import io.github.oliviercailloux.git.git_hub.model.GitHubToken;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinatesWithPrefix;
 import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherV3;
+import io.github.oliviercailloux.gitjfs.GitFileSystem;
+import io.github.oliviercailloux.gitjfs.GitFileSystemProvider;
 import io.github.oliviercailloux.grade.comm.json.JsonStudentOnGitHubKnown;
 import io.github.oliviercailloux.grade.markers.Marks;
 import io.github.oliviercailloux.json.JsonbUtils;
@@ -98,8 +98,8 @@ public class HarvestIds {
 
 	private Optional<Integer> getId(RepositoryCoordinates coordinates) throws IOException {
 		LOGGER.info("Proceeding with {}.", coordinates);
-		try (FileRepository repository = GitCloner.create().setCheckCommonRefsAgree(false)
-				.download(coordinates.asGitUri(), Utils.getTempDirectory().resolve(coordinates.getRepositoryName()));
+		try (FileRepository repository = GitCloner.create().download(coordinates.asGitUri(),
+				Utils.getTempDirectory().resolve(coordinates.getRepositoryName()));
 				GitFileSystem fs = GitFileSystemProvider.getInstance().newFileSystemFromFileRepository(repository)) {
 			return getId(fs);
 		}

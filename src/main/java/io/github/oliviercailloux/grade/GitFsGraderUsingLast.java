@@ -2,7 +2,7 @@ package io.github.oliviercailloux.grade;
 
 import static com.google.common.base.Verify.verify;
 
-import io.github.oliviercailloux.git.fs.GitPathRootSha;
+import io.github.oliviercailloux.gitjfs.GitPathRootSha;
 
 public class GitFsGraderUsingLast<X extends Exception> implements GitFsGrader<X> {
 	public static <X extends Exception> GitFsGraderUsingLast<X> using(PathGrader<X> g) {

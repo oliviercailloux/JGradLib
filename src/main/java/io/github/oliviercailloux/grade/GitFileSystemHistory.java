@@ -11,13 +11,13 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import com.google.common.graph.ImmutableGraph;
 import io.github.oliviercailloux.git.GitHistory;
-import io.github.oliviercailloux.git.fs.Commit;
-import io.github.oliviercailloux.git.fs.GitFileFileSystem;
-import io.github.oliviercailloux.git.fs.GitFileSystem;
-import io.github.oliviercailloux.git.fs.GitPath;
-import io.github.oliviercailloux.git.fs.GitPathRoot;
-import io.github.oliviercailloux.git.fs.GitPathRootRef;
-import io.github.oliviercailloux.git.fs.GitPathRootSha;
+import io.github.oliviercailloux.gitjfs.Commit;
+import io.github.oliviercailloux.gitjfs.GitFileFileSystem;
+import io.github.oliviercailloux.gitjfs.GitFileSystem;
+import io.github.oliviercailloux.gitjfs.GitPath;
+import io.github.oliviercailloux.gitjfs.GitPathRoot;
+import io.github.oliviercailloux.gitjfs.GitPathRootRef;
+import io.github.oliviercailloux.gitjfs.GitPathRootSha;
 import io.github.oliviercailloux.grade.old.Mark;
 import io.github.oliviercailloux.jaris.exceptions.Throwing;
 import io.github.oliviercailloux.utils.Utils;
@@ -200,13 +200,13 @@ public class GitFileSystemHistory {
 
 	private Stream<GitPathRootRef> getRefsStream() throws IOException {
 		final Throwing.Predicate<GitPathRoot, IOException> inThisHistory = GitGrader.Predicates
-				.compose(GitPathRoot::getCommit, c -> history.getGraph().nodes().contains(c.getId()));
+				.compose(GitPathRoot::getCommit, c -> history.getGraph().nodes().contains(c.id()));
 		/*
 		 * Note that on GitHub, every commit designated by some ref should have a push
 		 * date; but in this object, we might not have been given those push dates.
 		 */
 		final Throwing.Predicate<GitPathRoot, IOException> withinCap = GitGrader.Predicates
-				.compose(GitPathRoot::getCommit, GitGrader.Predicates.compose(Commit::getId, GitGrader.Predicates
+				.compose(GitPathRoot::getCommit, GitGrader.Predicates.compose(Commit::id, GitGrader.Predicates
 						.compose(o -> pushDates.getOrDefault(o, Instant.MIN), i -> !i.isAfter(furtherCap))));
 		final Predicate<GitPathRoot> inThisHistoryWrapped = IO_UNCHECKER.wrapPredicate(inThisHistory.and(withinCap));
 		try {
@@ -262,7 +262,7 @@ public class GitFileSystemHistory {
 		if (commit.isCommitId()) {
 			id = commit.getStaticCommitId();
 		} else {
-			id = commit.getCommit().getId();
+			id = commit.getCommit().id();
 		}
 		if (!history.getGraph().nodes().contains(id)) {
 			throw new NoSuchFileException(commit.toString());
@@ -352,7 +352,7 @@ public class GitFileSystemHistory {
 	public ImmutableSet<GitPathRoot> getRefsTo(GitPathRootSha target) throws IOException {
 		final ObjectId targetId = target.getStaticCommitId();
 		final Throwing.Predicate<? super GitPathRoot, IOException> rightTarget = GitGrader.Predicates
-				.compose(GitPathRoot::getCommit, c -> c.getId().equals(targetId));
+				.compose(GitPathRoot::getCommit, c -> c.id().equals(targetId));
 		return getRefsMatching(rightTarget);
 	}
 
@@ -401,9 +401,9 @@ public class GitFileSystemHistory {
 
 		try (ObjectReader reader = repository.newObjectReader()) {
 			CanonicalTreeParser oldTreeIter = new CanonicalTreeParser();
-			oldTreeIter.reset(reader, getTreeId(oldId.getCommit().getId(), reader));
+			oldTreeIter.reset(reader, getTreeId(oldId.getCommit().id(), reader));
 			CanonicalTreeParser newTreeIter = new CanonicalTreeParser();
-			newTreeIter.reset(reader, getTreeId(newId.getCommit().getId(), reader));
+			newTreeIter.reset(reader, getTreeId(newId.getCommit().id(), reader));
 
 			try (Git git = new Git(repository)) {
 				final List<DiffEntry> diff = git.diff().setNewTree(newTreeIter).setOldTree(oldTreeIter).call();

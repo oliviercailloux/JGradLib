@@ -11,11 +11,11 @@ import com.google.common.graph.ImmutableGraph;
 import io.github.oliviercailloux.git.GitCloner;
 import io.github.oliviercailloux.git.GitHistory;
 import io.github.oliviercailloux.git.GitUtils;
-import io.github.oliviercailloux.git.fs.GitFileSystem;
-import io.github.oliviercailloux.git.fs.GitFileSystemProvider;
-import io.github.oliviercailloux.git.fs.GitPathRoot;
 import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
+import io.github.oliviercailloux.gitjfs.GitFileSystem;
+import io.github.oliviercailloux.gitjfs.GitFileSystemProvider;
+import io.github.oliviercailloux.gitjfs.GitPathRoot;
 import io.github.oliviercailloux.grade.GitFileSystemHistory;
 import io.github.oliviercailloux.grade.GitWork;
 import io.github.oliviercailloux.grade.IGrade;
@@ -54,7 +54,7 @@ public class EclipseTests {
 
 	@Test
 	void testNothing() throws Exception {
-		try (FileRepository repository = GitCloner.create().setCheckCommonRefsAgree(false).download(
+		try (FileRepository repository = GitCloner.create().download(
 				RepositoryCoordinates.from("oliviercailloux-org", "minimax-ex").asGitUri(),
 				Utils.getTempDirectory().resolve("minimax-ex"));
 				GitFileSystem gitFs = GitFileSystemProvider.getInstance().newFileSystemFromRepository(repository)) {
@@ -66,7 +66,7 @@ public class EclipseTests {
 			LOGGER.debug("Cst: {}.", withConstantTimes.getGraph().nodes().size());
 
 			final GitPathRoot master = gitFs.getPathRoot("/refs/remotes/origin/master/");
-			final GitPathRoot masterId = gitFs.getPathRoot(master.getCommit().getId());
+			final GitPathRoot masterId = gitFs.getPathRoot(master.getCommit().id());
 			final GitFileSystemHistory justMaster = withConstantTimes.filter(r -> r.equals(masterId));
 			LOGGER.debug("From master: {}.", justMaster);
 
@@ -79,7 +79,7 @@ public class EclipseTests {
 
 	@Test
 	void testPerfect() throws Exception {
-		try (FileRepository repository = GitCloner.create().setCheckCommonRefsAgree(false).download(
+		try (FileRepository repository = GitCloner.create().download(
 				RepositoryCoordinates.from("oliviercailloux-org", "minimax-ex").asGitUri(),
 				Utils.getTempDirectory().resolve("minimax-ex"));
 				GitFileSystem gitFs = GitFileSystemProvider.getInstance().newFileSystemFromRepository(repository)) {
@@ -91,7 +91,7 @@ public class EclipseTests {
 			LOGGER.debug("Cst: {}.", withConstantTimes.getGraph().nodes().size());
 
 			final GitPathRoot master = gitFs.getPathRoot("/refs/remotes/origin/master/");
-			final GitPathRoot masterId = gitFs.getPathRoot(master.getCommit().getId());
+			final GitPathRoot masterId = gitFs.getPathRoot(master.getCommit().id());
 			final Set<GitPathRoot> afterMaster = Graphs.reachableNodes(withConstantTimes.getGraph(), masterId);
 			final GitFileSystemHistory fromMaster = withConstantTimes
 					.filter(r -> afterMaster.contains(r) || r.equals(masterId));

@@ -63,7 +63,7 @@ public class ByTimeAndGitHubIgnoringGrader<X extends Exception> implements Grade
 			earliestTimeCommitByGitHub = ByTimeGrader.earliestTimeCommitByGitHub(history);
 			LOGGER.debug("Earliest: {}.", earliestTimeCommitByGitHub);
 			beforeCommitByGitHub = TOptional.wrapping(earliestTimeCommitByGitHub).map(
-					t -> history.filter(c -> history.asGitHistory().getTimestamp(c.getCommit().getId()).isBefore(t), t))
+					t -> history.filter(c -> history.asGitHistory().getTimestamp(c.getCommit().id()).isBefore(t), t))
 					.orElse(history);
 		} catch (IOException e) {
 			throw new IllegalStateException(e);

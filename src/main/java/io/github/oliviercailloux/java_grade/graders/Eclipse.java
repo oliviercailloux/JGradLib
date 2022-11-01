@@ -9,8 +9,8 @@ import static io.github.oliviercailloux.jaris.exceptions.Unchecker.IO_UNCHECKER;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
-import io.github.oliviercailloux.git.fs.GitPath;
-import io.github.oliviercailloux.git.fs.GitPathRoot;
+import io.github.oliviercailloux.gitjfs.GitPath;
+import io.github.oliviercailloux.gitjfs.GitPathRoot;
 import io.github.oliviercailloux.grade.Criterion;
 import io.github.oliviercailloux.grade.CriterionGradeWeight;
 import io.github.oliviercailloux.grade.DeadlineGrader;
@@ -70,14 +70,14 @@ public class Eclipse implements GitGrader {
 	public WeightingGrade grade(GitWork work) throws IOException {
 		this.history = work.getHistory();
 		if (excludeMine) {
-			authoredHistory = history.filter(r -> !r.getCommit().getAuthorName().equals("Olivier Cailloux")
-					&& !r.getCommit().getAuthorName().equals("xoxor")
-					&& !r.getCommit().getAuthorName().equals("Beatrice Napolitano"));
+			authoredHistory = history.filter(r -> !r.getCommit().authorName().equals("Olivier Cailloux")
+					&& !r.getCommit().authorName().equals("xoxor")
+					&& !r.getCommit().authorName().equals("Beatrice Napolitano"));
 		} else {
 			authoredHistory = history;
 		}
 		final ImmutableSet<String> authors = authoredHistory.getGraph().nodes().stream()
-				.map(c -> IO_UNCHECKER.getUsing(c::getCommit).getAuthorName()).distinct()
+				.map(c -> IO_UNCHECKER.getUsing(c::getCommit).authorName()).distinct()
 				.collect(ImmutableSet.toImmutableSet());
 		verify(authors.size() <= 1, authors.toString());
 		LOGGER.debug("Considering whole history {} and own history {}.", history.getGraph().nodes(),
