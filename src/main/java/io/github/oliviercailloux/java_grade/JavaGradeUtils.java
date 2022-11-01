@@ -7,8 +7,8 @@ import com.google.common.collect.ImmutableList;
 import io.github.oliviercailloux.grade.GradingException;
 import io.github.oliviercailloux.grade.IGrade;
 import io.github.oliviercailloux.grade.MarksTree;
-import io.github.oliviercailloux.jaris.exceptions.Throwing;
 import io.github.oliviercailloux.jaris.exceptions.TryCatchAll;
+import io.github.oliviercailloux.jaris.throwing.TFunction;
 import io.github.oliviercailloux.java_grade.bytecode.Instanciator;
 import io.github.oliviercailloux.java_grade.bytecode.RestrictingClassLoader;
 import java.io.IOException;
@@ -111,7 +111,7 @@ public class JavaGradeUtils {
 	}
 
 	public static <X extends Exception> MarksTree markSecurely(Path classPathRoot,
-			Throwing.Function<Instanciator, MarksTree, X> gradeFunction) throws X {
+			TFunction<Instanciator, MarksTree, X> gradeFunction) throws X {
 		final MarksTree implGrade;
 		try (URLClassLoader loader = RestrictingClassLoader.noPermissions(classPathRoot.toUri().toURL(),
 				gradeFunction.getClass().getClassLoader())) {

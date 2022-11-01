@@ -19,8 +19,9 @@ import io.github.oliviercailloux.gitjfs.GitPathRootSha;
 import io.github.oliviercailloux.grade.old.Mark;
 import io.github.oliviercailloux.jaris.collections.CollectionUtils;
 import io.github.oliviercailloux.jaris.exceptions.CheckedStream;
-import io.github.oliviercailloux.jaris.exceptions.Throwing;
 import io.github.oliviercailloux.jaris.io.PathUtils;
+import io.github.oliviercailloux.jaris.throwing.TComparator;
+import io.github.oliviercailloux.jaris.throwing.TFunction;
 import io.github.oliviercailloux.java_grade.JavaGradeUtils;
 import io.github.oliviercailloux.java_grade.bytecode.Compiler;
 import io.github.oliviercailloux.java_grade.bytecode.Compiler.CompilationResult;
@@ -58,9 +59,9 @@ public class DeadlineGrader {
 	private static class PathToGitGrader {
 
 		private static final double USER_GRADE_WEIGHT = 0.5d / 20d;
-		private final Throwing.Function<Path, IGrade, IOException> simpleWorkGrader;
+		private final TFunction<Path, IGrade, IOException> simpleWorkGrader;
 
-		private PathToGitGrader(Throwing.Function<Path, IGrade, IOException> simpleWorkGrader) {
+		private PathToGitGrader(TFunction<Path, IGrade, IOException> simpleWorkGrader) {
 			this.simpleWorkGrader = checkNotNull(simpleWorkGrader);
 		}
 
@@ -71,7 +72,7 @@ public class DeadlineGrader {
 			checkArgument(!latestTiedPathsOnTime.isEmpty());
 			LOGGER.debug("Considering {}.", latestTiedPathsOnTime);
 			final IGrade mainGrade = CheckedStream.<GitPathRootSha, IOException>wrapping(latestTiedPathsOnTime.stream())
-					.map(simpleWorkGrader).min(Throwing.Comparator.comparing(IGrade::getPoints)).get();
+					.map(simpleWorkGrader).min(TComparator.comparing(IGrade::getPoints)).get();
 			return WeightingGrade.from(ImmutableSet.of(
 					CriterionGradeWeight.from(Criterion.given("user.name"), userGrade, USER_GRADE_WEIGHT),
 					CriterionGradeWeight.from(Criterion.given("main"), mainGrade, 1d - USER_GRADE_WEIGHT)));
@@ -108,7 +109,7 @@ public class DeadlineGrader {
 					.comparing(c -> IO_UNCHECKER.getUsing(() -> c.getCommit()).authorDate());
 			final Comparator<GitPathRootSha> byCommitDate = Comparator
 					.comparing(c -> IO_UNCHECKER.getUsing(() -> c.getCommit()).committerDate());
-			final Throwing.Comparator<GitPathRootSha, IOException> byDate = (t1, t2) -> byAuthorDate
+			final TComparator<GitPathRootSha, IOException> byDate = (t1, t2) -> byAuthorDate
 					.thenComparing(byCommitDate).compare(t1, t2);
 			return Utils.<GitPathRootSha, IOException>getMaximalElements(leaves, byDate);
 		}
@@ -288,7 +289,7 @@ public class DeadlineGrader {
 		return new DeadlineGrader(grader::grade, deadline, LinearPenalizer.DEFAULT_PENALIZER);
 	}
 
-	public static DeadlineGrader usingPathGrader(Throwing.Function<Path, IGrade, IOException> grader,
+	public static DeadlineGrader usingPathGrader(TFunction<Path, IGrade, IOException> grader,
 			ZonedDateTime deadline) {
 		return new DeadlineGrader(new PathToGitGrader(grader)::grade, deadline, LinearPenalizer.DEFAULT_PENALIZER);
 	}
@@ -335,11 +336,11 @@ public class DeadlineGrader {
 				"Expected ‘" + authorExpected + "’, seen " + authorsShow);
 	}
 
-	private final Throwing.Function<GitWork, IGrade, IOException> grader;
+	private final TFunction<GitWork, IGrade, IOException> grader;
 	private final ZonedDateTime deadline;
 	private Penalizer penalizer;
 
-	private DeadlineGrader(Throwing.Function<GitWork, IGrade, IOException> gitWorkGrader, ZonedDateTime deadline,
+	private DeadlineGrader(TFunction<GitWork, IGrade, IOException> gitWorkGrader, ZonedDateTime deadline,
 			Penalizer penalizer) {
 		this.grader = checkNotNull(gitWorkGrader);
 		this.deadline = checkNotNull(deadline);

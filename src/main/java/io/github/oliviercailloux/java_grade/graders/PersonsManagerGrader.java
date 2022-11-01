@@ -18,9 +18,9 @@ import io.github.oliviercailloux.grade.IGrade;
 import io.github.oliviercailloux.grade.RepositoryFetcher;
 import io.github.oliviercailloux.grade.WeightingGrade;
 import io.github.oliviercailloux.grade.old.Mark;
-import io.github.oliviercailloux.jaris.exceptions.Throwing;
 import io.github.oliviercailloux.jaris.exceptions.TryCatchAll;
 import io.github.oliviercailloux.jaris.exceptions.TryCatchAllVoid;
+import io.github.oliviercailloux.jaris.throwing.TSupplier;
 import io.github.oliviercailloux.java_grade.bytecode.Instanciator;
 import io.github.oliviercailloux.java_grade.utils.StdOutErrLogger;
 import io.github.oliviercailloux.java_grade.utils.Summarizer;
@@ -46,7 +46,7 @@ import org.slf4j.LoggerFactory;
 
 public class PersonsManagerGrader {
 
-	public static <T, X extends Exception> Supplier<Optional<T>> wrap(Throwing.Supplier<T, X> supplier) {
+	public static <T, X extends Exception> Supplier<Optional<T>> wrap(TSupplier<T, X> supplier) {
 		return () -> {
 			try {
 				return Optional.of(supplier.get());

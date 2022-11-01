@@ -5,8 +5,8 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.google.common.collect.ImmutableSet;
 import io.github.oliviercailloux.grade.old.Mark;
-import io.github.oliviercailloux.jaris.exceptions.Throwing;
-import io.github.oliviercailloux.jaris.exceptions.Throwing.Function;
+import io.github.oliviercailloux.jaris.throwing.TFunction;
+import io.github.oliviercailloux.jaris.throwing.TPredicate;
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
@@ -40,22 +40,22 @@ import java.util.Set;
 public class WeightingGrader<E> {
 
 	public static class CriterionGraderWeight<E> {
-		public static <E> CriterionGraderWeight<E> given(Criterion criterion,
-				Throwing.Predicate<E, IOException> predicate, double weight) {
+		public static <E> CriterionGraderWeight<E> given(Criterion criterion, TPredicate<E, IOException> predicate,
+				double weight) {
 			return new CriterionGraderWeight<>(criterion,
 					(Optional<E> o) -> Mark.binary(o.isPresent() && predicate.test(o.get())), weight);
 		}
 
 		public static <E> CriterionGraderWeight<E> given(Criterion criterion,
-				Throwing.Function<Optional<E>, IGrade, IOException> grader, double weight) {
+				TFunction<Optional<E>, IGrade, IOException> grader, double weight) {
 			return new CriterionGraderWeight<>(criterion, grader, weight);
 		}
 
 		private final Criterion criterion;
-		private final Throwing.Function<Optional<E>, IGrade, IOException> grader;
+		private final TFunction<Optional<E>, IGrade, IOException> grader;
 		private final double weight;
 
-		private CriterionGraderWeight(Criterion criterion, Throwing.Function<Optional<E>, IGrade, IOException> grader,
+		private CriterionGraderWeight(Criterion criterion, TFunction<Optional<E>, IGrade, IOException> grader,
 				double weight) {
 			this.criterion = checkNotNull(criterion);
 			this.grader = checkNotNull(grader);
@@ -68,22 +68,22 @@ public class WeightingGrader<E> {
 	}
 
 	public static <E> WeightingGrader<E> getGrader(List<CriterionGraderWeight<E>> cs) {
-		final ImmutableSet<Throwing.Function<Optional<E>, CriterionGradeWeight, IOException>> graders = cs.stream()
-				.map(c -> ((Throwing.Function<Optional<E>, CriterionGradeWeight, IOException>) c::grade))
+		final ImmutableSet<TFunction<Optional<E>, CriterionGradeWeight, IOException>> graders = cs.stream()
+				.map(c -> ((TFunction<Optional<E>, CriterionGradeWeight, IOException>) c::grade))
 				.collect(ImmutableSet.toImmutableSet());
 		return new WeightingGrader<>(graders);
 	}
 
-	private final ImmutableSet<Function<Optional<E>, CriterionGradeWeight, IOException>> subGraders;
+	private final ImmutableSet<TFunction<Optional<E>, CriterionGradeWeight, IOException>> subGraders;
 
-	private WeightingGrader(Set<Throwing.Function<Optional<E>, CriterionGradeWeight, IOException>> subGraders) {
+	private WeightingGrader(Set<TFunction<Optional<E>, CriterionGradeWeight, IOException>> subGraders) {
 		checkArgument(!subGraders.isEmpty());
 		this.subGraders = ImmutableSet.copyOf(subGraders);
 	}
 
 	public WeightingGrade getGrade(Optional<E> source) throws IOException {
 		final ImmutableSet.Builder<CriterionGradeWeight> builder = ImmutableSet.builder();
-		for (Throwing.Function<Optional<E>, CriterionGradeWeight, IOException> subGrader : subGraders) {
+		for (TFunction<Optional<E>, CriterionGradeWeight, IOException> subGrader : subGraders) {
 			final CriterionGradeWeight grade = subGrader.apply(source);
 			builder.add(grade);
 		}

@@ -20,8 +20,7 @@ import io.github.oliviercailloux.grade.RepositoryFetcher;
 import io.github.oliviercailloux.grade.WeightingGrade;
 import io.github.oliviercailloux.grade.markers.Marks;
 import io.github.oliviercailloux.grade.old.Mark;
-import io.github.oliviercailloux.jaris.exceptions.Throwing;
-import io.github.oliviercailloux.jaris.exceptions.Throwing.Predicate;
+import io.github.oliviercailloux.jaris.throwing.TPredicate;
 import io.github.oliviercailloux.java_grade.testers.JavaMarkHelper;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -76,11 +75,12 @@ public class Commit {
 			final Pattern digitPattern = Marks.extendWhite("\\d+");
 			final Mark myIdContent = history
 					.anyCommitMatches(compose(resolve("myid.txt"), contentMatches(digitPattern)));
-			final Predicate<GitPathRoot, IOException> p1 = compose(resolve("myid.txt"), contentMatches(digitPattern));
-			final Predicate<GitPathRoot, IOException> p2 = compose(resolve("afile.txt"), contentMatches(coucouPattern));
-			final Throwing.Predicate<GitPathRoot, IOException> both = p1.and(p2);
+			final TPredicate<GitPathRoot, IOException> p1 = compose(resolve("myid.txt"), contentMatches(digitPattern));
+			final TPredicate<GitPathRoot, IOException> p2 = compose(resolve("afile.txt"),
+					contentMatches(coucouPattern));
+			final TPredicate<GitPathRoot, IOException> both = p1.and(p2);
 			final Mark myIdAndAFileContent = history.anyCommitMatches(both);
-			final Throwing.Predicate<GitPathRoot, IOException> branch = isBranch("main").or(isBranch("master"));
+			final TPredicate<GitPathRoot, IOException> branch = isBranch("main").or(isBranch("master"));
 			final Mark mainContent = history.anyRefMatches(branch.and(both));
 			final CriterionGradeWeight myIdGrade = CriterionGradeWeight.from(Criterion.given("'myid.txt' content"),
 					myIdContent, 1d);

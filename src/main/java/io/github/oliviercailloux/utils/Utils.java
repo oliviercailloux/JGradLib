@@ -19,7 +19,8 @@ import com.google.common.graph.ImmutableGraph;
 import com.google.common.graph.MutableGraph;
 import com.google.common.graph.SuccessorsFunction;
 import io.github.oliviercailloux.jaris.exceptions.CheckedStream;
-import io.github.oliviercailloux.jaris.exceptions.Throwing;
+import io.github.oliviercailloux.jaris.throwing.TComparator;
+import io.github.oliviercailloux.jaris.throwing.TPredicate;
 import java.io.FilePermission;
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -214,7 +215,7 @@ public class Utils {
 	}
 
 	public static <T, X extends Exception> ImmutableSet<T> getMaximalElements(Iterable<T> iterable,
-			Throwing.Comparator<T, ? extends X> comparator) throws X {
+			TComparator<T, ? extends X> comparator) throws X {
 		final Optional<T> maxOpt = CheckedStream.<T, X>wrapping(Streams.stream(iterable)).max(comparator);
 		if (maxOpt.isEmpty()) {
 			return ImmutableSet.of();
@@ -225,7 +226,7 @@ public class Utils {
 	}
 
 	public static ImmutableSet<Path> getPathsMatching(Path root,
-			Throwing.Predicate<? super Path, IOException> predicate) throws IOException {
+			TPredicate<? super Path, IOException> predicate) throws IOException {
 		final Predicate<? super Path> wrapped = IO_UNCHECKER.wrapPredicate(predicate);
 		try (Stream<Path> foundStream = Files.find(root, Integer.MAX_VALUE, (p, a) -> wrapped.test(p))) {
 			return foundStream.collect(ImmutableSet.toImmutableSet());

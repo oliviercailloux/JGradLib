@@ -14,8 +14,8 @@ import io.github.oliviercailloux.grade.format.CsvGrades;
 import io.github.oliviercailloux.grade.format.HtmlGrades;
 import io.github.oliviercailloux.grade.format.json.JsonSimpleGrade;
 import io.github.oliviercailloux.jaris.collections.CollectionUtils;
-import io.github.oliviercailloux.jaris.exceptions.Throwing;
 import io.github.oliviercailloux.jaris.throwing.TOptional;
+import io.github.oliviercailloux.jaris.throwing.TSupplier;
 import io.github.oliviercailloux.xml.XmlUtils;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -37,13 +37,13 @@ public class BatchGitHistoryGrader<X extends Exception> {
 	public static final ZonedDateTime MAX_DEADLINE = Instant.ofEpochMilli(Long.MAX_VALUE).atZone(ZoneOffset.UTC);
 
 	public static <X extends Exception> BatchGitHistoryGrader<X> given(
-			Throwing.Supplier<GitFileSystemWithHistoryFetcher, X> fetcherFactory) {
+			TSupplier<GitFileSystemWithHistoryFetcher, X> fetcherFactory) {
 		return new BatchGitHistoryGrader<>(fetcherFactory);
 	}
 
-	private final Throwing.Supplier<GitFileSystemWithHistoryFetcher, X> fetcherFactory;
+	private final TSupplier<GitFileSystemWithHistoryFetcher, X> fetcherFactory;
 
-	private BatchGitHistoryGrader(Throwing.Supplier<GitFileSystemWithHistoryFetcher, X> fetcherFactory) {
+	private BatchGitHistoryGrader(TSupplier<GitFileSystemWithHistoryFetcher, X> fetcherFactory) {
 		this.fetcherFactory = checkNotNull(fetcherFactory);
 	}
 

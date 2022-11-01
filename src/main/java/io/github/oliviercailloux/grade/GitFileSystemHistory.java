@@ -19,7 +19,8 @@ import io.github.oliviercailloux.gitjfs.GitPathRoot;
 import io.github.oliviercailloux.gitjfs.GitPathRootRef;
 import io.github.oliviercailloux.gitjfs.GitPathRootSha;
 import io.github.oliviercailloux.grade.old.Mark;
-import io.github.oliviercailloux.jaris.exceptions.Throwing;
+import io.github.oliviercailloux.jaris.throwing.TFunction;
+import io.github.oliviercailloux.jaris.throwing.TPredicate;
 import io.github.oliviercailloux.utils.Utils;
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -58,12 +59,12 @@ import org.slf4j.LoggerFactory;
  * that would not appear in the graph.
  *
  * <p>
- * Idea: add getRefsMatching(Throwing.Predicate<GitPathRoot> refPredicate):
+ * Idea: add getRefsMatching(TPredicate<GitPathRoot> refPredicate):
  * ImmutableSet<GitPathRoot>.
  *
- * static filter(Set<GitPathRoot>, Throwing.Predicate<GitPath>):
- * ImmutableSet<GitPath>. NB I can use this to filter on oids in order to
- * implement anyMatch if nothing better. But what about allMatchAndExists?
+ * static filter(Set<GitPathRoot>, TPredicate<GitPath>): ImmutableSet<GitPath>.
+ * NB I can use this to filter on oids in order to implement anyMatch if nothing
+ * better. But what about allMatchAndExists?
  *
  * <p>
  * OR filter only on refs, thus filter(T.P<GPR> refPredicate, TP<GP>); and
@@ -118,9 +119,9 @@ public class GitFileSystemHistory {
 	private static final Logger LOGGER = LoggerFactory.getLogger(GitFileSystemHistory.class);
 
 	private static ImmutableSet<GitPath> getPathsMatching(Stream<GitPathRoot> startingPaths,
-			Throwing.Predicate<GitPath, IOException> predicate) throws IOException {
+			TPredicate<GitPath, IOException> predicate) throws IOException {
 		final Predicate<GitPath> wrappedPredicate = IO_UNCHECKER.wrapPredicate(predicate);
-		final Throwing.Function<GitPathRoot, Stream<GitPath>, IOException> matchingFiles = r -> Files
+		final TFunction<GitPathRoot, Stream<GitPath>, IOException> matchingFiles = r -> Files
 				.find(r, 100, (p, a) -> wrappedPredicate.test((GitPath) p)).map(p -> (GitPath) p);
 		final Function<GitPathRoot, Stream<GitPath>> wrappedMatchingFiles = IO_UNCHECKER.wrapFunction(matchingFiles);
 		try {
@@ -199,14 +200,14 @@ public class GitFileSystemHistory {
 	}
 
 	private Stream<GitPathRootRef> getRefsStream() throws IOException {
-		final Throwing.Predicate<GitPathRoot, IOException> inThisHistory = GitGrader.Predicates
-				.compose(GitPathRoot::getCommit, c -> history.getGraph().nodes().contains(c.id()));
+		final TPredicate<GitPathRoot, IOException> inThisHistory = GitGrader.Predicates.compose(GitPathRoot::getCommit,
+				c -> history.getGraph().nodes().contains(c.id()));
 		/*
 		 * Note that on GitHub, every commit designated by some ref should have a push
 		 * date; but in this object, we might not have been given those push dates.
 		 */
-		final Throwing.Predicate<GitPathRoot, IOException> withinCap = GitGrader.Predicates
-				.compose(GitPathRoot::getCommit, GitGrader.Predicates.compose(Commit::id, GitGrader.Predicates
+		final TPredicate<GitPathRoot, IOException> withinCap = GitGrader.Predicates.compose(GitPathRoot::getCommit,
+				GitGrader.Predicates.compose(Commit::id, GitGrader.Predicates
 						.compose(o -> pushDates.getOrDefault(o, Instant.MIN), i -> !i.isAfter(furtherCap))));
 		final Predicate<GitPathRoot> inThisHistoryWrapped = IO_UNCHECKER.wrapPredicate(inThisHistory.and(withinCap));
 		try {
@@ -274,11 +275,11 @@ public class GitFileSystemHistory {
 		return history.getGraph().nodes().isEmpty();
 	}
 
-	public GitFileSystemHistory filter(Throwing.Predicate<GitPathRoot, IOException> predicate) throws IOException {
+	public GitFileSystemHistory filter(TPredicate<GitPathRoot, IOException> predicate) throws IOException {
 		return filter(predicate, furtherCap);
 	}
 
-	public GitFileSystemHistory filter(Throwing.Predicate<GitPathRoot, IOException> predicate, Instant andFurtherCap)
+	public GitFileSystemHistory filter(TPredicate<GitPathRoot, IOException> predicate, Instant andFurtherCap)
 			throws IOException {
 		final Predicate<GitPathRoot> wrappedPredicate = IO_UNCHECKER.wrapPredicate(predicate);
 		try {
@@ -290,18 +291,18 @@ public class GitFileSystemHistory {
 		}
 	}
 
-	public Mark allAndSomeCommitMatch(Throwing.Predicate<GitPathRoot, IOException> p) throws IOException {
+	public Mark allAndSomeCommitMatch(TPredicate<GitPathRoot, IOException> p) throws IOException {
 		final int nbMatch = filter(p).getGraph().nodes().size();
 		return Mark.binary(nbMatch >= 1 && nbMatch == getGraph().nodes().size());
 	}
 
-	public Mark anyCommitMatches(Throwing.Predicate<GitPathRoot, IOException> p) throws IOException {
+	public Mark anyCommitMatches(TPredicate<GitPathRoot, IOException> p) throws IOException {
 		final boolean match = !filter(p).isEmpty();
 		return Mark.binary(match);
 	}
 
 	private <FO extends Comparable<FO>> Optional<GitPathRoot> getCommitMaximizing(
-			Throwing.Function<GitPathRoot, FO, IOException> scorer, FO bestPossible) throws IOException {
+			TFunction<GitPathRoot, FO, IOException> scorer, FO bestPossible) throws IOException {
 		/**
 		 * As grading sometimes takes a lot of time (e.g. 3 seconds to grade
 		 * "eclipse-compile" because it requires a find all, currently very slow), it is
@@ -326,7 +327,7 @@ public class GitFileSystemHistory {
 	}
 
 	public <FO extends Comparable<FO>> Optional<GitPathRoot> getCommitMaximizing(
-			Throwing.Function<GitPathRoot, FO, IOException> scorer) throws IOException {
+			TFunction<GitPathRoot, FO, IOException> scorer) throws IOException {
 		final Function<GitPathRoot, FO> wrappedScorer = IO_UNCHECKER.wrapFunction(scorer);
 		try {
 			return getGraph().nodes().stream().max(Comparator.comparing(wrappedScorer));
@@ -335,11 +336,11 @@ public class GitFileSystemHistory {
 		}
 	}
 
-	public Mark anyRefMatches(Throwing.Predicate<GitPathRoot, IOException> p) throws IOException {
+	public Mark anyRefMatches(TPredicate<GitPathRoot, IOException> p) throws IOException {
 		return Mark.binary(!getRefsMatching(p).isEmpty());
 	}
 
-	public ImmutableSet<GitPathRoot> getRefsMatching(Throwing.Predicate<? super GitPathRoot, IOException> predicate)
+	public ImmutableSet<GitPathRoot> getRefsMatching(TPredicate<? super GitPathRoot, IOException> predicate)
 			throws IOException {
 		final Predicate<? super GitPathRoot> wrappedPredicate = IO_UNCHECKER.wrapPredicate(predicate);
 		try {
@@ -351,21 +352,20 @@ public class GitFileSystemHistory {
 
 	public ImmutableSet<GitPathRoot> getRefsTo(GitPathRootSha target) throws IOException {
 		final ObjectId targetId = target.getStaticCommitId();
-		final Throwing.Predicate<? super GitPathRoot, IOException> rightTarget = GitGrader.Predicates
+		final TPredicate<? super GitPathRoot, IOException> rightTarget = GitGrader.Predicates
 				.compose(GitPathRoot::getCommit, c -> c.id().equals(targetId));
 		return getRefsMatching(rightTarget);
 	}
 
-	public IGrade getBestGrade(Throwing.Function<Optional<GitPathRoot>, IGrade, IOException> grader,
-			double bestPossible) throws IOException {
-		final Throwing.Function<Optional<GitPathRoot>, Double, IOException> scorer = r -> grader.apply(r).getPoints();
+	public IGrade getBestGrade(TFunction<Optional<GitPathRoot>, IGrade, IOException> grader, double bestPossible)
+			throws IOException {
+		final TFunction<Optional<GitPathRoot>, Double, IOException> scorer = r -> grader.apply(r).getPoints();
 		final Optional<GitPathRoot> best = getCommitMaximizing(r -> scorer.apply(Optional.of(r)), bestPossible);
 		return grader.apply(best);
 	}
 
 	@Deprecated
-	public ImmutableSet<GitPath> getPathsMatching(Throwing.Predicate<GitPath, IOException> predicate)
-			throws IOException {
+	public ImmutableSet<GitPath> getPathsMatching(TPredicate<GitPath, IOException> predicate) throws IOException {
 		return getPathsMatching(getGraph().nodes().stream(), predicate);
 	}
 

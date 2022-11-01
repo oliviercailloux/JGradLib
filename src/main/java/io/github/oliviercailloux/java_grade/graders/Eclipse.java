@@ -23,8 +23,8 @@ import io.github.oliviercailloux.grade.RepositoryFetcher;
 import io.github.oliviercailloux.grade.WeightingGrade;
 import io.github.oliviercailloux.grade.markers.Marks;
 import io.github.oliviercailloux.grade.old.Mark;
-import io.github.oliviercailloux.jaris.exceptions.Throwing.Function;
-import io.github.oliviercailloux.jaris.exceptions.Throwing.Predicate;
+import io.github.oliviercailloux.jaris.throwing.TFunction;
+import io.github.oliviercailloux.jaris.throwing.TPredicate;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -127,13 +127,13 @@ public class Eclipse implements GitGrader {
 
 	boolean compiles(GitPathRoot p) throws IOException {
 		LOGGER.debug("Files matching.");
-		final Function<GitPathRoot, ImmutableSet<GitPath>, IOException> filesMatching = Functions
+		final TFunction<GitPathRoot, ImmutableSet<GitPath>, IOException> filesMatching = Functions
 				.filesMatching(isFileNamed("QuestioningConstraint.java"));
 		final ImmutableSet<GitPath> matching = filesMatching.apply(p);
 		LOGGER.debug("Files matching found: {}.", matching);
 		final Pattern patternCompiles = Pattern.compile(".*^(?<indent>\\h+)return[\\v\\h]+kind[\\v\\h]*;.*",
 				Pattern.DOTALL | Pattern.MULTILINE);
-		final Predicate<ImmutableSet<GitPath>, IOException> singletonAndMatch = Predicates
+		final TPredicate<ImmutableSet<GitPath>, IOException> singletonAndMatch = Predicates
 				.singletonAndMatch(contentMatches(patternCompiles));
 		final boolean tested = singletonAndMatch.test(matching);
 		LOGGER.debug("Predicate known: {}.", tested);

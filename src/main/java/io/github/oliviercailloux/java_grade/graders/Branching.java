@@ -15,16 +15,16 @@ import io.github.oliviercailloux.grade.BatchGitHistoryGrader;
 import io.github.oliviercailloux.grade.Criterion;
 import io.github.oliviercailloux.grade.GitFileSystemHistory;
 import io.github.oliviercailloux.grade.GitFileSystemWithHistoryFetcherByPrefix;
+import io.github.oliviercailloux.grade.GitFsGrader;
 import io.github.oliviercailloux.grade.GitGrader.Predicates;
 import io.github.oliviercailloux.grade.Grade;
 import io.github.oliviercailloux.grade.GradeAggregator;
-import io.github.oliviercailloux.grade.GitFsGrader;
 import io.github.oliviercailloux.grade.IGrade.CriteriaPath;
 import io.github.oliviercailloux.grade.Mark;
 import io.github.oliviercailloux.grade.MarksTree;
 import io.github.oliviercailloux.grade.SubMark;
 import io.github.oliviercailloux.grade.SubMarksTree;
-import io.github.oliviercailloux.jaris.exceptions.Throwing.Function;
+import io.github.oliviercailloux.jaris.throwing.TFunction;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
@@ -133,7 +133,7 @@ public class Branching implements GitFsGrader<IOException> {
 		return subs.isEmpty() ? Mark.zero(commentIfEmpty) : MarksTree.composite(subs);
 	}
 
-	private SubMarksTree subGrade(GitPathRoot gitPathRoot, Function<GitPathRoot, MarksTree, IOException> grader)
+	private SubMarksTree subGrade(GitPathRoot gitPathRoot, TFunction<GitPathRoot, MarksTree, IOException> grader)
 			throws IOException, NoSuchFileException {
 		final String comment = "Using " + gitPathRoot.getCommit().id().getName();
 		final MarksTree grade = grader.apply(gitPathRoot);

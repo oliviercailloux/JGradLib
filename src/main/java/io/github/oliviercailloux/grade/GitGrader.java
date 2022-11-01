@@ -8,7 +8,8 @@ import com.google.common.collect.Iterables;
 import com.google.common.primitives.Ints;
 import io.github.oliviercailloux.gitjfs.GitPath;
 import io.github.oliviercailloux.gitjfs.GitPathRoot;
-import io.github.oliviercailloux.jaris.exceptions.Throwing;
+import io.github.oliviercailloux.jaris.throwing.TFunction;
+import io.github.oliviercailloux.jaris.throwing.TPredicate;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
@@ -22,16 +23,16 @@ import org.slf4j.LoggerFactory;
 
 public interface GitGrader {
 	public static class Predicates {
-		public static Throwing.Predicate<Path, IOException> isFileNamed(String fileName) {
+		public static TPredicate<Path, IOException> isFileNamed(String fileName) {
 			return p -> p.getFileName() != null && p.getFileName().toString().equals(fileName);
 		}
 
-		public static Throwing.Predicate<Path, IOException> contentMatches(Pattern pattern) {
+		public static TPredicate<Path, IOException> contentMatches(Pattern pattern) {
 			return p -> Files.exists(p) && pattern.matcher(Files.readString(p)).matches();
 		}
 
-		public static Throwing.Predicate<GitPathRoot, IOException> containsFileMatching(
-				Throwing.Predicate<? super GitPath, IOException> predicate) {
+		public static TPredicate<GitPathRoot, IOException> containsFileMatching(
+				TPredicate<? super GitPath, IOException> predicate) {
 			final Predicate<? super GitPath> wrappedPredicate = IO_UNCHECKER.wrapPredicate(predicate);
 			return r -> {
 				try (Stream<Path> found = Files.find(r, 100, (p, a) -> wrappedPredicate.test((GitPath) p))) {
@@ -42,7 +43,7 @@ public interface GitGrader {
 			};
 		}
 
-		public static Throwing.Predicate<GitPathRoot, IOException> isBranch(String remoteBranch) {
+		public static TPredicate<GitPathRoot, IOException> isBranch(String remoteBranch) {
 			checkArgument(!remoteBranch.contains("/"));
 			checkArgument(!remoteBranch.isEmpty());
 
@@ -58,13 +59,13 @@ public interface GitGrader {
 			return patternBranch.matcher(gitRef).matches();
 		}
 
-		public static <PI, QI, FO extends QI> Throwing.Predicate<PI, IOException> compose(
-				Throwing.Function<PI, FO, IOException> f, Throwing.Predicate<QI, IOException> p) {
+		public static <PI, QI, FO extends QI> TPredicate<PI, IOException> compose(
+				TFunction<PI, FO, IOException> f, TPredicate<QI, IOException> p) {
 			return r -> p.test(f.apply(r));
 		}
 
-		public static <PI> Throwing.Predicate<ImmutableSet<PI>, IOException> anyMatch(
-				Throwing.Predicate<? super PI, IOException> p) {
+		public static <PI> TPredicate<ImmutableSet<PI>, IOException> anyMatch(
+				TPredicate<? super PI, IOException> p) {
 			return r -> {
 				try {
 					return r.stream().anyMatch(IO_UNCHECKER.wrapPredicate(p));
@@ -74,8 +75,8 @@ public interface GitGrader {
 			};
 		}
 
-		public static <PI> Throwing.Predicate<ImmutableSet<PI>, IOException> allAndSomeMatch(
-				Throwing.Predicate<? super PI, IOException> p) {
+		public static <PI> TPredicate<ImmutableSet<PI>, IOException> allAndSomeMatch(
+				TPredicate<? super PI, IOException> p) {
 			return r -> {
 				try {
 					return !r.isEmpty() && r.stream().allMatch(IO_UNCHECKER.wrapPredicate(p));
@@ -85,8 +86,8 @@ public interface GitGrader {
 			};
 		}
 
-		public static <PI> Throwing.Predicate<ImmutableSet<PI>, IOException> singletonAndMatch(
-				Throwing.Predicate<? super PI, IOException> p) {
+		public static <PI> TPredicate<ImmutableSet<PI>, IOException> singletonAndMatch(
+				TPredicate<? super PI, IOException> p) {
 			return r -> r.size() == 1 && p.test(Iterables.getOnlyElement(r));
 		}
 	}
@@ -95,12 +96,12 @@ public interface GitGrader {
 		@SuppressWarnings("unused")
 		private static final Logger LOGGER = LoggerFactory.getLogger(GitGrader.class);
 
-		public static <FI extends GitPath> Throwing.Function<FI, GitPath, IOException> resolve(String file) {
+		public static <FI extends GitPath> TFunction<FI, GitPath, IOException> resolve(String file) {
 			return r -> r.resolve(file);
 		}
 
-		public static Throwing.Function<GitPathRoot, Integer, IOException> countTrue(
-				Set<Throwing.Predicate<GitPathRoot, IOException>> predicates) throws IOException {
+		public static TFunction<GitPathRoot, Integer, IOException> countTrue(
+				Set<TPredicate<GitPathRoot, IOException>> predicates) throws IOException {
 			try {
 				return r -> Ints.checkedCast(
 						predicates.stream().map(p -> IO_UNCHECKER.wrapPredicate(p).test(r)).filter(b -> b).count());
@@ -109,8 +110,8 @@ public interface GitGrader {
 			}
 		}
 
-		public static Throwing.Function<GitPathRoot, ImmutableSet<GitPath>, IOException> filesMatching(
-				Throwing.Predicate<? super GitPath, IOException> predicate) {
+		public static TFunction<GitPathRoot, ImmutableSet<GitPath>, IOException> filesMatching(
+				TPredicate<? super GitPath, IOException> predicate) {
 			final Predicate<? super GitPath> wrappedPredicate = IO_UNCHECKER.wrapPredicate(predicate);
 			return r -> {
 				try (Stream<Path> found = Files.find(r, 100, (p, a) -> wrappedPredicate.test((GitPath) p))) {

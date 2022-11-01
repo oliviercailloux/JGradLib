@@ -17,19 +17,19 @@ import io.github.oliviercailloux.grade.BatchGitHistoryGrader;
 import io.github.oliviercailloux.grade.Criterion;
 import io.github.oliviercailloux.grade.GitFileSystemHistory;
 import io.github.oliviercailloux.grade.GitFileSystemWithHistoryFetcherByPrefix;
+import io.github.oliviercailloux.grade.GitFsGrader;
 import io.github.oliviercailloux.grade.GitGrader.Functions;
 import io.github.oliviercailloux.grade.GitGrader.Predicates;
 import io.github.oliviercailloux.grade.GradeAggregator;
-import io.github.oliviercailloux.grade.GitFsGrader;
 import io.github.oliviercailloux.grade.Mark;
 import io.github.oliviercailloux.grade.MarksTree;
 import io.github.oliviercailloux.grade.SubMark;
 import io.github.oliviercailloux.grade.SubMarksTree;
 import io.github.oliviercailloux.grade.markers.Marks;
 import io.github.oliviercailloux.jaris.exceptions.CheckedStream;
-import io.github.oliviercailloux.jaris.exceptions.Throwing.Function;
-import io.github.oliviercailloux.jaris.exceptions.Throwing.Predicate;
+import io.github.oliviercailloux.jaris.throwing.TFunction;
 import io.github.oliviercailloux.jaris.throwing.TOptional;
+import io.github.oliviercailloux.jaris.throwing.TPredicate;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -247,13 +247,13 @@ public class EclipseBis implements GitFsGrader<IOException> {
 
 	boolean compiles(GitPathRoot p) throws IOException {
 		LOGGER.debug("Files matching.");
-		final Function<GitPathRoot, ImmutableSet<GitPath>, IOException> filesMatching = Functions
+		final TFunction<GitPathRoot, ImmutableSet<GitPath>, IOException> filesMatching = Functions
 				.filesMatching(isFileNamed("Oracle.java"));
 		final ImmutableSet<GitPath> matching = filesMatching.apply(p);
 		LOGGER.debug("Files matching found: {}.", matching);
 		final Pattern patternCompiles = Pattern.compile(".*^(?<indent>\\h+)return[\\v\\h]+alternatives.[\\v\\h]*size.*",
 				Pattern.DOTALL | Pattern.MULTILINE);
-		final Predicate<ImmutableSet<GitPath>, IOException> singletonAndMatch = Predicates
+		final TPredicate<ImmutableSet<GitPath>, IOException> singletonAndMatch = Predicates
 				.singletonAndMatch(contentMatches(patternCompiles));
 		final boolean tested = singletonAndMatch.test(matching);
 		LOGGER.debug("Predicate known: {}.", tested);
