@@ -13,9 +13,9 @@ import io.github.oliviercailloux.git.GitHistory;
 import io.github.oliviercailloux.git.GitUtils;
 import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
-import io.github.oliviercailloux.gitjfs.impl.GitFileSystemImpl;
-import io.github.oliviercailloux.gitjfs.impl.GitFileSystemProviderImpl;
-import io.github.oliviercailloux.gitjfs.impl.GitPathRootImpl;
+import io.github.oliviercailloux.gitjfs.GitFileSystem;
+import io.github.oliviercailloux.gitjfs.GitFileSystemProvider;
+import io.github.oliviercailloux.gitjfs.GitPathRoot;
 import io.github.oliviercailloux.grade.GitFileSystemHistory;
 import io.github.oliviercailloux.grade.GitWork;
 import io.github.oliviercailloux.grade.IGrade;
@@ -41,7 +41,7 @@ public class EclipseTests {
 	@Test
 	void testEmpty() throws Exception {
 		try (Repository repository = new InMemoryRepository(new DfsRepositoryDescription("myrepo"));
-				GitFileSystemImpl gitFs = GitFileSystemProviderImpl.getInstance().newFileSystemFromRepository(repository)) {
+				GitFileSystem gitFs = GitFileSystemProvider.getInstance().newFileSystemFromRepository(repository)) {
 
 			final GitFileSystemHistory empty = GitFileSystemHistory.create(gitFs,
 					GitHistory.create(GraphBuilder.directed().build(), ImmutableMap.of()));
@@ -57,7 +57,7 @@ public class EclipseTests {
 		try (FileRepository repository = GitCloner.create().download(
 				RepositoryCoordinates.from("oliviercailloux-org", "minimax-ex").asGitUri(),
 				Utils.getTempDirectory().resolve("minimax-ex"));
-				GitFileSystemImpl gitFs = GitFileSystemProviderImpl.getInstance().newFileSystemFromRepository(repository)) {
+				GitFileSystem gitFs = GitFileSystemProvider.getInstance().newFileSystemFromRepository(repository)) {
 			final GitHistory rawHistory = GitUtils.getHistory(gitFs);
 			final ImmutableGraph<ObjectId> graph = rawHistory.getGraph();
 			final Map<ObjectId, Instant> constantTimes = Maps.asMap(graph.nodes(), o -> Commit.DEADLINE.toInstant());
@@ -65,8 +65,8 @@ public class EclipseTests {
 					GitHistory.create(graph, constantTimes));
 			LOGGER.debug("Cst: {}.", withConstantTimes.getGraph().nodes().size());
 
-			final GitPathRootImpl master = gitFs.getPathRoot("/refs/remotes/origin/master/");
-			final GitPathRootImpl masterId = gitFs.getPathRoot(master.getCommit().id());
+			final GitPathRoot master = gitFs.getPathRoot("/refs/remotes/origin/master/");
+			final GitPathRoot masterId = gitFs.getPathRoot(master.getCommit().id());
 			final GitFileSystemHistory justMaster = withConstantTimes.filter(r -> r.equals(masterId));
 			LOGGER.debug("From master: {}.", justMaster);
 
@@ -82,7 +82,7 @@ public class EclipseTests {
 		try (FileRepository repository = GitCloner.create().download(
 				RepositoryCoordinates.from("oliviercailloux-org", "minimax-ex").asGitUri(),
 				Utils.getTempDirectory().resolve("minimax-ex"));
-				GitFileSystemImpl gitFs = GitFileSystemProviderImpl.getInstance().newFileSystemFromRepository(repository)) {
+				GitFileSystem gitFs = GitFileSystemProvider.getInstance().newFileSystemFromRepository(repository)) {
 			final GitHistory rawHistory = GitUtils.getHistory(gitFs);
 			final ImmutableGraph<ObjectId> graph = rawHistory.getGraph();
 			final Map<ObjectId, Instant> constantTimes = Maps.asMap(graph.nodes(), o -> Commit.DEADLINE.toInstant());
@@ -90,9 +90,9 @@ public class EclipseTests {
 					GitHistory.create(graph, constantTimes));
 			LOGGER.debug("Cst: {}.", withConstantTimes.getGraph().nodes().size());
 
-			final GitPathRootImpl master = gitFs.getPathRoot("/refs/remotes/origin/master/");
-			final GitPathRootImpl masterId = gitFs.getPathRoot(master.getCommit().id());
-			final Set<GitPathRootImpl> afterMaster = Graphs.reachableNodes(withConstantTimes.getGraph(), masterId);
+			final GitPathRoot master = gitFs.getPathRoot("/refs/remotes/origin/master/");
+			final GitPathRoot masterId = gitFs.getPathRoot(master.getCommit().id());
+			final Set<GitPathRoot> afterMaster = Graphs.reachableNodes(withConstantTimes.getGraph(), masterId);
 			final GitFileSystemHistory fromMaster = withConstantTimes
 					.filter(r -> afterMaster.contains(r) || r.equals(masterId));
 			LOGGER.debug("From master: {}.", fromMaster);

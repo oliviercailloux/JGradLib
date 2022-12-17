@@ -9,7 +9,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
-import io.github.oliviercailloux.gitjfs.impl.GitPathRootShaImpl;
+import io.github.oliviercailloux.gitjfs.GitPathRootSha;
 import io.github.oliviercailloux.grade.DeadlineGrader.LinearPenalizer;
 import io.github.oliviercailloux.jaris.throwing.TOptional;
 import io.github.oliviercailloux.java_grade.graders.Grader421;
@@ -83,8 +83,8 @@ public class DoubleGrader implements Grader<IOException> {
 			for (GitFileSystemHistory cappedS : cappedsSecond) {
 				final MarksTree old = gO.grade(author, cappedO);
 				final MarksTree second = gS.grade(author, cappedS);
-				final GitPathRootShaImpl lastO = ByTimeGrader.last(cappedO);
-				final GitPathRootShaImpl lastS = ByTimeGrader.last(cappedS);
+				final GitPathRootSha lastO = ByTimeGrader.last(cappedO);
+				final GitPathRootSha lastS = ByTimeGrader.last(cappedS);
 				final Instant cappedIO = ByTimeGrader.cappedAt(cappedO);
 				final Instant cappedIS = ByTimeGrader.cappedAt(cappedS);
 				verify(!cappedIO.isAfter(Grader421.CAP_ORIGINAL), cappedIO.toString());

@@ -9,7 +9,7 @@ import com.google.common.collect.MoreCollectors;
 import com.google.common.jimfs.Jimfs;
 import com.google.common.util.concurrent.SimpleTimeLimiter;
 import io.github.oliviercailloux.gitjfs.GitPath;
-import io.github.oliviercailloux.gitjfs.impl.GitPathRootImpl;
+import io.github.oliviercailloux.gitjfs.GitPathRoot;
 import io.github.oliviercailloux.grade.BatchGitHistoryGrader;
 import io.github.oliviercailloux.grade.CodeGrader;
 import io.github.oliviercailloux.grade.Criterion;
@@ -69,7 +69,7 @@ public class GraderVarious implements CodeGrader<RuntimeException> {
 						LOGGER.info("Compiling {} to {}.", javaPaths, compiledDir);
 						final ImmutableSet<GitPath> gitPaths = javaPaths.stream().map(p -> (GitPath) p)
 								.collect(ImmutableSet.toImmutableSet());
-						final String root = gitPaths.stream().map(GitPath::getRoot).map(GitPathRootImpl::getStaticCommitId)
+						final String root = gitPaths.stream().map(GitPath::getRoot).map(GitPathRoot::getStaticCommitId)
 								.map(ObjectId::getName).distinct().collect(MoreCollectors.onlyElement());
 						LOGGER.info("Root: {}.", root);
 						if (!root.equals("fc6a3c6f9864eccd9fa53d0c8e3cb70704d4835e")) {

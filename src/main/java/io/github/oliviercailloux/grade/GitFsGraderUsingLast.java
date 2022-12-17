@@ -2,7 +2,7 @@ package io.github.oliviercailloux.grade;
 
 import static com.google.common.base.Verify.verify;
 
-import io.github.oliviercailloux.gitjfs.impl.GitPathRootShaImpl;
+import io.github.oliviercailloux.gitjfs.GitPathRootSha;
 
 public class GitFsGraderUsingLast<X extends Exception> implements GitFsGrader<X> {
 	public static <X extends Exception> GitFsGraderUsingLast<X> using(PathGrader<X> g) {
@@ -19,7 +19,7 @@ public class GitFsGraderUsingLast<X extends Exception> implements GitFsGrader<X>
 	public MarksTree grade(GitFileSystemHistory data) throws X {
 		verify(!data.getGraph().nodes().isEmpty());
 
-		final GitPathRootShaImpl leaf = ByTimeGrader.last(data);
+		final GitPathRootSha leaf = ByTimeGrader.last(data);
 		return g.grade(leaf);
 	}
 

@@ -7,7 +7,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.primitives.Ints;
 import io.github.oliviercailloux.gitjfs.GitPath;
-import io.github.oliviercailloux.gitjfs.impl.GitPathRootImpl;
+import io.github.oliviercailloux.gitjfs.GitPathRoot;
 import io.github.oliviercailloux.jaris.throwing.TFunction;
 import io.github.oliviercailloux.jaris.throwing.TPredicate;
 import java.io.IOException;
@@ -31,7 +31,7 @@ public interface GitGrader {
 			return p -> Files.exists(p) && pattern.matcher(Files.readString(p)).matches();
 		}
 
-		public static TPredicate<GitPathRootImpl, IOException> containsFileMatching(
+		public static TPredicate<GitPathRoot, IOException> containsFileMatching(
 				TPredicate<? super GitPath, IOException> predicate) {
 			final Predicate<? super GitPath> wrappedPredicate = IO_UNCHECKER.wrapPredicate(predicate);
 			return r -> {
@@ -43,7 +43,7 @@ public interface GitGrader {
 			};
 		}
 
-		public static TPredicate<GitPathRootImpl, IOException> isBranch(String remoteBranch) {
+		public static TPredicate<GitPathRoot, IOException> isBranch(String remoteBranch) {
 			checkArgument(!remoteBranch.contains("/"));
 			checkArgument(!remoteBranch.isEmpty());
 
@@ -100,8 +100,8 @@ public interface GitGrader {
 			return r -> r.resolve(file);
 		}
 
-		public static TFunction<GitPathRootImpl, Integer, IOException> countTrue(
-				Set<TPredicate<GitPathRootImpl, IOException>> predicates) throws IOException {
+		public static TFunction<GitPathRoot, Integer, IOException> countTrue(
+				Set<TPredicate<GitPathRoot, IOException>> predicates) throws IOException {
 			try {
 				return r -> Ints.checkedCast(
 						predicates.stream().map(p -> IO_UNCHECKER.wrapPredicate(p).test(r)).filter(b -> b).count());
@@ -110,7 +110,7 @@ public interface GitGrader {
 			}
 		}
 
-		public static TFunction<GitPathRootImpl, ImmutableSet<GitPath>, IOException> filesMatching(
+		public static TFunction<GitPathRoot, ImmutableSet<GitPath>, IOException> filesMatching(
 				TPredicate<? super GitPath, IOException> predicate) {
 			final Predicate<? super GitPath> wrappedPredicate = IO_UNCHECKER.wrapPredicate(predicate);
 			return r -> {

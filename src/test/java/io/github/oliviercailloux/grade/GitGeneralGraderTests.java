@@ -12,8 +12,8 @@ import com.google.common.jimfs.Configuration;
 import com.google.common.jimfs.Jimfs;
 import io.github.oliviercailloux.git.GitHistory;
 import io.github.oliviercailloux.git.GitUtils;
-import io.github.oliviercailloux.gitjfs.impl.GitFileSystemImpl;
-import io.github.oliviercailloux.gitjfs.impl.GitFileSystemProviderImpl;
+import io.github.oliviercailloux.gitjfs.GitFileSystem;
+import io.github.oliviercailloux.gitjfs.GitFileSystemProvider;
 import io.github.oliviercailloux.java_grade.graders.Commit;
 import io.github.oliviercailloux.jgit.JGit;
 import io.github.oliviercailloux.utils.Utils;
@@ -43,7 +43,7 @@ public class GitGeneralGraderTests {
 	@Disabled("To be implemented")
 	void testEmpty() throws Exception {
 		try (Repository repository = new InMemoryRepository(new DfsRepositoryDescription("myrepo"));
-				GitFileSystemImpl gitFs = GitFileSystemProviderImpl.getInstance().newFileSystemFromRepository(repository)) {
+				GitFileSystem gitFs = GitFileSystemProvider.getInstance().newFileSystemFromRepository(repository)) {
 			assertTrue(repository.getObjectDatabase().exists());
 			assertFalse(repository.getRefDatabase().hasRefs());
 
@@ -91,7 +91,7 @@ public class GitGeneralGraderTests {
 
 			try (Repository repository = JGit.createRepository(personIdent, Utils.asGraph(ImmutableList.of(c1, c2, c3)),
 					links);
-					GitFileSystemImpl gitFs = GitFileSystemProviderImpl.getInstance().newFileSystemFromRepository(repository)) {
+					GitFileSystem gitFs = GitFileSystemProvider.getInstance().newFileSystemFromRepository(repository)) {
 				final GitHistory history = GitUtils.getHistory(gitFs);
 				final ImmutableGraph<ObjectId> graph = history.getGraph();
 				final ObjectId o1 = Iterables.getOnlyElement(history.getRoots());

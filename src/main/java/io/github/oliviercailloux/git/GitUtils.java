@@ -102,7 +102,7 @@ public class GitUtils {
 	}
 
 	public static GitHistory getHistory(GitFileSystem gitFs) throws IOException {
-		final ImmutableGraph<? extends GitPathRootSha> graphOfPaths = gitFs.getCommitsGraph();
+		final ImmutableGraph<GitPathRootSha> graphOfPaths = gitFs.getCommitsGraph();
 
 		final Function<GitPathRoot, Instant> getDate = IO_UNCHECKER
 				.wrapFunction(p -> p.getCommit().committerDate().toInstant());

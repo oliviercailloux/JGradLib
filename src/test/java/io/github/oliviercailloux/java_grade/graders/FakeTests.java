@@ -10,8 +10,8 @@ import com.google.common.jimfs.Jimfs;
 import io.github.oliviercailloux.git.GitHistory;
 import io.github.oliviercailloux.git.GitUtils;
 import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
-import io.github.oliviercailloux.gitjfs.impl.GitFileSystemImpl;
-import io.github.oliviercailloux.gitjfs.impl.GitFileSystemProviderImpl;
+import io.github.oliviercailloux.gitjfs.GitFileSystem;
+import io.github.oliviercailloux.gitjfs.GitFileSystemProvider;
 import io.github.oliviercailloux.grade.BatchGitHistoryGrader;
 import io.github.oliviercailloux.grade.Exam;
 import io.github.oliviercailloux.grade.GitFileSystemHistory;
@@ -45,7 +45,7 @@ class FakeTests {
 	@Test
 	void testEmpty() throws Exception {
 		try (Repository repository = new InMemoryRepository(new DfsRepositoryDescription("myrepo"));
-				GitFileSystemImpl gitFs = GitFileSystemProviderImpl.getInstance().newFileSystemFromRepository(repository)) {
+				GitFileSystem gitFs = GitFileSystemProvider.getInstance().newFileSystemFromRepository(repository)) {
 
 			final GitFileSystemHistory gitH = GitFileSystemHistory.create(gitFs, GitUtils.getHistory(gitFs));
 			final BatchGitHistoryGrader<RuntimeException> batchGrader = BatchGitHistoryGrader
@@ -90,7 +90,7 @@ class FakeTests {
 
 			final ImmutableGraph<Path> graph = Utils.asGraph(ImmutableList.of(c1, c2, c3));
 			try (Repository repository = JGit.createRepository(personIdent, graph, links)) {
-				try (GitFileSystemImpl gitFs = GitFileSystemProviderImpl.getInstance()
+				try (GitFileSystem gitFs = GitFileSystemProvider.getInstance()
 						.newFileSystemFromRepository(repository)) {
 					final GitHistory history = GitUtils.getHistory(gitFs);
 					final GitFileSystemHistory gitH = GitFileSystemHistory.create(gitFs, history);
