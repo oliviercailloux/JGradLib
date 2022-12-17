@@ -14,7 +14,7 @@ import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinatesWithPrefix;
 import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherQL;
 import io.github.oliviercailloux.gitjfs.GitFileSystem;
-import io.github.oliviercailloux.gitjfs.GitFileSystemProvider;
+import io.github.oliviercailloux.gitjfs.IGitFileSystemProvider;
 import io.github.oliviercailloux.utils.Utils;
 import java.io.IOException;
 import java.nio.file.Path;
@@ -94,7 +94,7 @@ public class GitFileSystemWithHistoryFetcherByPrefix implements GitFileSystemWit
 
 			lastRepository = cloner.download(coordinates.asGitUri(), dir);
 
-			lastGitFs = GitFileSystemProvider.getInstance().newFileSystemFromRepository(lastRepository);
+			lastGitFs = IGitFileSystemProvider.provider().newFileSystemFromRepository(lastRepository);
 
 			final GitHubHistory gitHubHistory = fetcherQl.getReversedGitHubHistory(coordinates);
 			final GitHistory history;
@@ -117,7 +117,7 @@ public class GitFileSystemWithHistoryFetcherByPrefix implements GitFileSystemWit
 	}
 
 	@Override
-	public void close() {
+	public void close() throws IOException {
 		Optional<RuntimeException> firstCloseExc = closePrevious();
 		try {
 			fetcherQl.close();
@@ -130,7 +130,7 @@ public class GitFileSystemWithHistoryFetcherByPrefix implements GitFileSystemWit
 		});
 	}
 
-	private Optional<RuntimeException> closePrevious() {
+	private Optional<RuntimeException> closePrevious() throws IOException {
 		Optional<RuntimeException> firstCloseExc = Optional.empty();
 		if (lastGitFs != null) {
 			try {

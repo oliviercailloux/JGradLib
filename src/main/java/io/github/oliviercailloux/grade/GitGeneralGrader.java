@@ -14,8 +14,8 @@ import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinatesWithPrefix;
 import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherQL;
 import io.github.oliviercailloux.gitjfs.GitFileSystem;
-import io.github.oliviercailloux.gitjfs.GitFileSystemProvider;
 import io.github.oliviercailloux.gitjfs.GitPathRoot;
+import io.github.oliviercailloux.gitjfs.IGitFileSystemProvider;
 import io.github.oliviercailloux.grade.format.json.JsonGrade;
 import io.github.oliviercailloux.java_grade.testers.JavaMarkHelper;
 import io.github.oliviercailloux.json.JsonbUtils;
@@ -109,7 +109,7 @@ public class GitGeneralGrader {
 	IGrade grade(RepositoryCoordinatesWithPrefix coordinates) throws IOException {
 		final Path dir = Utils.getTempDirectory().resolve(coordinates.getRepositoryName());
 		try (FileRepository repository = getFileRepo(coordinates, dir);
-				GitFileSystem gitFs = GitFileSystemProvider.getInstance().newFileSystemFromRepository(repository)) {
+				GitFileSystem gitFs = IGitFileSystemProvider.provider().newFileSystemFromRepository(repository)) {
 			final GitHistory pushHistory;
 			{
 				final GitHubHistory gitHubHistory;

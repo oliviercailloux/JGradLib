@@ -18,5 +18,5 @@ public interface GitFileSystemWithHistoryFetcher extends AutoCloseable {
 	public GitFileSystemHistory goTo(GitHubUsername author) throws IOException;
 
 	@Override
-	void close();
+	void close() throws IOException;
 }

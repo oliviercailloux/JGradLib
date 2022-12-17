@@ -12,12 +12,12 @@ import com.google.common.collect.Maps;
 import com.google.common.graph.ImmutableGraph;
 import io.github.oliviercailloux.git.GitHistory;
 import io.github.oliviercailloux.gitjfs.Commit;
-import io.github.oliviercailloux.gitjfs.GitFileFileSystem;
 import io.github.oliviercailloux.gitjfs.GitFileSystem;
 import io.github.oliviercailloux.gitjfs.GitPath;
 import io.github.oliviercailloux.gitjfs.GitPathRoot;
 import io.github.oliviercailloux.gitjfs.GitPathRootRef;
 import io.github.oliviercailloux.gitjfs.GitPathRootSha;
+import io.github.oliviercailloux.gitjfs.impl.GitFileFileSystemImpl;
 import io.github.oliviercailloux.grade.old.Mark;
 import io.github.oliviercailloux.jaris.throwing.TFunction;
 import io.github.oliviercailloux.jaris.throwing.TPredicate;
@@ -397,7 +397,7 @@ public class GitFileSystemHistory {
 	 */
 	@Deprecated
 	public ImmutableSet<DiffEntry> getDiff(GitPathRoot oldId, GitPathRoot newId) throws IOException {
-		final Repository repository = ((GitFileFileSystem) gitFs).getRepository();
+		final Repository repository = ((GitFileFileSystemImpl) gitFs).getRepository();
 
 		try (ObjectReader reader = repository.newObjectReader()) {
 			CanonicalTreeParser oldTreeIter = new CanonicalTreeParser();

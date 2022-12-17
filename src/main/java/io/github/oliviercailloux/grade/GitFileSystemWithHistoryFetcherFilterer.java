@@ -38,7 +38,7 @@ public class GitFileSystemWithHistoryFetcherFilterer implements GitFileSystemWit
 	}
 
 	@Override
-	public void close() {
+	public void close() throws IOException {
 		delegate.close();
 	}
 
