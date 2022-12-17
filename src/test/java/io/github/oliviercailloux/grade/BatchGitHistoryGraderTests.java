@@ -5,8 +5,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import com.google.common.collect.ImmutableMap;
 import io.github.oliviercailloux.git.GitUtils;
 import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
-import io.github.oliviercailloux.gitjfs.GitFileSystem;
-import io.github.oliviercailloux.gitjfs.GitFileSystemProvider;
+import io.github.oliviercailloux.gitjfs.impl.GitFileSystemImpl;
+import io.github.oliviercailloux.gitjfs.impl.GitFileSystemProviderImpl;
 import io.github.oliviercailloux.grade.format.json.JsonSimpleGrade;
 import io.github.oliviercailloux.jgit.JGit;
 import java.nio.file.Files;
@@ -50,13 +50,13 @@ public class BatchGitHistoryGraderTests {
 	@Test
 	void testBatch() throws Exception {
 		try (Repository empty = new InMemoryRepository(new DfsRepositoryDescription("empty"));
-				GitFileSystem emptyGitFs = GitFileSystemProvider.getInstance().newFileSystemFromRepository(empty);
+				GitFileSystemImpl emptyGitFs = GitFileSystemProviderImpl.getInstance().newFileSystemFromRepository(empty);
 				Repository early = new InMemoryRepository(new DfsRepositoryDescription("early"));
-				GitFileSystem earlyFs = GitFileSystemProvider.getInstance().newFileSystemFromRepository(early);
+				GitFileSystemImpl earlyFs = GitFileSystemProviderImpl.getInstance().newFileSystemFromRepository(early);
 				Repository now = new InMemoryRepository(new DfsRepositoryDescription("now"));
-				GitFileSystem nowFs = GitFileSystemProvider.getInstance().newFileSystemFromRepository(now);
+				GitFileSystemImpl nowFs = GitFileSystemProviderImpl.getInstance().newFileSystemFromRepository(now);
 				Repository late = new InMemoryRepository(new DfsRepositoryDescription("late"));
-				GitFileSystem lateFs = GitFileSystemProvider.getInstance().newFileSystemFromRepository(late)) {
+				GitFileSystemImpl lateFs = GitFileSystemProviderImpl.getInstance().newFileSystemFromRepository(late)) {
 			final ZonedDateTime nowTime = ZonedDateTime.parse("2022-01-01T10:00:00+01:00[Europe/Paris]");
 
 			JGit.createRepoWithSubDir(early, nowTime.minus(10, ChronoUnit.HOURS));

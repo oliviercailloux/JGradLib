@@ -14,9 +14,9 @@ import com.google.common.jimfs.Jimfs;
 import io.github.oliviercailloux.git.GitHistory;
 import io.github.oliviercailloux.git.GitUtils;
 import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
-import io.github.oliviercailloux.gitjfs.GitFileSystem;
-import io.github.oliviercailloux.gitjfs.GitFileSystemProvider;
-import io.github.oliviercailloux.gitjfs.GitPathRoot;
+import io.github.oliviercailloux.gitjfs.impl.GitFileSystemImpl;
+import io.github.oliviercailloux.gitjfs.impl.GitFileSystemProviderImpl;
+import io.github.oliviercailloux.gitjfs.impl.GitPathRootImpl;
 import io.github.oliviercailloux.grade.BatchGitHistoryGrader;
 import io.github.oliviercailloux.grade.Exam;
 import io.github.oliviercailloux.grade.GitFileSystemHistory;
@@ -59,7 +59,7 @@ class BranchingTests {
 	@Test
 	void testEmpty() throws Exception {
 		try (Repository repository = new InMemoryRepository(new DfsRepositoryDescription("myrepo"));
-				GitFileSystem gitFs = GitFileSystemProvider.getInstance().newFileSystemFromRepository(repository)) {
+				GitFileSystemImpl gitFs = GitFileSystemProviderImpl.getInstance().newFileSystemFromRepository(repository)) {
 
 			final GitFileSystemHistory gitH = GitFileSystemHistory.create(gitFs, GitUtils.getHistory(gitFs),
 					ImmutableMap.of());
@@ -140,39 +140,39 @@ class BranchingTests {
 			final PersonIdent personIdent = personIdent(USERNAME.getUsername(), "email", startTime);
 
 			try (Repository repository = JGit.createRepository(personIdent, graph, links)) {
-				try (GitFileSystem gitFs = GitFileSystemProvider.getInstance()
+				try (GitFileSystemImpl gitFs = GitFileSystemProviderImpl.getInstance()
 						.newFileSystemFromRepository(repository)) {
 					final GitHistory history = GitUtils.getHistory(gitFs);
 					final ObjectId startId = history.getRoots().stream().collect(MoreCollectors.onlyElement());
 					LOGGER.info("Start id: {}", startId.getName());
-					final GitPathRoot startPath = gitFs.getPathRoot(startId);
+					final GitPathRootImpl startPath = gitFs.getPathRoot(startId);
 					verify(Files.find(startPath, Integer.MAX_VALUE, (p, a) -> Files.isRegularFile(p)).count() == 1);
 					final Set<ObjectId> successors = history.getGraph().successors(startId);
 					final Iterator<ObjectId> iterator = successors.iterator();
 					final ObjectId commitFirstSucc = iterator.next();
 					final ObjectId commitSecondSucc = iterator.next();
 					verify(!iterator.hasNext());
-					final GitPathRoot commitFirstSuccPath = gitFs.getPathRoot(commitFirstSucc);
+					final GitPathRootImpl commitFirstSuccPath = gitFs.getPathRoot(commitFirstSucc);
 					final boolean firstIsHello = Files.readString(commitFirstSuccPath.resolve("first.txt"))
 							.equals("Hello world");
 					final ObjectId commitAId = firstIsHello ? commitFirstSucc : commitSecondSucc;
 					final ObjectId commitCId = firstIsHello ? commitSecondSucc : commitFirstSucc;
 					LOGGER.info("A id: {}", commitAId.getName());
-					final GitPathRoot commitAPath = gitFs.getPathRoot(commitAId);
+					final GitPathRootImpl commitAPath = gitFs.getPathRoot(commitAId);
 					verify(Files.find(commitAPath, Integer.MAX_VALUE, (p, a) -> Files.isRegularFile(p)).count() == 2);
-					final GitPathRoot commitCPath = gitFs.getPathRoot(commitCId);
+					final GitPathRootImpl commitCPath = gitFs.getPathRoot(commitCId);
 					verify(Files.find(commitCPath, Integer.MAX_VALUE, (p, a) -> Files.isRegularFile(p)).count() == 2);
 					verify(Files.readString(commitCPath.resolve("first.txt")).equals("Coucou monde"));
 					final ObjectId commitBId = history.getGraph().successors(commitAId).stream()
 							.collect(MoreCollectors.onlyElement());
 					LOGGER.info("B id: {}", commitBId.getName());
 					LOGGER.info("C id: {}", commitCId.getName());
-					final GitPathRoot commitBPath = gitFs.getPathRoot(commitBId);
+					final GitPathRootImpl commitBPath = gitFs.getPathRoot(commitBId);
 					verify(Files.find(commitBPath, Integer.MAX_VALUE, (p, a) -> Files.isRegularFile(p)).count() == 3);
 					final ObjectId commitDId = history.getGraph().successors(commitBId).stream()
 							.collect(MoreCollectors.onlyElement());
 					LOGGER.info("D id: {}", commitDId.getName());
-					final GitPathRoot commitDPath = gitFs.getPathRoot(commitDId);
+					final GitPathRootImpl commitDPath = gitFs.getPathRoot(commitDId);
 					verify(Files.find(commitDPath, Integer.MAX_VALUE, (p, a) -> Files.isRegularFile(p)).count() == 3);
 					final ObjectId commitChildCId = history.getGraph().successors(commitCId).stream()
 							.collect(MoreCollectors.onlyElement());
@@ -245,39 +245,39 @@ class BranchingTests {
 			final ImmutableGraph<Path> graph = ImmutableGraph.copyOf(graphBuilder);
 
 			try (Repository repository = JGit.createRepository(personIdent, graph, links)) {
-				try (GitFileSystem gitFs = GitFileSystemProvider.getInstance()
+				try (GitFileSystemImpl gitFs = GitFileSystemProviderImpl.getInstance()
 						.newFileSystemFromRepository(repository)) {
 					final GitHistory history = GitUtils.getHistory(gitFs);
 					final ObjectId startId = history.getRoots().stream().collect(MoreCollectors.onlyElement());
 					LOGGER.info("Start id: {}", startId.getName());
-					final GitPathRoot startPath = gitFs.getPathRoot(startId);
+					final GitPathRootImpl startPath = gitFs.getPathRoot(startId);
 					verify(Files.find(startPath, Integer.MAX_VALUE, (p, a) -> Files.isRegularFile(p)).count() == 1);
 					final Set<ObjectId> successors = history.getGraph().successors(startId);
 					final Iterator<ObjectId> iterator = successors.iterator();
 					final ObjectId commitFirstSucc = iterator.next();
 					final ObjectId commitSecondSucc = iterator.next();
 					verify(!iterator.hasNext());
-					final GitPathRoot commitFirstSuccPath = gitFs.getPathRoot(commitFirstSucc);
+					final GitPathRootImpl commitFirstSuccPath = gitFs.getPathRoot(commitFirstSucc);
 					final boolean firstIsHello = Files.readString(commitFirstSuccPath.resolve("first.txt"))
 							.equals("Hello world");
 					final ObjectId commitAId = firstIsHello ? commitFirstSucc : commitSecondSucc;
 					final ObjectId commitCId = firstIsHello ? commitSecondSucc : commitFirstSucc;
 					LOGGER.info("A id: {}", commitAId.getName());
-					final GitPathRoot commitAPath = gitFs.getPathRoot(commitAId);
+					final GitPathRootImpl commitAPath = gitFs.getPathRoot(commitAId);
 					verify(Files.find(commitAPath, Integer.MAX_VALUE, (p, a) -> Files.isRegularFile(p)).count() == 2);
-					final GitPathRoot commitCPath = gitFs.getPathRoot(commitCId);
+					final GitPathRootImpl commitCPath = gitFs.getPathRoot(commitCId);
 					verify(Files.find(commitCPath, Integer.MAX_VALUE, (p, a) -> Files.isRegularFile(p)).count() == 2);
 					verify(Files.readString(commitCPath.resolve("first.txt")).equals("Coucou monde"));
 					final ObjectId commitBId = history.getGraph().successors(commitAId).stream()
 							.collect(MoreCollectors.onlyElement());
 					LOGGER.info("B id: {}", commitBId.getName());
 					LOGGER.info("C id: {}", commitCId.getName());
-					final GitPathRoot commitBPath = gitFs.getPathRoot(commitBId);
+					final GitPathRootImpl commitBPath = gitFs.getPathRoot(commitBId);
 					verify(Files.find(commitBPath, Integer.MAX_VALUE, (p, a) -> Files.isRegularFile(p)).count() == 3);
 					final ObjectId commitDId = history.getGraph().successors(commitBId).stream()
 							.collect(MoreCollectors.onlyElement());
 					LOGGER.info("D id: {}", commitDId.getName());
-					final GitPathRoot commitDPath = gitFs.getPathRoot(commitDId);
+					final GitPathRootImpl commitDPath = gitFs.getPathRoot(commitDId);
 					verify(Files.find(commitDPath, Integer.MAX_VALUE, (p, a) -> Files.isRegularFile(p)).count() == 3);
 					final ObjectId commitChildCId = history.getGraph().successors(commitCId).stream()
 							.collect(MoreCollectors.onlyElement());

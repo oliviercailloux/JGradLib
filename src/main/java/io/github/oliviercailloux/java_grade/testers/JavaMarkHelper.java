@@ -5,7 +5,7 @@ import static com.google.common.base.Preconditions.checkState;
 
 import com.sun.management.UnixOperatingSystemMXBean;
 import io.github.oliviercailloux.gitjfs.Commit;
-import io.github.oliviercailloux.gitjfs.GitPathRoot;
+import io.github.oliviercailloux.gitjfs.impl.GitPathRootImpl;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.lang.management.ManagementFactory;
@@ -61,7 +61,7 @@ public class JavaMarkHelper {
 	 * <noreply@github.com> while the author seems to be the logged user.
 	 *
 	 */
-	public static boolean committerIsGitHub(GitPathRoot commit) throws NoSuchFileException, IOException {
+	public static boolean committerIsGitHub(GitPathRootImpl commit) throws NoSuchFileException, IOException {
 		return committerIsGitHub(commit.getCommit());
 	}
 
@@ -80,7 +80,7 @@ public class JavaMarkHelper {
 		return committerIsRight && authorIsRight;
 	}
 
-	public static boolean committerAndAuthorIs(GitPathRoot commit, String name)
+	public static boolean committerAndAuthorIs(GitPathRootImpl commit, String name)
 			throws NoSuchFileException, IOException {
 		checkNotNull(name);
 		final boolean committerIsRight = commit.getCommit().committerName().equals(name);

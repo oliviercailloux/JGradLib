@@ -14,8 +14,8 @@ import com.google.common.collect.Iterables;
 import io.github.oliviercailloux.git.GitHistory;
 import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
 import io.github.oliviercailloux.gitjfs.Commit;
-import io.github.oliviercailloux.gitjfs.GitPathRoot;
-import io.github.oliviercailloux.gitjfs.GitPathRootSha;
+import io.github.oliviercailloux.gitjfs.impl.GitPathRootImpl;
+import io.github.oliviercailloux.gitjfs.impl.GitPathRootShaImpl;
 import io.github.oliviercailloux.grade.old.Mark;
 import io.github.oliviercailloux.jaris.collections.CollectionUtils;
 import io.github.oliviercailloux.jaris.exceptions.CheckedStream;
@@ -68,10 +68,10 @@ public class DeadlineGrader {
 		public IGrade grade(GitWork work) throws IOException {
 			final GitFileSystemHistory history = work.getHistory();
 			final Mark userGrade = getUsernameGrade(history, work.getAuthor());
-			final ImmutableSet<GitPathRootSha> latestTiedPathsOnTime = PathToGitGrader.getLatest(history);
+			final ImmutableSet<GitPathRootShaImpl> latestTiedPathsOnTime = PathToGitGrader.getLatest(history);
 			checkArgument(!latestTiedPathsOnTime.isEmpty());
 			LOGGER.debug("Considering {}.", latestTiedPathsOnTime);
-			final IGrade mainGrade = CheckedStream.<GitPathRootSha, IOException>wrapping(latestTiedPathsOnTime.stream())
+			final IGrade mainGrade = CheckedStream.<GitPathRootShaImpl, IOException>wrapping(latestTiedPathsOnTime.stream())
 					.map(simpleWorkGrader).min(TComparator.comparing(IGrade::getPoints)).get();
 			return WeightingGrade.from(ImmutableSet.of(
 					CriterionGradeWeight.from(Criterion.given("user.name"), userGrade, USER_GRADE_WEIGHT),
@@ -83,8 +83,8 @@ public class DeadlineGrader {
 		 * latest among the remaining ones, and have been committed the latest among the
 		 * remaining ones.
 		 */
-		private static ImmutableSet<GitPathRootSha> getLatest(GitFileSystemHistory history) throws IOException {
-			final ImmutableSet<GitPathRootSha> leaves = history.getLeaves();
+		private static ImmutableSet<GitPathRootShaImpl> getLatest(GitFileSystemHistory history) throws IOException {
+			final ImmutableSet<GitPathRootShaImpl> leaves = history.getLeaves();
 			// final GitFileSystemHistory leavesHistory = history.filter(c ->
 			// leaves.contains(c));
 
@@ -105,13 +105,13 @@ public class DeadlineGrader {
 			// .filter(c ->
 			// c.getCommit().getCommitterDate().toInstant().equals(latestCommittedDate));
 
-			final Comparator<GitPathRootSha> byAuthorDate = Comparator
+			final Comparator<GitPathRootShaImpl> byAuthorDate = Comparator
 					.comparing(c -> IO_UNCHECKER.getUsing(() -> c.getCommit()).authorDate());
-			final Comparator<GitPathRootSha> byCommitDate = Comparator
+			final Comparator<GitPathRootShaImpl> byCommitDate = Comparator
 					.comparing(c -> IO_UNCHECKER.getUsing(() -> c.getCommit()).committerDate());
-			final TComparator<GitPathRootSha, IOException> byDate = (t1, t2) -> byAuthorDate
+			final TComparator<GitPathRootShaImpl, IOException> byDate = (t1, t2) -> byAuthorDate
 					.thenComparing(byCommitDate).compare(t1, t2);
-			return Utils.<GitPathRootSha, IOException>getMaximalElements(leaves, byDate);
+			return Utils.<GitPathRootShaImpl, IOException>getMaximalElements(leaves, byDate);
 		}
 
 	}
@@ -324,9 +324,9 @@ public class DeadlineGrader {
 
 	public static Mark getUsernameGrade(GitFileSystemHistory history, GitHubUsername expectedUsername)
 			throws IOException {
-		final CheckedStream<GitPathRoot, IOException> checkedCommits = CheckedStream
+		final CheckedStream<GitPathRootImpl, IOException> checkedCommits = CheckedStream
 				.wrapping(history.getGraph().nodes().stream());
-		final ImmutableSet<String> authors = checkedCommits.map(GitPathRoot::getCommit).map(Commit::authorName)
+		final ImmutableSet<String> authors = checkedCommits.map(GitPathRootImpl::getCommit).map(Commit::authorName)
 				.filter(s -> !s.equals("github-classroom[bot]")).collect(ImmutableSet.toImmutableSet());
 		final ImmutableSet<String> authorsShow = authors.stream().map(s -> "‘" + s + "’")
 				.collect(ImmutableSet.toImmutableSet());

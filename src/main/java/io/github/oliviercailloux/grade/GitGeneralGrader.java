@@ -13,9 +13,9 @@ import io.github.oliviercailloux.git.git_hub.model.GitHubToken;
 import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinatesWithPrefix;
 import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherQL;
-import io.github.oliviercailloux.gitjfs.GitFileSystem;
-import io.github.oliviercailloux.gitjfs.GitFileSystemProvider;
-import io.github.oliviercailloux.gitjfs.GitPathRoot;
+import io.github.oliviercailloux.gitjfs.impl.GitFileSystemImpl;
+import io.github.oliviercailloux.gitjfs.impl.GitFileSystemProviderImpl;
+import io.github.oliviercailloux.gitjfs.impl.GitPathRootImpl;
 import io.github.oliviercailloux.grade.format.json.JsonGrade;
 import io.github.oliviercailloux.java_grade.testers.JavaMarkHelper;
 import io.github.oliviercailloux.json.JsonbUtils;
@@ -109,7 +109,7 @@ public class GitGeneralGrader {
 	IGrade grade(RepositoryCoordinatesWithPrefix coordinates) throws IOException {
 		final Path dir = Utils.getTempDirectory().resolve(coordinates.getRepositoryName());
 		try (FileRepository repository = getFileRepo(coordinates, dir);
-				GitFileSystem gitFs = GitFileSystemProvider.getInstance().newFileSystemFromRepository(repository)) {
+				GitFileSystemImpl gitFs = GitFileSystemProviderImpl.getInstance().newFileSystemFromRepository(repository)) {
 			final GitHistory pushHistory;
 			{
 				final GitHubHistory gitHubHistory;
@@ -140,9 +140,9 @@ public class GitGeneralGrader {
 
 	IGrade grade(GitWork work) throws IOException {
 		final GitFileSystemHistory manual;
-		final ImmutableSet<GitPathRoot> excludedByGitHub;
+		final ImmutableSet<GitPathRootImpl> excludedByGitHub;
 		if (excludeCommitsByGitHub) {
-			final ThrowingStream<GitPathRoot, IOException> stream = ThrowingStream
+			final ThrowingStream<GitPathRootImpl, IOException> stream = ThrowingStream
 					.of(work.getHistory().getGraph().nodes().stream(), IOException.class);
 			manual = work.getHistory().filter(r -> !JavaMarkHelper.committerIsGitHub(r));
 			excludedByGitHub = stream.filter(JavaMarkHelper::committerIsGitHub).collect(ImmutableSet.toImmutableSet());

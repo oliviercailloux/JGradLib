@@ -11,8 +11,8 @@ import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Streams;
 import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
-import io.github.oliviercailloux.gitjfs.GitPathRoot;
-import io.github.oliviercailloux.gitjfs.GitPathRootSha;
+import io.github.oliviercailloux.gitjfs.impl.GitPathRootImpl;
+import io.github.oliviercailloux.gitjfs.impl.GitPathRootShaImpl;
 import io.github.oliviercailloux.jaris.throwing.TOptional;
 import io.github.oliviercailloux.java_grade.testers.JavaMarkHelper;
 import java.io.IOException;
@@ -195,23 +195,23 @@ public class ByTimeGrader<X extends Exception> implements Grader<X> {
 	public static Instant cappedAt(GitFileSystemHistory capped) {
 //		final ImmutableSet<GitPathRoot> leaves = IO_UNCHECKER.getUsing(capped::getRefs).stream()
 //				.filter(n -> capped.getGraph().successors(n).isEmpty()).collect(ImmutableSet.toImmutableSet());
-		final ImmutableSet<GitPathRootSha> leaves = capped.getFilteredLeaves();
+		final ImmutableSet<GitPathRootShaImpl> leaves = capped.getFilteredLeaves();
 		final Instant timeCap = leaves.stream()
-				.map((GitPathRoot r) -> IO_UNCHECKER.getUsing(() -> capped.getCommitDate(r)))
+				.map((GitPathRootImpl r) -> IO_UNCHECKER.getUsing(() -> capped.getCommitDate(r)))
 				.max(Comparator.naturalOrder()).orElseThrow();
 		return timeCap;
 	}
 
-	public static GitPathRootSha last(GitFileSystemHistory data) {
+	public static GitPathRootShaImpl last(GitFileSystemHistory data) {
 //		final ImmutableSet<GitPathRoot> leaves = IO_UNCHECKER.getUsing(data::getRefs).stream()
 //				.filter(n -> data.getGraph().successors(n).isEmpty()).collect(ImmutableSet.toImmutableSet());
-		final ImmutableSet<GitPathRootSha> leaves = data.getLeaves();
-		final ImmutableSet<GitPathRootSha> filteredLeaves = data.getFilteredLeaves();
+		final ImmutableSet<GitPathRootShaImpl> leaves = data.getLeaves();
+		final ImmutableSet<GitPathRootShaImpl> filteredLeaves = data.getFilteredLeaves();
 		LOGGER.debug("Leaves: {}, filtered: {}.", leaves, filteredLeaves);
-		final Comparator<GitPathRootSha> byDate = Comparator
-				.comparing((GitPathRootSha r) -> IO_UNCHECKER.getUsing(() -> data.getCommitDate(r)));
-		final ImmutableSortedSet<GitPathRootSha> sortedLeaves = ImmutableSortedSet.copyOf(byDate, filteredLeaves);
-		final GitPathRootSha leaf = sortedLeaves.last();
+		final Comparator<GitPathRootShaImpl> byDate = Comparator
+				.comparing((GitPathRootShaImpl r) -> IO_UNCHECKER.getUsing(() -> data.getCommitDate(r)));
+		final ImmutableSortedSet<GitPathRootShaImpl> sortedLeaves = ImmutableSortedSet.copyOf(byDate, filteredLeaves);
+		final GitPathRootShaImpl leaf = sortedLeaves.last();
 		return leaf;
 	}
 
@@ -229,16 +229,16 @@ public class ByTimeGrader<X extends Exception> implements Grader<X> {
 		 * commit times and try to detect inconsistencies: commit time on time but push
 		 * date late.
 		 */
-		final ImmutableSet<GitPathRoot> refs = IO_UNCHECKER.getUsing(history::getRefs);
-		final ImmutableMap<GitPathRoot, Instant> commitDates = refs.stream().collect(ImmutableMap.toImmutableMap(p -> p,
+		final ImmutableSet<GitPathRootImpl> refs = IO_UNCHECKER.getUsing(history::getRefs);
+		final ImmutableMap<GitPathRootImpl, Instant> commitDates = refs.stream().collect(ImmutableMap.toImmutableMap(p -> p,
 				IO_UNCHECKER.wrapFunction(p -> p.getCommit().committerDate().toInstant())));
-		final ImmutableMap<GitPathRoot, Instant> pushDates = refs.stream()
+		final ImmutableMap<GitPathRootImpl, Instant> pushDates = refs.stream()
 				.collect(ImmutableMap.toImmutableMap(p -> p, IO_UNCHECKER
 						.wrapFunction(p -> history.getPushDates().getOrDefault(p.getCommit().id(), Instant.MIN))));
-		final Map<GitPathRoot, Instant> pushDatesLate = Maps.filterValues(pushDates, i -> i.isAfter(deadline));
-		final Map<GitPathRoot, Instant> commitsOnTime = Maps.filterValues(commitDates, i -> !i.isAfter(deadline));
+		final Map<GitPathRootImpl, Instant> pushDatesLate = Maps.filterValues(pushDates, i -> i.isAfter(deadline));
+		final Map<GitPathRootImpl, Instant> commitsOnTime = Maps.filterValues(commitDates, i -> !i.isAfter(deadline));
 
-		final Map<GitPathRoot, Instant> contradictory = Maps.filterKeys(pushDatesLate,
+		final Map<GitPathRootImpl, Instant> contradictory = Maps.filterKeys(pushDatesLate,
 				r -> commitsOnTime.containsKey(r));
 		if (!contradictory.isEmpty()) {
 			LOGGER.info("Commit times: {}.", commitDates);

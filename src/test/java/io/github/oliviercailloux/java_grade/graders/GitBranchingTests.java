@@ -12,8 +12,8 @@ import com.google.common.jimfs.Jimfs;
 import io.github.oliviercailloux.git.GitHistory;
 import io.github.oliviercailloux.git.GitUtils;
 import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
-import io.github.oliviercailloux.gitjfs.GitFileSystem;
-import io.github.oliviercailloux.gitjfs.GitFileSystemProvider;
+import io.github.oliviercailloux.gitjfs.impl.GitFileSystemImpl;
+import io.github.oliviercailloux.gitjfs.impl.GitFileSystemProviderImpl;
 import io.github.oliviercailloux.grade.GitFileSystemHistory;
 import io.github.oliviercailloux.grade.GitWork;
 import io.github.oliviercailloux.grade.IGrade;
@@ -42,7 +42,7 @@ public class GitBranchingTests {
 	@Test
 	void testEmpty() throws Exception {
 		try (Repository repository = new InMemoryRepository(new DfsRepositoryDescription("myrepo"));
-				GitFileSystem gitFs = GitFileSystemProvider.getInstance().newFileSystemFromRepository(repository)) {
+				GitFileSystemImpl gitFs = GitFileSystemProviderImpl.getInstance().newFileSystemFromRepository(repository)) {
 
 			final GitFileSystemHistory empty = GitFileSystemHistory.create(gitFs,
 					GitHistory.create(GraphBuilder.directed().build(), ImmutableMap.of()));
@@ -96,7 +96,7 @@ public class GitBranchingTests {
 			final PersonIdent personIdent = new PersonIdent("Me", "email");
 
 			try (Repository repository = JGit.createRepository(personIdent, baseDirs, links)) {
-				try (GitFileSystem gitFs = GitFileSystemProvider.getInstance()
+				try (GitFileSystemImpl gitFs = GitFileSystemProviderImpl.getInstance()
 						.newFileSystemFromRepository(repository)) {
 					final ImmutableGraph<ObjectId> graph = GitUtils.getHistory(gitFs).getGraph();
 					final Map<ObjectId, Instant> constantTimes = Maps.asMap(graph.nodes(),
@@ -154,7 +154,7 @@ public class GitBranchingTests {
 			final PersonIdent personIdent = new PersonIdent("Me", "email");
 
 			try (Repository repository = JGit.createRepository(personIdent, baseDirs, links)) {
-				try (GitFileSystem gitFs = GitFileSystemProvider.getInstance()
+				try (GitFileSystemImpl gitFs = GitFileSystemProviderImpl.getInstance()
 						.newFileSystemFromRepository(repository)) {
 					final ImmutableGraph<ObjectId> graph = GitUtils.getHistory(gitFs).getGraph();
 					final Map<ObjectId, Instant> constantTimes = Maps.asMap(graph.nodes(),

@@ -9,7 +9,7 @@ import static io.github.oliviercailloux.grade.GitGrader.Predicates.isFileNamed;
 
 import com.google.common.collect.ImmutableSet;
 import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
-import io.github.oliviercailloux.gitjfs.GitPathRoot;
+import io.github.oliviercailloux.gitjfs.impl.GitPathRootImpl;
 import io.github.oliviercailloux.grade.Criterion;
 import io.github.oliviercailloux.grade.CriterionGradeWeight;
 import io.github.oliviercailloux.grade.DeadlineGrader;
@@ -75,12 +75,12 @@ public class Commit {
 			final Pattern digitPattern = Marks.extendWhite("\\d+");
 			final Mark myIdContent = history
 					.anyCommitMatches(compose(resolve("myid.txt"), contentMatches(digitPattern)));
-			final TPredicate<GitPathRoot, IOException> p1 = compose(resolve("myid.txt"), contentMatches(digitPattern));
-			final TPredicate<GitPathRoot, IOException> p2 = compose(resolve("afile.txt"),
+			final TPredicate<GitPathRootImpl, IOException> p1 = compose(resolve("myid.txt"), contentMatches(digitPattern));
+			final TPredicate<GitPathRootImpl, IOException> p2 = compose(resolve("afile.txt"),
 					contentMatches(coucouPattern));
-			final TPredicate<GitPathRoot, IOException> both = p1.and(p2);
+			final TPredicate<GitPathRootImpl, IOException> both = p1.and(p2);
 			final Mark myIdAndAFileContent = history.anyCommitMatches(both);
-			final TPredicate<GitPathRoot, IOException> branch = isBranch("main").or(isBranch("master"));
+			final TPredicate<GitPathRootImpl, IOException> branch = isBranch("main").or(isBranch("master"));
 			final Mark mainContent = history.anyRefMatches(branch.and(both));
 			final CriterionGradeWeight myIdGrade = CriterionGradeWeight.from(Criterion.given("'myid.txt' content"),
 					myIdContent, 1d);

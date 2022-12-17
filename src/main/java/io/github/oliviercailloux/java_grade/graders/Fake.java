@@ -7,7 +7,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import com.google.common.graph.Graphs;
 import io.github.oliviercailloux.gitjfs.GitPath;
-import io.github.oliviercailloux.gitjfs.GitPathRoot;
+import io.github.oliviercailloux.gitjfs.impl.GitPathRootImpl;
 import io.github.oliviercailloux.grade.BatchGitHistoryGrader;
 import io.github.oliviercailloux.grade.Criterion;
 import io.github.oliviercailloux.grade.GitFileSystemHistory;
@@ -67,10 +67,10 @@ public class Fake implements GitFsGrader<RuntimeException> {
 	public MarksTree grade(GitFileSystemHistory data) {
 		verify(!data.getGraph().nodes().isEmpty());
 
-		final ImmutableSet<GitPathRoot> commitsOrdered = data.getRoots().stream()
+		final ImmutableSet<GitPathRootImpl> commitsOrdered = data.getRoots().stream()
 				.flatMap(r -> Graphs.reachableNodes(data.getGraph(), r).stream())
 				.collect(ImmutableSet.toImmutableSet());
-		final ImmutableSet<GitPathRoot> commitsOrderedExceptRoots = Sets.difference(commitsOrdered, data.getRoots())
+		final ImmutableSet<GitPathRootImpl> commitsOrderedExceptRoots = Sets.difference(commitsOrdered, data.getRoots())
 				.immutableCopy();
 		LOGGER.info("Commits ordered (except for roots): {}.", commitsOrderedExceptRoots);
 		final int nbCommits = commitsOrderedExceptRoots.size();
@@ -81,14 +81,14 @@ public class Fake implements GitFsGrader<RuntimeException> {
 
 		final Comparator<MarksTree> byPoints = Comparator
 				.comparing(m -> Grade.given(firstCommitDiscriminator(), m).mark().getPoints());
-		final GitPathRoot firstCommit = commitsOrderedExceptRoots.stream()
+		final GitPathRootImpl firstCommit = commitsOrderedExceptRoots.stream()
 				.sorted(Comparator.comparing(this::firstCommitMark, byPoints.reversed())).findFirst()
 				.orElse(data.getRoots().iterator().next());
 		final MarksTree firstCommitMark = firstCommitMark(firstCommit);
 
 		final Comparator<MarksTree> byPointsSecond = Comparator
 				.comparing(m -> Grade.given(secondCommitDiscriminator(), m).mark().getPoints());
-		final GitPathRoot secondCommit = Graphs.reachableNodes(data.getGraph(), firstCommit).stream()
+		final GitPathRootImpl secondCommit = Graphs.reachableNodes(data.getGraph(), firstCommit).stream()
 				.sorted(Comparator.comparing(this::secondCommitMark, byPointsSecond.reversed())).findFirst()
 				.orElse(data.getRoots().iterator().next());
 		final MarksTree secondCommitMark = secondCommitMark(secondCommit);
@@ -102,7 +102,7 @@ public class Fake implements GitFsGrader<RuntimeException> {
 				ImmutableMap.of(C1, firstCommitAggregator(), C2, secondCommitAggregator()));
 	}
 
-	private MarksTree firstCommitMark(GitPathRoot root) {
+	private MarksTree firstCommitMark(GitPathRootImpl root) {
 		try {
 			final long nbFiles = Files.find(root, Integer.MAX_VALUE, (p, a) -> Files.isRegularFile(p)).count();
 			final boolean exactlyTwo = nbFiles == 2;
@@ -141,7 +141,7 @@ public class Fake implements GitFsGrader<RuntimeException> {
 				ImmutableMap.of());
 	}
 
-	private MarksTree secondCommitMark(GitPathRoot root) {
+	private MarksTree secondCommitMark(GitPathRootImpl root) {
 		try {
 			final long nbFiles = Files.find(root, Integer.MAX_VALUE, (p, a) -> Files.isRegularFile(p)).count();
 			final boolean exactlyOne = nbFiles == 1;

@@ -13,8 +13,8 @@ import io.github.oliviercailloux.git.git_hub.model.GitHubToken;
 import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinatesWithPrefix;
 import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherQL;
-import io.github.oliviercailloux.gitjfs.GitFileSystem;
-import io.github.oliviercailloux.gitjfs.GitFileSystemProvider;
+import io.github.oliviercailloux.gitjfs.impl.GitFileSystemImpl;
+import io.github.oliviercailloux.gitjfs.impl.GitFileSystemProviderImpl;
 import io.github.oliviercailloux.utils.Utils;
 import java.io.IOException;
 import java.nio.file.Path;
@@ -48,7 +48,7 @@ public class GitFileSystemWithHistoryFetcherByPrefix implements GitFileSystemWit
 	private final String prefix;
 	private final GitCloner cloner;
 	private final GitHubFetcherQL fetcherQl;
-	private GitFileSystem lastGitFs;
+	private GitFileSystemImpl lastGitFs;
 	private Repository lastRepository;
 	private GitFileSystemHistory lastHistory;
 	private final int count;
@@ -94,7 +94,7 @@ public class GitFileSystemWithHistoryFetcherByPrefix implements GitFileSystemWit
 
 			lastRepository = cloner.download(coordinates.asGitUri(), dir);
 
-			lastGitFs = GitFileSystemProvider.getInstance().newFileSystemFromRepository(lastRepository);
+			lastGitFs = GitFileSystemProviderImpl.getInstance().newFileSystemFromRepository(lastRepository);
 
 			final GitHubHistory gitHubHistory = fetcherQl.getReversedGitHubHistory(coordinates);
 			final GitHistory history;

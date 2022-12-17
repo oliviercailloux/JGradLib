@@ -11,8 +11,8 @@ import io.github.oliviercailloux.git.git_hub.model.GitHubToken;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinatesWithPrefix;
 import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherV3;
-import io.github.oliviercailloux.gitjfs.GitFileSystem;
-import io.github.oliviercailloux.gitjfs.GitFileSystemProvider;
+import io.github.oliviercailloux.gitjfs.impl.GitFileSystemImpl;
+import io.github.oliviercailloux.gitjfs.impl.GitFileSystemProviderImpl;
 import io.github.oliviercailloux.grade.comm.json.JsonStudentOnGitHubKnown;
 import io.github.oliviercailloux.grade.markers.Marks;
 import io.github.oliviercailloux.json.JsonbUtils;
@@ -34,7 +34,7 @@ public class HarvestIds {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(HarvestIds.class);
 
-	public static Optional<Integer> getId(GitFileSystem fs) throws IOException {
+	public static Optional<Integer> getId(GitFileSystemImpl fs) throws IOException {
 		final Pattern digitPattern = Marks.extendWhite("\\d+");
 		final ImmutableSet.Builder<Integer> builder = ImmutableSet.builder();
 		for (Path root : fs.getRootDirectories()) {
@@ -100,7 +100,7 @@ public class HarvestIds {
 		LOGGER.info("Proceeding with {}.", coordinates);
 		try (FileRepository repository = GitCloner.create().download(coordinates.asGitUri(),
 				Utils.getTempDirectory().resolve(coordinates.getRepositoryName()));
-				GitFileSystem fs = GitFileSystemProvider.getInstance().newFileSystemFromFileRepository(repository)) {
+				GitFileSystemImpl fs = GitFileSystemProviderImpl.getInstance().newFileSystemFromFileRepository(repository)) {
 			return getId(fs);
 		}
 	}

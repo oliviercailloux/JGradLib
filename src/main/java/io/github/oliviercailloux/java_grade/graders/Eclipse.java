@@ -10,7 +10,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import io.github.oliviercailloux.gitjfs.GitPath;
-import io.github.oliviercailloux.gitjfs.GitPathRoot;
+import io.github.oliviercailloux.gitjfs.impl.GitPathRootImpl;
 import io.github.oliviercailloux.grade.Criterion;
 import io.github.oliviercailloux.grade.CriterionGradeWeight;
 import io.github.oliviercailloux.grade.DeadlineGrader;
@@ -116,7 +116,7 @@ public class Eclipse implements GitGrader {
 		this.authoredHistory = history;
 	}
 
-	private IGrade compileGrade(Optional<GitPathRoot> p) throws IOException {
+	private IGrade compileGrade(Optional<GitPathRootImpl> p) throws IOException {
 		final CriterionGradeWeight c1 = CriterionGradeWeight.from(Criterion.given("Compile"),
 				Mark.binary(p.isPresent() && compiles(p.get())), 7d);
 		final CriterionGradeWeight c2 = CriterionGradeWeight.from(Criterion.given("Single change"),
@@ -125,9 +125,9 @@ public class Eclipse implements GitGrader {
 
 	}
 
-	boolean compiles(GitPathRoot p) throws IOException {
+	boolean compiles(GitPathRootImpl p) throws IOException {
 		LOGGER.debug("Files matching.");
-		final TFunction<GitPathRoot, ImmutableSet<GitPath>, IOException> filesMatching = Functions
+		final TFunction<GitPathRootImpl, ImmutableSet<GitPath>, IOException> filesMatching = Functions
 				.filesMatching(isFileNamed("QuestioningConstraint.java"));
 		final ImmutableSet<GitPath> matching = filesMatching.apply(p);
 		LOGGER.debug("Files matching found: {}.", matching);
@@ -141,12 +141,12 @@ public class Eclipse implements GitGrader {
 //		return compose(filesMatching, singletonAndMatch).test(p);
 	}
 
-	boolean singleChangeAbout(GitPathRoot p, String file) throws IOException {
-		final Set<GitPathRoot> predecessors = history.getGraph().predecessors(p);
+	boolean singleChangeAbout(GitPathRootImpl p, String file) throws IOException {
+		final Set<GitPathRootImpl> predecessors = history.getGraph().predecessors(p);
 		return (predecessors.size() == 1) && singleDiffAbout(Iterables.getOnlyElement(predecessors), p, file);
 	}
 
-	private boolean singleDiffAbout(GitPathRoot predecessor, GitPathRoot p, String file) throws IOException {
+	private boolean singleDiffAbout(GitPathRootImpl predecessor, GitPathRootImpl p, String file) throws IOException {
 		final ImmutableSet<DiffEntry> diff = history.getDiff(predecessor, p);
 		return diff.size() == 1 && diffIsAboutFile(Iterables.getOnlyElement(diff), file);
 	}
@@ -155,7 +155,7 @@ public class Eclipse implements GitGrader {
 		return singleDiff.getOldPath().contains(file) && singleDiff.getNewPath().contains(file);
 	}
 
-	private IGrade warningGrade(Optional<GitPathRoot> p) throws IOException {
+	private IGrade warningGrade(Optional<GitPathRootImpl> p) throws IOException {
 		final CriterionGradeWeight c1 = CriterionGradeWeight.from(Criterion.given("Warning"),
 				Mark.binary(p.isPresent() && warning(p.get())), 7d);
 		final CriterionGradeWeight c2 = CriterionGradeWeight.from(Criterion.given("Single change"),
@@ -164,24 +164,24 @@ public class Eclipse implements GitGrader {
 
 	}
 
-	boolean warning(GitPathRoot p) throws IOException {
+	boolean warning(GitPathRootImpl p) throws IOException {
 		final Pattern pattern = Pattern.compile(".*^(?<indent>\\h+)builder[\\v\\h]*=[\\v\\h]*mp[\\v\\h]*;.*",
 				Pattern.DOTALL | Pattern.MULTILINE);
 		return compose(Functions.filesMatching(isFileNamed("ConstraintsOnWeights.java")),
 				Predicates.singletonAndMatch(contentMatches(pattern))).test(p);
 	}
 
-	private IGrade helperGrade(Optional<GitPathRoot> p) throws IOException {
+	private IGrade helperGrade(Optional<GitPathRootImpl> p) throws IOException {
 		return Mark.binary(p.isPresent() && helper(p.get()));
 
 	}
 
-	private boolean helper(GitPathRoot p) throws IOException {
+	private boolean helper(GitPathRootImpl p) throws IOException {
 		return compose(Functions.filesMatching(isFileNamed("StrategyHelperTests.java")),
 				Predicates.singletonAndMatch(contentMatches(Marks.extendAll("StrategyHelper[^T]")).negate())).test(p);
 	}
 
-	private IGrade coursesGrade(Optional<GitPathRoot> p) throws IOException {
+	private IGrade coursesGrade(Optional<GitPathRootImpl> p) throws IOException {
 		final CriterionGradeWeight c1 = CriterionGradeWeight.from(Criterion.given("courses.soc"),
 				Mark.binary(p.isPresent() && coursesChange(p.get())), 7d);
 		final CriterionGradeWeight c2 = CriterionGradeWeight.from(Criterion.given("Single change"),
@@ -190,12 +190,12 @@ public class Eclipse implements GitGrader {
 
 	}
 
-	private boolean coursesChange(GitPathRoot p) throws IOException {
+	private boolean coursesChange(GitPathRootImpl p) throws IOException {
 		return compose(Functions.filesMatching(isFileNamed("courses.soc")),
 				Predicates.singletonAndMatch(contentMatches(Pattern.compile("^8[\\r\\n]1.+", Pattern.DOTALL)))).test(p);
 	}
 
-	private IGrade numberGrade(Optional<GitPathRoot> p) throws IOException {
+	private IGrade numberGrade(Optional<GitPathRootImpl> p) throws IOException {
 		final CriterionGradeWeight c1 = CriterionGradeWeight.from(Criterion.given("Number"),
 				Mark.binary(p.isPresent() && numberChange(p.get())), 7d);
 		final CriterionGradeWeight c2 = CriterionGradeWeight.from(Criterion.given("Single change"),
@@ -204,17 +204,17 @@ public class Eclipse implements GitGrader {
 
 	}
 
-	private boolean numberChange(GitPathRoot p) throws IOException {
+	private boolean numberChange(GitPathRootImpl p) throws IOException {
 		return compose(Functions.filesMatching(isFileNamed("Oracles m = 10, n = 6, 100.json")),
 				Predicates.singletonAndMatch(contentMatches(Marks.extendAll("0.8388174124160426")))).test(p);
 	}
 
-	private IGrade formattingGrade(Optional<GitPathRoot> p) throws IOException {
+	private IGrade formattingGrade(Optional<GitPathRootImpl> p) throws IOException {
 		return Mark.binary(p.isPresent() && formatted(p.get()));
 
 	}
 
-	boolean formatted(GitPathRoot p) throws IOException {
+	boolean formatted(GitPathRootImpl p) throws IOException {
 		return compose(Functions.filesMatching(isFileNamed("PreferenceInformation.java")),
 				Predicates.singletonAndMatch(this::isFormatted)).test(p);
 	}

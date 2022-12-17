@@ -18,8 +18,8 @@ import io.github.oliviercailloux.git.git_hub.model.GitHubToken;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.git.git_hub.model.v3.CommitGitHubDescription;
 import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherV3;
-import io.github.oliviercailloux.gitjfs.GitFileSystem;
-import io.github.oliviercailloux.gitjfs.GitFileSystemProvider;
+import io.github.oliviercailloux.gitjfs.impl.GitFileSystemImpl;
+import io.github.oliviercailloux.gitjfs.impl.GitFileSystemProviderImpl;
 import io.github.oliviercailloux.utils.Utils;
 import java.net.URI;
 import java.nio.file.Files;
@@ -210,7 +210,7 @@ class GitClonerTests {
 			final Ref head = repo.findRef(Constants.HEAD);
 			assertNotNull(head);
 //			assertEquals("e26c142665bb9f560d59b18fd80763ef45e29324", head.getLeaf().getObjectId().getName());
-			try (GitFileSystem gitFs = GitFileSystemProvider.getInstance().newFileSystemFromDfsRepository(repo)) {
+			try (GitFileSystemImpl gitFs = GitFileSystemProviderImpl.getInstance().newFileSystemFromDfsRepository(repo)) {
 				assertTrue(Files.exists(gitFs.getAbsolutePath("/refs/heads/master/")));
 				assertTrue(Files.exists(gitFs.getAbsolutePath("/refs/heads/master/", "Test.html")));
 				assertFalse(Files.exists(gitFs.getAbsolutePath("/refs/heads/master/", "test.html")));
@@ -238,7 +238,7 @@ class GitClonerTests {
 //			assertEquals("e26c142665bb9f560d59b18fd80763ef45e29324", head.getLeaf().getObjectId().getName());
 			assertNotNull(head.getLeaf().getObjectId().getName());
 		}
-		try (GitFileSystem gitFs = GitFileSystemProvider.getInstance().newFileSystemFromGitDir(gitDir)) {
+		try (GitFileSystemImpl gitFs = GitFileSystemProviderImpl.getInstance().newFileSystemFromGitDir(gitDir)) {
 			assertTrue(Files.exists(gitFs.getAbsolutePath("/refs/heads/master/")));
 			assertTrue(Files.exists(gitFs.getAbsolutePath("/refs/heads/master/", "Test.html")));
 			assertFalse(Files.exists(gitFs.getAbsolutePath("/refs/heads/master/", "test.html")));
