@@ -50,13 +50,13 @@ public class BatchGitHistoryGraderTests {
 	@Test
 	void testBatch() throws Exception {
 		try (Repository empty = new InMemoryRepository(new DfsRepositoryDescription("empty"));
-				GitFileSystem emptyGitFs = GitFileSystemProvider.getInstance().newFileSystemFromRepository(empty);
+				GitFileSystem emptyGitFs = GitFileSystemProvider.instance().newFileSystemFromRepository(empty);
 				Repository early = new InMemoryRepository(new DfsRepositoryDescription("early"));
-				GitFileSystem earlyFs = GitFileSystemProvider.getInstance().newFileSystemFromRepository(early);
+				GitFileSystem earlyFs = GitFileSystemProvider.instance().newFileSystemFromRepository(early);
 				Repository now = new InMemoryRepository(new DfsRepositoryDescription("now"));
-				GitFileSystem nowFs = GitFileSystemProvider.getInstance().newFileSystemFromRepository(now);
+				GitFileSystem nowFs = GitFileSystemProvider.instance().newFileSystemFromRepository(now);
 				Repository late = new InMemoryRepository(new DfsRepositoryDescription("late"));
-				GitFileSystem lateFs = GitFileSystemProvider.getInstance().newFileSystemFromRepository(late)) {
+				GitFileSystem lateFs = GitFileSystemProvider.instance().newFileSystemFromRepository(late)) {
 			final ZonedDateTime nowTime = ZonedDateTime.parse("2022-01-01T10:00:00+01:00[Europe/Paris]");
 
 			JGit.createRepoWithSubDir(early, nowTime.minus(10, ChronoUnit.HOURS));

@@ -100,7 +100,7 @@ public class HarvestIds {
 		LOGGER.info("Proceeding with {}.", coordinates);
 		try (FileRepository repository = GitCloner.create().download(coordinates.asGitUri(),
 				Utils.getTempDirectory().resolve(coordinates.getRepositoryName()));
-				GitFileSystem fs = GitFileSystemProvider.getInstance().newFileSystemFromFileRepository(repository)) {
+				GitFileSystem fs = GitFileSystemProvider.instance().newFileSystemFromFileRepository(repository)) {
 			return getId(fs);
 		}
 	}

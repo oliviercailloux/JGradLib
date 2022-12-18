@@ -43,7 +43,7 @@ public class GitGeneralGraderTests {
 	@Disabled("To be implemented")
 	void testEmpty() throws Exception {
 		try (Repository repository = new InMemoryRepository(new DfsRepositoryDescription("myrepo"));
-				GitFileSystem gitFs = GitFileSystemProvider.getInstance().newFileSystemFromRepository(repository)) {
+				GitFileSystem gitFs = GitFileSystemProvider.instance().newFileSystemFromRepository(repository)) {
 			assertTrue(repository.getObjectDatabase().exists());
 			assertFalse(repository.getRefDatabase().hasRefs());
 
@@ -91,7 +91,7 @@ public class GitGeneralGraderTests {
 
 			try (Repository repository = JGit.createRepository(personIdent, Utils.asGraph(ImmutableList.of(c1, c2, c3)),
 					links);
-					GitFileSystem gitFs = GitFileSystemProvider.getInstance().newFileSystemFromRepository(repository)) {
+					GitFileSystem gitFs = GitFileSystemProvider.instance().newFileSystemFromRepository(repository)) {
 				final GitHistory history = GitUtils.getHistory(gitFs);
 				final ImmutableGraph<ObjectId> graph = history.getGraph();
 				final ObjectId o1 = Iterables.getOnlyElement(history.getRoots());

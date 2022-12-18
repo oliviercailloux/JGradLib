@@ -210,7 +210,7 @@ class GitClonerTests {
 			final Ref head = repo.findRef(Constants.HEAD);
 			assertNotNull(head);
 //			assertEquals("e26c142665bb9f560d59b18fd80763ef45e29324", head.getLeaf().getObjectId().getName());
-			try (GitFileSystem gitFs = GitFileSystemProvider.getInstance().newFileSystemFromDfsRepository(repo)) {
+			try (GitFileSystem gitFs = GitFileSystemProvider.instance().newFileSystemFromDfsRepository(repo)) {
 				assertTrue(Files.exists(gitFs.getAbsolutePath("/refs/heads/master/")));
 				assertTrue(Files.exists(gitFs.getAbsolutePath("/refs/heads/master/", "Test.html")));
 				assertFalse(Files.exists(gitFs.getAbsolutePath("/refs/heads/master/", "test.html")));
@@ -238,7 +238,7 @@ class GitClonerTests {
 //			assertEquals("e26c142665bb9f560d59b18fd80763ef45e29324", head.getLeaf().getObjectId().getName());
 			assertNotNull(head.getLeaf().getObjectId().getName());
 		}
-		try (GitFileSystem gitFs = GitFileSystemProvider.getInstance().newFileSystemFromGitDir(gitDir)) {
+		try (GitFileSystem gitFs = GitFileSystemProvider.instance().newFileSystemFromGitDir(gitDir)) {
 			assertTrue(Files.exists(gitFs.getAbsolutePath("/refs/heads/master/")));
 			assertTrue(Files.exists(gitFs.getAbsolutePath("/refs/heads/master/", "Test.html")));
 			assertFalse(Files.exists(gitFs.getAbsolutePath("/refs/heads/master/", "test.html")));

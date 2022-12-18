@@ -45,7 +45,7 @@ class FakeTests {
 	@Test
 	void testEmpty() throws Exception {
 		try (Repository repository = new InMemoryRepository(new DfsRepositoryDescription("myrepo"));
-				GitFileSystem gitFs = GitFileSystemProvider.getInstance().newFileSystemFromRepository(repository)) {
+				GitFileSystem gitFs = GitFileSystemProvider.instance().newFileSystemFromRepository(repository)) {
 
 			final GitFileSystemHistory gitH = GitFileSystemHistory.create(gitFs, GitUtils.getHistory(gitFs));
 			final BatchGitHistoryGrader<RuntimeException> batchGrader = BatchGitHistoryGrader
@@ -90,8 +90,7 @@ class FakeTests {
 
 			final ImmutableGraph<Path> graph = Utils.asGraph(ImmutableList.of(c1, c2, c3));
 			try (Repository repository = JGit.createRepository(personIdent, graph, links)) {
-				try (GitFileSystem gitFs = GitFileSystemProvider.getInstance()
-						.newFileSystemFromRepository(repository)) {
+				try (GitFileSystem gitFs = GitFileSystemProvider.instance().newFileSystemFromRepository(repository)) {
 					final GitHistory history = GitUtils.getHistory(gitFs);
 					final GitFileSystemHistory gitH = GitFileSystemHistory.create(gitFs, history);
 					final BatchGitHistoryGrader<RuntimeException> batchGrader = BatchGitHistoryGrader

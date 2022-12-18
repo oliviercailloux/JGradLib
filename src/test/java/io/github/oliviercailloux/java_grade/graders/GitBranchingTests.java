@@ -42,7 +42,7 @@ public class GitBranchingTests {
 	@Test
 	void testEmpty() throws Exception {
 		try (Repository repository = new InMemoryRepository(new DfsRepositoryDescription("myrepo"));
-				GitFileSystem gitFs = GitFileSystemProvider.getInstance().newFileSystemFromRepository(repository)) {
+				GitFileSystem gitFs = GitFileSystemProvider.instance().newFileSystemFromRepository(repository)) {
 
 			final GitFileSystemHistory empty = GitFileSystemHistory.create(gitFs,
 					GitHistory.create(GraphBuilder.directed().build(), ImmutableMap.of()));
@@ -96,8 +96,7 @@ public class GitBranchingTests {
 			final PersonIdent personIdent = new PersonIdent("Me", "email");
 
 			try (Repository repository = JGit.createRepository(personIdent, baseDirs, links)) {
-				try (GitFileSystem gitFs = GitFileSystemProvider.getInstance()
-						.newFileSystemFromRepository(repository)) {
+				try (GitFileSystem gitFs = GitFileSystemProvider.instance().newFileSystemFromRepository(repository)) {
 					final ImmutableGraph<ObjectId> graph = GitUtils.getHistory(gitFs).getGraph();
 					final Map<ObjectId, Instant> constantTimes = Maps.asMap(graph.nodes(),
 							o -> Commit.DEADLINE.toInstant());
@@ -154,8 +153,7 @@ public class GitBranchingTests {
 			final PersonIdent personIdent = new PersonIdent("Me", "email");
 
 			try (Repository repository = JGit.createRepository(personIdent, baseDirs, links)) {
-				try (GitFileSystem gitFs = GitFileSystemProvider.getInstance()
-						.newFileSystemFromRepository(repository)) {
+				try (GitFileSystem gitFs = GitFileSystemProvider.instance().newFileSystemFromRepository(repository)) {
 					final ImmutableGraph<ObjectId> graph = GitUtils.getHistory(gitFs).getGraph();
 					final Map<ObjectId, Instant> constantTimes = Maps.asMap(graph.nodes(),
 							o -> Commit.DEADLINE.toInstant());

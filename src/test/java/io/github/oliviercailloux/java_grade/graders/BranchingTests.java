@@ -59,7 +59,7 @@ class BranchingTests {
 	@Test
 	void testEmpty() throws Exception {
 		try (Repository repository = new InMemoryRepository(new DfsRepositoryDescription("myrepo"));
-				GitFileSystem gitFs = GitFileSystemProvider.getInstance().newFileSystemFromRepository(repository)) {
+				GitFileSystem gitFs = GitFileSystemProvider.instance().newFileSystemFromRepository(repository)) {
 
 			final GitFileSystemHistory gitH = GitFileSystemHistory.create(gitFs, GitUtils.getHistory(gitFs),
 					ImmutableMap.of());
@@ -140,8 +140,7 @@ class BranchingTests {
 			final PersonIdent personIdent = personIdent(USERNAME.getUsername(), "email", startTime);
 
 			try (Repository repository = JGit.createRepository(personIdent, graph, links)) {
-				try (GitFileSystem gitFs = GitFileSystemProvider.getInstance()
-						.newFileSystemFromRepository(repository)) {
+				try (GitFileSystem gitFs = GitFileSystemProvider.instance().newFileSystemFromRepository(repository)) {
 					final GitHistory history = GitUtils.getHistory(gitFs);
 					final ObjectId startId = history.getRoots().stream().collect(MoreCollectors.onlyElement());
 					LOGGER.info("Start id: {}", startId.getName());
@@ -245,8 +244,7 @@ class BranchingTests {
 			final ImmutableGraph<Path> graph = ImmutableGraph.copyOf(graphBuilder);
 
 			try (Repository repository = JGit.createRepository(personIdent, graph, links)) {
-				try (GitFileSystem gitFs = GitFileSystemProvider.getInstance()
-						.newFileSystemFromRepository(repository)) {
+				try (GitFileSystem gitFs = GitFileSystemProvider.instance().newFileSystemFromRepository(repository)) {
 					final GitHistory history = GitUtils.getHistory(gitFs);
 					final ObjectId startId = history.getRoots().stream().collect(MoreCollectors.onlyElement());
 					LOGGER.info("Start id: {}", startId.getName());

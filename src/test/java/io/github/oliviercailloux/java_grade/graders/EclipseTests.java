@@ -41,7 +41,7 @@ public class EclipseTests {
 	@Test
 	void testEmpty() throws Exception {
 		try (Repository repository = new InMemoryRepository(new DfsRepositoryDescription("myrepo"));
-				GitFileSystem gitFs = GitFileSystemProvider.getInstance().newFileSystemFromRepository(repository)) {
+				GitFileSystem gitFs = GitFileSystemProvider.instance().newFileSystemFromRepository(repository)) {
 
 			final GitFileSystemHistory empty = GitFileSystemHistory.create(gitFs,
 					GitHistory.create(GraphBuilder.directed().build(), ImmutableMap.of()));
@@ -57,7 +57,7 @@ public class EclipseTests {
 		try (FileRepository repository = GitCloner.create().download(
 				RepositoryCoordinates.from("oliviercailloux-org", "minimax-ex").asGitUri(),
 				Utils.getTempDirectory().resolve("minimax-ex"));
-				GitFileSystem gitFs = GitFileSystemProvider.getInstance().newFileSystemFromRepository(repository)) {
+				GitFileSystem gitFs = GitFileSystemProvider.instance().newFileSystemFromRepository(repository)) {
 			final GitHistory rawHistory = GitUtils.getHistory(gitFs);
 			final ImmutableGraph<ObjectId> graph = rawHistory.getGraph();
 			final Map<ObjectId, Instant> constantTimes = Maps.asMap(graph.nodes(), o -> Commit.DEADLINE.toInstant());
@@ -82,7 +82,7 @@ public class EclipseTests {
 		try (FileRepository repository = GitCloner.create().download(
 				RepositoryCoordinates.from("oliviercailloux-org", "minimax-ex").asGitUri(),
 				Utils.getTempDirectory().resolve("minimax-ex"));
-				GitFileSystem gitFs = GitFileSystemProvider.getInstance().newFileSystemFromRepository(repository)) {
+				GitFileSystem gitFs = GitFileSystemProvider.instance().newFileSystemFromRepository(repository)) {
 			final GitHistory rawHistory = GitUtils.getHistory(gitFs);
 			final ImmutableGraph<ObjectId> graph = rawHistory.getGraph();
 			final Map<ObjectId, Instant> constantTimes = Maps.asMap(graph.nodes(), o -> Commit.DEADLINE.toInstant());
