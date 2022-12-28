@@ -2,16 +2,18 @@ package io.github.oliviercailloux.git.fs;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import io.github.oliviercailloux.gitjfs.ForwardingGitPath;
 import io.github.oliviercailloux.gitjfs.GitPath;
 import java.io.IOException;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
+import java.util.Objects;
 
 /**
  * Similar to a GitPath (which it wraps and delegates to) except linked to a
  * filteredFs.
  */
-public class GitPathOnFilteredFs extends PathWrapper implements Path {
+public class GitPathOnFilteredFs extends ForwardingGitPath {
 
 	static GitPathOnFilteredFs wrap(GitFilteringFs fs, GitPath delegate) {
 		return new GitPathOnFilteredFs(fs, delegate);
@@ -40,6 +42,21 @@ public class GitPathOnFilteredFs extends PathWrapper implements Path {
 	@Override
 	protected GitPath delegate() {
 		return delegate;
+	}
+
+	@Override
+	public boolean equals(Object o2) {
+		return ForwardingGitPath.defaultEquals(this, o2);
+	}
+
+	@Override
+	public int hashCode() {
+		return Objects.hash(fs, toString());
+	}
+
+	@Override
+	public String toString() {
+		return delegate().toString();
 	}
 
 	@Override

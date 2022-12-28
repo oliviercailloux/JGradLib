@@ -9,6 +9,7 @@ import io.github.oliviercailloux.git.GitCloner;
 import io.github.oliviercailloux.git.GitHistory;
 import io.github.oliviercailloux.git.GitHubHistory;
 import io.github.oliviercailloux.git.GitUtils;
+import io.github.oliviercailloux.git.fs.GitHistorySimple;
 import io.github.oliviercailloux.git.git_hub.model.GitHubToken;
 import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinatesWithPrefix;
@@ -51,6 +52,7 @@ public class GitFileSystemWithHistoryFetcherByPrefix implements GitFileSystemWit
 	private GitFileSystem lastGitFs;
 	private Repository lastRepository;
 	private GitFileSystemHistory lastHistory;
+	private GitHistorySimple lastHistorySimple;
 	private final int count;
 	private final Predicate<GitHubUsername> accepted;
 	private final boolean useCommitDates;
@@ -77,6 +79,7 @@ public class GitFileSystemWithHistoryFetcherByPrefix implements GitFileSystemWit
 				.map(GitHubUsername::given).filter(accepted).collect(ImmutableSet.toImmutableSet());
 	}
 
+	@Deprecated
 	@Override
 	public GitFileSystemHistory goTo(GitHubUsername username) throws IOException {
 		checkArgument(accepted.test(username));
@@ -106,6 +109,43 @@ public class GitFileSystemWithHistoryFetcherByPrefix implements GitFileSystemWit
 
 			lastHistory = GitFileSystemHistory.create(lastGitFs, history, gitHubHistory.getPushDates());
 			return lastHistory;
+		} catch (RuntimeException | IOException e) {
+			try {
+				close();
+			} catch (RuntimeException suppressed) {
+				LOGGER.info("Suppressed {}.", suppressed);
+			}
+			throw e;
+		}
+	}
+
+	@Override
+	public GitHistorySimple goToFs(GitHubUsername username) throws IOException {
+		checkArgument(accepted.test(username));
+
+		final Optional<RuntimeException> exc = closePrevious();
+		exc.ifPresent(e -> {
+			throw e;
+		});
+
+		try {
+			final RepositoryCoordinatesWithPrefix coordinates = RepositoryCoordinatesWithPrefix
+					.from(RepositoryFetcher.DEFAULT_ORG, prefix, username.getUsername());
+
+			final Path dir = Utils.getTempDirectory().resolve(coordinates.getRepositoryName());
+
+			lastRepository = cloner.download(coordinates.asGitUri(), dir);
+
+			lastGitFs = GitFileSystemProvider.instance().newFileSystemFromRepository(lastRepository);
+
+			final GitHubHistory gitHubHistory = fetcherQl.getReversedGitHubHistory(coordinates);
+			if (useCommitDates) {
+				lastHistorySimple = GitHistorySimple.create(lastGitFs, gitHubHistory.getPushDates());
+			} else {
+				lastHistorySimple = GitHistorySimple.create(lastGitFs, gitHubHistory.getPushDates());
+			}
+
+			return lastHistorySimple;
 		} catch (RuntimeException | IOException e) {
 			try {
 				close();
