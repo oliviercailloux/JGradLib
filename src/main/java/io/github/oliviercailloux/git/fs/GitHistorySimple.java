@@ -1,25 +1,25 @@
 package io.github.oliviercailloux.git.fs;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static io.github.oliviercailloux.jaris.exceptions.Unchecker.IO_UNCHECKER;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
+import com.google.common.graph.Graph;
 import com.google.common.graph.ImmutableGraph;
 import com.google.common.graph.MutableGraph;
 import io.github.oliviercailloux.git.GitHubHistory;
+import io.github.oliviercailloux.gitjfs.Commit;
 import io.github.oliviercailloux.gitjfs.GitFileSystem;
-import io.github.oliviercailloux.gitjfs.GitPathRoot;
 import io.github.oliviercailloux.gitjfs.GitPathRootSha;
 import io.github.oliviercailloux.gitjfs.GitPathRootShaCached;
+import io.github.oliviercailloux.jaris.collections.CollectionUtils;
 import io.github.oliviercailloux.jaris.collections.GraphUtils;
 import java.io.IOException;
 import java.time.Instant;
 import java.util.Map;
 import java.util.Objects;
-import java.util.function.Function;
 import java.util.function.Predicate;
 import org.eclipse.jgit.lib.ObjectId;
 import org.slf4j.Logger;
@@ -35,32 +35,29 @@ import org.slf4j.LoggerFactory;
  * probably, for push dates coming from GitHub, which are incomplete. Better,
  * for that specific use case, complete the information, as done in
  * {@link GitHubHistory}.
+ * <p>
+ * TODO consider using only (or mostly) paths instead of object ids.
  */
 public class GitHistorySimple {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(GitHistorySimple.class);
 
 	/**
-	 * @param graph successors = children (time-based view)
 	 * @param dates its keyset must contain all nodes of the graph.
-	 * @throws IOException
 	 */
 	public static GitHistorySimple create(GitFileSystem fs, Map<ObjectId, Instant> dates) throws IOException {
 		return new GitHistorySimple(fs, dates);
 	}
 
 	/**
-	 * @param graph successors = children (time-based view)
 	 * @param dates its keyset must contain all nodes of the graph.
-	 * @throws IOException
 	 */
 	public static GitHistorySimple usingCommitterDates(GitFileSystem fs) throws IOException {
 		final ImmutableGraph<GitPathRootSha> graphOfPaths = fs.getCommitsGraph();
-
-		final Function<GitPathRoot, Instant> getDate = IO_UNCHECKER.wrapFunction();
-
-		final ImmutableMap<ObjectId, Instant> dates = graphOfPaths.nodes().stream().collect(ImmutableMap
-				.toImmutableMap(GitPathRootSha::getStaticCommitId, p -> p.getCommit().committerDate().toInstant()));
+		final Graph<Commit> graph = GraphUtils.transform(graphOfPaths, GitPathRootSha::getCommit);
+		final ImmutableMap<Commit, Instant> dated = CollectionUtils.toMap(graph.nodes(),
+				c -> c.committerDate().toInstant());
+		final ImmutableMap<ObjectId, Instant> dates = CollectionUtils.transformKeys(dated, Commit::id);
 
 		return GitHistorySimple.create(fs, dates);
 	}
@@ -92,6 +89,9 @@ public class GitHistorySimple {
 		return fs;
 	}
 
+	/**
+	 * graph successors = children (time-based view)
+	 */
 	public ImmutableGraph<GitPathRootShaCached> graph() {
 		return graph;
 	}
@@ -137,6 +137,15 @@ public class GitHistorySimple {
 	}
 
 	/**
+	 * @throws IllegalArgumentException iff the given path corresponds to no node of
+	 *                                  the {@link #graph() graph}.
+	 */
+	public Instant getTimestamp(GitPathRootShaCached path) {
+		final ObjectId id = path.getCommit().id();
+		return getTimestamp(id);
+	}
+
+	/**
 	 * @throws IllegalArgumentException iff the given commit id corresponds to no
 	 *                                  node of the {@link #graph() graph}.
 	 */
@@ -159,9 +168,22 @@ public class GitHistorySimple {
 	 *
 	 * @param filter indicates which elements should be kept
 	 * @return a filtering file system
+	 * @throws IOException
 	 */
 	public GitFileSystem filterDate(Predicate<Instant> filter) {
 		return GitFilteringFs.filter(fs, p -> filter.test(dates.get(p.id())));
+	}
+
+	/**
+	 * Returns a git history that only shows paths whose timestamp match the given
+	 * filter.
+	 *
+	 * @param filter indicates which elements should be kept
+	 * @return a filtering file system
+	 * @throws IOException TODO to remove
+	 */
+	public GitHistorySimple filtered(Predicate<Instant> filter) throws IOException {
+		return GitHistorySimple.create(filterDate(filter), dates);
 	}
 
 	@Override

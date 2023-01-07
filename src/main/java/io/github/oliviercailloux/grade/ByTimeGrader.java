@@ -10,10 +10,17 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Streams;
+import com.google.common.graph.Graph;
+import io.github.oliviercailloux.git.fs.GitFilteringFs;
 import io.github.oliviercailloux.git.fs.GitHistorySimple;
 import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
+import io.github.oliviercailloux.gitjfs.Commit;
 import io.github.oliviercailloux.gitjfs.GitPathRoot;
+import io.github.oliviercailloux.gitjfs.GitPathRootRef;
 import io.github.oliviercailloux.gitjfs.GitPathRootSha;
+import io.github.oliviercailloux.gitjfs.GitPathRootShaCached;
+import io.github.oliviercailloux.jaris.collections.CollectionUtils;
+import io.github.oliviercailloux.jaris.collections.GraphUtils;
 import io.github.oliviercailloux.jaris.throwing.TOptional;
 import io.github.oliviercailloux.java_grade.testers.JavaMarkHelper;
 import java.io.IOException;
@@ -29,7 +36,7 @@ import org.slf4j.LoggerFactory;
 public class ByTimeGrader<X extends Exception> implements Grader<X> {
 
 	public static class PreparedGrader<X extends Exception> {
-		private final GitFileSystemHistory whole;
+		private final GitHistorySimple whole;
 		private GitFsGrader<X> grader;
 		private GitHubUsername author;
 		private final GradeModifier penalizerModifier;
@@ -37,7 +44,7 @@ public class ByTimeGrader<X extends Exception> implements Grader<X> {
 		private ZonedDateTime deadline;
 
 		public PreparedGrader(GitFsGrader<X> grader, GitHubUsername author, GradeModifier modifier,
-				GitFileSystemHistory whole, String commentGeneralCapped, ZonedDateTime deadline) {
+				GitHistorySimple whole, String commentGeneralCapped, ZonedDateTime deadline) {
 			this.grader = grader;
 			this.author = author;
 			this.penalizerModifier = modifier;
@@ -48,8 +55,7 @@ public class ByTimeGrader<X extends Exception> implements Grader<X> {
 
 		public MarksTree grade(Instant timeCap) throws X {
 			try {
-				final GitFileSystemHistory capped = whole.filter(r -> !whole.getCommitDate(r).isAfter(timeCap),
-						timeCap);
+				final GitHistorySimple capped = whole.filtered(i -> !i.isAfter(timeCap));
 
 				final MarksTree grade = grader.grade(capped);
 
@@ -78,7 +84,7 @@ public class ByTimeGrader<X extends Exception> implements Grader<X> {
 			return commentGeneralCapped;
 		}
 
-		public GitFileSystemHistory getWhole() {
+		public GitHistorySimple getWhole() {
 			return whole;
 		}
 	}
@@ -144,12 +150,11 @@ public class ByTimeGrader<X extends Exception> implements Grader<X> {
 		return byTimeGrade;
 	}
 
-	public PreparedGrader<X> prepared(GitHubUsername author, GitFileSystemHistory history) throws IOException {
+	public PreparedGrader<X> prepared(GitHubUsername author, GitHistorySimple history) throws IOException {
 		checkTimes(history, deadline.toInstant());
 		final Optional<Instant> earliestTimeCommitByGitHub = earliestTimeCommitByGitHub(history);
-		final GitFileSystemHistory beforeCommitByGitHub = TOptional.wrapping(earliestTimeCommitByGitHub)
-				.map(t -> history.filter(c -> history.asGitHistory().getTimestamp(c.getCommit().id()).isBefore(t), t))
-				.orElse(history);
+		final GitHistorySimple beforeCommitByGitHub = TOptional.wrapping(earliestTimeCommitByGitHub)
+				.map(t -> history.filtered(i -> i.isBefore(t))).orElse(history);
 		final String commentGeneralCapped = earliestTimeCommitByGitHub
 				.map(t -> "; ignored commits after " + t.atZone(deadline.getZone()).toString() + ", sent by GitHub")
 				.orElse("");
@@ -159,15 +164,26 @@ public class ByTimeGrader<X extends Exception> implements Grader<X> {
 		return preparedGrader;
 	}
 
-	public static Optional<Instant> earliestTimeCommitByGitHub(GitFileSystemHistory history) throws IOException {
-		LOGGER.debug("Found {} commits (total).", history.getGraph().nodes().size());
-
+	public static Optional<Instant> earliestTimeCommitByGitHub(GitHistorySimple history) throws IOException {
+		final Graph<GitPathRootShaCached> graph = GraphUtils.transform(history.fs().getCommitsGraph(),
+				GitPathRootSha::toShaCached);
+		LOGGER.debug("Found {} commits (total).", graph.nodes().size());
+		final ImmutableSet<Commit> commits = graph.nodes().stream().map(GitPathRootShaCached::getCommit)
+				.collect(ImmutableSet.toImmutableSet());
 		/* GitHub creates the very first commit when importing from a template. */
 		final Optional<Instant> earliestTimeCommitByGitHub;
 		if (IGNORE_FROM_GITHUB) {
-			earliestTimeCommitByGitHub = history.filter(JavaMarkHelper::committerIsGitHub)
-					.filter(c -> !history.getRoots().contains(c)).asGitHistory().getTimestamps().values().stream()
-					.min(Comparator.naturalOrder());
+			/*
+			 * Not sure why but the procedure here seems to keep commits by github that are
+			 * not roots, and get earliest timestamp.
+			 */
+			final ImmutableSet<Commit> roots = history.roots().stream().map(GitPathRootShaCached::getCommit)
+					.collect(ImmutableSet.toImmutableSet());
+			final ImmutableSet<Commit> kept = commits.stream().filter(JavaMarkHelper::committerIsGitHub)
+					.filter(c -> !roots.contains(c)).collect(ImmutableSet.toImmutableSet());
+			final ImmutableSet<Instant> timestamps = kept.stream().map(Commit::id).map(history::getTimestamp)
+					.collect(ImmutableSet.toImmutableSet());
+			earliestTimeCommitByGitHub = timestamps.stream().min(Comparator.naturalOrder());
 		} else {
 			earliestTimeCommitByGitHub = Optional.empty();
 		}
@@ -194,12 +210,23 @@ public class ByTimeGrader<X extends Exception> implements Grader<X> {
 	}
 
 	public static Instant cappedAt(GitFileSystemHistory capped) {
-//		final ImmutableSet<GitPathRoot> leaves = IO_UNCHECKER.getUsing(capped::getRefs).stream()
-//				.filter(n -> capped.getGraph().successors(n).isEmpty()).collect(ImmutableSet.toImmutableSet());
+		// final ImmutableSet<GitPathRoot> leaves =
+		// IO_UNCHECKER.getUsing(capped::getRefs).stream()
+		// .filter(n ->
+		// capped.getGraph().successors(n).isEmpty()).collect(ImmutableSet.toImmutableSet());
 		final ImmutableSet<GitPathRootSha> leaves = capped.getFilteredLeaves();
 		final Instant timeCap = leaves.stream()
 				.map((GitPathRoot r) -> IO_UNCHECKER.getUsing(() -> capped.getCommitDate(r)))
 				.max(Comparator.naturalOrder()).orElseThrow();
+		return timeCap;
+	}
+
+	public static Instant cappedAt(GitHistorySimple capped) {
+//		final ImmutableSet<GitPathRoot> leaves = IO_UNCHECKER.getUsing(capped::getRefs).stream()
+//				.filter(n -> capped.getGraph().successors(n).isEmpty()).collect(ImmutableSet.toImmutableSet());
+		final ImmutableSet<GitPathRootShaCached> leaves = capped.leaves();
+		final Instant timeCap = leaves.stream().map(r -> capped.getTimestamp(r)).max(Comparator.naturalOrder())
+				.orElseThrow();
 		return timeCap;
 	}
 
@@ -216,6 +243,18 @@ public class ByTimeGrader<X extends Exception> implements Grader<X> {
 		return leaf;
 	}
 
+	public static GitPathRootSha last(GitHistorySimple data) {
+		// final ImmutableSet<GitPathRoot> leaves =
+		// IO_UNCHECKER.getUsing(data::getRefs).stream()
+		// .filter(n ->
+		// data.getGraph().successors(n).isEmpty()).collect(ImmutableSet.toImmutableSet());
+		final ImmutableSet<GitPathRootShaCached> leaves = data.leaves();
+		final Comparator<GitPathRootShaCached> byDate = Comparator.comparing(r -> data.getTimestamp(r));
+		final ImmutableSortedSet<GitPathRootShaCached> sortedLeaves = ImmutableSortedSet.copyOf(byDate, leaves);
+		final GitPathRootSha leaf = sortedLeaves.last();
+		return leaf;
+	}
+
 	private static GradeAggregator getUserNamedAggregator(GitFsGrader<?> grader, double userGradeWeight) {
 		final GradeAggregator basis = grader.getAggregator();
 		return GradeAggregator.staticAggregator(
@@ -223,22 +262,22 @@ public class ByTimeGrader<X extends Exception> implements Grader<X> {
 				ImmutableMap.of(ByTimeGrader.C_GRADE, basis));
 	}
 
-	private static void checkTimes(GitFileSystemHistory history, Instant deadline) {
+	private static void checkTimes(GitHistorySimple history, Instant deadline) throws IOException {
 		/*
 		 * Check whether has put late branches on every ending commits: some leaf has a
 		 * pointer that is not main or master. And it is late. OR rather simply use
 		 * commit times and try to detect inconsistencies: commit time on time but push
 		 * date late.
 		 */
-		final ImmutableSet<GitPathRoot> refs = IO_UNCHECKER.getUsing(history::getRefs);
-		final ImmutableMap<GitPathRoot, Instant> commitDates = refs.stream().collect(ImmutableMap.toImmutableMap(p -> p,
-				IO_UNCHECKER.wrapFunction(p -> p.getCommit().committerDate().toInstant())));
-		final ImmutableMap<GitPathRoot, Instant> pushDates = refs.stream().collect(ImmutableMap.toImmutableMap(p -> p,
-				IO_UNCHECKER.wrapFunction(p -> history.getPushDates().getOrDefault(p.getCommit().id(), Instant.MIN))));
-		final Map<GitPathRoot, Instant> pushDatesLate = Maps.filterValues(pushDates, i -> i.isAfter(deadline));
-		final Map<GitPathRoot, Instant> commitsOnTime = Maps.filterValues(commitDates, i -> !i.isAfter(deadline));
+		final ImmutableSet<GitPathRootRef> refs = history.fs().getRefs();
+		final ImmutableMap<GitPathRootRef, Instant> commitDates = CollectionUtils.toMap(refs,
+				r -> r.getCommit().committerDate().toInstant());
+		final ImmutableMap<GitPathRootRef, Instant> pushDates = CollectionUtils.toMap(refs,
+				r -> history.getTimestamps().getOrDefault(r.getCommit().id(), Instant.MIN));
+		final Map<GitPathRootRef, Instant> pushDatesLate = Maps.filterValues(pushDates, i -> i.isAfter(deadline));
+		final Map<GitPathRootRef, Instant> commitsOnTime = Maps.filterValues(commitDates, i -> !i.isAfter(deadline));
 
-		final Map<GitPathRoot, Instant> contradictory = Maps.filterKeys(pushDatesLate,
+		final Map<GitPathRootRef, Instant> contradictory = Maps.filterKeys(pushDatesLate,
 				r -> commitsOnTime.containsKey(r));
 		if (!contradictory.isEmpty()) {
 			LOGGER.info("Commit times: {}.", commitDates);
@@ -274,23 +313,65 @@ public class ByTimeGrader<X extends Exception> implements Grader<X> {
 		return consideredTimestamps;
 	}
 
+	/**
+	 * Note that according to a note that I do not understand any more: Considers as
+	 * “commit time” every times given by the git history AND by the push dates
+	 * (something may be pushed at some date that does not appear in the git
+	 * history, as it may have being overwritten by later commits: in case the
+	 * commits were all pushed at some time but a branch was later put on some
+	 * commit not ending the series, for example).
+	 *
+	 * @param history
+	 * @return the latest commit time that is on time, that is, the latest commit
+	 *         time within [MIN, deadline], if it exists, and the late commit times,
+	 *         that is, every times of commits falling in the range (deadline, max].
+	 */
+	public static ImmutableSortedSet<Instant> getTimestamps(GitHistorySimple history, Instant deadline, Instant max) {
+		final ImmutableSortedSet<Instant> timestamps = history.getTimestamps().values().stream()
+				.collect(ImmutableSortedSet.toImmutableSortedSet(Comparator.naturalOrder()));
+		final Instant latestCommitTimeOnTime = Optional.ofNullable(timestamps.floor(deadline)).orElse(Instant.MIN);
+		final ImmutableSortedSet<Instant> consideredTimestamps = timestamps.subSet(latestCommitTimeOnTime, true, max,
+				true);
+		verify(consideredTimestamps.isEmpty() == history.graph().nodes().isEmpty());
+		verify(!consideredTimestamps.last().isAfter(max));
+		return consideredTimestamps;
+	}
+
 	public static ImmutableSet<GitFileSystemHistory> getCapped(GitFileSystemHistory history, Instant deadline,
 			Instant max) {
 		return getTimestamps(history, deadline, max).stream().map(c -> cap(history, c))
 				.collect(ImmutableSet.toImmutableSet());
 	}
 
+	public static ImmutableSet<GitHistorySimple> getCapped(GitHistorySimple history, Instant deadline, Instant max) {
+		return getTimestamps(history, deadline, max).stream().map(c -> cap(history, c))
+				.collect(ImmutableSet.toImmutableSet());
+	}
+
 	private static GitFileSystemHistory cap(GitFileSystemHistory history, Instant c) {
 		try {
-//			GitFileSystemHistory.create(history.)
+			// GitFileSystemHistory.create(history.)
 			final GitFileSystemHistory filtered = history.filter(
 					r -> (!history.getCommitDate(r).isAfter(c) && !r.getCommit().authorDate().toInstant().isAfter(c))
 							|| (history.getPushDates().get(r.getCommit().id()) != null
 									&& !history.getPushDates().get(r.getCommit().id()).isAfter(c)),
 					c);
-//			final GitPathRootSha last = ByTimeGrader.last(filtered);
+			// final GitPathRootSha last = ByTimeGrader.last(filtered);
 			final Instant last = ByTimeGrader.cappedAt(filtered);
 			verify(!last.isAfter(c));
+			return filtered;
+		} catch (IOException e) {
+			throw new UncheckedIOException(e);
+		}
+	}
+
+	private static GitHistorySimple cap(GitHistorySimple history, Instant cap) {
+		try {
+			final GitFilteringFs filteredFs = GitFilteringFs.filter(history.fs(),
+					c -> !history.getTimestamp(c.id()).isAfter(cap));
+			final GitHistorySimple filtered = GitHistorySimple.create(filteredFs, history.getTimestamps());
+			final Instant last = ByTimeGrader.cappedAt(filtered);
+			verify(!last.isAfter(cap));
 			return filtered;
 		} catch (IOException e) {
 			throw new UncheckedIOException(e);

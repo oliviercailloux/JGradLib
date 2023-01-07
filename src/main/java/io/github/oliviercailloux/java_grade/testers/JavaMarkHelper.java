@@ -6,6 +6,7 @@ import static com.google.common.base.Preconditions.checkState;
 import com.sun.management.UnixOperatingSystemMXBean;
 import io.github.oliviercailloux.gitjfs.Commit;
 import io.github.oliviercailloux.gitjfs.GitPathRoot;
+import io.github.oliviercailloux.gitjfs.GitPathRootShaCached;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.lang.management.ManagementFactory;
@@ -62,6 +63,15 @@ public class JavaMarkHelper {
 	 *
 	 */
 	public static boolean committerIsGitHub(GitPathRoot commit) throws NoSuchFileException, IOException {
+		return committerIsGitHub(commit.getCommit());
+	}
+
+	/**
+	 * When the GitHub GUI is used, the committer is set to GitHub
+	 * <noreply@github.com> while the author seems to be the logged user.
+	 *
+	 */
+	public static boolean committerIsGitHub(GitPathRootShaCached commit) {
 		return committerIsGitHub(commit.getCommit());
 	}
 

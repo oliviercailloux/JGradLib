@@ -8,6 +8,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
+import io.github.oliviercailloux.git.fs.GitHistorySimple;
 import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
 import io.github.oliviercailloux.gitjfs.GitPathRootSha;
 import io.github.oliviercailloux.grade.DeadlineGrader.LinearPenalizer;
@@ -50,21 +51,21 @@ public class DoubleGrader implements Grader<IOException> {
 	}
 
 	@Override
-	public MarksTree grade(GitHubUsername author, GitFileSystemHistory data) throws IOException {
+	public MarksTree grade(GitHubUsername author, GitHistorySimple data) throws IOException {
 		final Optional<Instant> earliestTimeCommitByGitHub;
-		final GitFileSystemHistory beforeCommitByGitHub;
+		final GitHistorySimple beforeCommitByGitHub;
 		try {
 			earliestTimeCommitByGitHub = ByTimeGrader.earliestTimeCommitByGitHub(data);
+			LOGGER.debug("Earliest: {}.", earliestTimeCommitByGitHub);
 			beforeCommitByGitHub = TOptional.wrapping(earliestTimeCommitByGitHub)
-					.map(t -> data.filter(c -> data.asGitHistory().getTimestamp(c.getCommit().id()).isBefore(t), t))
-					.orElse(data);
+					.map(t -> data.filtered(i -> i.isBefore(t))).orElse(data);
 		} catch (IOException e) {
 			throw new IllegalStateException(e);
 		}
 		final String commentGeneralCapped = earliestTimeCommitByGitHub
 				.map(t -> "; ignored commits after " + t.atZone(zone).toString() + ", sent by GitHub").orElse("");
 
-		final ImmutableSet<GitFileSystemHistory> cappedsOriginal = ByTimeGrader.getCapped(beforeCommitByGitHub,
+		final ImmutableSet<GitHistorySimple> cappedsOriginal = ByTimeGrader.getCapped(beforeCommitByGitHub,
 				Grader421.DEADLINE_ORIGINAL.toInstant(), Grader421.CAP_ORIGINAL);
 //		final ImmutableSet<GitFileSystemHistory> cappedsSecond = ByTimeGrader.getCapped(beforeCommitByGitHub,
 //				Grader421.DEADLINE_SECOND_CHANCE.toInstant(), Instant.MAX);
@@ -75,12 +76,12 @@ public class DoubleGrader implements Grader<IOException> {
 		 *
 		 * Improvement: consider summing the latenesses.
 		 */
-		final ImmutableSet<GitFileSystemHistory> cappedsSecond = ByTimeGrader.getCapped(beforeCommitByGitHub,
+		final ImmutableSet<GitHistorySimple> cappedsSecond = ByTimeGrader.getCapped(beforeCommitByGitHub,
 				Grader421.DEADLINE_ORIGINAL.toInstant(), Instant.MAX);
 
 		final ImmutableSet.Builder<SubMarksTree> cappedBuilder = ImmutableSet.builder();
-		for (GitFileSystemHistory cappedO : cappedsOriginal) {
-			for (GitFileSystemHistory cappedS : cappedsSecond) {
+		for (GitHistorySimple cappedO : cappedsOriginal) {
+			for (GitHistorySimple cappedS : cappedsSecond) {
 				final MarksTree old = gO.grade(author, cappedO);
 				final MarksTree second = gS.grade(author, cappedS);
 				final GitPathRootSha lastO = ByTimeGrader.last(cappedO);

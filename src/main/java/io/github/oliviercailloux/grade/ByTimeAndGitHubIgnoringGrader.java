@@ -59,13 +59,12 @@ public class ByTimeAndGitHubIgnoringGrader<X extends Exception> implements Grade
 //		LOGGER.info("Leaves: {}.", history.getLeaves());
 
 		final Optional<Instant> earliestTimeCommitByGitHub;
-		final GitFileSystemHistory beforeCommitByGitHub;
+		final GitHistorySimple beforeCommitByGitHub;
 		try {
 			earliestTimeCommitByGitHub = ByTimeGrader.earliestTimeCommitByGitHub(history);
 			LOGGER.debug("Earliest: {}.", earliestTimeCommitByGitHub);
-			beforeCommitByGitHub = TOptional.wrapping(earliestTimeCommitByGitHub).map(
-					t -> history.filter(c -> history.asGitHistory().getTimestamp(c.getCommit().id()).isBefore(t), t))
-					.orElse(history);
+			beforeCommitByGitHub = TOptional.wrapping(earliestTimeCommitByGitHub)
+					.map(t -> history.filtered(i -> i.isBefore(t))).orElse(history);
 		} catch (IOException e) {
 			throw new IllegalStateException(e);
 		}
@@ -74,19 +73,17 @@ public class ByTimeAndGitHubIgnoringGrader<X extends Exception> implements Grade
 				.orElse("");
 
 //		verify(beforeCommitByGitHub.getLeaves().equals(noSuccs));
-		final ImmutableCollection<Instant> tsesFromGitH = history.asGitHistory().getTimestamps().values();
+		final ImmutableCollection<Instant> tsesFromGitH = history.getTimestamps().values();
 		LOGGER.debug("Tses from gitH: {}.", tsesFromGitH);
-		final ImmutableCollection<Instant> pushDates = history.getPushDates().values();
-		LOGGER.debug("Push dates: {}.", pushDates);
 		final ImmutableSortedSet<Instant> tsFromTimer = ByTimeGrader.getTimestamps(beforeCommitByGitHub,
 				deadline.toInstant(), Instant.MAX);
 		LOGGER.debug("Tses from timer: {}.", tsFromTimer);
-		final ImmutableSet<GitFileSystemHistory> cappeds = ByTimeGrader.getCapped(beforeCommitByGitHub,
+		final ImmutableSet<GitHistorySimple> cappeds = ByTimeGrader.getCapped(beforeCommitByGitHub,
 				deadline.toInstant(), Instant.MAX);
 //		final GitFileSystemHistory cappedOnly = Iterables.getOnlyElement(cappeds);
 //		verify(cappedOnly.getLeaves().equals(noSuccs));
 		final ImmutableSet.Builder<SubMarksTree> cappedBuilder = ImmutableSet.builder();
-		for (GitFileSystemHistory capped : cappeds) {
+		for (GitHistorySimple capped : cappeds) {
 			final MarksTree cappedGrade = delegate.grade(author, capped);
 			final Instant i = ByTimeGrader.cappedAt(capped);
 			final String cappingAt = cappeds.size() == 1 ? "No capping"

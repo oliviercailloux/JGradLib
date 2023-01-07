@@ -12,10 +12,12 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Iterables;
 import io.github.oliviercailloux.git.GitHistory;
+import io.github.oliviercailloux.git.fs.GitHistorySimple;
 import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
 import io.github.oliviercailloux.gitjfs.Commit;
 import io.github.oliviercailloux.gitjfs.GitPathRoot;
 import io.github.oliviercailloux.gitjfs.GitPathRootSha;
+import io.github.oliviercailloux.gitjfs.GitPathRootShaCached;
 import io.github.oliviercailloux.grade.old.Mark;
 import io.github.oliviercailloux.jaris.collections.CollectionUtils;
 import io.github.oliviercailloux.jaris.exceptions.CheckedStream;
@@ -109,8 +111,8 @@ public class DeadlineGrader {
 					.comparing(c -> IO_UNCHECKER.getUsing(() -> c.getCommit()).authorDate());
 			final Comparator<GitPathRootSha> byCommitDate = Comparator
 					.comparing(c -> IO_UNCHECKER.getUsing(() -> c.getCommit()).committerDate());
-			final TComparator<GitPathRootSha, IOException> byDate = (t1, t2) -> byAuthorDate
-					.thenComparing(byCommitDate).compare(t1, t2);
+			final TComparator<GitPathRootSha, IOException> byDate = (t1, t2) -> byAuthorDate.thenComparing(byCommitDate)
+					.compare(t1, t2);
 			return Utils.<GitPathRootSha, IOException>getMaximalElements(leaves, byDate);
 		}
 
@@ -289,8 +291,7 @@ public class DeadlineGrader {
 		return new DeadlineGrader(grader::grade, deadline, LinearPenalizer.DEFAULT_PENALIZER);
 	}
 
-	public static DeadlineGrader usingPathGrader(TFunction<Path, IGrade, IOException> grader,
-			ZonedDateTime deadline) {
+	public static DeadlineGrader usingPathGrader(TFunction<Path, IGrade, IOException> grader, ZonedDateTime deadline) {
 		return new DeadlineGrader(new PathToGitGrader(grader)::grade, deadline, LinearPenalizer.DEFAULT_PENALIZER);
 	}
 
@@ -328,6 +329,18 @@ public class DeadlineGrader {
 				.wrapping(history.getGraph().nodes().stream());
 		final ImmutableSet<String> authors = checkedCommits.map(GitPathRoot::getCommit).map(Commit::authorName)
 				.filter(s -> !s.equals("github-classroom[bot]")).collect(ImmutableSet.toImmutableSet());
+		final ImmutableSet<String> authorsShow = authors.stream().map(s -> "‘" + s + "’")
+				.collect(ImmutableSet.toImmutableSet());
+		LOGGER.debug("Authors: {}.", authors);
+		final String authorExpected = expectedUsername.getUsername();
+		return Mark.binary(authors.equals(ImmutableSet.of(authorExpected)), "",
+				"Expected ‘" + authorExpected + "’, seen " + authorsShow);
+	}
+
+	public static Mark getUsernameGrade(GitHistorySimple history, GitHubUsername expectedUsername) {
+		final ImmutableSet<String> authors = history.graph().nodes().stream().map(GitPathRootShaCached::getCommit)
+				.map(Commit::authorName).filter(s -> !s.equals("github-classroom[bot]"))
+				.collect(ImmutableSet.toImmutableSet());
 		final ImmutableSet<String> authorsShow = authors.stream().map(s -> "‘" + s + "’")
 				.collect(ImmutableSet.toImmutableSet());
 		LOGGER.debug("Authors: {}.", authors);
