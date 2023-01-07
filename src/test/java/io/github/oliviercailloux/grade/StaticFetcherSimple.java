@@ -9,18 +9,18 @@ import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
 import java.io.IOException;
 import java.util.Map;
 
-public class StaticFetcher implements GitFileSystemWithHistoryFetcher {
-	public static GitFileSystemWithHistoryFetcher single(GitHubUsername username, GitFileSystemHistory gitFs) {
-		return new StaticFetcher(ImmutableMap.of(username, gitFs));
+public class StaticFetcherSimple implements GitFileSystemWithHistoryFetcher {
+	public static GitFileSystemWithHistoryFetcher single(GitHubUsername username, GitHistorySimple gitFs) {
+		return new StaticFetcherSimple(ImmutableMap.of(username, gitFs));
 	}
 
-	public static GitFileSystemWithHistoryFetcher multiple(Map<GitHubUsername, GitFileSystemHistory> gitFsesByauthor) {
-		return new StaticFetcher(gitFsesByauthor);
+	public static GitFileSystemWithHistoryFetcher multiple(Map<GitHubUsername, GitHistorySimple> gitFsesByauthor) {
+		return new StaticFetcherSimple(gitFsesByauthor);
 	}
 
-	private final ImmutableMap<GitHubUsername, GitFileSystemHistory> gitFsesByauthor;
+	private final ImmutableMap<GitHubUsername, GitHistorySimple> gitFsesByauthor;
 
-	private StaticFetcher(Map<GitHubUsername, GitFileSystemHistory> gitFsesByauthor) {
+	private StaticFetcherSimple(Map<GitHubUsername, GitHistorySimple> gitFsesByauthor) {
 		this.gitFsesByauthor = ImmutableMap.copyOf(gitFsesByauthor);
 	}
 
@@ -32,13 +32,13 @@ public class StaticFetcher implements GitFileSystemWithHistoryFetcher {
 	@SuppressWarnings("deprecation")
 	@Override
 	public GitFileSystemHistory goTo(GitHubUsername author) throws IOException {
-		checkArgument(gitFsesByauthor.containsKey(author));
-		return gitFsesByauthor.get(author);
+		throw new UnsupportedOperationException();
 	}
 
 	@Override
 	public GitHistorySimple goToFs(GitHubUsername author) throws IOException {
-		throw new UnsupportedOperationException();
+		checkArgument(gitFsesByauthor.containsKey(author));
+		return gitFsesByauthor.get(author);
 	}
 
 	@Override

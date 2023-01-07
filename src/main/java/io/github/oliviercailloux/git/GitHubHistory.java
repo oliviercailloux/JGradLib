@@ -107,6 +107,10 @@ public class GitHubHistory {
 		return pushDates;
 	}
 
+	public ImmutableMap<ObjectId, Instant> getConsistentPushDates() {
+		return finalPushDates;
+	}
+
 	/**
 	 * Many null values among the pushedDate information sent by GitHub. Also,
 	 * there’s probably occasional bugs, where a commit is reportedly pushed before

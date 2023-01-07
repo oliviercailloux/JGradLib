@@ -128,32 +128,23 @@ public class GitFileSystemWithHistoryFetcherByPrefix implements GitFileSystemWit
 			throw e;
 		});
 
-		try {
-			final RepositoryCoordinatesWithPrefix coordinates = RepositoryCoordinatesWithPrefix
-					.from(RepositoryFetcher.DEFAULT_ORG, prefix, username.getUsername());
+		final RepositoryCoordinatesWithPrefix coordinates = RepositoryCoordinatesWithPrefix
+				.from(RepositoryFetcher.DEFAULT_ORG, prefix, username.getUsername());
 
-			final Path dir = Utils.getTempDirectory().resolve(coordinates.getRepositoryName());
+		final Path dir = Utils.getTempDirectory().resolve(coordinates.getRepositoryName());
 
-			lastRepository = cloner.download(coordinates.asGitUri(), dir);
+		lastRepository = cloner.download(coordinates.asGitUri(), dir);
 
-			lastGitFs = GitFileSystemProvider.instance().newFileSystemFromRepository(lastRepository);
+		lastGitFs = GitFileSystemProvider.instance().newFileSystemFromRepository(lastRepository);
 
-			final GitHubHistory gitHubHistory = fetcherQl.getReversedGitHubHistory(coordinates);
-			if (useCommitDates) {
-				lastHistorySimple = GitHistorySimple.create(lastGitFs, gitHubHistory.getPushDates());
-			} else {
-				lastHistorySimple = GitHistorySimple.create(lastGitFs, gitHubHistory.getPushDates());
-			}
-
-			return lastHistorySimple;
-		} catch (RuntimeException | IOException e) {
-			try {
-				close();
-			} catch (RuntimeException suppressed) {
-				LOGGER.info("Suppressed {}.", suppressed);
-			}
-			throw e;
+		final GitHubHistory gitHubHistory = fetcherQl.getReversedGitHubHistory(coordinates);
+		if (useCommitDates) {
+			lastHistorySimple = GitHistorySimple.usingCommitterDates(lastGitFs);
+		} else {
+			lastHistorySimple = GitHistorySimple.create(lastGitFs, gitHubHistory.getPushDates());
 		}
+
+		return lastHistorySimple;
 	}
 
 	@Override

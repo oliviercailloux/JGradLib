@@ -1,6 +1,7 @@
 package io.github.oliviercailloux.git.fs;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static io.github.oliviercailloux.jaris.exceptions.Unchecker.IO_UNCHECKER;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableMap;
@@ -9,16 +10,16 @@ import com.google.common.collect.Maps;
 import com.google.common.graph.ImmutableGraph;
 import com.google.common.graph.MutableGraph;
 import io.github.oliviercailloux.git.GitHubHistory;
-import io.github.oliviercailloux.gitjfs.Commit;
 import io.github.oliviercailloux.gitjfs.GitFileSystem;
+import io.github.oliviercailloux.gitjfs.GitPathRoot;
 import io.github.oliviercailloux.gitjfs.GitPathRootSha;
 import io.github.oliviercailloux.gitjfs.GitPathRootShaCached;
 import io.github.oliviercailloux.jaris.collections.GraphUtils;
-import io.github.oliviercailloux.jaris.throwing.TPredicate;
 import java.io.IOException;
 import java.time.Instant;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import org.eclipse.jgit.lib.ObjectId;
 import org.slf4j.Logger;
@@ -46,6 +47,22 @@ public class GitHistorySimple {
 	 */
 	public static GitHistorySimple create(GitFileSystem fs, Map<ObjectId, Instant> dates) throws IOException {
 		return new GitHistorySimple(fs, dates);
+	}
+
+	/**
+	 * @param graph successors = children (time-based view)
+	 * @param dates its keyset must contain all nodes of the graph.
+	 * @throws IOException
+	 */
+	public static GitHistorySimple usingCommitterDates(GitFileSystem fs) throws IOException {
+		final ImmutableGraph<GitPathRootSha> graphOfPaths = fs.getCommitsGraph();
+
+		final Function<GitPathRoot, Instant> getDate = IO_UNCHECKER.wrapFunction();
+
+		final ImmutableMap<ObjectId, Instant> dates = graphOfPaths.nodes().stream().collect(ImmutableMap
+				.toImmutableMap(GitPathRootSha::getStaticCommitId, p -> p.getCommit().committerDate().toInstant()));
+
+		return GitHistorySimple.create(fs, dates);
 	}
 
 	private final GitFileSystem fs;

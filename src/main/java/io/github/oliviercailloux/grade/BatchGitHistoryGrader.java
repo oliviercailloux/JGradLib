@@ -6,6 +6,7 @@ import static com.google.common.base.Verify.verify;
 
 import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.ImmutableMap;
+import io.github.oliviercailloux.git.fs.GitHistorySimple;
 import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
 import io.github.oliviercailloux.grade.DeadlineGrader.LinearPenalizer;
 import io.github.oliviercailloux.grade.comm.StudentOnGitHub;
@@ -110,7 +111,7 @@ public class BatchGitHistoryGrader<X extends Exception> {
 		try (GitFileSystemWithHistoryFetcher fetcher = fetcherFactory.get()) {
 
 			for (GitHubUsername author : fetcher.getAuthors()) {
-				final GitFileSystemHistory history = fetcher.goTo(author);
+				final GitHistorySimple history = fetcher.goToFs(author);
 				final MarksTree byTimeGrade = ext.grade(author, history);
 				builder.put(author, byTimeGrade);
 				try {

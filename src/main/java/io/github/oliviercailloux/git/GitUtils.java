@@ -9,7 +9,6 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.graph.Graph;
 import com.google.common.graph.Graphs;
 import com.google.common.graph.ImmutableGraph;
-import io.github.oliviercailloux.git.fs.GitHistorySimple;
 import io.github.oliviercailloux.gitjfs.GitFileSystem;
 import io.github.oliviercailloux.gitjfs.GitPathRoot;
 import io.github.oliviercailloux.gitjfs.GitPathRootSha;
@@ -102,6 +101,7 @@ public class GitUtils {
 		return GitHistory.create(graph, dates);
 	}
 
+	@Deprecated
 	public static GitHistory getHistory(GitFileSystem gitFs) throws IOException {
 		final ImmutableGraph<GitPathRootSha> graphOfPaths = gitFs.getCommitsGraph();
 
@@ -119,18 +119,6 @@ public class GitUtils {
 		} catch (UncheckedIOException e) {
 			throw new IOException(e.getCause());
 		}
-	}
-
-	public static GitHistorySimple getHistorySimple(GitFileSystem gitFs) throws IOException {
-		final ImmutableGraph<GitPathRootSha> graphOfPaths = gitFs.getCommitsGraph();
-
-		final Function<GitPathRoot, Instant> getDate = IO_UNCHECKER
-				.wrapFunction(p -> p.getCommit().committerDate().toInstant());
-
-		final ImmutableMap<ObjectId, Instant> dates = graphOfPaths.nodes().stream()
-				.collect(ImmutableMap.toImmutableMap(GitPathRootSha::getStaticCommitId, getDate));
-
-		return GitHistorySimple.create(gitFs, dates);
 	}
 
 }

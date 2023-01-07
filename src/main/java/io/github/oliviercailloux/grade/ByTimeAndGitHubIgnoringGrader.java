@@ -3,6 +3,7 @@ package io.github.oliviercailloux.grade;
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedSet;
+import io.github.oliviercailloux.git.fs.GitHistorySimple;
 import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
 import io.github.oliviercailloux.jaris.throwing.TOptional;
 import java.io.IOException;
@@ -25,7 +26,7 @@ public class ByTimeAndGitHubIgnoringGrader<X extends Exception> implements Grade
 	}
 
 	@Override
-	public MarksTree grade(GitHubUsername author, GitFileSystemHistory history) throws X {
+	public MarksTree grade(GitHubUsername author, GitHistorySimple history) throws X {
 //		{
 //			final Set<GitPathRoot> pureNodes = IO_UNCHECKER.getUsing(() -> history.getGraph().nodes());
 //			final Set<GitPathRootSha> nodes = IO_UNCHECKER.getUsing(() -> history.getGraphSha().nodes());
