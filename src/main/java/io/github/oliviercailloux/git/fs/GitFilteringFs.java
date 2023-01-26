@@ -21,8 +21,10 @@ import io.github.oliviercailloux.jaris.exceptions.CheckedStream;
 import io.github.oliviercailloux.jaris.throwing.TPredicate;
 import java.io.IOException;
 import java.nio.file.InvalidPathException;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.PathMatcher;
+import org.eclipse.jgit.diff.DiffEntry;
 import org.eclipse.jgit.lib.ObjectId;
 import org.jgrapht.alg.TransitiveReduction;
 import org.jgrapht.graph.guava.MutableGraphAdapter;
@@ -128,6 +130,19 @@ public class GitFilteringFs extends ForwardingGitFileSystem {
 	@Override
 	public PathMatcher getPathMatcher(String syntaxAndPattern) {
 		throw new UnsupportedOperationException();
+	}
+
+	@Override
+	public ImmutableSet<DiffEntry> getDiff(GitPathRoot first, GitPathRoot second)
+			throws IOException, NoSuchFileException {
+		if (!filter.test(first.getCommit())) {
+			throw new NoSuchFileException(first.toString());
+		}
+		if (!filter.test(second.getCommit())) {
+			throw new NoSuchFileException(second.toString());
+		}
+
+		return super.getDiff(first, second);
 	}
 
 }

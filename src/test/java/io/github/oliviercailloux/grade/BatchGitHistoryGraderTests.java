@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.google.common.collect.ImmutableMap;
 import io.github.oliviercailloux.git.GitUtils;
+import io.github.oliviercailloux.git.fs.GitHistorySimple;
 import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
 import io.github.oliviercailloux.gitjfs.GitFileSystem;
 import io.github.oliviercailloux.gitjfs.GitFileSystemProvider;
@@ -34,8 +35,8 @@ public class BatchGitHistoryGraderTests {
 		private static final Criterion C3 = Criterion.given("c3");
 
 		@Override
-		public MarksTree grade(GitFileSystemHistory history) {
-			final int nbCommits = history.getGraph().nodes().size();
+		public MarksTree grade(GitHistorySimple history) {
+			final int nbCommits = history.graph().nodes().size();
 			final ImmutableMap<Criterion, Mark> subGrades = ImmutableMap.of(C1, Mark.binary(nbCommits >= 1), C2,
 					Mark.binary(nbCommits >= 2), C3, Mark.binary(nbCommits >= 3));
 			return MarksTree.composite(subGrades);

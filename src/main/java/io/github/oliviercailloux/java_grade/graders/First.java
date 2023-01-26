@@ -6,11 +6,12 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import com.google.common.graph.Graphs;
+import io.github.oliviercailloux.git.fs.GitHistorySimple;
 import io.github.oliviercailloux.gitjfs.GitPath;
 import io.github.oliviercailloux.gitjfs.GitPathRoot;
+import io.github.oliviercailloux.gitjfs.GitPathRootShaCached;
 import io.github.oliviercailloux.grade.BatchGitHistoryGrader;
 import io.github.oliviercailloux.grade.Criterion;
-import io.github.oliviercailloux.grade.GitFileSystemHistory;
 import io.github.oliviercailloux.grade.GitFileSystemWithHistoryFetcherByPrefix;
 import io.github.oliviercailloux.grade.GitFsGrader;
 import io.github.oliviercailloux.grade.Grade;
@@ -54,14 +55,13 @@ public class First implements GitFsGrader<RuntimeException> {
 	private static final Criterion C_CONTENTS_THIRD = Criterion.given("Contents Third file");
 
 	@Override
-	public MarksTree grade(GitFileSystemHistory data) {
-		verify(!data.getGraph().nodes().isEmpty());
+	public MarksTree grade(GitHistorySimple data) {
+		verify(!data.graph().nodes().isEmpty());
 
-		final ImmutableSet<GitPathRoot> commitsOrdered = data.getRoots().stream()
-				.flatMap(r -> Graphs.reachableNodes(data.getGraph(), r).stream())
-				.collect(ImmutableSet.toImmutableSet());
-		final ImmutableSet<GitPathRoot> commitsOrderedExceptRoots = Sets.difference(commitsOrdered, data.getRoots())
-				.immutableCopy();
+		final ImmutableSet<GitPathRootShaCached> commitsOrdered = data.roots().stream()
+				.flatMap(r -> Graphs.reachableNodes(data.graph(), r).stream()).collect(ImmutableSet.toImmutableSet());
+		final ImmutableSet<GitPathRootShaCached> commitsOrderedExceptRoots = Sets
+				.difference(commitsOrdered, data.roots()).immutableCopy();
 		LOGGER.info("Commits ordered (except for roots): {}.", commitsOrderedExceptRoots);
 		final int nbCommits = commitsOrderedExceptRoots.size();
 
@@ -71,16 +71,16 @@ public class First implements GitFsGrader<RuntimeException> {
 
 		final Comparator<MarksTree> byPoints = Comparator
 				.comparing(m -> Grade.given(firstCommitDiscriminator(), m).mark().getPoints());
-		final GitPathRoot firstCommit = commitsOrderedExceptRoots.stream()
+		final GitPathRootShaCached firstCommit = commitsOrderedExceptRoots.stream()
 				.sorted(Comparator.comparing(this::firstCommitMark, byPoints.reversed())).findFirst()
-				.orElse(data.getRoots().iterator().next());
+				.orElse(data.roots().iterator().next());
 		final MarksTree firstCommitMark = firstCommitMark(firstCommit);
 
 		final Comparator<MarksTree> byPointsSecond = Comparator
 				.comparing(m -> Grade.given(secondCommitDiscriminator(), m).mark().getPoints());
-		final GitPathRoot secondCommit = Graphs.reachableNodes(data.getGraph(), firstCommit).stream()
+		final GitPathRoot secondCommit = Graphs.reachableNodes(data.graph(), firstCommit).stream()
 				.sorted(Comparator.comparing(this::secondCommitMark, byPointsSecond.reversed())).findFirst()
-				.orElse(data.getRoots().iterator().next());
+				.orElse(data.roots().iterator().next());
 		final MarksTree secondCommitMark = secondCommitMark(secondCommit);
 
 		return MarksTree.composite(ImmutableMap.of(C0, anyCommitMark, C1, firstCommitMark, C2, secondCommitMark));

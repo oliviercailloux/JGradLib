@@ -11,11 +11,12 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.MoreCollectors;
 import com.google.common.collect.Sets;
 import com.google.common.graph.Graphs;
+import io.github.oliviercailloux.git.fs.GitHistorySimple;
 import io.github.oliviercailloux.gitjfs.GitPath;
 import io.github.oliviercailloux.gitjfs.GitPathRoot;
+import io.github.oliviercailloux.gitjfs.GitPathRootShaCached;
 import io.github.oliviercailloux.grade.BatchGitHistoryGrader;
 import io.github.oliviercailloux.grade.Criterion;
-import io.github.oliviercailloux.grade.GitFileSystemHistory;
 import io.github.oliviercailloux.grade.GitFileSystemWithHistoryFetcherByPrefix;
 import io.github.oliviercailloux.grade.GitFsGrader;
 import io.github.oliviercailloux.grade.GitGrader.Functions;
@@ -82,7 +83,7 @@ public class EclipseBis implements GitFsGrader<IOException> {
 
 	private static final Criterion C_LIMITED_CHANGES = Criterion.given("Limited changes");
 
-	private GitFileSystemHistory history;
+	private GitHistorySimple history;
 
 	EclipseBis() {
 		history = null;
@@ -90,15 +91,15 @@ public class EclipseBis implements GitFsGrader<IOException> {
 	}
 
 	@Override
-	public MarksTree grade(GitFileSystemHistory data) throws IOException {
+	public MarksTree grade(GitHistorySimple data) throws IOException {
 		history = data;
 		final ImmutableSet.Builder<SubMarksTree> gradeBuilder = ImmutableSet.builder();
 
-		final ImmutableSet<GitPathRoot> commitsOrdered = data.getRoots().stream()
-				.flatMap(r -> Graphs.reachableNodes(data.getGraph(), r).stream())
-				.collect(ImmutableSet.toImmutableSet());
+		final ImmutableSet<GitPathRootShaCached> commitsOrdered = data.roots().stream()
+				.flatMap(r -> Graphs.reachableNodes(data.graph(), r).stream()).collect(ImmutableSet.toImmutableSet());
 		verify(!commitsOrdered.isEmpty());
-		final ImmutableSet<GitPathRoot> commits = Sets.difference(commitsOrdered, data.getRoots()).immutableCopy();
+		final ImmutableSet<GitPathRootShaCached> commits = Sets.difference(commitsOrdered, data.roots())
+				.immutableCopy();
 
 		{
 			final int nbCommits = commits.size();
@@ -108,7 +109,7 @@ public class EclipseBis implements GitFsGrader<IOException> {
 		}
 		{
 			LOGGER.info("Grading compile.");
-			final ImmutableSet<SubMarksTree> subs = CheckedStream.<GitPathRoot, IOException>from(commits).map(
+			final ImmutableSet<SubMarksTree> subs = CheckedStream.<GitPathRootShaCached, IOException>from(commits).map(
 					p -> new RootedMarksTree(p.toShaCached(), toTree(compiles(p), singleChangeAbout(p, "Oracle.java"))))
 					.map(RootedMarksTree::commented).collect(ImmutableSet.toImmutableSet());
 			gradeBuilder.add(SubMarksTree.given(C_COMPILE, MarksTree.composite(subs)));
@@ -128,7 +129,7 @@ public class EclipseBis implements GitFsGrader<IOException> {
 		verify(renamed(testContent));
 		{
 			LOGGER.info("Grading warning.");
-			final ImmutableSet<SubMarksTree> subs = CheckedStream.<GitPathRoot, IOException>from(commits)
+			final ImmutableSet<SubMarksTree> subs = CheckedStream.<GitPathRootShaCached, IOException>from(commits)
 					.map(p -> new RootedMarksTree(p.toShaCached(),
 							toTree(warning(p), singleChangeAbout(p, "RegretComputer.java"))))
 					.map(RootedMarksTree::commented).collect(ImmutableSet.toImmutableSet());
@@ -136,14 +137,14 @@ public class EclipseBis implements GitFsGrader<IOException> {
 		}
 		{
 			LOGGER.info("Grading rename.");
-			final ImmutableSet<SubMarksTree> subs = CheckedStream.<GitPathRoot, IOException>from(commits)
+			final ImmutableSet<SubMarksTree> subs = CheckedStream.<GitPathRootShaCached, IOException>from(commits)
 					.map(p -> new RootedMarksTree(p.toShaCached(), toRenameTree(p))).map(RootedMarksTree::commented)
 					.collect(ImmutableSet.toImmutableSet());
 			gradeBuilder.add(SubMarksTree.given(C_RENAME, MarksTree.composite(subs)));
 		}
 		{
 			LOGGER.info("Grading courses.");
-			final ImmutableSet<SubMarksTree> subs = CheckedStream.<GitPathRoot, IOException>from(commits)
+			final ImmutableSet<SubMarksTree> subs = CheckedStream.<GitPathRootShaCached, IOException>from(commits)
 					.map(p -> new RootedMarksTree(p.toShaCached(),
 							toTree(coursesChange(p), singleChangeAbout(p, "courses.soc"))))
 					.map(RootedMarksTree::commented).collect(ImmutableSet.toImmutableSet());
@@ -151,7 +152,7 @@ public class EclipseBis implements GitFsGrader<IOException> {
 		}
 		{
 			LOGGER.info("Grading number.");
-			final ImmutableSet<SubMarksTree> subs = CheckedStream.<GitPathRoot, IOException>from(commits)
+			final ImmutableSet<SubMarksTree> subs = CheckedStream.<GitPathRootShaCached, IOException>from(commits)
 					.map(p -> new RootedMarksTree(p.toShaCached(),
 							toTree(numberChange(p), singleChangeAbout(p, "Oracles m = 5, n = 9, 100.json"))))
 					.map(RootedMarksTree::commented).collect(ImmutableSet.toImmutableSet());
@@ -159,7 +160,7 @@ public class EclipseBis implements GitFsGrader<IOException> {
 		}
 		{
 			LOGGER.info("Grading formatting.");
-			final ImmutableSet<SubMarksTree> subs = CheckedStream.<GitPathRoot, IOException>from(commits)
+			final ImmutableSet<SubMarksTree> subs = CheckedStream.<GitPathRootShaCached, IOException>from(commits)
 					.map(p -> new RootedMarksTree(p.toShaCached(), toFormattingTree(p))).map(RootedMarksTree::commented)
 					.collect(ImmutableSet.toImmutableSet());
 			gradeBuilder.add(SubMarksTree.given(C_FORMATTING, MarksTree.composite(subs)));
@@ -261,23 +262,23 @@ public class EclipseBis implements GitFsGrader<IOException> {
 		// return compose(filesMatching, singletonAndMatch).test(p);
 	}
 
-	boolean singleChangeAbout(GitPathRoot p, String file) throws IOException {
-		final Set<GitPathRoot> predecessors = history.getGraph().predecessors(p);
+	boolean singleChangeAbout(GitPathRootShaCached p, String file) throws IOException {
+		final Set<GitPathRootShaCached> predecessors = history.graph().predecessors(p);
 		return (predecessors.size() == 1) && singleDiffAbout(Iterables.getOnlyElement(predecessors), p, file);
 	}
 
-	boolean changesAbout(GitPathRoot p, Set<String> files) throws IOException {
-		final Set<GitPathRoot> predecessors = history.getGraph().predecessors(p);
+	boolean changesAbout(GitPathRootShaCached p, Set<String> files) throws IOException {
+		final Set<GitPathRootShaCached> predecessors = history.graph().predecessors(p);
 		return (predecessors.size() == 1) && diffsAbout(Iterables.getOnlyElement(predecessors), p, files);
 	}
 
-	private boolean singleDiffAbout(GitPathRoot predecessor, GitPathRoot p, String file) throws IOException {
-		final ImmutableSet<DiffEntry> diff = history.getDiff(predecessor, p);
+	private boolean singleDiffAbout(GitPathRootShaCached predecessor, GitPathRoot p, String file) throws IOException {
+		final ImmutableSet<DiffEntry> diff = history.fs().getDiff(predecessor, p);
 		return diff.size() == 1 && diffIsAboutFile(Iterables.getOnlyElement(diff), file);
 	}
 
-	private boolean diffsAbout(GitPathRoot predecessor, GitPathRoot p, Set<String> files) throws IOException {
-		final ImmutableSet<DiffEntry> diff = history.getDiff(predecessor, p);
+	private boolean diffsAbout(GitPathRootShaCached predecessor, GitPathRoot p, Set<String> files) throws IOException {
+		final ImmutableSet<DiffEntry> diff = history.fs().getDiff(predecessor, p);
 		return diff.stream().allMatch(d -> diffsAreAbout(d, files));
 	}
 
@@ -310,7 +311,7 @@ public class EclipseBis implements GitFsGrader<IOException> {
 				Predicates.singletonAndMatch(contentMatches(Marks.extendAll("0.3298073577203555")))).test(p);
 	}
 
-	private MarksTree toFormattingTree(GitPathRoot path) throws IOException {
+	private MarksTree toFormattingTree(GitPathRootShaCached path) throws IOException {
 		final Optional<Path> f = Files.find(path, Integer.MAX_VALUE, (p, a) -> Files.isRegularFile(p))
 				.filter(p -> p.getFileName().toString().equals("PSRWeights.java")).collect(MoreCollectors.toOptional());
 		final Pattern origSpace = Pattern.compile("     checkArgument");

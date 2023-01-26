@@ -9,11 +9,14 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import com.google.common.collect.MoreCollectors;
 import com.google.common.graph.Graphs;
+import io.github.oliviercailloux.git.fs.GitHistorySimple;
 import io.github.oliviercailloux.gitjfs.GitPath;
 import io.github.oliviercailloux.gitjfs.GitPathRoot;
+import io.github.oliviercailloux.gitjfs.GitPathRootRef;
+import io.github.oliviercailloux.gitjfs.GitPathRootSha;
+import io.github.oliviercailloux.gitjfs.GitPathRootShaCached;
 import io.github.oliviercailloux.grade.BatchGitHistoryGrader;
 import io.github.oliviercailloux.grade.Criterion;
-import io.github.oliviercailloux.grade.GitFileSystemHistory;
 import io.github.oliviercailloux.grade.GitFileSystemWithHistoryFetcherByPrefix;
 import io.github.oliviercailloux.grade.GitFsGrader;
 import io.github.oliviercailloux.grade.GitGrader.Predicates;
@@ -24,6 +27,7 @@ import io.github.oliviercailloux.grade.Mark;
 import io.github.oliviercailloux.grade.MarksTree;
 import io.github.oliviercailloux.grade.SubMark;
 import io.github.oliviercailloux.grade.SubMarksTree;
+import io.github.oliviercailloux.jaris.exceptions.CheckedStream;
 import io.github.oliviercailloux.jaris.throwing.TFunction;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -83,12 +87,12 @@ public class Branching implements GitFsGrader<IOException> {
 	private static final Criterion C_BR3 = Criterion.given("Branch br3");
 	private static final Criterion C_PARENTS = Criterion.given("Right parents");
 
-	private GitFileSystemHistory currentHistory;
+	private GitHistorySimple currentHistory;
 
-	private GitPathRoot startPath;
-	private GitPathRoot aPath;
-	private GitPathRoot bPath;
-	private GitPathRoot cPath;
+	private GitPathRootShaCached startPath;
+	private GitPathRootShaCached aPath;
+	private GitPathRootShaCached bPath;
+	private GitPathRootShaCached cPath;
 
 	Branching() {
 		currentHistory = null;
@@ -99,17 +103,17 @@ public class Branching implements GitFsGrader<IOException> {
 	}
 
 	@Override
-	public MarksTree grade(GitFileSystemHistory data) throws IOException {
+	public MarksTree grade(GitHistorySimple data) throws IOException {
 		startPath = null;
 		aPath = null;
 		bPath = null;
 		cPath = null;
 
 		currentHistory = data;
-		verify(!currentHistory.getGraph().nodes().isEmpty());
+		verify(!currentHistory.graph().nodes().isEmpty());
 
-		final ImmutableSet<GitPathRoot> commitsOrdered = currentHistory.getRoots().stream()
-				.flatMap(r -> Graphs.reachableNodes(currentHistory.getGraph(), r).stream())
+		final ImmutableSet<GitPathRootShaCached> commitsOrdered = currentHistory.roots().stream()
+				.flatMap(r -> Graphs.reachableNodes(currentHistory.graph(), r).stream())
 				.collect(ImmutableSet.toImmutableSet());
 		final int nbCommits = commitsOrdered.size();
 
@@ -133,8 +137,8 @@ public class Branching implements GitFsGrader<IOException> {
 		return subs.isEmpty() ? Mark.zero(commentIfEmpty) : MarksTree.composite(subs);
 	}
 
-	private SubMarksTree subGrade(GitPathRoot gitPathRoot, TFunction<GitPathRoot, MarksTree, IOException> grader)
-			throws IOException, NoSuchFileException {
+	private SubMarksTree subGrade(GitPathRootShaCached gitPathRoot,
+			TFunction<GitPathRootShaCached, MarksTree, IOException> grader) throws IOException, NoSuchFileException {
 		final String comment = "Using " + gitPathRoot.getCommit().id().getName();
 		final MarksTree grade = grader.apply(gitPathRoot);
 		final MarksTree newTree = addComment(grade, comment);
@@ -329,11 +333,11 @@ public class Branching implements GitFsGrader<IOException> {
 		return mainAg;
 	}
 
-	private SubMarksTree gradeStartFromCommits(ImmutableSet<GitPathRoot> commitsOrdered, boolean expandLocally)
+	private SubMarksTree gradeStartFromCommits(ImmutableSet<GitPathRootShaCached> commitsOrdered, boolean expandLocally)
 			throws IOException {
-		final ImmutableBiMap<GitPathRoot, SubMarksTree> subs = ThrowingStream
+		final ImmutableBiMap<GitPathRootShaCached, SubMarksTree> subs = ThrowingStream
 				.of(commitsOrdered.stream(), IOException.class)
-				.filter(r -> currentHistory.getGraph().predecessors(r).size() <= 1)
+				.filter(r -> currentHistory.graph().predecessors(r).size() <= 1)
 				.collect(ImmutableBiMap.toImmutableBiMap(r -> r, r -> {
 					try {
 						return subGrade(r, w -> gradeStart(w, true));
@@ -356,7 +360,7 @@ public class Branching implements GitFsGrader<IOException> {
 		return SubMarksTree.given(C_START, gradeStart(startPath, false));
 	}
 
-	private MarksTree gradeStart(GitPathRoot commitStart, boolean expandLocally) throws IOException {
+	private MarksTree gradeStart(GitPathRootShaCached commitStart, boolean expandLocally) throws IOException {
 		final long nbFiles = Files.find(commitStart, Integer.MAX_VALUE, (p, a) -> Files.isRegularFile(p)).count();
 		final boolean rightNb = nbFiles == 1;
 		final SubMarksTree subNb = SubMarksTree.given(C_ONE, Mark.binary(rightNb, "", "Found " + nbFiles + " files"));
@@ -378,14 +382,21 @@ public class Branching implements GitFsGrader<IOException> {
 		return MarksTree.composite(builder.build());
 	}
 
-	private SubMarksTree gradeAFromStart(GitPathRoot commitStart, boolean expandLocally) throws IOException {
+	private ImmutableSet<GitPathRootRef> getRefsTo(GitPathRootSha target) throws IOException {
+		return CheckedStream.<GitPathRootRef, IOException>from(currentHistory.fs().getRefs())
+				.filter(r -> r.getCommit().id().equals(target.getStaticCommitId()))
+				.collect(ImmutableSet.toImmutableSet());
+	}
+
+	private SubMarksTree gradeAFromStart(GitPathRootShaCached commitStart, boolean expandLocally) throws IOException {
 		if (commitStart == null) {
 			return SubMark.given(C_A, Mark.zero());
 		}
 
-		final Set<GitPathRoot> successors = currentHistory.getGraph().successors(commitStart);
-		final ImmutableBiMap<GitPathRoot, SubMarksTree> subs = ThrowingStream.of(successors.stream(), IOException.class)
-				.filter(r -> currentHistory.getGraph().predecessors(r).size() == 1)
+		final Set<GitPathRootShaCached> successors = currentHistory.graph().successors(commitStart);
+		final ImmutableBiMap<GitPathRootShaCached, SubMarksTree> subs = ThrowingStream
+				.of(successors.stream(), IOException.class)
+				.filter(r -> currentHistory.graph().predecessors(r).size() == 1)
 				.collect(ImmutableBiMap.toImmutableBiMap(r -> r, r -> {
 					try {
 						return subGrade(r, w -> gradeA(w, true));
@@ -408,15 +419,14 @@ public class Branching implements GitFsGrader<IOException> {
 		return SubMarksTree.given(C_A, gradeA(aPath, false));
 	}
 
-	private MarksTree gradeA(GitPathRoot commitA, boolean expandLocally) throws IOException {
-		checkArgument(currentHistory.getGraph().predecessors(commitA).size() == 1);
+	private MarksTree gradeA(GitPathRootShaCached commitA, boolean expandLocally) throws IOException {
+		checkArgument(currentHistory.graph().predecessors(commitA).size() == 1);
 
 		final long nbFiles = Files.find(commitA, Integer.MAX_VALUE, (p, a) -> Files.isRegularFile(p)).count();
 		final boolean rightNb = nbFiles == 2;
 		final SubMarksTree subNb = SubMarksTree.given(C_TWO, Mark.binary(rightNb, "", "Found " + nbFiles + " files"));
 
-		final boolean isBranch = ThrowingStream
-				.of(currentHistory.getRefsTo(commitA.toSha()).stream(), IOException.class).filter(GitPathRoot::isRef)
+		final boolean isBranch = ThrowingStream.of(getRefsTo(commitA).stream(), IOException.class)
 				.map(GitPathRoot::getGitRef).anyMatch(r -> Predicates.isBranch(r, "br1"));
 		final SubMarksTree subBranch = SubMarksTree.given(C_BR1, Mark.binary(isBranch));
 
@@ -448,14 +458,15 @@ public class Branching implements GitFsGrader<IOException> {
 		return MarksTree.composite(builder.build());
 	}
 
-	private SubMarksTree gradeBFromA(GitPathRoot commitA, boolean expandLocally) throws IOException {
+	private SubMarksTree gradeBFromA(GitPathRootShaCached commitA, boolean expandLocally) throws IOException {
 		if (commitA == null) {
 			return SubMark.given(C_B, Mark.zero());
 		}
 
-		final Set<GitPathRoot> successors = currentHistory.getGraph().successors(commitA);
-		final ImmutableBiMap<GitPathRoot, SubMarksTree> subs = ThrowingStream.of(successors.stream(), IOException.class)
-				.filter(r -> currentHistory.getGraph().predecessors(r).size() == 1)
+		final Set<GitPathRootShaCached> successors = currentHistory.graph().successors(commitA);
+		final ImmutableBiMap<GitPathRootShaCached, SubMarksTree> subs = ThrowingStream
+				.of(successors.stream(), IOException.class)
+				.filter(r -> currentHistory.graph().predecessors(r).size() == 1)
 				.collect(ImmutableBiMap.toImmutableBiMap(r -> r, r -> {
 					try {
 						return subGrade(r, w -> gradeB(w, true));
@@ -478,12 +489,12 @@ public class Branching implements GitFsGrader<IOException> {
 		return SubMarksTree.given(C_B, gradeB(bPath, false));
 	}
 
-	private MarksTree gradeB(GitPathRoot commitB, boolean expandLocally) throws IOException {
-		checkArgument(currentHistory.getGraph().predecessors(commitB).size() == 1);
+	private MarksTree gradeB(GitPathRootShaCached commitB, boolean expandLocally) throws IOException {
+		checkArgument(currentHistory.graph().predecessors(commitB).size() == 1);
 		{
-			final GitPathRoot commitA = currentHistory.getGraph().predecessors(commitB).stream()
+			final GitPathRootShaCached commitA = currentHistory.graph().predecessors(commitB).stream()
 					.collect(MoreCollectors.onlyElement());
-			checkArgument(currentHistory.getGraph().predecessors(commitA).size() == 1);
+			checkArgument(currentHistory.graph().predecessors(commitA).size() == 1);
 		}
 
 		final long nbFiles = Files.find(commitB, Integer.MAX_VALUE, (p, a) -> Files.isRegularFile(p)).count();
@@ -523,18 +534,18 @@ public class Branching implements GitFsGrader<IOException> {
 		return MarksTree.composite(builder.build());
 	}
 
-	private SubMarksTree gradeCFromB(GitPathRoot commitB, boolean expandLocally) throws IOException {
+	private SubMarksTree gradeCFromB(GitPathRootShaCached commitB, boolean expandLocally) throws IOException {
 		if (commitB == null) {
 			return SubMark.given(C_C, Mark.zero());
 		}
 
-		final GitPathRoot commitA = currentHistory.getGraph().predecessors(commitB).stream()
+		final GitPathRootShaCached commitA = currentHistory.graph().predecessors(commitB).stream()
 				.collect(MoreCollectors.onlyElement());
-		final GitPathRoot start = currentHistory.getGraph().predecessors(commitA).stream()
+		final GitPathRootShaCached start = currentHistory.graph().predecessors(commitA).stream()
 				.collect(MoreCollectors.onlyElement());
-		final Set<GitPathRoot> siblingsOfA = currentHistory.getGraph().successors(start).stream()
+		final Set<GitPathRootShaCached> siblingsOfA = currentHistory.graph().successors(start).stream()
 				.filter(r -> !r.equals(commitA)).collect(ImmutableSet.toImmutableSet());
-		final ImmutableBiMap<GitPathRoot, SubMarksTree> subs = ThrowingStream
+		final ImmutableBiMap<GitPathRootShaCached, SubMarksTree> subs = ThrowingStream
 				.of(siblingsOfA.stream(), IOException.class).collect(ImmutableBiMap.toImmutableBiMap(r -> r, r -> {
 					try {
 						return subGrade(r, w -> gradeC(commitB, w, true));
@@ -557,13 +568,13 @@ public class Branching implements GitFsGrader<IOException> {
 		return SubMarksTree.given(C_C, gradeC(commitB, cPath, false));
 	}
 
-	private MarksTree gradeC(GitPathRoot commitB, GitPathRoot commitC, boolean expandLocally) throws IOException {
+	private MarksTree gradeC(GitPathRootShaCached commitB, GitPathRootShaCached commitC, boolean expandLocally)
+			throws IOException {
 		final long nbFiles = Files.find(commitC, Integer.MAX_VALUE, (p, a) -> Files.isRegularFile(p)).count();
 		final boolean rightNb = nbFiles == 2;
 		final SubMarksTree subNb = SubMarksTree.given(C_TWO, Mark.binary(rightNb, "", "Found " + nbFiles + " files"));
 
-		final boolean isBranch = ThrowingStream
-				.of(currentHistory.getRefsTo(commitC.toSha()).stream(), IOException.class).filter(GitPathRoot::isRef)
+		final boolean isBranch = ThrowingStream.of(getRefsTo(commitC).stream(), IOException.class)
 				.map(GitPathRoot::getGitRef).anyMatch(r -> Predicates.isBranch(r, "br2"));
 		final SubMarksTree subBranch = SubMarksTree.given(C_BR2, Mark.binary(isBranch));
 
@@ -592,15 +603,16 @@ public class Branching implements GitFsGrader<IOException> {
 		return MarksTree.composite(builder.build());
 	}
 
-	private SubMarksTree gradeDFromBAndC(GitPathRoot commitB, GitPathRoot commitC, boolean expandLocally)
-			throws IOException {
+	private SubMarksTree gradeDFromBAndC(GitPathRootShaCached commitB, GitPathRootShaCached commitC,
+			boolean expandLocally) throws IOException {
 		if (commitB == null || commitC == null) {
 			return SubMark.given(C_D, Mark.zero());
 		}
 
-		final Set<GitPathRoot> successors = currentHistory.getGraph().successors(commitC);
-		final ImmutableBiMap<GitPathRoot, SubMarksTree> subs = ThrowingStream.of(successors.stream(), IOException.class)
-				.filter(r -> currentHistory.getGraph().predecessors(r).size() == 2)
+		final Set<GitPathRootShaCached> successors = currentHistory.graph().successors(commitC);
+		final ImmutableBiMap<GitPathRootShaCached, SubMarksTree> subs = ThrowingStream
+				.of(successors.stream(), IOException.class)
+				.filter(r -> currentHistory.graph().predecessors(r).size() == 2)
 				.collect(ImmutableBiMap.toImmutableBiMap(r -> r, r -> {
 					try {
 						return subGrade(r, w -> gradeD(commitB, w));
@@ -618,18 +630,17 @@ public class Branching implements GitFsGrader<IOException> {
 				.getWeightedSubMarks();
 		final Criterion bestPath = Maps.filterValues(weightedSubMarks, w -> w == 1d).keySet().stream()
 				.map(SubMark::getCriterion).collect(MoreCollectors.onlyElement());
-		final GitPathRoot bestSubMark = Maps.filterValues(subs, s -> s.getCriterion().equals(bestPath)).keySet()
-				.stream().collect(MoreCollectors.onlyElement());
+		final GitPathRootShaCached bestSubMark = Maps.filterValues(subs, s -> s.getCriterion().equals(bestPath))
+				.keySet().stream().collect(MoreCollectors.onlyElement());
 		return SubMarksTree.given(C_D, gradeD(commitB, bestSubMark));
 	}
 
-	private MarksTree gradeD(GitPathRoot commitC, GitPathRoot commitD) throws IOException {
+	private MarksTree gradeD(GitPathRootShaCached commitC, GitPathRootShaCached commitD) throws IOException {
 		final long nbFiles = Files.find(commitD, Integer.MAX_VALUE, (p, a) -> Files.isRegularFile(p)).count();
 		final boolean rightNb = nbFiles == 3;
 		final SubMarksTree subNb = SubMarksTree.given(C_THREE, Mark.binary(rightNb, "", "Found " + nbFiles + " files"));
 
-		final boolean isBranch = ThrowingStream
-				.of(currentHistory.getRefsTo(commitD.toSha()).stream(), IOException.class).filter(GitPathRoot::isRef)
+		final boolean isBranch = ThrowingStream.of(getRefsTo(commitD).stream(), IOException.class)
 				.map(GitPathRoot::getGitRef).anyMatch(r -> Predicates.isBranch(r, "br3"));
 		final SubMarksTree subBranch = SubMarksTree.given(C_BR3, Mark.binary(isBranch));
 
@@ -661,7 +672,7 @@ public class Branching implements GitFsGrader<IOException> {
 		final SubMarksTree subSomeExists = SubMarksTree.given(C_EXISTS_SOME, Mark.binary(someExists));
 		final SubMarksTree subSomeMatches = SubMarksTree.given(C_CONTENTS_SOME, Mark.binary(someMatches));
 
-		final Set<GitPathRoot> parents = currentHistory.getGraph().predecessors(commitD);
+		final Set<GitPathRootShaCached> parents = currentHistory.graph().predecessors(commitD);
 		final boolean rightParents = parents.contains(commitC) && parents.size() == 2;
 		final SubMarksTree subParents = SubMarksTree.given(C_PARENTS, Mark.binary(rightParents));
 
