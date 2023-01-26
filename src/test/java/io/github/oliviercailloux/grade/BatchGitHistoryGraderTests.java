@@ -3,7 +3,6 @@ package io.github.oliviercailloux.grade;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.google.common.collect.ImmutableMap;
-import io.github.oliviercailloux.git.GitUtils;
 import io.github.oliviercailloux.git.fs.GitHistorySimple;
 import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
 import io.github.oliviercailloux.gitjfs.GitFileSystem;
@@ -63,25 +62,25 @@ public class BatchGitHistoryGraderTests {
 			JGit.createRepoWithSubDir(early, nowTime.minus(10, ChronoUnit.HOURS));
 			JGit.createRepoWithSubDir(now, nowTime);
 			JGit.createRepoWithSubDir(late, nowTime.plus(1, ChronoUnit.HOURS));
-			final GitFileSystemHistory emptyWithHist = GitFileSystemHistory.create(emptyGitFs,
-					GitUtils.getHistory(emptyGitFs));
-			final GitFileSystemHistory earlyWithHist = GitFileSystemHistory.create(earlyFs,
-					GitUtils.getHistory(earlyFs));
-			final GitFileSystemHistory nowWithHist = GitFileSystemHistory.create(nowFs, GitUtils.getHistory(nowFs));
-			final GitFileSystemHistory lateWithHist = GitFileSystemHistory.create(lateFs, GitUtils.getHistory(lateFs));
+			final GitHistorySimple emptyWithHist = GitHistorySimple.usingCommitterDates(emptyGitFs);
+			final GitHistorySimple earlyWithHist = GitHistorySimple.usingCommitterDates(earlyFs);
+			final GitHistorySimple nowWithHist = GitHistorySimple.usingCommitterDates(nowFs);
+			final GitHistorySimple lateWithHist = GitHistorySimple.usingCommitterDates(lateFs);
 			final GitHubUsername userEmpty = GitHubUsername.given("user-empty");
 			final GitHubUsername userEarly = GitHubUsername.given("user-early");
 			final GitHubUsername userNow = GitHubUsername.given("user-now");
 			final GitHubUsername userLate = GitHubUsername.given("user-late");
 
-			final ImmutableMap<GitHubUsername, GitFileSystemHistory> gitFses = ImmutableMap.of(userEmpty, emptyWithHist,
+			final ImmutableMap<GitHubUsername, GitHistorySimple> gitFses = ImmutableMap.of(userEmpty, emptyWithHist,
 					userEarly, earlyWithHist, userNow, nowWithHist, userLate, lateWithHist);
 			final BatchGitHistoryGrader<RuntimeException> batchGrader = BatchGitHistoryGrader
 					.given(() -> StaticFetcher.multiple(gitFses));
 
-			final Exam exam = batchGrader.getAndWriteGrades(nowTime.plus(30, ChronoUnit.MINUTES),
-					Duration.of(1, ChronoUnit.HOURS), new MyGrader(), USER_GRADE_WEIGHT, Path.of("test grades.json"),
-					"testprefix");
+//			final Exam exam = batchGrader.getAndWriteGrades(nowTime.plus(30, ChronoUnit.MINUTES),
+//					Duration.of(1, ChronoUnit.HOURS), new MyGrader(), USER_GRADE_WEIGHT, Path.of("test grades.json"),
+//					"testprefix");
+			final Exam exam = batchGrader.getGrades(nowTime.plus(30, ChronoUnit.MINUTES),
+					Duration.of(1, ChronoUnit.HOURS), new MyGrader(), USER_GRADE_WEIGHT);
 			Files.writeString(Path.of("exam.json"), JsonSimpleGrade.toJson(exam));
 
 			assertEquals(gitFses.keySet(), exam.getUsernames());

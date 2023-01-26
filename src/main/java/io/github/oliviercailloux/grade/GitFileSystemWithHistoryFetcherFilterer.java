@@ -30,18 +30,6 @@ public class GitFileSystemWithHistoryFetcherFilterer implements GitFileSystemWit
 		return delegate.getAuthors();
 	}
 
-	@Deprecated
-	@Override
-	public GitFileSystemHistory goTo(GitHubUsername author) throws IOException {
-		final GitFileSystemHistory h = delegate.goTo(author);
-		final GitFileSystemHistory filtered = h
-				.filter(r -> !h.asGitHistory().getTimestamp(r.getStaticCommitId()).isAfter(cap), cap);
-		verify(filtered.asGitHistory().getTimestamps().values().stream().allMatch(i -> !i.isAfter(cap)));
-		verify(filtered.anyCommitMatches(r -> filtered.getCommitDate(r).isAfter(cap)).getPoints() == 0d);
-		verify(filtered.getPushDates().values().stream().allMatch(i -> !i.isAfter(cap)));
-		return filtered;
-	}
-
 	@Override
 	public GitHistorySimple goToFs(GitHubUsername author) throws IOException {
 		final GitHistorySimple hs = delegate.goToFs(author);

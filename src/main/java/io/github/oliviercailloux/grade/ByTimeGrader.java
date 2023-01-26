@@ -333,7 +333,7 @@ public class ByTimeGrader<X extends Exception> implements Grader<X> {
 		final ImmutableSortedSet<Instant> consideredTimestamps = timestamps.subSet(latestCommitTimeOnTime, true, max,
 				true);
 		verify(consideredTimestamps.isEmpty() == history.graph().nodes().isEmpty());
-		verify(!consideredTimestamps.last().isAfter(max));
+		verify(consideredTimestamps.isEmpty() || !consideredTimestamps.last().isAfter(max));
 		return consideredTimestamps;
 	}
 

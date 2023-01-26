@@ -79,46 +79,6 @@ public class GitFileSystemWithHistoryFetcherByPrefix implements GitFileSystemWit
 				.map(GitHubUsername::given).filter(accepted).collect(ImmutableSet.toImmutableSet());
 	}
 
-	@Deprecated
-	@Override
-	public GitFileSystemHistory goTo(GitHubUsername username) throws IOException {
-		checkArgument(accepted.test(username));
-
-		final Optional<RuntimeException> exc = closePrevious();
-		exc.ifPresent(e -> {
-			throw e;
-		});
-
-		try {
-			final RepositoryCoordinatesWithPrefix coordinates = RepositoryCoordinatesWithPrefix
-					.from(RepositoryFetcher.DEFAULT_ORG, prefix, username.getUsername());
-
-			final Path dir = Utils.getTempDirectory().resolve(coordinates.getRepositoryName());
-
-			lastRepository = cloner.download(coordinates.asGitUri(), dir);
-
-			lastGitFs = GitFileSystemProvider.instance().newFileSystemFromRepository(lastRepository);
-
-			final GitHubHistory gitHubHistory = fetcherQl.getReversedGitHubHistory(coordinates);
-			final GitHistory history;
-			if (useCommitDates) {
-				history = GitUtils.getHistory(lastGitFs);
-			} else {
-				history = gitHubHistory.getConsistentPushHistory();
-			}
-
-			lastHistory = GitFileSystemHistory.create(lastGitFs, history, gitHubHistory.getPushDates());
-			return lastHistory;
-		} catch (RuntimeException | IOException e) {
-			try {
-				close();
-			} catch (RuntimeException suppressed) {
-				LOGGER.info("Suppressed {}.", suppressed);
-			}
-			throw e;
-		}
-	}
-
 	@Override
 	public GitHistorySimple goToFs(GitHubUsername username) throws IOException {
 		checkArgument(accepted.test(username));

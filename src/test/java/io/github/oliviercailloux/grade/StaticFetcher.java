@@ -10,17 +10,17 @@ import java.io.IOException;
 import java.util.Map;
 
 public class StaticFetcher implements GitFileSystemWithHistoryFetcher {
-	public static GitFileSystemWithHistoryFetcher single(GitHubUsername username, GitFileSystemHistory gitFs) {
+	public static GitFileSystemWithHistoryFetcher single(GitHubUsername username, GitHistorySimple gitFs) {
 		return new StaticFetcher(ImmutableMap.of(username, gitFs));
 	}
 
-	public static GitFileSystemWithHistoryFetcher multiple(Map<GitHubUsername, GitFileSystemHistory> gitFsesByauthor) {
+	public static GitFileSystemWithHistoryFetcher multiple(Map<GitHubUsername, GitHistorySimple> gitFsesByauthor) {
 		return new StaticFetcher(gitFsesByauthor);
 	}
 
-	private final ImmutableMap<GitHubUsername, GitFileSystemHistory> gitFsesByauthor;
+	private final ImmutableMap<GitHubUsername, GitHistorySimple> gitFsesByauthor;
 
-	private StaticFetcher(Map<GitHubUsername, GitFileSystemHistory> gitFsesByauthor) {
+	private StaticFetcher(Map<GitHubUsername, GitHistorySimple> gitFsesByauthor) {
 		this.gitFsesByauthor = ImmutableMap.copyOf(gitFsesByauthor);
 	}
 
@@ -29,16 +29,10 @@ public class StaticFetcher implements GitFileSystemWithHistoryFetcher {
 		return gitFsesByauthor.keySet();
 	}
 
-	@SuppressWarnings("deprecation")
-	@Override
-	public GitFileSystemHistory goTo(GitHubUsername author) throws IOException {
-		checkArgument(gitFsesByauthor.containsKey(author));
-		return gitFsesByauthor.get(author);
-	}
-
 	@Override
 	public GitHistorySimple goToFs(GitHubUsername author) throws IOException {
-		throw new UnsupportedOperationException();
+		checkArgument(gitFsesByauthor.containsKey(author));
+		return gitFsesByauthor.get(author);
 	}
 
 	@Override

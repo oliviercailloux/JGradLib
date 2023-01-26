@@ -7,14 +7,12 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.graph.ImmutableGraph;
 import com.google.common.jimfs.Configuration;
 import com.google.common.jimfs.Jimfs;
-import io.github.oliviercailloux.git.GitHistory;
-import io.github.oliviercailloux.git.GitUtils;
+import io.github.oliviercailloux.git.fs.GitHistorySimple;
 import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
 import io.github.oliviercailloux.gitjfs.GitFileSystem;
 import io.github.oliviercailloux.gitjfs.GitFileSystemProvider;
 import io.github.oliviercailloux.grade.BatchGitHistoryGrader;
 import io.github.oliviercailloux.grade.Exam;
-import io.github.oliviercailloux.grade.GitFileSystemHistory;
 import io.github.oliviercailloux.grade.StaticFetcher;
 import io.github.oliviercailloux.grade.format.HtmlGrades;
 import io.github.oliviercailloux.grade.format.json.JsonSimpleGrade;
@@ -47,7 +45,7 @@ class FakeTests {
 		try (Repository repository = new InMemoryRepository(new DfsRepositoryDescription("myrepo"));
 				GitFileSystem gitFs = GitFileSystemProvider.instance().newFileSystemFromRepository(repository)) {
 
-			final GitFileSystemHistory gitH = GitFileSystemHistory.create(gitFs, GitUtils.getHistory(gitFs));
+			final GitHistorySimple gitH = GitHistorySimple.usingCommitterDates(gitFs);
 			final BatchGitHistoryGrader<RuntimeException> batchGrader = BatchGitHistoryGrader
 					.given(() -> StaticFetcher.single(USERNAME, gitH));
 
@@ -91,8 +89,7 @@ class FakeTests {
 			final ImmutableGraph<Path> graph = Utils.asGraph(ImmutableList.of(c1, c2, c3));
 			try (Repository repository = JGit.createRepository(personIdent, graph, links)) {
 				try (GitFileSystem gitFs = GitFileSystemProvider.instance().newFileSystemFromRepository(repository)) {
-					final GitHistory history = GitUtils.getHistory(gitFs);
-					final GitFileSystemHistory gitH = GitFileSystemHistory.create(gitFs, history);
+					final GitHistorySimple gitH = GitHistorySimple.usingCommitterDates(gitFs);
 					final BatchGitHistoryGrader<RuntimeException> batchGrader = BatchGitHistoryGrader
 							.given(() -> StaticFetcher.single(USERNAME, gitH));
 					final Exam exam = batchGrader.getGrades(BatchGitHistoryGrader.MAX_DEADLINE, Duration.ofMinutes(0),

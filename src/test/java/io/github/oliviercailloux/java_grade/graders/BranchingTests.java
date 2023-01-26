@@ -3,7 +3,6 @@ package io.github.oliviercailloux.java_grade.graders;
 import static com.google.common.base.Verify.verify;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.MoreCollectors;
 import com.google.common.graph.GraphBuilder;
@@ -13,13 +12,13 @@ import com.google.common.jimfs.Configuration;
 import com.google.common.jimfs.Jimfs;
 import io.github.oliviercailloux.git.GitHistory;
 import io.github.oliviercailloux.git.GitUtils;
+import io.github.oliviercailloux.git.fs.GitHistorySimple;
 import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
 import io.github.oliviercailloux.gitjfs.GitFileSystem;
 import io.github.oliviercailloux.gitjfs.GitFileSystemProvider;
 import io.github.oliviercailloux.gitjfs.GitPathRoot;
 import io.github.oliviercailloux.grade.BatchGitHistoryGrader;
 import io.github.oliviercailloux.grade.Exam;
-import io.github.oliviercailloux.grade.GitFileSystemHistory;
 import io.github.oliviercailloux.grade.StaticFetcher;
 import io.github.oliviercailloux.grade.format.HtmlGrades;
 import io.github.oliviercailloux.grade.format.json.JsonSimpleGrade;
@@ -61,8 +60,7 @@ class BranchingTests {
 		try (Repository repository = new InMemoryRepository(new DfsRepositoryDescription("myrepo"));
 				GitFileSystem gitFs = GitFileSystemProvider.instance().newFileSystemFromRepository(repository)) {
 
-			final GitFileSystemHistory gitH = GitFileSystemHistory.create(gitFs, GitUtils.getHistory(gitFs),
-					ImmutableMap.of());
+			final GitHistorySimple gitH = GitHistorySimple.usingCommitterDates(gitFs);
 			final BatchGitHistoryGrader<RuntimeException> batchGrader = BatchGitHistoryGrader
 					.given(() -> StaticFetcher.single(USERNAME, gitH));
 
@@ -177,8 +175,9 @@ class BranchingTests {
 							.collect(MoreCollectors.onlyElement());
 					verify(commitDId.equals(commitChildCId));
 
-					final GitFileSystemHistory gitH = GitFileSystemHistory.create(gitFs, history,
-							ImmutableMap.of(startId, startTime.toInstant(), commitCId, cCTime.toInstant()));
+//					final GitFileSystemHistory gitH = GitFileSystemHistory.create(gitFs, history,
+//							ImmutableMap.of(startId, startTime.toInstant(), commitCId, cCTime.toInstant()));
+					final GitHistorySimple gitH = GitHistorySimple.usingCommitterDates(gitFs);
 					final BatchGitHistoryGrader<RuntimeException> batchGrader = BatchGitHistoryGrader
 							.given(() -> StaticFetcher.single(USERNAME, gitH));
 					final Exam exam = batchGrader.getGrades(startTime, Duration.ofHours(100), new Branching(),
@@ -281,7 +280,7 @@ class BranchingTests {
 							.collect(MoreCollectors.onlyElement());
 					verify(commitDId.equals(commitChildCId));
 
-					final GitFileSystemHistory gitH = GitFileSystemHistory.create(gitFs, history, ImmutableMap.of());
+					final GitHistorySimple gitH = GitHistorySimple.usingCommitterDates(gitFs);
 					final BatchGitHistoryGrader<RuntimeException> batchGrader = BatchGitHistoryGrader
 							.given(() -> StaticFetcher.single(USERNAME, gitH));
 					final Exam exam = batchGrader.getGrades(BatchGitHistoryGrader.MAX_DEADLINE, Duration.ofMinutes(0),
