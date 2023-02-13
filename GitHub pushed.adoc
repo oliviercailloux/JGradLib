@@ -1,0 +1,61 @@
+= GitHub pushed
+:stem:
+:Bs: \mathcal{B}
+:Gs: \mathcal{G}
+:Cs: \mathcal{C}
+:N: \mathbb{N}
+
+== Doc
+$ xdotool search --name "Mozilla Firefox"
+$ xdotool search --name "emacs"
+$ while inotifywait -e close_write GitHub\ pushed.adoc; do asciidoctor GitHub\ pushed.adoc; xdotool windowactivate 27263037; xdotool key CTRL+r; xdotool windowactivate 69206338; done
+
+== Defs
+- Small greek letters designate instants; capital greek letters designate sets of instants.
+- Capital latin letters designate commits
+- Calligraphic latin letters designate sets of references or commits
+- Small latin letters designate functions
+
+“Instant” means timestamp (date and time, Instant in Java).
+Let \(ν\) designate “now” and \(Σ = ]−∞, ν[ \) be the set of possible past event instants.
+The letter \(τ\) designate real event instants, thus with \(τ \in Σ\), while \(σ\) designate instants as known by us (that is, given by GitHub or unknown), with \(σ \in [−∞, ν]\).
+
+- \({Cs}\) the commits in the GitHub repository
+- Commit \(C \in {Cs}\).
+- \(σ^C_P\) the pushed instant reported by GitHub
+- \( {Bs} \) the set of refs (branches) that the GitHub repo ever had (thus not containing local branchs that never reached the GitHub repo)
+- Given \(B \in \mathcal{B}\):
+** \(u^B \in {N} \) the number of updates of branch \(B\), \(0\) iff the branch was created and never updated;
+** \( τ^B_i, i \in [0, u^B] \), the \(i\)th update instant of branch \(B\), 
+** thus with \( τ^B_0 \) the create instant of branch \(B\),
+** \( c^B: [0, u^B] → {Cs} \), \( c^B(i) \) designates the commit that \(B\) was at during \(i\)th update;
+** \(u^{B → C} \in [0, u^B] \) the number of updates of branch \(B\) where it was as \(C\),
+** \( τ^{B → C}_i, i \in [0, u^{B → C}] \), the \(i\)th update instant of branch \(B\) at \(C\),
+** thus if branch \(B\) was created at \(C\), then \( τ^{B → C}_0 = τ^B_0 \) is the create instant of branch \(B\)
+- \( {Gs} \subseteq {Bs} \) the branches known by GitHub (with \( {Gs} ≠ {Bs} \) iff a branch has been deleted sufficiently long ago)
+- \(σ^B_0\) the branch creation instant reported by GitHub, or \(−∞\) if unknown (either \( B \in {Gs} \) and no corresponding CreateEvent, or \( B \notin {Gs} \))
+- Given \(B \in {Gs}\):
+** \(ũ^B \in {N}\) the number of PushEvents reported by GitHub concerning branch \(B\)
+** \( σ^B_i, i \in [1, ũ^B] \) the \(i\)th PushEvent reported by GitHub, ordered by instant (\(σ^B_i ≤ σ^B_{i + 1} \))
+** \( ĉ^B: [0, ũ^B] → {Cs} \) the commit that the branch reportedly was at during the CreateEvent or \(i\)th PushEvent;
+- latexmath:[ σ^{B → C} = \min {ĉ^B}^{-1}(C) ] if \(C \in ĉ^B([0, ũ^B])\), \(σ^{B → C} = ν\) otherwise;
+- \( τ^R = \min_{B \in {Bs}} τ^B_0 \) the repository creation instant
+- \(σ^R \in Σ \) the repository creation instant reported by GitHub
+- \(τ^C_L\) any lower bound on the existence of \(C\) (−∞ is suitable, or any instant before the challenge was given, for example)
+- latexmath:[ τ^C_0 = \min_{B \in {Bs} \mid C \in c^B([0, u^B\])} \min {c^B}^{-1}(C) ] the creation instant of \(C\)
+
+== Hyps
+- \( \forall i \in [0, u^B - 1]: τ^B_i ≤ τ^B_{i + 1} \)
+- \( \forall i \in [0, u^{B → C} - 1]: τ^{B → C}_i ≤ τ^{B → C}_{i + 1} \)
+- \( \forall i \in [0, u^{B → C}], \exists i ≤ j ≤ u^B \mid τ^{B → C}_i = τ^B_j \)
+- latexmath:[ σ^C_P = \max_B τ^B_{u^{B → C}} ]
+- \( σ^R = \min_B τ^B_0 \)
+- \( \forall B \in {Gs}, i: σ^B_i ≠ −∞ ⇒ σ^B_i = τ^B_i \) 
+- \( −∞ ≠ σ^B_i ≤ τ^{B'}_j ⇒ σ^{B'}_j ≠ −∞ \)
+
+== Claims
+- Easy. \( \min_B σ^B_0 = σ^R ⇒ \forall B \in {Bs}: σ^B_0 = τ^B_0. \)
+- Immediate. \( τ^R ≤ \min_B τ^B_0 \).
+- Theorem. latexmath:[ {Gs} ≠ \emptyset \land \min_{B \in {Gs}} σ^B_0 ≤ \max \{σ^R, τ^C_L\} ⇒ τ^C_0 = \min_{B \in {Gs} \mid C \in ĉ^B([0, ũ^B\])} {ĉ^B}^{-1}(C) ].
+
+
