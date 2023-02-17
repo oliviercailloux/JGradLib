@@ -16,6 +16,7 @@ import io.github.oliviercailloux.gitjfs.GitPathRootSha;
 import io.github.oliviercailloux.gitjfs.GitPathRootShaCached;
 import io.github.oliviercailloux.jaris.collections.CollectionUtils;
 import io.github.oliviercailloux.jaris.collections.GraphUtils;
+import io.github.oliviercailloux.jaris.throwing.TPredicate;
 import java.io.IOException;
 import java.time.Instant;
 import java.util.Map;
@@ -250,6 +251,18 @@ public class GitHistorySimple {
 	 */
 	public GitHistorySimple filtered(Predicate<Instant> filter) throws IOException {
 		return GitHistorySimple.create(filterDate(filter), dates);
+	}
+
+	/**
+	 * Returns a git history that only shows paths whose timestamp match the given
+	 * filter.
+	 *
+	 * @param filter indicates which elements should be kept
+	 * @return a filtering file system
+	 * @throws IOException TODO to remove
+	 */
+	public GitHistorySimple filteredCommits(TPredicate<Commit, IOException> filter) throws IOException {
+		return GitHistorySimple.create(GitFilteringFs.filter(fs, filter), dates);
 	}
 
 	@Override

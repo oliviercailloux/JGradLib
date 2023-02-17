@@ -3,7 +3,6 @@ package io.github.oliviercailloux.grade;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Verify.verify;
-import static io.github.oliviercailloux.jaris.exceptions.Unchecker.IO_UNCHECKER;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableBiMap;
@@ -11,12 +10,10 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Iterables;
-import io.github.oliviercailloux.git.GitHistory;
 import io.github.oliviercailloux.git.fs.GitHistorySimple;
 import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
 import io.github.oliviercailloux.gitjfs.Commit;
 import io.github.oliviercailloux.gitjfs.GitPathRoot;
-import io.github.oliviercailloux.gitjfs.GitPathRootSha;
 import io.github.oliviercailloux.gitjfs.GitPathRootShaCached;
 import io.github.oliviercailloux.grade.old.Mark;
 import io.github.oliviercailloux.jaris.collections.CollectionUtils;
@@ -68,13 +65,14 @@ public class DeadlineGrader {
 		}
 
 		public IGrade grade(GitWork work) throws IOException {
-			final GitFileSystemHistory history = work.getHistory();
+			final GitHistorySimple history = work.getHistory();
 			final Mark userGrade = getUsernameGrade(history, work.getAuthor());
-			final ImmutableSet<GitPathRootSha> latestTiedPathsOnTime = PathToGitGrader.getLatest(history);
+			final ImmutableSet<GitPathRootShaCached> latestTiedPathsOnTime = PathToGitGrader.getLatest(history);
 			checkArgument(!latestTiedPathsOnTime.isEmpty());
 			LOGGER.debug("Considering {}.", latestTiedPathsOnTime);
-			final IGrade mainGrade = CheckedStream.<GitPathRootSha, IOException>wrapping(latestTiedPathsOnTime.stream())
-					.map(simpleWorkGrader).min(TComparator.comparing(IGrade::getPoints)).get();
+			final IGrade mainGrade = CheckedStream
+					.<GitPathRootShaCached, IOException>wrapping(latestTiedPathsOnTime.stream()).map(simpleWorkGrader)
+					.min(TComparator.comparing(IGrade::getPoints)).get();
 			return WeightingGrade.from(ImmutableSet.of(
 					CriterionGradeWeight.from(Criterion.given("user.name"), userGrade, USER_GRADE_WEIGHT),
 					CriterionGradeWeight.from(Criterion.given("main"), mainGrade, 1d - USER_GRADE_WEIGHT)));
@@ -85,8 +83,8 @@ public class DeadlineGrader {
 		 * latest among the remaining ones, and have been committed the latest among the
 		 * remaining ones.
 		 */
-		private static ImmutableSet<GitPathRootSha> getLatest(GitFileSystemHistory history) throws IOException {
-			final ImmutableSet<GitPathRootSha> leaves = history.getLeaves();
+		private static ImmutableSet<GitPathRootShaCached> getLatest(GitHistorySimple history) throws IOException {
+			final ImmutableSet<GitPathRootShaCached> leaves = history.leaves();
 			// final GitFileSystemHistory leavesHistory = history.filter(c ->
 			// leaves.contains(c));
 
@@ -107,13 +105,12 @@ public class DeadlineGrader {
 			// .filter(c ->
 			// c.getCommit().getCommitterDate().toInstant().equals(latestCommittedDate));
 
-			final Comparator<GitPathRootSha> byAuthorDate = Comparator
-					.comparing(c -> IO_UNCHECKER.getUsing(() -> c.getCommit()).authorDate());
-			final Comparator<GitPathRootSha> byCommitDate = Comparator
-					.comparing(c -> IO_UNCHECKER.getUsing(() -> c.getCommit()).committerDate());
-			final TComparator<GitPathRootSha, IOException> byDate = (t1, t2) -> byAuthorDate.thenComparing(byCommitDate)
-					.compare(t1, t2);
-			return Utils.<GitPathRootSha, IOException>getMaximalElements(leaves, byDate);
+			final Comparator<GitPathRootShaCached> byAuthorDate = Comparator.comparing(c -> c.getCommit().authorDate());
+			final Comparator<GitPathRootShaCached> byCommitDate = Comparator
+					.comparing(c -> c.getCommit().committerDate());
+			final TComparator<GitPathRootShaCached, IOException> byDate = (t1, t2) -> byAuthorDate
+					.thenComparing(byCommitDate).compare(t1, t2);
+			return Utils.<GitPathRootShaCached, IOException>getMaximalElements(leaves, byDate);
 		}
 
 	}
@@ -323,20 +320,6 @@ public class DeadlineGrader {
 		return finalGrade;
 	}
 
-	public static Mark getUsernameGrade(GitFileSystemHistory history, GitHubUsername expectedUsername)
-			throws IOException {
-		final CheckedStream<GitPathRoot, IOException> checkedCommits = CheckedStream
-				.wrapping(history.getGraph().nodes().stream());
-		final ImmutableSet<String> authors = checkedCommits.map(GitPathRoot::getCommit).map(Commit::authorName)
-				.filter(s -> !s.equals("github-classroom[bot]")).collect(ImmutableSet.toImmutableSet());
-		final ImmutableSet<String> authorsShow = authors.stream().map(s -> "‘" + s + "’")
-				.collect(ImmutableSet.toImmutableSet());
-		LOGGER.debug("Authors: {}.", authors);
-		final String authorExpected = expectedUsername.getUsername();
-		return Mark.binary(authors.equals(ImmutableSet.of(authorExpected)), "",
-				"Expected ‘" + authorExpected + "’, seen " + authorsShow);
-	}
-
 	public static Mark getUsernameGrade(GitHistorySimple history, GitHubUsername expectedUsername) {
 		final ImmutableSet<String> authors = history.graph().nodes().stream().map(GitPathRootShaCached::getCommit)
 				.map(Commit::authorName).filter(s -> !s.equals("github-classroom[bot]"))
@@ -360,11 +343,9 @@ public class DeadlineGrader {
 		this.penalizer = checkNotNull(penalizer);
 	}
 
-	private static Instant getLatestCommit(GitFileSystemHistory history) {
-		checkArgument(!history.isEmpty());
-		final GitHistory asGitHistory = history.asGitHistory();
-		return asGitHistory.getLeaves().stream().map(asGitHistory::getTimestamp).max(Comparator.naturalOrder())
-				.orElseThrow();
+	private static Instant getLatestCommit(GitHistorySimple history) {
+		checkArgument(!history.graph().nodes().isEmpty());
+		return history.leaves().stream().map(history::getTimestamp).max(Comparator.naturalOrder()).orElseThrow();
 	}
 
 	/**
@@ -383,17 +364,17 @@ public class DeadlineGrader {
 		return considerFrom;
 	}
 
-	private static ImmutableSet<GitFileSystemHistory> fromJustBeforeDeadline(GitFileSystemHistory history,
+	private static ImmutableSet<GitHistorySimple> fromJustBeforeDeadline(GitHistorySimple history,
 			ZonedDateTime deadline) throws IOException {
 		final ImmutableSortedSet<Instant> toConsider;
-		final ImmutableSortedSet<Instant> timestamps = history.asGitHistory().getTimestamps().values().stream()
+		final ImmutableSortedSet<Instant> timestamps = history.getTimestamps().values().stream()
 				.collect(ImmutableSortedSet.toImmutableSortedSet(Comparator.naturalOrder()));
 		{
 			final Instant latestAll = getLatestBefore(timestamps, deadline.toInstant());
 			final ImmutableSortedSet<Instant> fromJustBefore = timestamps.tailSet(latestAll);
 
 			final ImmutableSortedSet<Instant> timestampsNonGitHub = history
-					.filter(p -> !JavaMarkHelper.committerIsGitHub(p)).asGitHistory().getTimestamps().values().stream()
+					.filteredCommits(p -> !JavaMarkHelper.committerIsGitHub(p)).getTimestamps().values().stream()
 					.collect(ImmutableSortedSet.toImmutableSortedSet(Comparator.naturalOrder()));
 			final Instant latestNonGitHub = getLatestBefore(timestampsNonGitHub, deadline.toInstant());
 			final ImmutableSortedSet.Builder<Instant> builder = ImmutableSortedSet.naturalOrder();
@@ -412,14 +393,13 @@ public class DeadlineGrader {
 			adjustedConsider = toConsider;
 		}
 		LOGGER.debug("Given {}, to consider: {}, adjusted: {}.", history, toConsider, adjustedConsider);
-		verify(toConsider.isEmpty() == history.getGraph().nodes().isEmpty(),
-				toConsider.toString() + history.getGraph().nodes());
+		verify(toConsider.isEmpty() == history.graph().nodes().isEmpty(),
+				toConsider.toString() + history.graph().nodes());
 
 		verify(timestamps.containsAll(adjustedConsider));
 
 		return CheckedStream.<Instant, IOException>from(adjustedConsider)
-				.map(timeCap -> history.filter(r -> !history.getCommitDate(r).isAfter(timeCap)))
-				.collect(ImmutableSet.toImmutableSet());
+				.map(timeCap -> history.filtered(r -> r.isAfter(timeCap))).collect(ImmutableSet.toImmutableSet());
 	}
 
 	public Penalizer getPenalizer() {
@@ -455,24 +435,24 @@ public class DeadlineGrader {
 	 *
 	 */
 	private ImmutableBiMap<Instant, IGrade> getPenalizedGradesByCap(GitWork work) throws IOException {
-		final ImmutableSet<GitFileSystemHistory> toConsider = fromJustBeforeDeadline(work.getHistory(), deadline);
+		final ImmutableSet<GitHistorySimple> toConsider = fromJustBeforeDeadline(work.getHistory(), deadline);
 
 		final ImmutableBiMap.Builder<Instant, IGrade> byTimeBuilder = ImmutableBiMap.builder();
-		for (GitFileSystemHistory timeCapped : toConsider) {
+		for (GitHistorySimple timeCapped : toConsider) {
 			final IGrade penalizedGrade = getPenalized(work.getAuthor(), timeCapped);
 			byTimeBuilder.put(getLatestCommit(timeCapped), penalizedGrade);
 		}
 		final ImmutableBiMap<Instant, IGrade> byTime = byTimeBuilder.build();
-		verify(toConsider.isEmpty() == work.getHistory().getGraph().nodes().isEmpty());
+		verify(toConsider.isEmpty() == work.getHistory().graph().nodes().isEmpty());
 		return byTime;
 	}
 
-	private IGrade getPenalized(GitHubUsername author, GitFileSystemHistory capped) throws IOException {
+	private IGrade getPenalized(GitHubUsername author, GitHistorySimple capped) throws IOException {
 		final IGrade grade = grader.apply(GitWork.given(author, capped));
 		final Instant latest = getLatestCommit(capped);
 		final Duration lateness = Duration.between(deadline.toInstant(), latest);
 		final IGrade penalizedForTimeGrade = penalizer.penalize(lateness, grade);
-		if (!capped.filter(r -> JavaMarkHelper.committerIsGitHub(r)).isEmpty()) {
+		if (!capped.filteredCommits(r -> JavaMarkHelper.committerIsGitHub(r)).graph().nodes().isEmpty()) {
 			return penalizeForGitHub(penalizedForTimeGrade);
 		}
 		return penalizedForTimeGrade;

@@ -6,9 +6,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableSet;
 import io.github.oliviercailloux.git.GitCloner;
-import io.github.oliviercailloux.git.GitHistory;
 import io.github.oliviercailloux.git.GitHubHistory;
-import io.github.oliviercailloux.git.GitUtils;
 import io.github.oliviercailloux.git.fs.GitHistorySimple;
 import io.github.oliviercailloux.git.git_hub.model.GitHubToken;
 import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
@@ -51,8 +49,7 @@ public class GitFileSystemWithHistoryFetcherByPrefix implements GitFileSystemWit
 	private final GitHubFetcherQL fetcherQl;
 	private GitFileSystem lastGitFs;
 	private Repository lastRepository;
-	private GitFileSystemHistory lastHistory;
-	private GitHistorySimple lastHistorySimple;
+	private GitHistorySimple lastHistory;
 	private final int count;
 	private final Predicate<GitHubUsername> accepted;
 	private final boolean useCommitDates;
@@ -67,7 +64,6 @@ public class GitFileSystemWithHistoryFetcherByPrefix implements GitFileSystemWit
 		fetcherQl = GitHubFetcherQL.using(GitHubToken.getRealInstance());
 		lastGitFs = null;
 		lastRepository = null;
-		lastHistory = null;
 		this.useCommitDates = useCommitDates;
 	}
 
@@ -99,12 +95,12 @@ public class GitFileSystemWithHistoryFetcherByPrefix implements GitFileSystemWit
 
 		final GitHubHistory gitHubHistory = fetcherQl.getReversedGitHubHistory(coordinates);
 		if (useCommitDates) {
-			lastHistorySimple = GitHistorySimple.usingCommitterDates(lastGitFs);
+			lastHistory = GitHistorySimple.usingCommitterDates(lastGitFs);
 		} else {
-			lastHistorySimple = GitHistorySimple.create(lastGitFs, gitHubHistory.getPushDates());
+			lastHistory = GitHistorySimple.create(lastGitFs, gitHubHistory.getPushDates());
 		}
 
-		return lastHistorySimple;
+		return lastHistory;
 	}
 
 	@Override

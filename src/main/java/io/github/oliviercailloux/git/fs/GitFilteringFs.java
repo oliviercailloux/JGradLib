@@ -133,7 +133,7 @@ public class GitFilteringFs extends ForwardingGitFileSystem {
 	}
 
 	@Override
-	public ImmutableSet<DiffEntry> getDiff(GitPathRoot first, GitPathRoot second)
+	public ImmutableSet<DiffEntry> diff(GitPathRoot first, GitPathRoot second)
 			throws IOException, NoSuchFileException {
 		if (!filter.test(first.getCommit())) {
 			throw new NoSuchFileException(first.toString());
@@ -142,7 +142,7 @@ public class GitFilteringFs extends ForwardingGitFileSystem {
 			throw new NoSuchFileException(second.toString());
 		}
 
-		return super.getDiff(first, second);
+		return super.diff(first, second);
 	}
 
 }

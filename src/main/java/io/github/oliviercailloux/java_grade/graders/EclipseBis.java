@@ -273,12 +273,12 @@ public class EclipseBis implements GitFsGrader<IOException> {
 	}
 
 	private boolean singleDiffAbout(GitPathRootShaCached predecessor, GitPathRoot p, String file) throws IOException {
-		final ImmutableSet<DiffEntry> diff = history.fs().getDiff(predecessor, p);
+		final ImmutableSet<DiffEntry> diff = history.fs().diff(predecessor, p);
 		return diff.size() == 1 && diffIsAboutFile(Iterables.getOnlyElement(diff), file);
 	}
 
 	private boolean diffsAbout(GitPathRootShaCached predecessor, GitPathRoot p, Set<String> files) throws IOException {
-		final ImmutableSet<DiffEntry> diff = history.fs().getDiff(predecessor, p);
+		final ImmutableSet<DiffEntry> diff = history.fs().diff(predecessor, p);
 		return diff.stream().allMatch(d -> diffsAreAbout(d, files));
 	}
 

@@ -9,6 +9,7 @@ import com.google.common.collect.ImmutableSet;
 import io.github.oliviercailloux.git.GitCloner;
 import io.github.oliviercailloux.git.GitHistory;
 import io.github.oliviercailloux.git.GitHubHistory;
+import io.github.oliviercailloux.git.fs.GitHistorySimple;
 import io.github.oliviercailloux.git.git_hub.model.GitHubToken;
 import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinatesWithPrefix;
@@ -16,6 +17,7 @@ import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherQL;
 import io.github.oliviercailloux.gitjfs.GitFileSystem;
 import io.github.oliviercailloux.gitjfs.GitFileSystemProvider;
 import io.github.oliviercailloux.gitjfs.GitPathRoot;
+import io.github.oliviercailloux.gitjfs.GitPathRootShaCached;
 import io.github.oliviercailloux.grade.format.json.JsonGrade;
 import io.github.oliviercailloux.java_grade.testers.JavaMarkHelper;
 import io.github.oliviercailloux.json.JsonbUtils;
@@ -125,7 +127,7 @@ public class GitGeneralGrader {
 				LOGGER.debug("Push history: {}.", pushHistory);
 			}
 
-			final GitFileSystemHistory history = GitFileSystemHistory.create(gitFs, pushHistory);
+			final GitHistorySimple history = GitHistorySimple.create(gitFs, pushHistory.getTimestamps());
 			final GitWork work = GitWork.given(GitHubUsername.given(coordinates.getUsername()), history);
 			return grade(work);
 		}
@@ -139,20 +141,19 @@ public class GitGeneralGrader {
 	}
 
 	IGrade grade(GitWork work) throws IOException {
-		final GitFileSystemHistory manual;
+		final GitHistorySimple manual;
 		final ImmutableSet<GitPathRoot> excludedByGitHub;
 		if (excludeCommitsByGitHub) {
-			final ThrowingStream<GitPathRoot, IOException> stream = ThrowingStream
-					.of(work.getHistory().getGraph().nodes().stream(), IOException.class);
-			manual = work.getHistory().filter(r -> !JavaMarkHelper.committerIsGitHub(r));
+			final ThrowingStream<GitPathRootShaCached, IOException> stream = ThrowingStream
+					.of(work.getHistory().graph().nodes().stream(), IOException.class);
+			manual = work.getHistory().filteredCommits(c -> !JavaMarkHelper.committerIsGitHub(c));
 			excludedByGitHub = stream.filter(JavaMarkHelper::committerIsGitHub).collect(ImmutableSet.toImmutableSet());
 		} else {
 			manual = work.getHistory();
 			excludedByGitHub = ImmutableSet.of();
 		}
 
-		final GitFileSystemHistory filteredHistory = manual
-				.filter(r -> !excludedAuthors.contains(r.getCommit().authorName()));
+		final GitHistorySimple filteredHistory = manual.filteredCommits(c -> !excludedAuthors.contains(c.authorName()));
 		final IGrade grade = deadlineGrader.grade(GitWork.given(work.getAuthor(), filteredHistory));
 		final String spaceBefore = grade.getComment().isEmpty() ? "" : " ";
 		final String added = excludedByGitHub.isEmpty() ? ""

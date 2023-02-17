@@ -57,32 +57,6 @@ public class GitHistory {
 		leaves = null;
 	}
 
-	/**
-	 * Returns a graph representing the has-as-child relation: the successors of a
-	 * node are its children; following the successors (children) relation goes
-	 * forward in time; following the predecessors (parents) relation goes back in
-	 * time; a pair (a, b) in the graph represents a parent commit a and its child
-	 * commit b.
-	 * <p>
-	 * This contradicts the usual git vision, where the edge represents the parent
-	 * relation, thus, flow from child commits to their parents (which reflects the
-	 * actual pointer locations, I suppose); but it is more intuitive that the
-	 * “successors” relation goes forward in time, in other words, that the edges
-	 * flow in the direction of time. Furthermore, in graph theory, the usual
-	 * convention is that the roots are the node without predecessors, and that the
-	 * DAG flows outwards from the roots (if the DAG is a tree, this is then called
-	 * an out-tree or arborescence, in Wikipedia terminology). With the convention
-	 * adopted here, the roots, in that sense, are also the first nodes in time,
-	 * which makes sense intuitively. With the git convention (where the edges flow
-	 * from child commits to their parents), you have to choose between calling a
-	 * “root” a node which has no successors but possibly predecessors, or calling a
-	 * “root” a node which is at the end of time, which both feel intuitively
-	 * awkward. I suppose this discrepancy between the common edge orientation and
-	 * the time-flow is a usual problem with VCSes more generally (but I am not
-	 * sure). https://math.stackexchange.com/questions/1374802
-	 *
-	 * @return a DAG (thus, irreflexive)
-	 */
 	public ImmutableGraph<ObjectId> getGraph() {
 		return graph;
 	}

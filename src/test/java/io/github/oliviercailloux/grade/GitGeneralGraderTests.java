@@ -6,12 +6,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
-import com.google.common.graph.GraphBuilder;
 import com.google.common.graph.ImmutableGraph;
 import com.google.common.jimfs.Configuration;
 import com.google.common.jimfs.Jimfs;
 import io.github.oliviercailloux.git.GitHistory;
 import io.github.oliviercailloux.git.GitUtils;
+import io.github.oliviercailloux.git.fs.GitHistorySimple;
 import io.github.oliviercailloux.gitjfs.GitFileSystem;
 import io.github.oliviercailloux.gitjfs.GitFileSystemProvider;
 import io.github.oliviercailloux.java_grade.graders.Commit;
@@ -47,8 +47,7 @@ public class GitGeneralGraderTests {
 			assertTrue(repository.getObjectDatabase().exists());
 			assertFalse(repository.getRefDatabase().hasRefs());
 
-			final GitFileSystemHistory empty = GitFileSystemHistory.create(gitFs,
-					GitHistory.create(GraphBuilder.directed().build(), ImmutableMap.of()));
+			final GitHistorySimple empty = GitHistorySimple.create(gitFs, ImmutableMap.of());
 //			final GitGeneralGrader general = GitGeneralGrader.using("dummy", DeadlineGrader.given(new Commit(), Commit.DEADLINE));
 //			general.
 //			final IGrade grade = general;
@@ -99,8 +98,7 @@ public class GitGeneralGraderTests {
 				final ObjectId o3 = Iterables.getOnlyElement(graph.successors(o2));
 				final Map<ObjectId, Instant> times = ImmutableMap.of(o1, Commit.DEADLINE.toInstant(), o2,
 						Commit.DEADLINE.toInstant(), o3, Commit.DEADLINE.toInstant().plus(Duration.ofMinutes(4)));
-				final GitFileSystemHistory withTimes = GitFileSystemHistory.create(gitFs,
-						GitHistory.create(graph, times));
+				final GitHistorySimple withTimes = GitHistorySimple.create(gitFs, times);
 
 //				final IGrade grade = GitGeneralGrader.grade(withTimes, Commit.DEADLINE, "Not me", new Commit());
 //				LOGGER.debug("Grade: {}.", JsonGrade.asJson(grade));

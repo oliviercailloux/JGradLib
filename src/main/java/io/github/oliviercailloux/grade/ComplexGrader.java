@@ -12,6 +12,7 @@ import com.google.common.collect.Streams;
 import io.github.oliviercailloux.git.fs.GitHistorySimple;
 import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
 import io.github.oliviercailloux.gitjfs.GitPathRoot;
+import io.github.oliviercailloux.gitjfs.GitPathRootRef;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.time.Instant;
@@ -89,18 +90,19 @@ public class ComplexGrader<X extends Exception> implements Grader<X> {
 				ComplexGrader.C_GRADE, 1d - userGradeWeight), ImmutableMap.of(ComplexGrader.C_GRADE, basis));
 	}
 
-	private static void checkTimes(GitFileSystemHistory history, Instant deadline) {
+	private static void checkTimes(GitHistorySimple history, Map<GitPathRoot, Instant> pushDates, Instant deadline) {
 		/*
 		 * Check whether has put late branches on every ending commits: some leaf has a
 		 * pointer that is not main or master. And it is late. OR rather simply use
 		 * commit times and try to detect inconsistencies: commit time on time but push
 		 * date late.
 		 */
-		final ImmutableSet<GitPathRoot> refs = IO_UNCHECKER.getUsing(history::getRefs);
+		final ImmutableSet<GitPathRootRef> refs = IO_UNCHECKER.getUsing(() -> history.fs().getRefs());
 		final ImmutableMap<GitPathRoot, Instant> commitDates = refs.stream().collect(ImmutableMap.toImmutableMap(p -> p,
 				IO_UNCHECKER.wrapFunction(p -> p.getCommit().committerDate().toInstant())));
-		final ImmutableMap<GitPathRoot, Instant> pushDates = refs.stream().collect(ImmutableMap.toImmutableMap(p -> p,
-				IO_UNCHECKER.wrapFunction(p -> history.getPushDates().getOrDefault(p.getCommit().id(), Instant.MIN))));
+//		final ImmutableMap<GitPathRootRef, Instant> pushDates = refs.stream().collect(ImmutableMap.toImmutableMap(
+//				p -> p,
+//				IO_UNCHECKER.wrapFunction(p -> history.getPushDates().getOrDefault(p.getCommit().id(), Instant.MIN))));
 		final Map<GitPathRoot, Instant> pushDatesLate = Maps.filterValues(pushDates, i -> i.isAfter(deadline));
 		final Map<GitPathRoot, Instant> commitsOnTime = Maps.filterValues(commitDates, i -> !i.isAfter(deadline));
 
@@ -112,31 +114,6 @@ public class ComplexGrader<X extends Exception> implements Grader<X> {
 			LOGGER.info("Pushed late but committed on time: {}; commit times {}.", contradictory,
 					Maps.filterKeys(commitsOnTime, r -> pushDatesLate.containsKey(r)));
 		}
-	}
-
-	/**
-	 * Considers as “commit time” every times given by the git history AND by the
-	 * push dates (something may be pushed at some date that does not appear in the
-	 * git history, as it may have being overwritten by later commits: in case the
-	 * commits were all pushed at some time but a branch was later put on some
-	 * commit not ending the series, for example).
-	 *
-	 * @param history
-	 * @return the latest commit time that is on time, that is, the latest commit
-	 *         time within [MIN, deadline], if it exists, and the late commit times,
-	 *         that is, every times of commits falling in the range (deadline, max].
-	 */
-	public static ImmutableSortedSet<Instant> getTimestamps(GitFileSystemHistory history, Instant deadline,
-			Instant max) {
-		final ImmutableSortedSet<Instant> timestamps = Streams
-				.concat(history.asGitHistory().getTimestamps().values().stream(),
-						history.getPushDates().values().stream())
-				.collect(ImmutableSortedSet.toImmutableSortedSet(Comparator.naturalOrder()));
-		final Instant latestCommitTimeOnTime = Optional.ofNullable(timestamps.floor(deadline)).orElse(Instant.MIN);
-		final ImmutableSortedSet<Instant> consideredTimestamps = timestamps.subSet(latestCommitTimeOnTime, true, max,
-				true);
-		verify(consideredTimestamps.isEmpty() == history.getGraph().nodes().isEmpty());
-		return consideredTimestamps;
 	}
 
 }

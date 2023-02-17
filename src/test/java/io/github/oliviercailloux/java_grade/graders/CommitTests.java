@@ -6,21 +6,22 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
-import com.google.common.graph.GraphBuilder;
-import com.google.common.graph.ImmutableGraph;
+import com.google.common.graph.Graph;
 import com.google.common.jimfs.Configuration;
 import com.google.common.jimfs.Jimfs;
-import io.github.oliviercailloux.git.GitHistory;
-import io.github.oliviercailloux.git.GitUtils;
+import io.github.oliviercailloux.git.fs.GitHistorySimple;
 import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
 import io.github.oliviercailloux.gitjfs.GitFileSystem;
 import io.github.oliviercailloux.gitjfs.GitFileSystemProvider;
-import io.github.oliviercailloux.grade.GitFileSystemHistory;
+import io.github.oliviercailloux.gitjfs.GitPathRootSha;
+import io.github.oliviercailloux.gitjfs.GitPathRootShaCached;
 import io.github.oliviercailloux.grade.GitWork;
 import io.github.oliviercailloux.grade.IGrade;
 import io.github.oliviercailloux.grade.format.json.JsonGrade;
+import io.github.oliviercailloux.jaris.collections.GraphUtils;
 import io.github.oliviercailloux.jgit.JGit;
 import io.github.oliviercailloux.utils.Utils;
 import java.nio.file.FileSystem;
@@ -50,8 +51,7 @@ class CommitTests {
 			assertTrue(repository.getObjectDatabase().exists());
 			assertFalse(repository.getRefDatabase().hasRefs());
 
-			final GitFileSystemHistory empty = GitFileSystemHistory.create(gitFs,
-					GitHistory.create(GraphBuilder.directed().build(), ImmutableMap.of()));
+			final GitHistorySimple empty = GitHistorySimple.create(gitFs, ImmutableMap.of());
 
 			final IGrade direct = Commit.grade(GitWork.given(GitHubUsername.given("ploum"), empty));
 			LOGGER.debug("Grade direct: {}.", JsonGrade.asJson(direct));
@@ -92,15 +92,15 @@ class CommitTests {
 			try (Repository repository = JGit.createRepository(personIdent, Utils.asGraph(ImmutableList.of(c1, c2, c3)),
 					links);
 					GitFileSystem gitFs = GitFileSystemProvider.instance().newFileSystemFromRepository(repository)) {
-				final GitHistory history = GitUtils.getHistory(gitFs);
-				final ImmutableGraph<ObjectId> graph = history.getGraph();
-				final ObjectId o1 = Iterables.getOnlyElement(history.getRoots());
+				final Graph<ObjectId> graph = GraphUtils.transform(gitFs.getCommitsGraph(), p -> p.getCommit().id());
+				final ImmutableSet<ObjectId> roots = graph.nodes().stream().filter(n -> graph.predecessors(n).isEmpty())
+						.collect(ImmutableSet.toImmutableSet());
+				final ObjectId o1 = Iterables.getOnlyElement(roots);
 				final ObjectId o2 = Iterables.getOnlyElement(graph.successors(o1));
 				final ObjectId o3 = Iterables.getOnlyElement(graph.successors(o2));
 				final Map<ObjectId, Instant> times = ImmutableMap.of(o1, Commit.DEADLINE.toInstant(), o2,
 						Commit.DEADLINE.toInstant(), o3, Commit.DEADLINE.toInstant().plus(Duration.ofMinutes(4)));
-				final GitFileSystemHistory withTimes = GitFileSystemHistory.create(gitFs,
-						GitHistory.create(graph, times));
+				final GitHistorySimple withTimes = GitHistorySimple.create(gitFs, times);
 
 				final IGrade direct = Commit.grade(GitWork.given(GitHubUsername.given("Not me"), withTimes));
 				LOGGER.debug("Grade direct: {}.", JsonGrade.asJson(direct));
@@ -142,11 +142,12 @@ class CommitTests {
 			try (Repository repository = JGit.createRepository(personIdent, Utils.asGraph(ImmutableList.of(c1, c2, c3)),
 					links)) {
 				try (GitFileSystem gitFs = GitFileSystemProvider.instance().newFileSystemFromRepository(repository)) {
-					final ImmutableGraph<ObjectId> graph = GitUtils.getHistory(gitFs).getGraph();
-					final Map<ObjectId, Instant> constantTimes = Maps.asMap(graph.nodes(),
-							o -> Commit.DEADLINE.toInstant());
-					final GitFileSystemHistory withConstantTimes = GitFileSystemHistory.create(gitFs,
-							GitHistory.create(graph, constantTimes));
+					final Graph<GitPathRootShaCached> graph = GraphUtils.transform(gitFs.getCommitsGraph(),
+							GitPathRootSha::toShaCached);
+					final ImmutableSet<ObjectId> ids = graph.nodes().stream().map(GitPathRootShaCached::getCommit)
+							.map(io.github.oliviercailloux.gitjfs.Commit::id).collect(ImmutableSet.toImmutableSet());
+					final Map<ObjectId, Instant> constantTimes = Maps.asMap(ids, o -> Commit.DEADLINE.toInstant());
+					final GitHistorySimple withConstantTimes = GitHistorySimple.create(gitFs, constantTimes);
 
 					final IGrade direct = Commit.grade(GitWork.given(GitHubUsername.given("Me"), withConstantTimes));
 					LOGGER.debug("Grade direct: {}.", JsonGrade.asJson(direct));

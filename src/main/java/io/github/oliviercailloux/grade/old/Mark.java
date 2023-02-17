@@ -17,6 +17,9 @@ import java.util.Objects;
 
 @JsonbPropertyOrder({ "points", "comments" })
 public class Mark implements IGrade {
+	public static Mark fromNew(io.github.oliviercailloux.grade.Mark newer) {
+		return new Mark(newer.getPoints(), newer.getComment());
+	}
 
 	public static Mark zero() {
 		return new Mark(0d, "");

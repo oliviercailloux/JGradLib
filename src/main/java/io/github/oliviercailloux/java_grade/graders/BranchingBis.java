@@ -19,18 +19,16 @@ import io.github.oliviercailloux.grade.BatchGitHistoryGrader;
 import io.github.oliviercailloux.grade.Criterion;
 import io.github.oliviercailloux.grade.GitFileSystemWithHistoryFetcherByPrefix;
 import io.github.oliviercailloux.grade.GitFsGrader;
-import io.github.oliviercailloux.grade.GitGrader;
 import io.github.oliviercailloux.grade.GitGrader.Predicates;
 import io.github.oliviercailloux.grade.Grade;
 import io.github.oliviercailloux.grade.GradeAggregator;
+import io.github.oliviercailloux.grade.GradeUtils;
 import io.github.oliviercailloux.grade.IGrade.CriteriaPath;
 import io.github.oliviercailloux.grade.Mark;
 import io.github.oliviercailloux.grade.MarksTree;
 import io.github.oliviercailloux.grade.SubMark;
 import io.github.oliviercailloux.grade.SubMarksTree;
-import io.github.oliviercailloux.jaris.exceptions.CheckedStream;
 import io.github.oliviercailloux.jaris.throwing.TFunction;
-import io.github.oliviercailloux.jaris.throwing.TPredicate;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
@@ -42,7 +40,6 @@ import java.util.LinkedHashMap;
 import java.util.Set;
 import java.util.regex.Pattern;
 import name.falgout.jeffrey.throwing.stream.ThrowingStream;
-import org.eclipse.jgit.lib.ObjectId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -703,16 +700,6 @@ public class BranchingBis implements GitFsGrader<IOException> {
 	}
 
 	private ImmutableSet<GitPathRootRef> refsTo(GitPathRootSha target) throws IOException {
-		return getRefsTo(currentHistory, target);
-	}
-
-	public static ImmutableSet<GitPathRootRef> getRefsTo(GitHistorySimple history, GitPathRootSha target)
-			throws IOException {
-		final ObjectId targetId = target.getStaticCommitId();
-		final ImmutableSet<GitPathRootRef> refs = history.fs().getRefs();
-		final TPredicate<GitPathRootRef, IOException> rightTarget = GitGrader.Predicates.compose(GitPathRoot::getCommit,
-				c -> c.id().equals(targetId));
-		return CheckedStream.<GitPathRootRef, IOException>from(refs).filter(rightTarget)
-				.collect(ImmutableSet.toImmutableSet());
+		return GradeUtils.getRefsTo(currentHistory.fs().getRefs(), target);
 	}
 }

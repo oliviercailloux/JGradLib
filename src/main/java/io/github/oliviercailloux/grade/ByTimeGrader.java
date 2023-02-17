@@ -209,18 +209,6 @@ public class ByTimeGrader<X extends Exception> implements Grader<X> {
 		return penalized;
 	}
 
-	public static Instant cappedAt(GitFileSystemHistory capped) {
-		// final ImmutableSet<GitPathRoot> leaves =
-		// IO_UNCHECKER.getUsing(capped::getRefs).stream()
-		// .filter(n ->
-		// capped.getGraph().successors(n).isEmpty()).collect(ImmutableSet.toImmutableSet());
-		final ImmutableSet<GitPathRootSha> leaves = capped.getFilteredLeaves();
-		final Instant timeCap = leaves.stream()
-				.map((GitPathRoot r) -> IO_UNCHECKER.getUsing(() -> capped.getCommitDate(r)))
-				.max(Comparator.naturalOrder()).orElseThrow();
-		return timeCap;
-	}
-
 	public static Instant cappedAt(GitHistorySimple capped) {
 //		final ImmutableSet<GitPathRoot> leaves = IO_UNCHECKER.getUsing(capped::getRefs).stream()
 //				.filter(n -> capped.getGraph().successors(n).isEmpty()).collect(ImmutableSet.toImmutableSet());
@@ -228,19 +216,6 @@ public class ByTimeGrader<X extends Exception> implements Grader<X> {
 		final Instant timeCap = leaves.stream().map(r -> capped.getTimestamp(r)).max(Comparator.naturalOrder())
 				.orElseThrow();
 		return timeCap;
-	}
-
-	public static GitPathRootSha last(GitFileSystemHistory data) {
-//		final ImmutableSet<GitPathRoot> leaves = IO_UNCHECKER.getUsing(data::getRefs).stream()
-//				.filter(n -> data.getGraph().successors(n).isEmpty()).collect(ImmutableSet.toImmutableSet());
-		final ImmutableSet<GitPathRootSha> leaves = data.getLeaves();
-		final ImmutableSet<GitPathRootSha> filteredLeaves = data.getFilteredLeaves();
-		LOGGER.debug("Leaves: {}, filtered: {}.", leaves, filteredLeaves);
-		final Comparator<GitPathRootSha> byDate = Comparator
-				.comparing((GitPathRootSha r) -> IO_UNCHECKER.getUsing(() -> data.getCommitDate(r)));
-		final ImmutableSortedSet<GitPathRootSha> sortedLeaves = ImmutableSortedSet.copyOf(byDate, filteredLeaves);
-		final GitPathRootSha leaf = sortedLeaves.last();
-		return leaf;
 	}
 
 	public static GitPathRootSha last(GitHistorySimple data) {
@@ -288,32 +263,6 @@ public class ByTimeGrader<X extends Exception> implements Grader<X> {
 	}
 
 	/**
-	 * Considers as “commit time” every times given by the git history AND by the
-	 * push dates (something may be pushed at some date that does not appear in the
-	 * git history, as it may have being overwritten by later commits: in case the
-	 * commits were all pushed at some time but a branch was later put on some
-	 * commit not ending the series, for example).
-	 *
-	 * @param history
-	 * @return the latest commit time that is on time, that is, the latest commit
-	 *         time within [MIN, deadline], if it exists, and the late commit times,
-	 *         that is, every times of commits falling in the range (deadline, max].
-	 */
-	public static ImmutableSortedSet<Instant> getTimestamps(GitFileSystemHistory history, Instant deadline,
-			Instant max) {
-		final ImmutableSortedSet<Instant> timestamps = Streams
-				.concat(history.asGitHistory().getTimestamps().values().stream(),
-						history.getPushDates().values().stream())
-				.collect(ImmutableSortedSet.toImmutableSortedSet(Comparator.naturalOrder()));
-		final Instant latestCommitTimeOnTime = Optional.ofNullable(timestamps.floor(deadline)).orElse(Instant.MIN);
-		final ImmutableSortedSet<Instant> consideredTimestamps = timestamps.subSet(latestCommitTimeOnTime, true, max,
-				true);
-		verify(consideredTimestamps.isEmpty() == history.getGraph().nodes().isEmpty());
-		verify(!consideredTimestamps.last().isAfter(max));
-		return consideredTimestamps;
-	}
-
-	/**
 	 * Note that according to a note that I do not understand any more: Considers as
 	 * “commit time” every times given by the git history AND by the push dates
 	 * (something may be pushed at some date that does not appear in the git
@@ -337,32 +286,9 @@ public class ByTimeGrader<X extends Exception> implements Grader<X> {
 		return consideredTimestamps;
 	}
 
-	public static ImmutableSet<GitFileSystemHistory> getCapped(GitFileSystemHistory history, Instant deadline,
-			Instant max) {
-		return getTimestamps(history, deadline, max).stream().map(c -> cap(history, c))
-				.collect(ImmutableSet.toImmutableSet());
-	}
-
 	public static ImmutableSet<GitHistorySimple> getCapped(GitHistorySimple history, Instant deadline, Instant max) {
 		return getTimestamps(history, deadline, max).stream().map(c -> cap(history, c))
 				.collect(ImmutableSet.toImmutableSet());
-	}
-
-	private static GitFileSystemHistory cap(GitFileSystemHistory history, Instant c) {
-		try {
-			// GitFileSystemHistory.create(history.)
-			final GitFileSystemHistory filtered = history.filter(
-					r -> (!history.getCommitDate(r).isAfter(c) && !r.getCommit().authorDate().toInstant().isAfter(c))
-							|| (history.getPushDates().get(r.getCommit().id()) != null
-									&& !history.getPushDates().get(r.getCommit().id()).isAfter(c)),
-					c);
-			// final GitPathRootSha last = ByTimeGrader.last(filtered);
-			final Instant last = ByTimeGrader.cappedAt(filtered);
-			verify(!last.isAfter(c));
-			return filtered;
-		} catch (IOException e) {
-			throw new UncheckedIOException(e);
-		}
 	}
 
 	private static GitHistorySimple cap(GitHistorySimple history, Instant cap) {

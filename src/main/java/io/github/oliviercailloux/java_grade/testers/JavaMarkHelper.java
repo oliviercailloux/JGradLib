@@ -83,6 +83,13 @@ public class JavaMarkHelper {
 		return commit.getCommitterIdent().getName().equals("GitHub");
 	}
 
+	public static boolean committerAndAuthorIs(Commit commit, String name) {
+		checkNotNull(name);
+		final boolean committerIsRight = commit.committerName().equals(name);
+		final boolean authorIsRight = commit.authorName().equals(name);
+		return committerIsRight && authorIsRight;
+	}
+
 	public static boolean committerAndAuthorIs(RevCommit commit, String name) {
 		checkNotNull(name);
 		final boolean committerIsRight = commit.getCommitterIdent().getName().equals(name);

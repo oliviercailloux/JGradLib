@@ -8,6 +8,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.primitives.Ints;
 import io.github.oliviercailloux.gitjfs.GitPath;
 import io.github.oliviercailloux.gitjfs.GitPathRoot;
+import io.github.oliviercailloux.gitjfs.GitPathRootRef;
 import io.github.oliviercailloux.jaris.throwing.TFunction;
 import io.github.oliviercailloux.jaris.throwing.TPredicate;
 import java.io.IOException;
@@ -51,6 +52,14 @@ public interface GitGrader {
 			return r -> patternBranch.matcher(r.getGitRef()).matches();
 		}
 
+		public static TPredicate<GitPathRootRef, IOException> isRefBranch(String remoteBranch) {
+			checkArgument(!remoteBranch.contains("/"));
+			checkArgument(!remoteBranch.isEmpty());
+
+			final Pattern patternBranch = Pattern.compile("refs/remotes/[^/]+/" + remoteBranch);
+			return r -> patternBranch.matcher(r.getGitRef()).matches();
+		}
+
 		public static boolean isBranch(String gitRef, String remoteBranch) {
 			checkArgument(!remoteBranch.contains("/"));
 			checkArgument(!remoteBranch.isEmpty());
@@ -59,13 +68,12 @@ public interface GitGrader {
 			return patternBranch.matcher(gitRef).matches();
 		}
 
-		public static <PI, QI, FO extends QI> TPredicate<PI, IOException> compose(
-				TFunction<PI, FO, IOException> f, TPredicate<QI, IOException> p) {
+		public static <PI, QI, FO extends QI> TPredicate<PI, IOException> compose(TFunction<PI, FO, IOException> f,
+				TPredicate<QI, IOException> p) {
 			return r -> p.test(f.apply(r));
 		}
 
-		public static <PI> TPredicate<ImmutableSet<PI>, IOException> anyMatch(
-				TPredicate<? super PI, IOException> p) {
+		public static <PI> TPredicate<ImmutableSet<PI>, IOException> anyMatch(TPredicate<? super PI, IOException> p) {
 			return r -> {
 				try {
 					return r.stream().anyMatch(IO_UNCHECKER.wrapPredicate(p));
