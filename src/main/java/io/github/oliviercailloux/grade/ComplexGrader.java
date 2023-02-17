@@ -6,19 +6,13 @@ import static io.github.oliviercailloux.jaris.exceptions.Unchecker.IO_UNCHECKER;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Streams;
 import io.github.oliviercailloux.git.fs.GitHistorySimple;
 import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
 import io.github.oliviercailloux.gitjfs.GitPathRoot;
 import io.github.oliviercailloux.gitjfs.GitPathRootRef;
-import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.time.Instant;
-import java.util.Comparator;
 import java.util.Map;
-import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -51,23 +45,15 @@ public class ComplexGrader<X extends Exception> implements Grader<X> {
 
 	@Override
 	public MarksTree grade(GitHubUsername author, GitHistorySimple history) throws X {
-		try {
-			return gradeExc(author, history);
-		} catch (IOException e) {
-			throw new UncheckedIOException(e);
-		}
-	}
-
-	private MarksTree gradeExc(GitHubUsername author, GitHistorySimple capped) throws IOException, X {
-		verify(!capped.graph().nodes().isEmpty());
-
-		final Instant timeCap = ByTimeGrader.cappedAt(capped);
-
-		final MarksTree grade = grader.grade(capped);
-
-		final Mark userGrade = DeadlineGrader.getUsernameGrade(capped, author).asNew();
-		final MarksTree gradeWithUser = MarksTree.composite(ImmutableMap.of(C_USER_NAME, userGrade, C_GRADE, grade));
-
+		verify(!history.graph().nodes().isEmpty());
+		
+		final Instant timeCap = ByTimeGrader.cappedAt(history);
+		
+		final MarksTree grade1 = grader.grade(history);
+		
+		final Mark userGrade = DeadlineGrader.getUsernameGrade(history, author).asNew();
+		final MarksTree gradeWithUser = MarksTree.composite(ImmutableMap.of(C_USER_NAME, userGrade, C_GRADE, grade1));
+		
 		return penalizerModifier.modify(gradeWithUser, timeCap);
 	}
 
@@ -97,7 +83,7 @@ public class ComplexGrader<X extends Exception> implements Grader<X> {
 		 * commit times and try to detect inconsistencies: commit time on time but push
 		 * date late.
 		 */
-		final ImmutableSet<GitPathRootRef> refs = IO_UNCHECKER.getUsing(() -> history.fs().getRefs());
+		final ImmutableSet<GitPathRootRef> refs = IO_UNCHECKER.getUsing(() -> history.fs().refs());
 		final ImmutableMap<GitPathRoot, Instant> commitDates = refs.stream().collect(ImmutableMap.toImmutableMap(p -> p,
 				IO_UNCHECKER.wrapFunction(p -> p.getCommit().committerDate().toInstant())));
 //		final ImmutableMap<GitPathRootRef, Instant> pushDates = refs.stream().collect(ImmutableMap.toImmutableMap(

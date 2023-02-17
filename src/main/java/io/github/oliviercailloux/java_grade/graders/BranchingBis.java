@@ -700,6 +700,6 @@ public class BranchingBis implements GitFsGrader<IOException> {
 	}
 
 	private ImmutableSet<GitPathRootRef> refsTo(GitPathRootSha target) throws IOException {
-		return GradeUtils.getRefsTo(currentHistory.fs().getRefs(), target);
+		return GradeUtils.getRefsTo(currentHistory.fs().refs(), target);
 	}
 }

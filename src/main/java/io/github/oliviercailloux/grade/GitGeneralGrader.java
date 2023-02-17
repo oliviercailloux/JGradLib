@@ -122,8 +122,8 @@ public class GitGeneralGrader {
 					LOGGER.warn("Patched: {}.", gitHubHistory.getPatchedPushCommits());
 				}
 				pushHistory = gitHubHistory.getConsistentPushHistory();
-				verify(pushHistory.getGraph().equals(Utils.asImmutableGraph(gitFs.getCommitsGraph(),
-						IO_UNCHECKER.wrapFunction(r -> r.getCommit().id()))));
+				verify(pushHistory.getGraph().equals(
+						Utils.asImmutableGraph(gitFs.graph(), IO_UNCHECKER.wrapFunction(r -> r.getCommit().id()))));
 				LOGGER.debug("Push history: {}.", pushHistory);
 			}
 

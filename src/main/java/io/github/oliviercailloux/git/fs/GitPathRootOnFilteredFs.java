@@ -10,6 +10,7 @@ import io.github.oliviercailloux.gitjfs.ForwardingGitPathRoot;
 import io.github.oliviercailloux.gitjfs.GitPath;
 import io.github.oliviercailloux.gitjfs.GitPathRoot;
 import io.github.oliviercailloux.gitjfs.GitPathRootSha;
+import io.github.oliviercailloux.gitjfs.GitPathRootShaCached;
 import java.io.IOException;
 import java.nio.file.LinkOption;
 import java.nio.file.NoSuchFileException;
@@ -65,12 +66,14 @@ public class GitPathRootOnFilteredFs extends ForwardingGitPathRoot {
 		return delegate().toString();
 	}
 
+	@Deprecated
 	@Override
 	public GitPathRoot toAbsolutePath() {
 		verify(delegate.toAbsolutePath().equals(delegate));
 		return this;
 	}
 
+	@Deprecated
 	@Override
 	public GitPathRoot getRoot() {
 		verify(delegate.getRoot().equals(delegate));
@@ -121,9 +124,10 @@ public class GitPathRootOnFilteredFs extends ForwardingGitPathRoot {
 
 	@Override
 	public Commit getCommit() throws IOException, NoSuchFileException {
-		final Commit underlying = super.getCommit();
+		final GitPathRootShaCached cached = this.toShaCached();
+		final Commit underlying = cached.getCommit();
 		final ImmutableSet<ObjectId> underlyingParents = ImmutableSet.copyOf(underlying.parents());
-		final Set<GitPathRootSha> filteredParents = fs.getCommitsGraph().predecessors(this.toSha());
+		final Set<GitPathRootShaCached> filteredParents = fs.graph().predecessors(cached);
 		final ImmutableSet<ObjectId> filteredParentIds = filteredParents.stream().map(GitPathRootSha::getStaticCommitId)
 				.collect(ImmutableSet.toImmutableSet());
 		if (!underlyingParents.equals(filteredParentIds)) {

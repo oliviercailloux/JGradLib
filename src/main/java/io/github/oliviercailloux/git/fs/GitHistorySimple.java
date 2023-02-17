@@ -8,11 +8,9 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import com.google.common.graph.Graph;
 import com.google.common.graph.ImmutableGraph;
-import com.google.common.graph.MutableGraph;
 import io.github.oliviercailloux.git.GitHubHistory;
 import io.github.oliviercailloux.gitjfs.Commit;
 import io.github.oliviercailloux.gitjfs.GitFileSystem;
-import io.github.oliviercailloux.gitjfs.GitPathRootSha;
 import io.github.oliviercailloux.gitjfs.GitPathRootShaCached;
 import io.github.oliviercailloux.jaris.collections.CollectionUtils;
 import io.github.oliviercailloux.jaris.collections.GraphUtils;
@@ -120,8 +118,8 @@ public class GitHistorySimple {
 	 * @param dates its keyset must contain all nodes of the graph.
 	 */
 	public static GitHistorySimple usingCommitterDates(GitFileSystem fs) throws IOException {
-		final ImmutableGraph<GitPathRootSha> graphOfPaths = fs.getCommitsGraph();
-		final Graph<Commit> graph = GraphUtils.transform(graphOfPaths, GitPathRootSha::getCommit);
+		final ImmutableGraph<GitPathRootShaCached> graphOfPaths = fs.graph();
+		final Graph<Commit> graph = GraphUtils.transform(graphOfPaths, GitPathRootShaCached::getCommit);
 		final ImmutableMap<Commit, Instant> dated = CollectionUtils.toMap(graph.nodes(),
 				c -> c.committerDate().toInstant());
 		final ImmutableMap<ObjectId, Instant> dates = CollectionUtils.transformKeys(dated, Commit::id);
@@ -141,9 +139,7 @@ public class GitHistorySimple {
 
 	private GitHistorySimple(GitFileSystem fs, Map<ObjectId, Instant> dates) throws IOException {
 		this.fs = fs;
-		final ImmutableGraph<GitPathRootSha> commitsGraph = fs.getCommitsGraph();
-		final MutableGraph<GitPathRootShaCached> cached = GraphUtils.transform(commitsGraph, p -> p.toShaCached());
-		graph = ImmutableGraph.copyOf(cached);
+		graph = fs.graph();
 		final ImmutableSet<ObjectId> commits = graph.nodes().stream().map(p -> p.getCommit().id())
 				.collect(ImmutableSet.toImmutableSet());
 		this.dates = ImmutableMap.copyOf(Maps.filterKeys(dates, k -> commits.contains(k)));

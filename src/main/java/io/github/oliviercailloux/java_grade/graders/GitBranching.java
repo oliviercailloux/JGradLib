@@ -57,7 +57,7 @@ public class GitBranching implements GitGrader {
 	@Override
 	public WeightingGrade grade(GitWork work) throws IOException {
 		final GitHistorySimple history = work.getHistory();
-		final ImmutableSet<GitPathRootRef> refs = history.fs().getRefs();
+		final ImmutableSet<GitPathRootRef> refs = history.fs().refs();
 
 		final ImmutableSet.Builder<CriterionGradeWeight> gradeBuilder = ImmutableSet.builder();
 

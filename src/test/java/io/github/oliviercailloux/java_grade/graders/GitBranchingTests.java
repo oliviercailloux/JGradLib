@@ -14,12 +14,10 @@ import io.github.oliviercailloux.git.fs.GitHistorySimple;
 import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
 import io.github.oliviercailloux.gitjfs.GitFileSystem;
 import io.github.oliviercailloux.gitjfs.GitFileSystemProvider;
-import io.github.oliviercailloux.gitjfs.GitPathRootSha;
 import io.github.oliviercailloux.gitjfs.GitPathRootShaCached;
 import io.github.oliviercailloux.grade.GitWork;
 import io.github.oliviercailloux.grade.IGrade;
 import io.github.oliviercailloux.grade.format.json.JsonGrade;
-import io.github.oliviercailloux.jaris.collections.GraphUtils;
 import io.github.oliviercailloux.jgit.JGit;
 import java.nio.file.FileSystem;
 import java.nio.file.Files;
@@ -98,8 +96,7 @@ public class GitBranchingTests {
 
 			try (Repository repository = JGit.createRepository(personIdent, baseDirs, links)) {
 				try (GitFileSystem gitFs = GitFileSystemProvider.instance().newFileSystemFromRepository(repository)) {
-					final Graph<GitPathRootShaCached> graph = GraphUtils.transform(gitFs.getCommitsGraph(),
-							GitPathRootSha::toShaCached);
+					final Graph<GitPathRootShaCached> graph = gitFs.graph();
 					final ImmutableSet<ObjectId> ids = graph.nodes().stream().map(GitPathRootShaCached::getCommit)
 							.map(io.github.oliviercailloux.gitjfs.Commit::id).collect(ImmutableSet.toImmutableSet());
 					final Map<ObjectId, Instant> constantTimes = Maps.asMap(ids, o -> Commit.DEADLINE.toInstant());
@@ -156,8 +153,7 @@ public class GitBranchingTests {
 
 			try (Repository repository = JGit.createRepository(personIdent, baseDirs, links)) {
 				try (GitFileSystem gitFs = GitFileSystemProvider.instance().newFileSystemFromRepository(repository)) {
-					final Graph<GitPathRootShaCached> graph = GraphUtils.transform(gitFs.getCommitsGraph(),
-							GitPathRootSha::toShaCached);
+					final Graph<GitPathRootShaCached> graph = gitFs.graph();
 					final ImmutableSet<ObjectId> ids = graph.nodes().stream().map(GitPathRootShaCached::getCommit)
 							.map(io.github.oliviercailloux.gitjfs.Commit::id).collect(ImmutableSet.toImmutableSet());
 					final Map<ObjectId, Instant> constantTimes = Maps.asMap(ids, o -> Commit.DEADLINE.toInstant());

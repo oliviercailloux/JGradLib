@@ -58,8 +58,7 @@ public class EclipseTests {
 				RepositoryCoordinates.from("oliviercailloux-org", "minimax-ex").asGitUri(),
 				Utils.getTempDirectory().resolve("minimax-ex"));
 				GitFileSystem gitFs = GitFileSystemProvider.instance().newFileSystemFromRepository(repository)) {
-			final Graph<GitPathRootShaCached> graph = GraphUtils.transform(gitFs.getCommitsGraph(),
-					GitPathRootSha::toShaCached);
+			final Graph<GitPathRootShaCached> graph = gitFs.graph();
 			final ImmutableSet<ObjectId> ids = graph.nodes().stream().map(GitPathRootShaCached::getCommit)
 					.map(io.github.oliviercailloux.gitjfs.Commit::id).collect(ImmutableSet.toImmutableSet());
 			final Map<ObjectId, Instant> constantTimes = Maps.asMap(ids, o -> Commit.DEADLINE.toInstant());
@@ -84,8 +83,7 @@ public class EclipseTests {
 				RepositoryCoordinates.from("oliviercailloux-org", "minimax-ex").asGitUri(),
 				Utils.getTempDirectory().resolve("minimax-ex"));
 				GitFileSystem gitFs = GitFileSystemProvider.instance().newFileSystemFromRepository(repository)) {
-			final Graph<GitPathRootShaCached> graph = GraphUtils.transform(gitFs.getCommitsGraph(),
-					GitPathRootSha::toShaCached);
+			final Graph<GitPathRootShaCached> graph = gitFs.graph();
 			final Graph<io.github.oliviercailloux.gitjfs.Commit> commitGraph = GraphUtils.transform(graph,
 					GitPathRootSha::getCommit);
 			final ImmutableSet<ObjectId> ids = graph.nodes().stream().map(GitPathRootShaCached::getCommit)

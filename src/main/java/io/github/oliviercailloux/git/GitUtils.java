@@ -12,6 +12,7 @@ import com.google.common.graph.ImmutableGraph;
 import io.github.oliviercailloux.gitjfs.GitFileSystem;
 import io.github.oliviercailloux.gitjfs.GitPathRoot;
 import io.github.oliviercailloux.gitjfs.GitPathRootSha;
+import io.github.oliviercailloux.gitjfs.GitPathRootShaCached;
 import io.github.oliviercailloux.utils.Utils;
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -103,7 +104,7 @@ public class GitUtils {
 
 	@Deprecated
 	public static GitHistory getHistory(GitFileSystem gitFs) throws IOException {
-		final ImmutableGraph<GitPathRootSha> graphOfPaths = gitFs.getCommitsGraph();
+		final ImmutableGraph<GitPathRootShaCached> graphOfPaths = gitFs.graph();
 
 		final Function<GitPathRoot, Instant> getDate = IO_UNCHECKER
 				.wrapFunction(p -> p.getCommit().committerDate().toInstant());

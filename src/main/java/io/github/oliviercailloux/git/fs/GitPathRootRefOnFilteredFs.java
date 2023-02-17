@@ -56,12 +56,14 @@ public class GitPathRootRefOnFilteredFs extends ForwardingGitPathRootRef {
 		return delegate().toString();
 	}
 
+	@Deprecated
 	@Override
 	public GitPathRoot toAbsolutePath() {
 		verify(delegate.toAbsolutePath().equals(delegate));
 		return this;
 	}
 
+	@Deprecated
 	@Override
 	public GitPathRoot getRoot() {
 		verify(delegate.getRoot().equals(delegate));

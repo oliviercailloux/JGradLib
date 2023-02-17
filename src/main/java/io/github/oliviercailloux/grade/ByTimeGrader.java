@@ -2,25 +2,21 @@ package io.github.oliviercailloux.grade;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Verify.verify;
-import static io.github.oliviercailloux.jaris.exceptions.Unchecker.IO_UNCHECKER;
 
 import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Streams;
 import com.google.common.graph.Graph;
 import io.github.oliviercailloux.git.fs.GitFilteringFs;
 import io.github.oliviercailloux.git.fs.GitHistorySimple;
 import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
 import io.github.oliviercailloux.gitjfs.Commit;
-import io.github.oliviercailloux.gitjfs.GitPathRoot;
 import io.github.oliviercailloux.gitjfs.GitPathRootRef;
 import io.github.oliviercailloux.gitjfs.GitPathRootSha;
 import io.github.oliviercailloux.gitjfs.GitPathRootShaCached;
 import io.github.oliviercailloux.jaris.collections.CollectionUtils;
-import io.github.oliviercailloux.jaris.collections.GraphUtils;
 import io.github.oliviercailloux.jaris.throwing.TOptional;
 import io.github.oliviercailloux.java_grade.testers.JavaMarkHelper;
 import java.io.IOException;
@@ -164,9 +160,8 @@ public class ByTimeGrader<X extends Exception> implements Grader<X> {
 		return preparedGrader;
 	}
 
-	public static Optional<Instant> earliestTimeCommitByGitHub(GitHistorySimple history) throws IOException {
-		final Graph<GitPathRootShaCached> graph = GraphUtils.transform(history.fs().getCommitsGraph(),
-				GitPathRootSha::toShaCached);
+	public static Optional<Instant> earliestTimeCommitByGitHub(GitHistorySimple history) {
+		final Graph<GitPathRootShaCached> graph = history.graph();
 		LOGGER.debug("Found {} commits (total).", graph.nodes().size());
 		final ImmutableSet<Commit> commits = graph.nodes().stream().map(GitPathRootShaCached::getCommit)
 				.collect(ImmutableSet.toImmutableSet());
@@ -244,7 +239,7 @@ public class ByTimeGrader<X extends Exception> implements Grader<X> {
 		 * commit times and try to detect inconsistencies: commit time on time but push
 		 * date late.
 		 */
-		final ImmutableSet<GitPathRootRef> refs = history.fs().getRefs();
+		final ImmutableSet<GitPathRootRef> refs = history.fs().refs();
 		final ImmutableMap<GitPathRootRef, Instant> commitDates = CollectionUtils.toMap(refs,
 				r -> r.getCommit().committerDate().toInstant());
 		final ImmutableMap<GitPathRootRef, Instant> pushDates = CollectionUtils.toMap(refs,

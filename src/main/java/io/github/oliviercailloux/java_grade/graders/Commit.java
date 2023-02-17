@@ -53,7 +53,7 @@ public class Commit {
 		final GitHubUsername author = work.getAuthor();
 		final GitHistorySimple history = work.getHistory();
 		final Set<GitPathRootShaCached> paths = history.graph().nodes();
-		final ImmutableSet<GitPathRootRef> refs = history.fs().getRefs();
+		final ImmutableSet<GitPathRootRef> refs = history.fs().refs();
 
 		final ImmutableSet.Builder<CriterionGradeWeight> gradeBuilder = ImmutableSet.builder();
 

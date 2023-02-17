@@ -383,7 +383,7 @@ public class Branching implements GitFsGrader<IOException> {
 	}
 
 	private ImmutableSet<GitPathRootRef> getRefsTo(GitPathRootSha target) throws IOException {
-		return CheckedStream.<GitPathRootRef, IOException>from(currentHistory.fs().getRefs())
+		return CheckedStream.<GitPathRootRef, IOException>from(currentHistory.fs().refs())
 				.filter(r -> r.getCommit().id().equals(target.getStaticCommitId()))
 				.collect(ImmutableSet.toImmutableSet());
 	}

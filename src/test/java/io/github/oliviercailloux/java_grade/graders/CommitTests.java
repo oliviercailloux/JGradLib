@@ -92,7 +92,7 @@ class CommitTests {
 			try (Repository repository = JGit.createRepository(personIdent, Utils.asGraph(ImmutableList.of(c1, c2, c3)),
 					links);
 					GitFileSystem gitFs = GitFileSystemProvider.instance().newFileSystemFromRepository(repository)) {
-				final Graph<ObjectId> graph = GraphUtils.transform(gitFs.getCommitsGraph(), p -> p.getCommit().id());
+				final Graph<ObjectId> graph = GraphUtils.transform(gitFs.graph(), p -> p.getCommit().id());
 				final ImmutableSet<ObjectId> roots = graph.nodes().stream().filter(n -> graph.predecessors(n).isEmpty())
 						.collect(ImmutableSet.toImmutableSet());
 				final ObjectId o1 = Iterables.getOnlyElement(roots);
@@ -142,7 +142,7 @@ class CommitTests {
 			try (Repository repository = JGit.createRepository(personIdent, Utils.asGraph(ImmutableList.of(c1, c2, c3)),
 					links)) {
 				try (GitFileSystem gitFs = GitFileSystemProvider.instance().newFileSystemFromRepository(repository)) {
-					final Graph<GitPathRootShaCached> graph = GraphUtils.transform(gitFs.getCommitsGraph(),
+					final Graph<GitPathRootShaCached> graph = GraphUtils.transform(gitFs.graph(),
 							GitPathRootSha::toShaCached);
 					final ImmutableSet<ObjectId> ids = graph.nodes().stream().map(GitPathRootShaCached::getCommit)
 							.map(io.github.oliviercailloux.gitjfs.Commit::id).collect(ImmutableSet.toImmutableSet());
