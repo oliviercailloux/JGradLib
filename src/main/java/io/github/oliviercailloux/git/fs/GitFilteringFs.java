@@ -63,13 +63,8 @@ public class GitFilteringFs extends ForwardingGitFileSystem {
 	}
 
 	@Override
-	public GitPath getAbsolutePath(String first, String... more) throws InvalidPathException {
-		return GitPathOnFilteredFs.wrap(this, super.getAbsolutePath(first, more));
-	}
-
-	@Override
-	public GitPath getAbsolutePath(ObjectId commitId, String internalPath1, String... internalPath) {
-		return GitPathOnFilteredFs.wrap(this, super.getAbsolutePath(commitId, internalPath1, internalPath));
+	public GitPathRoot getPathRoot(String rootStringForm) throws InvalidPathException {
+		return GitPathRootOnFilteredFs.wrap(this, super.getPathRoot(rootStringForm));
 	}
 
 	@Override
@@ -83,8 +78,13 @@ public class GitFilteringFs extends ForwardingGitFileSystem {
 	}
 
 	@Override
-	public GitPathRoot getPathRoot(String rootStringForm) throws InvalidPathException {
-		return GitPathRootOnFilteredFs.wrap(this, super.getPathRoot(rootStringForm));
+	public GitPath getAbsolutePath(String first, String... more) throws InvalidPathException {
+		return GitPathOnFilteredFs.wrap(this, super.getAbsolutePath(first, more));
+	}
+
+	@Override
+	public GitPath getAbsolutePath(ObjectId commitId, String internalPath1, String... internalPath) {
+		return GitPathOnFilteredFs.wrap(this, super.getAbsolutePath(commitId, internalPath1, internalPath));
 	}
 
 	@Override
@@ -120,17 +120,6 @@ public class GitFilteringFs extends ForwardingGitFileSystem {
 	}
 
 	@Override
-	public ImmutableSet<Path> getRootDirectories() {
-		final ImmutableGraph<GitPathRootShaCached> commitsGraph = IO_UNCHECKER.getUsing(this::graph);
-		return ImmutableSet.copyOf(commitsGraph.nodes());
-	}
-
-	@Override
-	public PathMatcher getPathMatcher(String syntaxAndPattern) {
-		throw new UnsupportedOperationException();
-	}
-
-	@Override
 	public ImmutableSet<DiffEntry> diff(GitPathRoot first, GitPathRoot second) throws IOException, NoSuchFileException {
 		if (!filter.test(first.getCommit())) {
 			throw new NoSuchFileException(first.toString());
@@ -140,6 +129,17 @@ public class GitFilteringFs extends ForwardingGitFileSystem {
 		}
 
 		return super.diff(first, second);
+	}
+
+	@Override
+	public ImmutableSet<Path> getRootDirectories() {
+		final ImmutableGraph<GitPathRootShaCached> commitsGraph = IO_UNCHECKER.getUsing(this::graph);
+		return ImmutableSet.copyOf(commitsGraph.nodes());
+	}
+
+	@Override
+	public PathMatcher getPathMatcher(String syntaxAndPattern) {
+		throw new UnsupportedOperationException();
 	}
 
 }
