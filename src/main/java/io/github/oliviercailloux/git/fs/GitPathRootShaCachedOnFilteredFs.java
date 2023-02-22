@@ -17,7 +17,8 @@ import java.util.Objects;
  * Similar to a {@link GitPathRootShaCached} (which it wraps and delegates to)
  * except linked to a filteredFs.
  */
-class GitPathRootShaCachedOnFilteredFs extends ForwardingGitPathRootShaCached {
+final class GitPathRootShaCachedOnFilteredFs extends ForwardingGitPathRootShaCached
+		implements IGitPathRootOnFilteredFs {
 
 	static GitPathRootShaCachedOnFilteredFs wrap(GitFilteringFs fs, GitPathRootShaCached delegate) {
 		return new GitPathRootShaCachedOnFilteredFs(fs, delegate);
@@ -37,7 +38,7 @@ class GitPathRootShaCachedOnFilteredFs extends ForwardingGitPathRootShaCached {
 	}
 
 	@Override
-	protected GitPathRootShaCached delegate() {
+	public GitPathRootShaCached delegate() {
 		return delegate;
 	}
 

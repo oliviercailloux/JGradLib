@@ -139,7 +139,7 @@ public class GitFilteringFs extends ForwardingGitFileSystem {
 	}
 
 	@SuppressWarnings("unused")
-	private GitPath underlyingPath(GitPath filtered) {
+	private GitPath underlyingPath(IGitPathOnFilteredFs filtered) {
 		checkArgument(filtered.getFileSystem().equals(this));
 		if (filtered instanceof GitPathOnFilteredFs g) {
 			return g.delegate();
@@ -154,9 +154,6 @@ public class GitFilteringFs extends ForwardingGitFileSystem {
 			return g.delegate();
 		}
 		if (filtered instanceof GitPathRootShaCachedOnFilteredFs g) {
-			return g.delegate();
-		}
-		if (filtered instanceof GitPathRootOnFilteredFs g) {
 			return g.delegate();
 		}
 		throw new VerifyException();

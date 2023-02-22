@@ -13,7 +13,7 @@ import java.util.Objects;
  * Similar to a GitPath (which it wraps and delegates to) except linked to a
  * filteredFs.
  */
-class GitPathOnFilteredFs extends ForwardingGitPath {
+final class GitPathOnFilteredFs extends ForwardingGitPath implements IGitPathOnFilteredFs {
 
 	static GitPathOnFilteredFs wrap(GitFilteringFs fs, GitPath delegate) {
 		return new GitPathOnFilteredFs(fs, delegate);
@@ -40,7 +40,7 @@ class GitPathOnFilteredFs extends ForwardingGitPath {
 	}
 
 	@Override
-	protected GitPath delegate() {
+	public GitPath delegate() {
 		return delegate;
 	}
 

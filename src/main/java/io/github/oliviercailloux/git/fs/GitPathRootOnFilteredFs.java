@@ -25,7 +25,7 @@ import org.slf4j.LoggerFactory;
  * Similar to a GitPathRoot (which it wraps and delegates to) except linked to a
  * filteredFs.
  */
-class GitPathRootOnFilteredFs extends ForwardingGitPathRoot {
+final class GitPathRootOnFilteredFs extends ForwardingGitPathRoot implements IGitPathRootOnFilteredFs {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(GitPathRootOnFilteredFs.class);
 
@@ -47,7 +47,7 @@ class GitPathRootOnFilteredFs extends ForwardingGitPathRoot {
 	}
 
 	@Override
-	protected GitPathRoot delegate() {
+	public GitPathRoot delegate() {
 		return delegate;
 	}
 

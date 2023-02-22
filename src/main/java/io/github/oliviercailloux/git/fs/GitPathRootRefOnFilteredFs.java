@@ -17,7 +17,7 @@ import java.util.Objects;
  * Similar to a {@link GitPathRootRef} (which it wraps and delegates to) except
  * linked to a filteredFs.
  */
-class GitPathRootRefOnFilteredFs extends ForwardingGitPathRootRef {
+final class GitPathRootRefOnFilteredFs extends ForwardingGitPathRootRef implements IGitPathRootOnFilteredFs {
 
 	static GitPathRootRefOnFilteredFs wrap(GitFilteringFs fs, GitPathRootRef delegate) {
 		return new GitPathRootRefOnFilteredFs(fs, delegate);
@@ -37,7 +37,7 @@ class GitPathRootRefOnFilteredFs extends ForwardingGitPathRootRef {
 	}
 
 	@Override
-	protected GitPathRootRef delegate() {
+	public GitPathRootRef delegate() {
 		return delegate;
 	}
 
