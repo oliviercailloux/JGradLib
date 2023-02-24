@@ -30,9 +30,10 @@ public class GitFilteringFsTests {
 	private static final Logger LOGGER = LoggerFactory.getLogger(GitFilteringFsTests.class);
 
 	@Test
-	void test() throws Exception {
+	void testGraph() throws Exception {
 		try (DfsRepository repo = new InMemoryRepository(new DfsRepositoryDescription("myrepo"))) {
 			final ImmutableList<ObjectId> commits = JGit.createRepoWithSubDir(repo);
+			assertEquals(3, commits.size());
 			try (GitDfsFileSystem fs = GitFileSystemProvider.instance().newFileSystemFromDfsRepository(repo)) {
 				LOGGER.debug("Shas: " + fs.graph().nodes());
 
@@ -42,10 +43,13 @@ public class GitFilteringFsTests {
 				assertEquals(1, first.graph().nodes().size());
 				assertEquals(first.getPathRoot(commits.get(0)), Iterables.getOnlyElement(first.graph().nodes()));
 
-				assertEquals(3, commits.size());
 				final GitFilteringFs middle = GitFilteringFs.filter(fs, c -> !c.id().equals(commits.get(1)));
 				final ImmutableGraph<GitPathRootShaCached> graph = middle.graph();
+				LOGGER.debug("Middle: {}.", graph);
 				assertEquals(2, graph.nodes().size());
+				final ImmutableSet<ObjectId> middleIds = graph.nodes().stream().map(p -> p.getCommit().id())
+						.collect(ImmutableSet.toImmutableSet());
+				assertEquals(ImmutableSet.of(commits.get(0), commits.get(2)), middleIds);
 				final GitPathRootShaCached c0 = middle.getPathRoot(commits.get(0)).toShaCached();
 				final GitPathRootShaCached c2 = middle.getPathRoot(commits.get(2)).toShaCached();
 				assertEquals(ImmutableSet.of(c0), graph.predecessors(c2));

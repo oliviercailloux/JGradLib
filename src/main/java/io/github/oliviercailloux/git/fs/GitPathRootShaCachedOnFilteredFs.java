@@ -37,6 +37,12 @@ final class GitPathRootShaCachedOnFilteredFs extends ForwardingGitPathRootShaCac
 		return fs;
 	}
 
+	@Deprecated
+	@Override
+	public GitPathRootShaCached toShaCached() {
+		return this;
+	}
+
 	@Override
 	public GitPathRootShaCached delegate() {
 		return delegate;

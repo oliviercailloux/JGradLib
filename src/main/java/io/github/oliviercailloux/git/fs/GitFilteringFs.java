@@ -5,7 +5,6 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Verify.verify;
 import static io.github.oliviercailloux.jaris.exceptions.Unchecker.IO_UNCHECKER;
 
-import com.google.common.base.VerifyException;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.graph.EndpointPair;
 import com.google.common.graph.Graphs;
@@ -98,7 +97,7 @@ public class GitFilteringFs extends ForwardingGitFileSystem {
 	@Override
 	public ImmutableGraph<GitPathRootShaCached> graph() throws IOException {
 		if (graph == null) {
-			final ImmutableGraph<GitPathRootShaCached> wholeGraph = super.graph();
+			final ImmutableGraph<GitPathRootShaCached> wholeGraph = delegate.graph();
 			final MutableGraph<GitPathRootShaCached> closed = GraphUtils.transitiveClosure(wholeGraph);
 			final MutableGraph<GitPathRootShaCached> filtered = Graphs.inducedSubgraph(closed,
 					CheckedStream.<GitPathRootShaCached, IOException>wrapping(closed.nodes().stream())
@@ -127,6 +126,8 @@ public class GitFilteringFs extends ForwardingGitFileSystem {
 		checkArgument(this.equals(first.getFileSystem()));
 		checkArgument(this.equals(second.getFileSystem()));
 		verify(first.getFileSystem().equals(second.getFileSystem()));
+		verify(first instanceof IGitPathRootOnFilteredFs);
+		verify(second instanceof IGitPathRootOnFilteredFs);
 
 		if (!filter.test(first.getCommit())) {
 			throw new NoSuchFileException(first.toString());
@@ -135,48 +136,9 @@ public class GitFilteringFs extends ForwardingGitFileSystem {
 			throw new NoSuchFileException(second.toString());
 		}
 
-		return super.diff(underlyingPathRoot(first), underlyingPathRoot(second));
-	}
-
-	@SuppressWarnings("unused")
-	private GitPath underlyingPath(IGitPathOnFilteredFs filtered) {
-		checkArgument(filtered.getFileSystem().equals(this));
-		if (filtered instanceof GitPathOnFilteredFs g) {
-			return g.delegate();
-		}
-		if (filtered instanceof GitPathRootOnFilteredFs g) {
-			return g.delegate();
-		}
-		if (filtered instanceof GitPathRootRefOnFilteredFs g) {
-			return g.delegate();
-		}
-		if (filtered instanceof GitPathRootShaOnFilteredFs g) {
-			return g.delegate();
-		}
-		if (filtered instanceof GitPathRootShaCachedOnFilteredFs g) {
-			return g.delegate();
-		}
-		throw new VerifyException();
-	}
-
-	private GitPathRoot underlyingPathRoot(GitPathRoot filtered) {
-		checkArgument(filtered.getFileSystem().equals(this));
-		if (filtered instanceof GitPathRootOnFilteredFs g) {
-			return g.delegate();
-		}
-		if (filtered instanceof GitPathRootRefOnFilteredFs g) {
-			return g.delegate();
-		}
-		if (filtered instanceof GitPathRootShaOnFilteredFs g) {
-			return g.delegate();
-		}
-		if (filtered instanceof GitPathRootShaCachedOnFilteredFs g) {
-			return g.delegate();
-		}
-		if (filtered instanceof GitPathRootOnFilteredFs g) {
-			return g.delegate();
-		}
-		throw new VerifyException();
+		final IGitPathRootOnFilteredFs firstFiltered = (IGitPathRootOnFilteredFs) first;
+		final IGitPathRootOnFilteredFs secondFiltered = (IGitPathRootOnFilteredFs) second;
+		return super.diff(firstFiltered.delegate(), secondFiltered.delegate());
 	}
 
 	@Override
