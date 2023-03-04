@@ -57,7 +57,7 @@ public class TestFetch {
 		try (GitHubFetcherQL fetcher = GitHubFetcherQL.using(GitHubToken.getRealInstance())) {
 			final Optional<RepositoryWithFiles> found = fetcher.getRepositoryWithFiles(coord, Path.of(""));
 			final RepositoryWithFiles repo = found.get();
-			assertEquals(13, repo.getContentFromFileNames().size());
+			assertEquals(14, repo.getContentFromFileNames().size(), repo.getContentFromFileNames().keySet().toString());
 		}
 	}
 

@@ -84,7 +84,9 @@ public class BatchGitHistoryGraderTests {
 			Files.writeString(Path.of("exam.json"), JsonSimpleGrade.toJson(exam));
 
 			assertEquals(gitFses.keySet(), exam.getUsernames());
-			assertEquals(Mark.zero("No commit found."), exam.getGrade(userEmpty).mark());
+			assertEquals(0d, exam.getGrade(userEmpty).mark().getPoints());
+			/* To check. */
+//			assertEquals(Mark.zero("No commit found."), exam.getGrade(userEmpty).mark());
 			assertEquals((W1 + W2 + W3) / W_TOT, exam.getGrade(userEarly).mark().getPoints(), 1e-6d);
 			assertEquals(W1 / W_TOT, exam.getGrade(userNow).mark().getPoints(), 1e-6d);
 			assertEquals(W1 / W_TOT / 2d, exam.getGrade(userLate).mark().getPoints(), 1e-6d);

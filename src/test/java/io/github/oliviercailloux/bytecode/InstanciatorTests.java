@@ -105,7 +105,7 @@ public class InstanciatorTests {
 
 	@Test
 	void testInstanceThrowing() throws Exception {
-		final Path sourcePath = Path.of(getClass().getResource("MyIdentityFunctionTjava").toURI());
+		final Path sourcePath = Path.of(getClass().getResource("MyIdentityFunctionThrowing.java").toURI());
 		try (FileSystem jimFs = Jimfs.newFileSystem(Configuration.unix())) {
 			final Path work = jimFs.getPath("");
 

@@ -143,7 +143,7 @@ public class GitHubFetcherQL implements AutoCloseable {
 		final String pathString = Streams.stream(path.iterator()).map(Path::toString).collect(Collectors.joining("/"));
 		final JsonObject varsJson = jsonBuilderFactory.createObjectBuilder()
 				.add("repositoryName", coordinates.getRepositoryName()).add("repositoryOwner", coordinates.getOwner())
-				.add("ref", "master:" + pathString).build();
+				.add("ref", "main:" + pathString).build();
 		final Optional<RepositoryWithFiles> repo = queryOpt("filesAtRef", ImmutableList.of(), varsJson)
 				.map((d) -> d.getJsonObject("repository")).map((r) -> RepositoryWithFiles.from(r, path));
 		LOGGER.info("Got: {}.", repo);
