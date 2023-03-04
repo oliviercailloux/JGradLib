@@ -58,11 +58,12 @@ public class JsonSimpleGrade {
 			 * Should think about coherence with map (which is optional instead of empty to
 			 * mark absence); Eclipse does not like an Optional here.
 			 */
-			List<Double> simpleWeights) {
+			Optional<List<Double>> simpleWeights) {
 
 		@JsonbCreator
 		public GenericMarkAggregator(MarkAggregatorType type, Optional<Criterion> multiplied,
-				Optional<Criterion> weighting, Optional<Map<Criterion, Double>> weights, List<Double> simpleWeights) {
+				Optional<Criterion> weighting, Optional<Map<Criterion, Double>> weights,
+				Optional<List<Double>> simpleWeights) {
 			this.type = type;
 			this.multiplied = multiplied;
 			this.weighting = weighting;
@@ -82,20 +83,21 @@ public class JsonSimpleGrade {
 		}
 
 		public GenericMarkAggregator(MarkAggregatorType type) {
-			this(type, Optional.empty(), Optional.empty(), Optional.empty(), ImmutableList.of());
+			this(type, Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty());
 		}
 
 		public GenericMarkAggregator(Criterion multiplied, Criterion weighting) {
 			this(MarkAggregatorType.ParametricWeighter, Optional.of(multiplied), Optional.of(weighting),
-					Optional.empty(), ImmutableList.of());
+					Optional.empty(), Optional.empty());
 		}
 
 		public GenericMarkAggregator(MarkAggregatorType type, Map<Criterion, Double> weights) {
-			this(type, Optional.empty(), Optional.empty(), Optional.of(weights), ImmutableList.of());
+			this(type, Optional.empty(), Optional.empty(), Optional.of(weights), Optional.empty());
 		}
 
 		public GenericMarkAggregator(List<Double> simpleWeights) {
-			this(MarkAggregatorType.OwaAggregator, Optional.empty(), Optional.empty(), Optional.empty(), simpleWeights);
+			this(MarkAggregatorType.OwaAggregator, Optional.empty(), Optional.empty(), Optional.empty(),
+					Optional.of(simpleWeights));
 		}
 	}
 
@@ -245,15 +247,15 @@ public class JsonSimpleGrade {
 		@Override
 		public MarkAggregator adaptFromJson(GenericMarkAggregator from) {
 			return switch (from.type) {
-			case ParametricWeighter -> ParametricWeighter.given(from.multiplied.orElseThrow(),
-					from.weighting.orElseThrow());
+			case ParametricWeighter ->
+				ParametricWeighter.given(from.multiplied.orElseThrow(), from.weighting.orElseThrow());
 			case VoidAggregator -> VoidAggregator.INSTANCE;
 			case NormalizingStaticWeighter -> NormalizingStaticWeighter.given(from.weights.orElseThrow());
 			case StaticWeighter -> StaticWeighter.given(from.weights.orElseThrow());
 			case AbsoluteAggregator -> AbsoluteAggregator.INSTANCE;
 			case MinAggregator -> MinAggregator.INSTANCE;
 			case MaxAggregator -> MaxAggregator.INSTANCE;
-			case OwaAggregator -> OwaAggregator.given(from.simpleWeights);
+			case OwaAggregator -> OwaAggregator.given(from.simpleWeights.orElse(ImmutableList.of()));
 			};
 		}
 	}
