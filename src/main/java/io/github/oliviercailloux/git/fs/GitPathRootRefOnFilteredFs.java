@@ -71,8 +71,10 @@ final class GitPathRootRefOnFilteredFs extends ForwardingGitPathRootRef implemen
 	}
 
 	@Override
-	public GitPathOnFilteredFs getFileName() {
-		return GitPathOnFilteredFs.wrap(fs, delegate.getFileName());
+	@Deprecated
+	public GitPathRootOnFilteredFs getFileName() {
+		verify(delegate.getFileName() == null);
+		return null;
 	}
 
 	@Override

@@ -18,6 +18,7 @@ import io.github.oliviercailloux.gitjfs.GitPathRoot;
 import io.github.oliviercailloux.gitjfs.GitPathRootRef;
 import io.github.oliviercailloux.gitjfs.GitPathRootSha;
 import io.github.oliviercailloux.gitjfs.GitPathRootShaCached;
+import io.github.oliviercailloux.gitjfs.IGitFileSystem;
 import io.github.oliviercailloux.jaris.collections.GraphUtils;
 import io.github.oliviercailloux.jaris.exceptions.CheckedStream;
 import io.github.oliviercailloux.jaris.throwing.TPredicate;
@@ -150,6 +151,12 @@ public class GitFilteringFs extends ForwardingGitFileSystem {
 	@Override
 	public PathMatcher getPathMatcher(String syntaxAndPattern) {
 		throw new UnsupportedOperationException();
+	}
+
+	@Override
+	public GitFilteringFsProvider provider() {
+		final IGitFileSystem iDelegate = delegate;
+		return new GitFilteringFsProvider(iDelegate.provider());
 	}
 
 }

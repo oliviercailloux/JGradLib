@@ -81,8 +81,10 @@ final class GitPathRootOnFilteredFs extends ForwardingGitPathRoot implements IGi
 	}
 
 	@Override
-	public GitPathOnFilteredFs getFileName() {
-		return GitPathOnFilteredFs.wrap(fs, delegate.getFileName());
+	@Deprecated
+	public GitPathRootOnFilteredFs getFileName() {
+		verify(delegate.getFileName() == null);
+		return null;
 	}
 
 	@Override

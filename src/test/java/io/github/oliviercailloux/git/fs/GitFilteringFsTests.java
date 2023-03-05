@@ -3,6 +3,7 @@ package io.github.oliviercailloux.git.fs;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -14,6 +15,7 @@ import io.github.oliviercailloux.gitjfs.GitFileSystemProvider;
 import io.github.oliviercailloux.gitjfs.GitPathRootSha;
 import io.github.oliviercailloux.gitjfs.GitPathRootShaCached;
 import io.github.oliviercailloux.jgit.JGit;
+import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import org.eclipse.jgit.diff.DiffEntry;
 import org.eclipse.jgit.diff.DiffEntry.ChangeType;
@@ -28,6 +30,25 @@ import org.slf4j.LoggerFactory;
 public class GitFilteringFsTests {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(GitFilteringFsTests.class);
+
+	@Test
+	void testRead() throws Exception {
+		try (DfsRepository repo = new InMemoryRepository(new DfsRepositoryDescription("myrepo"))) {
+			final ImmutableList<ObjectId> commits = JGit.createRepoWithSubDir(repo);
+			assertEquals(3, commits.size());
+			try (GitDfsFileSystem fs = GitFileSystemProvider.instance().newFileSystemFromDfsRepository(repo)) {
+				LOGGER.debug("Shas: " + fs.graph().nodes());
+
+				final GitFilteringFs all = GitFilteringFs.filter(fs, c -> true);
+				final GitPathRootShaCached c0 = all.getPathRoot(commits.get(0)).toShaCached();
+				final GitPathRootShaCached c2 = all.getPathRoot(commits.get(2)).toShaCached();
+				assertEquals(3, all.graph().nodes().size());
+				final GitPathRootShaCached firstNode = all.graph().nodes().iterator().next();
+				assertEquals(c2, firstNode);
+				assertTrue(Files.exists(c0));
+			}
+		}
+	}
 
 	@Test
 	void testGraph() throws Exception {

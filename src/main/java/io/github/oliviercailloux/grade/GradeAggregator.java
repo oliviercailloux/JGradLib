@@ -131,6 +131,7 @@ public class GradeAggregator {
 
 	public static GradeAggregator parametric(Criterion multiplied, Criterion weighting,
 			GradeAggregator multipliedAggregator, GradeAggregator otherAggregator) {
+		checkNotNull(otherAggregator);
 		return new GradeAggregator(ParametricWeighter.given(multiplied, weighting),
 				ImmutableMap.of(multiplied, multipliedAggregator), otherAggregator);
 	}

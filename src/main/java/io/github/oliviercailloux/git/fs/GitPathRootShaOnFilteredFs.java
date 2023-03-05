@@ -61,20 +61,24 @@ final class GitPathRootShaOnFilteredFs extends ForwardingGitPathRootSha implemen
 	}
 
 	@Override
+	@Deprecated
 	public GitPathRootShaOnFilteredFs toAbsolutePath() {
 		verify(delegate.toAbsolutePath().equals(delegate));
 		return this;
 	}
 
 	@Override
+	@Deprecated
 	public GitPathRootShaOnFilteredFs getRoot() {
 		verify(delegate.getRoot().equals(delegate));
 		return this;
 	}
 
 	@Override
-	public GitPathOnFilteredFs getFileName() {
-		return GitPathOnFilteredFs.wrap(fs, delegate.getFileName());
+	@Deprecated
+	public GitPathRootOnFilteredFs getFileName() {
+		verify(delegate.getFileName() == null);
+		return null;
 	}
 
 	@Override

@@ -151,7 +151,9 @@ public class EmailerTests {
 	}
 
 	/**
-	 * https://github.com/eclipse-ee4j/mail/issues/425
+	 * https://github.com/eclipse-ee4j/mail/issues/425, now
+	 * https://github.com/jakartaee/mail-api/issues/425, though now JavaMail has
+	 * become Angus something.
 	 */
 	@Test
 	void testOutlookBugDirect() throws Exception {

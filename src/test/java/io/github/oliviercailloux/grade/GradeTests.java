@@ -1,5 +1,6 @@
 package io.github.oliviercailloux.grade;
 
+import static com.google.common.base.Preconditions.checkNotNull;
 import static io.github.oliviercailloux.grade.CriteriaPathTestsHelper.p1;
 import static io.github.oliviercailloux.grade.CriteriaPathTestsHelper.p11;
 import static io.github.oliviercailloux.grade.CriteriaPathTestsHelper.p12;
@@ -102,7 +103,10 @@ public class GradeTests {
 	@Test
 	void testParametricCascadeDraft() throws Exception {
 		final GradeAggregator c1A = GradeAggregator.parametric(c11, c12, GradeAggregator.TRIVIAL);
+		checkNotNull(WeightingGradeAggregator.ABSOLUTE_WEIGHTING);
+		checkNotNull(GradeAggregator.ABSOLUTE);
 		final GradeAggregator c2A = GradeAggregator.ABSOLUTE;
+		checkNotNull(c2A);
 		final GradeAggregator aggregator = GradeAggregator.parametric(c1, c2, c1A, c2A);
 		final MarksTree marks = MarksTreeTestsHelper.get1_11And1_12And2_21And2_22();
 		final Grade grade = Grade.given(aggregator, marks);

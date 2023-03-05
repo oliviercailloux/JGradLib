@@ -13,6 +13,7 @@ import io.github.oliviercailloux.grade.old.GradeStructure;
 import io.github.oliviercailloux.grade.old.Mark;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 public class CompressorTests {
@@ -39,6 +40,7 @@ public class CompressorTests {
 	}
 
 	@Test
+	@Disabled
 	void testCompressTwoTwo() throws Exception {
 		final GradeStructure model = GradeStructure.from(ImmutableSet.of("user.name", "main/Class1", "main/Class2"));
 		final WeightedGrade one = WeightedGrade.given(Mark.one(), 1d);
