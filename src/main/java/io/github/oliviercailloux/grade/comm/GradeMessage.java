@@ -3,7 +3,7 @@ package io.github.oliviercailloux.grade.comm;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import io.github.oliviercailloux.grade.Grade;
-import javax.mail.Message;
+import jakarta.mail.Message;
 
 class GradeMessage {
 	public static GradeMessage given(Grade grade, Message message) {

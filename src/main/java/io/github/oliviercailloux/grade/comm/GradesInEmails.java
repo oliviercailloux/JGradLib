@@ -22,6 +22,15 @@ import io.github.oliviercailloux.email.ImapSearchPredicate;
 import io.github.oliviercailloux.grade.Grade;
 import io.github.oliviercailloux.grade.format.HtmlGrades;
 import io.github.oliviercailloux.grade.format.json.JsonSimpleGrade;
+import jakarta.mail.Address;
+import jakarta.mail.Folder;
+import jakarta.mail.Message;
+import jakarta.mail.Message.RecipientType;
+import jakarta.mail.MessagingException;
+import jakarta.mail.internet.InternetAddress;
+import jakarta.mail.internet.MimeBodyPart;
+import jakarta.mail.internet.MimeMessage;
+import jakarta.mail.internet.MimeMultipart;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.UncheckedIOException;
@@ -32,15 +41,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Stream;
-import javax.mail.Address;
-import javax.mail.Folder;
-import javax.mail.Message;
-import javax.mail.Message.RecipientType;
-import javax.mail.MessagingException;
-import javax.mail.internet.InternetAddress;
-import javax.mail.internet.MimeBodyPart;
-import javax.mail.internet.MimeMessage;
-import javax.mail.internet.MimeMultipart;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
@@ -183,7 +183,7 @@ public class GradesInEmails implements AutoCloseable {
 		final ImmutableSet<EmailAddress> intersection = (recipients == null
 				? seen.stream().map(a -> (InternetAddress) a).map(a -> EmailAddress.given(a.getAddress()))
 				: recipients.stream().filter(r -> seen.contains(r.asInternetAddress())))
-						.collect(ImmutableSet.toImmutableSet());
+				.collect(ImmutableSet.toImmutableSet());
 		verify(!intersection.isEmpty(), seen.toString());
 		checkState(intersection.size() <= 1);
 		return Iterables.getOnlyElement(intersection);

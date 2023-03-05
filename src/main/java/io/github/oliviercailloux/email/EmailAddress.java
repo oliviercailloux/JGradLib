@@ -5,9 +5,9 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.base.VerifyException;
+import jakarta.mail.internet.AddressException;
+import jakarta.mail.internet.InternetAddress;
 import java.util.Objects;
-import javax.mail.internet.AddressException;
-import javax.mail.internet.InternetAddress;
 
 public class EmailAddress {
 	public static EmailAddress given(String address) {

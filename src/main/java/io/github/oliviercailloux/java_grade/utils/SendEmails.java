@@ -23,11 +23,11 @@ import io.github.oliviercailloux.grade.comm.GradesInEmails;
 import io.github.oliviercailloux.grade.comm.json.JsonStudents;
 import io.github.oliviercailloux.grade.format.json.JsonSimpleGrade;
 import io.github.oliviercailloux.xml.XmlUtils;
+import jakarta.mail.Folder;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
 import java.util.Optional;
-import javax.mail.Folder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

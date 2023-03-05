@@ -4,10 +4,10 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.base.VerifyException;
+import jakarta.mail.internet.InternetAddress;
 import java.io.UnsupportedEncodingException;
 import java.nio.charset.StandardCharsets;
 import java.util.Objects;
-import javax.mail.internet.InternetAddress;
 
 public class EmailAddressAndPersonal {
 	public static EmailAddressAndPersonal given(String address) {
