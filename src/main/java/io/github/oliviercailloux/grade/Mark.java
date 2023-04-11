@@ -9,6 +9,7 @@ import io.github.oliviercailloux.grade.IGrade.CriteriaPath;
 import jakarta.json.bind.annotation.JsonbCreator;
 import jakarta.json.bind.annotation.JsonbProperty;
 import jakarta.json.bind.annotation.JsonbPropertyOrder;
+import java.util.Comparator;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 import org.slf4j.Logger;
@@ -17,158 +18,161 @@ import org.slf4j.LoggerFactory;
 /**
  * Points are in [−1, 1].
  */
-@JsonbPropertyOrder({ "points", "comments" })
+@JsonbPropertyOrder({"points", "comments"})
 public class Mark implements MarksTree {
-	@SuppressWarnings("unused")
-	private static final Logger LOGGER = LoggerFactory.getLogger(Mark.class);
+  @SuppressWarnings("unused")
+  private static final Logger LOGGER = LoggerFactory.getLogger(Mark.class);
 
-	public static Mark zero() {
-		return new Mark(0d, "");
-	}
+  public static Comparator<Mark> byPoints() {
+    return Comparator.comparing(Mark::getPoints);
+  }
 
-	public static Mark zero(String comment) {
-		return new Mark(0d, comment);
-	}
+  public static Mark zero() {
+    return new Mark(0d, "");
+  }
 
-	public static Mark one() {
-		return new Mark(1d, "");
-	}
+  public static Mark zero(String comment) {
+    return new Mark(0d, comment);
+  }
 
-	public static Mark one(String comment) {
-		return new Mark(1d, comment);
-	}
+  public static Mark one() {
+    return new Mark(1d, "");
+  }
 
-	public static Mark binary(boolean condition) {
-		return condition ? one() : zero();
-	}
+  public static Mark one(String comment) {
+    return new Mark(1d, comment);
+  }
 
-	public static Mark binary(boolean criterion, String okComment, String elseComment) {
-		return criterion ? one(okComment) : zero(elseComment);
-	}
+  public static Mark binary(boolean condition) {
+    return condition ? one() : zero();
+  }
 
-	@JsonbCreator
-	public static Mark given(@JsonbProperty("points") double points, @JsonbProperty("comment") String comment) {
-		return new Mark(points, comment);
-	}
+  public static Mark binary(boolean criterion, String okComment, String elseComment) {
+    return criterion ? one(okComment) : zero(elseComment);
+  }
 
-	private final double points;
-	private final String comment;
+  @JsonbCreator
+  public static Mark given(@JsonbProperty("points") double points,
+      @JsonbProperty("comment") String comment) {
+    return new Mark(points, comment);
+  }
 
-	public Mark(double points, String comment) {
-		checkArgument(Double.isFinite(points));
-		checkArgument(points >= -1);
-		checkArgument(points <= 1, points);
-		this.points = points;
-		this.comment = checkNotNull(comment);
-	}
+  private final double points;
+  private final String comment;
 
-	/**
-	 * @return a value in [−1, 1]
-	 */
-	public double getPoints() {
-		return points;
-	}
+  public Mark(double points, String comment) {
+    checkArgument(Double.isFinite(points));
+    checkArgument(points >= -1);
+    checkArgument(points <= 1, points);
+    this.points = points;
+    this.comment = checkNotNull(comment);
+  }
 
-	public String getComment() {
-		return comment;
-	}
+  /**
+   * @return a value in [−1, 1]
+   */
+  public double getPoints() {
+    return points;
+  }
 
-	/**
-	 * Returns {@code true}.
-	 *
-	 * @return {@code true}
-	 */
-	@Override
-	public boolean isMark() {
-		return true;
-	}
+  public String getComment() {
+    return comment;
+  }
 
-	/**
-	 * Returns {@code false}.
-	 *
-	 * @return {@code false}
-	 */
-	@Override
-	public boolean isComposite() {
-		return false;
-	}
+  /**
+   * Returns {@code true}.
+   *
+   * @return {@code true}
+   */
+  @Override
+  public boolean isMark() {
+    return true;
+  }
 
-	/**
-	 * Returns the empty set.
-	 *
-	 * @return the empty set.
-	 */
-	@Override
-	public ImmutableSet<Criterion> getCriteria() {
-		return ImmutableSet.of();
-	}
+  /**
+   * Returns {@code false}.
+   *
+   * @return {@code false}
+   */
+  @Override
+  public boolean isComposite() {
+    return false;
+  }
 
-	/**
-	 * Throws {@code NoSuchElementException}.
-	 *
-	 * @throws NoSuchElementException always.
-	 */
-	@Override
-	public MarksTree getTree(Criterion criterion) {
-		throw new NoSuchElementException(criterion.getName());
-	}
+  /**
+   * Returns the empty set.
+   *
+   * @return the empty set.
+   */
+  @Override
+  public ImmutableSet<Criterion> getCriteria() {
+    return ImmutableSet.of();
+  }
 
-	@Override
-	public ImmutableSet<CriteriaPath> getPathsToMarks() {
-		return ImmutableSet.of(CriteriaPath.ROOT);
-	}
+  /**
+   * Throws {@code NoSuchElementException}.
+   *
+   * @throws NoSuchElementException always.
+   */
+  @Override
+  public MarksTree getTree(Criterion criterion) {
+    throw new NoSuchElementException(criterion.getName());
+  }
 
-	@Override
-	public boolean hasPath(CriteriaPath path) {
-		return path.isRoot();
-	}
+  @Override
+  public ImmutableSet<CriteriaPath> getPathsToMarks() {
+    return ImmutableSet.of(CriteriaPath.ROOT);
+  }
 
-	/**
-	 * Returns this instance.
-	 *
-	 * @throws NoSuchElementException iff the given path is not
-	 *                                {@link CriteriaPath#ROOT}.
-	 * @deprecated There is no reason to use this method
-	 */
-	@Override
-	@Deprecated()
-	public MarksTree getTree(CriteriaPath path) {
-		return getMark(path);
-	}
+  @Override
+  public boolean hasPath(CriteriaPath path) {
+    return path.isRoot();
+  }
 
-	/**
-	 * Returns this instance.
-	 *
-	 * @throws NoSuchElementException iff the given path is not
-	 *                                {@link CriteriaPath#ROOT}.
-	 * @deprecated There is no reason to use this method
-	 */
-	@Override
-	@Deprecated
-	public Mark getMark(CriteriaPath path) {
-		if (!path.isRoot()) {
-			throw new NoSuchElementException();
-		}
-		return this;
-	}
+  /**
+   * Returns this instance.
+   *
+   * @throws NoSuchElementException iff the given path is not {@link CriteriaPath#ROOT}.
+   * @deprecated There is no reason to use this method
+   */
+  @Override
+  @Deprecated()
+  public MarksTree getTree(CriteriaPath path) {
+    return getMark(path);
+  }
 
-	@Override
-	public boolean equals(Object o2) {
-		if (!(o2 instanceof Mark)) {
-			return false;
-		}
-		final Mark m2 = (Mark) o2;
-		return getPoints() == m2.getPoints() && getComment().equals(m2.getComment());
-	}
+  /**
+   * Returns this instance.
+   *
+   * @throws NoSuchElementException iff the given path is not {@link CriteriaPath#ROOT}.
+   * @deprecated There is no reason to use this method
+   */
+  @Override
+  @Deprecated
+  public Mark getMark(CriteriaPath path) {
+    if (!path.isRoot()) {
+      throw new NoSuchElementException();
+    }
+    return this;
+  }
 
-	@Override
-	public int hashCode() {
-		return Objects.hash(getPoints(), getComment());
-	}
+  @Override
+  public boolean equals(Object o2) {
+    if (!(o2 instanceof Mark)) {
+      return false;
+    }
+    final Mark m2 = (Mark) o2;
+    return getPoints() == m2.getPoints() && getComment().equals(m2.getComment());
+  }
 
-	@Override
-	public String toString() {
-		return MoreObjects.toStringHelper(this).add("points", getPoints()).add("comment", getComment()).toString();
-	}
+  @Override
+  public int hashCode() {
+    return Objects.hash(getPoints(), getComment());
+  }
 
+  @Override
+  public String toString() {
+    return MoreObjects.toStringHelper(this).add("points", getPoints()).add("comment", getComment())
+        .toString();
+  }
 }

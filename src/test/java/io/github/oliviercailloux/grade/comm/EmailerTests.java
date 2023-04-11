@@ -100,6 +100,17 @@ public class EmailerTests {
 	}
 
 	@Test
+	void testOutlookSmtp() throws Exception {
+		try (Emailer emailer = Emailer.instance()) {
+			emailer.connectToStore(Emailer.getZohoImapSession(), EmailerDauphineHelper.USERNAME_OTHERS,
+					EmailerDauphineHelper.getZohoToken());
+			emailer.connectToTransport(Emailer.getOutlookSmtpSession(), EmailerDauphineHelper.USERNAME_DAUPHINE,
+					EmailerDauphineHelper.getDauphineToken());
+		}
+	}
+
+	@Test
+	@Disabled
 	void testOutlookBug() throws Exception {
 		try (Emailer emailer = Emailer.instance()) {
 			emailer.connectToStore(Emailer.getOutlookImapSession(), EmailerDauphineHelper.USERNAME_DAUPHINE,
@@ -156,6 +167,7 @@ public class EmailerTests {
 	 * become Angus something.
 	 */
 	@Test
+	@Disabled
 	void testOutlookBugDirect() throws Exception {
 		final Properties props = new Properties();
 		props.setProperty("mail.store.protocol", "imap");
@@ -436,37 +448,48 @@ public class EmailerTests {
 			emailer.connectToStore(Emailer.getZohoImapSession(), EmailerDauphineHelper.USERNAME_OTHERS,
 					EmailerDauphineHelper.getZohoToken());
 			@SuppressWarnings("resource")
-			final Folder folder = emailer.getFolder("Tests");
+			final Folder folder = emailer.getFolder("Tests/To oliviercailloux");
 
-			final SearchTerm r1 = new RecipientTerm(RecipientType.TO,
+			final SearchTerm searchToMe = new RecipientTerm(RecipientType.TO,
 					new InternetAddress("olivier.cailloux@lamsade.dauphine.fr"));
 			{
-				final Message[] asArray = folder.search(r1);
+				final Message[] asArray = folder.search(searchToMe);
 				final ImmutableSet<Message> found = ImmutableSet.copyOf(asArray);
 				assertEquals(1, found.size());
 			}
-			final SearchTerm s = new SubjectTerm("grade commit");
+			final SearchTerm searchSubject = new SubjectTerm("Zoho to LAMSADE");
+			{
+				final Message[] asArray = folder.search(searchSubject);
+				final ImmutableSet<Message> found = ImmutableSet.copyOf(asArray);
+				assertEquals(1, found.size());
+			}
+			{
+				final SearchTerm s = new SubjectTerm("Zoho to  LAMSADE");
+				final Message[] asArray = folder.search(s);
+				final ImmutableSet<Message> found = ImmutableSet.copyOf(asArray);
+				assertEquals(0, found.size());
+			}
 			{
 				/**
-				 * Searches for A3 SEARCH SUBJECT "grade commit" TO
-				 * olivier.cailloux@lamsade.dauphine.fr ALL
+				 * Searches for A3 SEARCH SUBJECT "…" TO olivier.cailloux@lamsade.dauphine.fr
+				 * ALL
 				 */
-				final Message[] asArray = folder.search(new AndTerm(s, r1));
+				final Message[] asArray = folder.search(new AndTerm(searchSubject, searchToMe));
 				final ImmutableSet<Message> found = ImmutableSet.copyOf(asArray);
 				assertEquals(1, found.size());
 			}
-			final SearchTerm r2 = new RecipientTerm(RecipientType.TO,
+			final SearchTerm searchToNotExists = new RecipientTerm(RecipientType.TO,
 					new InternetAddress("olivier.cailloux@notexistdauphine.fr"));
 			{
-				final SearchTerm r12 = new OrTerm(r1, r2);
-				final SearchTerm sAndR12 = new AndTerm(s, r12);
-				final Message[] asArray = folder.search(sAndR12);
+				final SearchTerm searchToMeOrToNotExists = new OrTerm(searchToMe, searchToNotExists);
+				final SearchTerm searchSubjectAndTo = new AndTerm(searchSubject, searchToMeOrToNotExists);
+				final Message[] asArray = folder.search(searchSubjectAndTo);
 				final ImmutableSet<Message> found = ImmutableSet.copyOf(asArray);
 				/**
-				 * Searches for SEARCH SUBJECT "grade commit" OR TO
-				 * olivier.cailloux@lamsade.dauphine.fr TO olivier.cailloux@notexistdauphine.fr
-				 * ALL. Used to fail (return zero matches) but was corrected following
-				 * discussions with Zoho team somewhere around July 2020.
+				 * Searches for SEARCH SUBJECT "…" OR TO olivier.cailloux@lamsade.dauphine.fr TO
+				 * olivier.cailloux@notexistdauphine.fr ALL. Used to fail (return zero matches)
+				 * but was corrected following discussions with Zoho team somewhere around July
+				 * 2020.
 				 */
 				assertEquals(1, found.size());
 			}

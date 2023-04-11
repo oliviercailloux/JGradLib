@@ -22,22 +22,32 @@ import com.google.common.graph.ImmutableGraph;
 import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
 import io.github.oliviercailloux.grade.Criterion;
 import io.github.oliviercailloux.grade.CriterionGradeWeight;
+import io.github.oliviercailloux.grade.Exam;
+import io.github.oliviercailloux.grade.Grade;
 import io.github.oliviercailloux.grade.IGrade;
 import io.github.oliviercailloux.grade.IGrade.CriteriaPath;
+import io.github.oliviercailloux.grade.MarksTree;
 import io.github.oliviercailloux.grade.WeightingGrade;
 import io.github.oliviercailloux.grade.WeightingGrade.PathGradeWeight;
 import io.github.oliviercailloux.grade.comm.InstitutionalStudent;
+import io.github.oliviercailloux.grade.comm.StudentOnGitHub;
 import io.github.oliviercailloux.grade.comm.json.JsonStudents;
 import io.github.oliviercailloux.grade.format.CsvGrades;
+import io.github.oliviercailloux.grade.format.HtmlGrades;
+import io.github.oliviercailloux.grade.format.json.JsonSimpleGrade;
 import io.github.oliviercailloux.grade.old.GradeStructure;
 import io.github.oliviercailloux.grade.old.Mark;
 import io.github.oliviercailloux.grade.utils.Compressor;
 import io.github.oliviercailloux.jaris.collections.CollectionUtils;
+import io.github.oliviercailloux.java_grade.graders.TwoFiles;
 import io.github.oliviercailloux.utils.Utils;
+import io.github.oliviercailloux.xml.XmlUtils;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Instant;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
@@ -50,12 +60,35 @@ public class Summarizer {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(Summarizer.class);
 
+	private static final Path WORK_DIR = Path.of("");
+
 	public static void main(String[] args) throws Exception {
-		final Summarizer summarizer = new Summarizer().setPrefix("UML")
-				.setDissolveCriteria(ImmutableSet.of(Criterion.given("Warnings")));
+		convert();
+//		final Summarizer summarizer = new Summarizer().setPrefix("UML")
+//				.setDissolveCriteria(ImmutableSet.of(Criterion.given("Warnings")));
 //		.setPatched()
 //		summarizer.getReader().restrictTo(ImmutableSet.of(GitHubUsername.given("…")));
-		summarizer.summarize();
+//		summarizer.summarize();
+	}
+
+	private static void convert() throws IOException {
+		final String prefix = TwoFiles.PREFIX;
+
+		final JsonStudents students = JsonStudents.from(Files.readString(WORK_DIR.resolve("usernames.json")));
+		final Exam exam = JsonSimpleGrade.asExam(Files.readString(WORK_DIR.resolve("grades " + prefix + ".json")));
+
+		final ImmutableBiMap<GitHubUsername, StudentOnGitHub> studentsMap = students.getStudentsByGitHubUsername();
+		final ImmutableMap<StudentOnGitHub, MarksTree> trees = CollectionUtils.transformKeys(exam.grades(),
+				u -> Optional.ofNullable(studentsMap.get(u)).orElseThrow(
+						() -> new NoSuchElementException(u.getUsername() + " among " + studentsMap.keySet())));
+		final String csv = CsvGrades.newInstance(CsvGrades.STUDENT_IDENTITY_FUNCTION, 20).gradesToCsv(exam.aggregator(),
+				trees);
+		Files.writeString(WORK_DIR.resolve("grades " + prefix + ".csv"), csv);
+
+		final ImmutableMap<String, Grade> grades = exam.getUsernames().stream()
+				.collect(ImmutableMap.toImmutableMap(GitHubUsername::getUsername, exam::getGrade));
+		final String html = XmlUtils.asString(HtmlGrades.asHtml(grades, prefix + " " + Instant.now(), 20d));
+		Files.writeString(WORK_DIR.resolve("grades " + prefix + ".html"), html);
 	}
 
 	public static Summarizer create() {
