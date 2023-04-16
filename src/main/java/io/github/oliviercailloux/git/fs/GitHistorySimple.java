@@ -1,11 +1,13 @@
 package io.github.oliviercailloux.git.fs;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Verify.verify;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import com.google.common.graph.Graph;
 import com.google.common.graph.ImmutableGraph;
 import io.github.oliviercailloux.git.GitHubHistory;
@@ -142,8 +144,11 @@ public class GitHistorySimple {
 		graph = fs.graph();
 		final ImmutableSet<ObjectId> commits = graph.nodes().stream().map(p -> p.getCommit().id())
 				.collect(ImmutableSet.toImmutableSet());
+		final ImmutableSet<ObjectId> commitsWithNoDates = Sets.difference(commits, dates.keySet()).immutableCopy();
+		verify(dates.keySet().containsAll(commits) == commitsWithNoDates.isEmpty());
+		checkArgument(commitsWithNoDates.isEmpty(), commitsWithNoDates);
 		this.dates = ImmutableMap.copyOf(Maps.filterKeys(dates, k -> commits.contains(k)));
-		checkArgument(commits.equals(this.dates.keySet()));
+		verify(commits.equals(this.dates.keySet()));
 		roots = null;
 		leaves = null;
 	}

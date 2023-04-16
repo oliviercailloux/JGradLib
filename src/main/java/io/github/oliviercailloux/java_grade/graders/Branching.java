@@ -49,7 +49,7 @@ public class Branching implements GitFsGrader<IOException> {
 
 	public static final String PREFIX = "branching";
 
-	public static final ZonedDateTime DEADLINE = ZonedDateTime.parse("2022-03-09T14:11:00+01:00[Europe/Paris]");
+	public static final ZonedDateTime DEADLINE = ZonedDateTime.parse("2023-04-05T14:15:00+01:00[Europe/Paris]");
 
 	public static final double USER_WEIGHT = 0.05d;
 
@@ -360,6 +360,9 @@ public class Branching implements GitFsGrader<IOException> {
 		return SubMarksTree.given(C_START, gradeStart(startPath, false));
 	}
 
+	/**
+	 * commit containing 1 file, start.txt, containing “A starting point”.
+	 */
 	private MarksTree gradeStart(GitPathRootShaCached commitStart, boolean expandLocally) throws IOException {
 		final long nbFiles = Files.find(commitStart, Integer.MAX_VALUE, (p, a) -> Files.isRegularFile(p)).count();
 		final boolean rightNb = nbFiles == 1;
@@ -419,6 +422,9 @@ public class Branching implements GitFsGrader<IOException> {
 		return SubMarksTree.given(C_A, gradeA(aPath, false));
 	}
 
+	/**
+	 * Two files. start.txt, “A starting point” and first.txt, “Hello world”.
+	 */
 	private MarksTree gradeA(GitPathRootShaCached commitA, boolean expandLocally) throws IOException {
 		checkArgument(currentHistory.graph().predecessors(commitA).size() == 1);
 
@@ -489,6 +495,9 @@ public class Branching implements GitFsGrader<IOException> {
 		return SubMarksTree.given(C_B, gradeB(bPath, false));
 	}
 
+	/**
+	 * Follows a commit that has a single parent. Has three files. start.txt, first.txt and a/some file.txt. 
+	 */
 	private MarksTree gradeB(GitPathRootShaCached commitB, boolean expandLocally) throws IOException {
 		checkArgument(currentHistory.graph().predecessors(commitB).size() == 1);
 		{

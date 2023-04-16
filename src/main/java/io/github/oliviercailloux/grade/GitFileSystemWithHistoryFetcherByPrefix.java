@@ -97,7 +97,7 @@ public class GitFileSystemWithHistoryFetcherByPrefix implements GitFileSystemWit
 		if (useCommitDates) {
 			lastHistory = GitHistorySimple.usingCommitterDates(lastGitFs);
 		} else {
-			lastHistory = GitHistorySimple.create(lastGitFs, gitHubHistory.getPushDates());
+			lastHistory = GitHistorySimple.create(lastGitFs, gitHubHistory.getConsistentPushDates());
 		}
 
 		return lastHistory;

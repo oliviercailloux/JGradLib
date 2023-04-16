@@ -24,13 +24,27 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 public class MavenCodeGrader<X extends Exception> implements PathGrader<X> {
+	public static enum WarningsBehavior {
+		DO_NOT_PENALIZE, PENALIZE_WARNINGS_AND_NOT_SUPPRESSED, PENALIZE_WARNINGS_AND_SUPPRESS;
+
+		public boolean penalizeWarnings() {
+			return ImmutableSet.of(PENALIZE_WARNINGS_AND_NOT_SUPPRESSED, PENALIZE_WARNINGS_AND_SUPPRESS).contains(this);
+		}
+	}
+
+	public static <X extends Exception> MavenCodeGrader<X> penal(CodeGrader<X> g, Function<IOException, X> wrapper,
+			WarningsBehavior w) {
+		return new MavenCodeGrader<>(g, wrapper, w, new BasicCompiler());
+	}
+
 	public static <X extends Exception> MavenCodeGrader<X> basic(CodeGrader<X> g, Function<IOException, X> wrapper) {
-		return new MavenCodeGrader<>(g, wrapper, true, new BasicCompiler());
+		return new MavenCodeGrader<>(g, wrapper, WarningsBehavior.PENALIZE_WARNINGS_AND_SUPPRESS, new BasicCompiler());
 	}
 
 	public static <X extends Exception> MavenCodeGrader<X> complex(CodeGrader<X> g,
 			Function<IOException, ? extends X> wrapper, boolean considerSuppressed, MyCompiler compiler) {
-		return new MavenCodeGrader<>(g, wrapper, considerSuppressed, compiler);
+		return new MavenCodeGrader<>(g, wrapper, considerSuppressed ? WarningsBehavior.PENALIZE_WARNINGS_AND_SUPPRESS
+				: WarningsBehavior.PENALIZE_WARNINGS_AND_NOT_SUPPRESSED, compiler);
 	}
 
 	public static class BasicCompiler implements MyCompiler {
@@ -56,15 +70,15 @@ public class MavenCodeGrader<X extends Exception> implements PathGrader<X> {
 	public static final Criterion WARNING_CRITERION = Criterion.given("Warnings");
 	public static final Criterion CODE_CRITERION = Criterion.given("Code");
 	private ImmutableMap<Path, MarksTree> gradedProjects;
-	private final boolean considerSuppressed;
 	private final MyCompiler basicCompiler;
+	private WarningsBehavior w;
 
-	private MavenCodeGrader(CodeGrader<X> g, Function<IOException, ? extends X> wrapper, boolean considerSuppressed,
+	private MavenCodeGrader(CodeGrader<X> g, Function<IOException, ? extends X> wrapper, WarningsBehavior w,
 			MyCompiler basicCompiler) {
 		this.g = g;
 		gradedProjects = null;
 		this.wrapper = wrapper;
-		this.considerSuppressed = considerSuppressed;
+		this.w = w;
 		this.basicCompiler = basicCompiler;
 	}
 
@@ -112,35 +126,44 @@ public class MavenCodeGrader<X extends Exception> implements PathGrader<X> {
 			LOGGER.debug("No java files at {}.", srcDir);
 			projectGrade = Mark.zero("No java files found");
 		} else {
-			final Mark weightingMark;
-			{
-				final int nbCountedSW = considerSuppressed ? result.nbSuppressWarnings : 0;
-				final String comment;
-				{
-					final ImmutableSet.Builder<String> commentsBuilder = ImmutableSet.builder();
-					if (result.countWarnings() > 0) {
-						commentsBuilder.add(result.err);
-					}
-					if (nbCountedSW > 0) {
-						commentsBuilder.add("Found " + result.nbSuppressWarnings + " suppressed warnings");
-					}
-					comment = commentsBuilder.build().stream().collect(Collectors.joining(". "));
-				}
-				final double penalty = Math.min((result.countWarnings() + nbCountedSW) * 0.05d, 0.1d);
-				final double weightingScore = 1d - penalty;
-				weightingMark = Mark.given(weightingScore, comment);
-			}
 			final MarksTree codeGrade = JavaGradeUtils.markSecurely(compiledDir, g::gradeCode);
-			projectGrade = MarksTree
-					.composite(ImmutableMap.of(WARNING_CRITERION, weightingMark, CODE_CRITERION, codeGrade));
+			if (w.penalizeWarnings()) {
+				final Mark weightingMark;
+				{
+					final int nbCountedSW = (w == WarningsBehavior.PENALIZE_WARNINGS_AND_SUPPRESS)
+							? result.nbSuppressWarnings
+							: 0;
+					final String comment;
+					{
+						final ImmutableSet.Builder<String> commentsBuilder = ImmutableSet.builder();
+						if (result.countWarnings() > 0) {
+							commentsBuilder.add(result.err);
+						}
+						if (nbCountedSW > 0) {
+							commentsBuilder.add("Found " + result.nbSuppressWarnings + " suppressed warnings");
+						}
+						comment = commentsBuilder.build().stream().collect(Collectors.joining(". "));
+					}
+					final double penalty = Math.min((result.countWarnings() + nbCountedSW) * 0.05d, 0.1d);
+					final double weightingScore = 1d - penalty;
+					weightingMark = Mark.given(weightingScore, comment);
+				}
+				projectGrade = MarksTree
+						.composite(ImmutableMap.of(WARNING_CRITERION, weightingMark, CODE_CRITERION, codeGrade));
+			} else {
+				projectGrade = codeGrade;
+			}
 		}
 		return projectGrade;
 	}
 
 	@Override
 	public GradeAggregator getAggregator() {
-		return GradeAggregator
-				.min(GradeAggregator.parametric(CODE_CRITERION, WARNING_CRITERION, g.getCodeAggregator()));
+		if (w.penalizeWarnings()) {
+			return GradeAggregator
+					.min(GradeAggregator.parametric(CODE_CRITERION, WARNING_CRITERION, g.getCodeAggregator()));
+		}
+		return GradeAggregator.min(g.getCodeAggregator());
 	}
 
 	public static ImmutableSet<Path> possibleDirs(Path projectPath) throws IOException {

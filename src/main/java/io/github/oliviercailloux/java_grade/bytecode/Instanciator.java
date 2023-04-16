@@ -8,6 +8,7 @@ import com.google.common.base.VerifyException;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.MoreCollectors;
+import com.google.common.primitives.Primitives;
 import io.github.classgraph.ClassGraph;
 import io.github.classgraph.ClassInfo;
 import io.github.classgraph.ClassInfoList;
@@ -18,6 +19,7 @@ import io.github.oliviercailloux.jaris.exceptions.TryCatchAll;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.net.URLClassLoader;
 import java.util.List;
 import java.util.Optional;
@@ -31,6 +33,10 @@ public class Instanciator {
 
 	public static Instanciator given(URLClassLoader loader) {
 		return new Instanciator(loader);
+	}
+
+	private static Class<?> toPrimitiveIfPossible(Class<?> type) {
+		return Primitives.isWrapperType(type) ? Primitives.unwrap(type) : type;
 	}
 
 	private final URLClassLoader loader;
@@ -142,6 +148,67 @@ public class Instanciator {
 		}
 	}
 
+	public <T> TryCatchAll<Optional<T>> invokeStatic(String className, Class<T> returnType, String methodName,
+			List<Object> args) {
+		checkNotNull(className);
+		checkNotNull(methodName);
+		checkNotNull(args);
+		lastException = null;
+
+		final ImmutableList<Class<?>> argTypes = args.stream().map(a -> a.getClass())
+				.map(Instanciator::toPrimitiveIfPossible).collect(ImmutableList.toImmutableList());
+
+		final Class<?> clz;
+		try {
+			clz = Class.forName(className, true, loader);
+		} catch (ClassNotFoundException | ExceptionInInitializerError e) {
+			return TryCatchAll.failure(e);
+		}
+
+		final Method method;
+		try {
+			final Class<?>[] argTypesArray = argTypes.toArray(new Class[] {});
+			method = clz.getDeclaredMethod(methodName, argTypesArray);
+			LOGGER.debug("Found method using arg types {}.", argTypes);
+		} catch (NoSuchMethodException e) {
+			return TryCatchAll.failure(e);
+		}
+		if (!Modifier.isStatic(method.getModifiers())) {
+			return TryCatchAll.failure(new IllegalArgumentException("Not static."));
+		}
+
+		final Object result;
+		try {
+			LOGGER.debug("Invoking method using args {}.", args);
+			final Object[] argsArray = args.toArray();
+			result = method.invoke(null, argsArray);
+		} catch (NullPointerException e) {
+			throw new VerifyException("Method was verified static but null object was rejected.", e);
+		} catch (IllegalArgumentException e) {
+			throw new VerifyException("Method was found using those exact arguments but they were rejected.", e);
+		} catch (IllegalAccessException e) {
+			throw new VerifyException("I guess that this shouldn’t happen.", e);
+		} catch (ExceptionInInitializerError e) {
+			return TryCatchAll.failure(e);
+		} catch (InvocationTargetException e) {
+			return TryCatchAll.failure(e.getCause());
+		}
+		if (result != null && !returnType.isInstance(result)) {
+			return TryCatchAll.failure(new IllegalArgumentException("Unexpected return type."));
+		}
+
+		if (result == null) {
+			return TryCatchAll.success(Optional.empty());
+		}
+		final T casted;
+		try {
+			casted = returnType.cast(result);
+		} catch (ClassCastException e) {
+			throw new VerifyException("Object was verified castable but is not.", e);
+		}
+		return TryCatchAll.success(Optional.of(casted));
+	}
+
 	public Optional<Class<?>> getLastClass() {
 		checkState(classOpt != null);
 		return classOpt;
@@ -150,5 +217,9 @@ public class Instanciator {
 	public ReflectiveOperationException getLastException() {
 		checkState(lastException != null);
 		return lastException;
+	}
+
+	public URLClassLoader getLoader() {
+		return loader;
 	}
 }

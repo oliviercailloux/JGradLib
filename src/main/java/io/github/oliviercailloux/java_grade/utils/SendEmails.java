@@ -22,7 +22,7 @@ import io.github.oliviercailloux.grade.comm.EmailerDauphineHelper;
 import io.github.oliviercailloux.grade.comm.GradesInEmails;
 import io.github.oliviercailloux.grade.comm.json.JsonStudents;
 import io.github.oliviercailloux.grade.format.json.JsonSimpleGrade;
-import io.github.oliviercailloux.java_grade.graders.TwoFiles;
+import io.github.oliviercailloux.java_grade.graders.Branching;
 import io.github.oliviercailloux.xml.XmlUtils;
 import jakarta.mail.Folder;
 import java.nio.file.Files;
@@ -39,9 +39,7 @@ public class SendEmails {
 	private static final Path WORK_DIR = Path.of("");
 
 	public static void main(String[] args) throws Exception {
-//		final String prefix = "Présentation";
-//		final String prefix = GraderDiceRoller.PREFIX;
-		final String prefix = TwoFiles.PREFIX;
+		final String prefix = Branching.PREFIX;
 
 		final JsonStudents students = JsonStudents.from(Files.readString(WORK_DIR.resolve("usernames.json")));
 		final Exam exam = JsonSimpleGrade.asExam(Files.readString(WORK_DIR.resolve("grades " + prefix + ".json")));
