@@ -13,18 +13,12 @@ import io.github.oliviercailloux.grade.GradeAggregator;
 import io.github.oliviercailloux.grade.Mark;
 import io.github.oliviercailloux.grade.MarksTree;
 import io.github.oliviercailloux.grade.format.json.JsonSimpleGrade;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.StringReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
-import org.apache.poi.ss.usermodel.Cell;
-import org.apache.poi.ss.usermodel.Row;
-import org.apache.poi.xssf.usermodel.XSSFSheet;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -70,33 +64,6 @@ public class ReadCsvGrades {
 	}
 
 	public static void main(String[] args) throws Exception {
-		FileInputStream file = new FileInputStream(new File("howtodoinjava_demo.xlsx"));
-
-		// Create Workbook instance holding reference to .xlsx file
-		XSSFWorkbook workbook = new XSSFWorkbook(file);
-
-		// Get first/desired sheet from the workbook
-		XSSFSheet sheet = workbook.getSheetAt(0);
-
-		for (Row row : sheet) {
-			// For each row, iterate through all the columns
-			Iterator<Cell> cellIterator = row.cellIterator();
-
-			while (cellIterator.hasNext()) {
-				Cell cell = cellIterator.next();
-				// Check the cell type and format accordingly
-				switch (cell.getCellType()) {
-				case Cell.CELL_TYPE_NUMERIC:
-					System.out.print(cell.getNumericCellValue() + "t");
-					break;
-				case Cell.CELL_TYPE_STRING:
-					System.out.print(cell.getStringCellValue() + "t");
-					break;
-				}
-			}
-			System.out.println("");
-		}
-		file.close();
 
 //		readCsv();
 	}
