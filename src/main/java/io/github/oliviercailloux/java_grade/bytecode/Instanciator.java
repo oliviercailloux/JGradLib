@@ -1,5 +1,6 @@
 package io.github.oliviercailloux.java_grade.bytecode;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.base.Verify.verify;
@@ -8,21 +9,28 @@ import com.google.common.base.VerifyException;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.MoreCollectors;
+import com.google.common.collect.Sets;
 import com.google.common.primitives.Primitives;
+import com.google.common.reflect.TypeToken;
 import io.github.classgraph.ClassGraph;
 import io.github.classgraph.ClassInfo;
 import io.github.classgraph.ClassInfoList;
 import io.github.classgraph.MethodInfo;
 import io.github.classgraph.MethodInfoList;
 import io.github.classgraph.ScanResult;
+import io.github.oliviercailloux.jaris.exceptions.Try;
 import io.github.oliviercailloux.jaris.exceptions.TryCatchAll;
+import io.github.oliviercailloux.jaris.throwing.TOptional;
 import java.lang.reflect.Constructor;
+import java.lang.reflect.Executable;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.net.URLClassLoader;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,12 +39,132 @@ public class Instanciator {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(Instanciator.class);
 
-	public static Instanciator given(URLClassLoader loader) {
-		return new Instanciator(loader);
-	}
-
 	private static Class<?> toPrimitiveIfPossible(Class<?> type) {
 		return Primitives.isWrapperType(type) ? Primitives.unwrap(type) : type;
+	}
+
+	private static ImmutableList<Class<?>> toPrimitiveIfPossible(List<Class<?>> list) {
+		return list.stream().map(Instanciator::toPrimitiveIfPossible).collect(ImmutableList.toImmutableList());
+	}
+
+	private static Executable getExecutable(Class<?> clz, Optional<String> methodName,
+			Set<? extends List<Class<?>>> possibleArgTypes) throws NoSuchMethodException {
+		final Iterator<? extends List<Class<?>>> iterator = possibleArgTypes.iterator();
+		checkArgument(iterator.hasNext());
+		final Try<Executable, NoSuchMethodException> firstAttempt;
+		{
+			final List<Class<?>> argTypes = iterator.next();
+			final Class<?>[] argTypesArray = argTypes.toArray(new Class[] {});
+			LOGGER.debug("Searching for method {}#{} using arg types {}.", clz, methodName, argTypes);
+			firstAttempt = Try.get(() -> TOptional.wrapping(methodName)
+					.<Executable, NoSuchMethodException>map(n -> clz.getMethod(n, argTypesArray))
+					.orElseGet(() -> clz.getConstructor(argTypesArray)));
+		}
+		Try<Executable, NoSuchMethodException> t = firstAttempt;
+		while (!t.isSuccess() && iterator.hasNext()) {
+			final List<Class<?>> argTypes = iterator.next();
+			final Class<?>[] argTypesArray = argTypes.toArray(new Class[] {});
+			LOGGER.debug("Searching for method {}#{} using arg types {}.", clz, methodName, argTypes);
+			t = firstAttempt.or(() -> TOptional.wrapping(methodName)
+					.<Executable, NoSuchMethodException>map(n -> clz.getMethod(n, argTypesArray))
+					.orElseGet(() -> clz.getConstructor(argTypesArray)), (c, d) -> c);
+		}
+		return t.orThrow();
+	}
+
+	private static Object invokeExecutable(Optional<Object> instance, Executable executable, List<?> args)
+			throws InvocationTargetException, InstantiationException {
+		final Object[] argsArray = args.toArray();
+		try {
+			if (executable instanceof Method m) {
+				return m.invoke(instance.orElse(null), argsArray);
+			} else if (executable instanceof Constructor<?> c) {
+				checkArgument(instance.isEmpty());
+				return c.newInstance(argsArray);
+			} else {
+				throw new VerifyException();
+			}
+		} catch (IllegalAccessException e) {
+			throw new VerifyException("I guess that this shouldn’t happen.", e);
+		} catch (NullPointerException e) {
+			throw new VerifyException("Method was verified static but null object was rejected.", e);
+		} catch (IllegalArgumentException e) {
+			throw new VerifyException("Method was found using those exact arguments but they were rejected.", e);
+		}
+	}
+
+	private static <T> ImmutableSet<Class<?>> getAllSuperClasses(Class<T> c) {
+		final Set<Class<? super T>> supers = TypeToken.of(c).getTypes().rawTypes();
+		return ImmutableSet.copyOf(supers);
+	}
+
+	public static <T> TryCatchAll<Optional<T>> invoke(Object instance, Class<T> returnType, String methodName,
+			Object... args) {
+		return invoke(instance.getClass(), Optional.of(instance), returnType, Optional.of(methodName),
+				ImmutableList.copyOf(args));
+	}
+
+	public static <T> TryCatchAll<Optional<T>> invoke(Object instance, Class<T> returnType, String methodName,
+			List<?> args) {
+		return invoke(instance.getClass(), Optional.of(instance), returnType, Optional.of(methodName), args);
+	}
+
+	public static <T> TryCatchAll<T> invokeProducing(Object instance, Class<T> returnType, String methodName,
+			Object... args) {
+		return invoke(instance.getClass(), Optional.of(instance), returnType, Optional.of(methodName),
+				ImmutableList.copyOf(args)).andApply(o -> o.orElseThrow());
+	}
+
+	private static <T> TryCatchAll<Optional<T>> invoke(Class<?> clz, Optional<Object> instance, Class<T> returnType,
+			Optional<String> methodName, List<?> args) {
+		final ImmutableList<Class<?>> argTypes = args.stream().map(a -> a.getClass())
+				.collect(ImmutableList.toImmutableList());
+		// final ImmutableList<Class<?>> argTypesPrim =
+		// argTypes.stream().map(Instanciator::toPrimitiveIfPossible)
+		// .collect(ImmutableList.toImmutableList());
+		final ImmutableList<ImmutableSet<Class<?>>> setsOfSuperClasses = argTypes.stream()
+				.map(c -> getAllSuperClasses(c)).collect(ImmutableList.toImmutableList());
+		final Set<List<Class<?>>> possibleArgTypes = Sets.cartesianProduct(setsOfSuperClasses);
+		final ImmutableSet<ImmutableList<Class<?>>> possibleArgTypesPrim = possibleArgTypes.stream()
+				.map(l -> toPrimitiveIfPossible(l)).collect(ImmutableSet.toImmutableSet());
+		final Executable method;
+		try {
+			method = getExecutable(clz, methodName, possibleArgTypesPrim);
+		} catch (NoSuchMethodException e) {
+			return TryCatchAll.failure(e);
+		}
+		if (methodName.isPresent() && (instance.isEmpty() != Modifier.isStatic(method.getModifiers()))) {
+			return TryCatchAll.failure(new IllegalArgumentException("Unexpectedly static."));
+		}
+
+		final Object result;
+		try {
+			LOGGER.debug("Invoking method using args {}.", args);
+			result = invokeExecutable(instance, method, args);
+		} catch (ExceptionInInitializerError | InstantiationException e) {
+			return TryCatchAll.failure(e);
+		} catch (InvocationTargetException e) {
+			return TryCatchAll.failure(e.getCause());
+		}
+		if (result != null && !returnType.isInstance(result)) {
+			return TryCatchAll.failure(new IllegalArgumentException("Unexpected return type."));
+		}
+
+		if (result == null) {
+			verify(!methodName.isEmpty());
+			return TryCatchAll.success(Optional.empty());
+		}
+		final T casted;
+		try {
+			casted = returnType.cast(result);
+		} catch (ClassCastException e) {
+			throw new VerifyException("Object was verified castable but is not.", e);
+		}
+		return TryCatchAll.success(Optional.of(casted));
+	}
+
+	public static Instanciator given(URLClassLoader loader) {
+		return new Instanciator(loader);
 	}
 
 	private final URLClassLoader loader;
@@ -150,13 +278,19 @@ public class Instanciator {
 
 	public <T> TryCatchAll<Optional<T>> invokeStatic(String className, Class<T> returnType, String methodName,
 			List<Object> args) {
+		return obtainFrom(className, returnType, Optional.of(methodName), args);
+	}
+
+	public <T> TryCatchAll<T> invokeConstructor(String className, Class<T> returnType, List<?> args) {
+		final TryCatchAll<Optional<T>> opt = obtainFrom(className, returnType, Optional.empty(), args);
+		return opt.andApply(o -> o.orElseThrow(VerifyException::new));
+	}
+
+	private <T> TryCatchAll<Optional<T>> obtainFrom(String className, Class<T> returnType, Optional<String> methodName,
+			List<?> args) {
 		checkNotNull(className);
 		checkNotNull(methodName);
 		checkNotNull(args);
-		lastException = null;
-
-		final ImmutableList<Class<?>> argTypes = args.stream().map(a -> a.getClass())
-				.map(Instanciator::toPrimitiveIfPossible).collect(ImmutableList.toImmutableList());
 
 		final Class<?> clz;
 		try {
@@ -165,48 +299,7 @@ public class Instanciator {
 			return TryCatchAll.failure(e);
 		}
 
-		final Method method;
-		try {
-			final Class<?>[] argTypesArray = argTypes.toArray(new Class[] {});
-			method = clz.getDeclaredMethod(methodName, argTypesArray);
-			LOGGER.debug("Found method using arg types {}.", argTypes);
-		} catch (NoSuchMethodException e) {
-			return TryCatchAll.failure(e);
-		}
-		if (!Modifier.isStatic(method.getModifiers())) {
-			return TryCatchAll.failure(new IllegalArgumentException("Not static."));
-		}
-
-		final Object result;
-		try {
-			LOGGER.debug("Invoking method using args {}.", args);
-			final Object[] argsArray = args.toArray();
-			result = method.invoke(null, argsArray);
-		} catch (NullPointerException e) {
-			throw new VerifyException("Method was verified static but null object was rejected.", e);
-		} catch (IllegalArgumentException e) {
-			throw new VerifyException("Method was found using those exact arguments but they were rejected.", e);
-		} catch (IllegalAccessException e) {
-			throw new VerifyException("I guess that this shouldn’t happen.", e);
-		} catch (ExceptionInInitializerError e) {
-			return TryCatchAll.failure(e);
-		} catch (InvocationTargetException e) {
-			return TryCatchAll.failure(e.getCause());
-		}
-		if (result != null && !returnType.isInstance(result)) {
-			return TryCatchAll.failure(new IllegalArgumentException("Unexpected return type."));
-		}
-
-		if (result == null) {
-			return TryCatchAll.success(Optional.empty());
-		}
-		final T casted;
-		try {
-			casted = returnType.cast(result);
-		} catch (ClassCastException e) {
-			throw new VerifyException("Object was verified castable but is not.", e);
-		}
-		return TryCatchAll.success(Optional.of(casted));
+		return invoke(clz, Optional.empty(), returnType, methodName, args);
 	}
 
 	public Optional<Class<?>> getLastClass() {

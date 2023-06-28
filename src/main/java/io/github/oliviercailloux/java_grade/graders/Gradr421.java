@@ -32,9 +32,9 @@ import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class Grader421 implements CodeGrader<RuntimeException> {
+public class Gradr421 implements CodeGrader<RuntimeException> {
 	@SuppressWarnings("unused")
-	private static final Logger LOGGER = LoggerFactory.getLogger(Grader421.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(Gradr421.class);
 
 	public static final String PREFIX = "421";
 
@@ -57,7 +57,7 @@ public class Grader421 implements CodeGrader<RuntimeException> {
 				.getRetrievingByPrefix(PREFIX);
 		final BatchGitHistoryGrader<RuntimeException> batchGrader = BatchGitHistoryGrader.given(() -> fetcher);
 
-		final Grader421 grader421 = new Grader421();
+		final Gradr421 grader421 = new Gradr421();
 		final MavenCodeGrader<RuntimeException> m = MavenCodeGrader.basic(grader421, UncheckedIOException::new);
 
 		batchGrader.getAndWriteGrades(DEADLINE_ORIGINAL, Duration.ofMinutes(5), GitFsGraderUsingLast.using(m),
@@ -72,9 +72,10 @@ public class Grader421 implements CodeGrader<RuntimeException> {
 				.getRetrievingByPrefix(PREFIX);
 		final BatchGitHistoryGrader<RuntimeException> batchGrader = BatchGitHistoryGrader.given(() -> fetcher);
 
-		final Grader421 grader421 = new Grader421();
+		final Gradr421 grader421 = new Gradr421();
 		final MavenCodeGrader<RuntimeException> m = MavenCodeGrader.basic(grader421, UncheckedIOException::new);
-		final DoubleGrader doubleGrader = new DoubleGrader(m);
+		final DoubleGrader doubleGrader = new DoubleGrader(m, DEADLINE_ORIGINAL.toInstant(),
+				DEADLINE_SECOND_CHANCE.toInstant(), DEADLINE_ORIGINAL.getZone(), CAP_ORIGINAL, USER_WEIGHT);
 
 		batchGrader.getAndWriteGrades(doubleGrader, Path.of("grades " + PREFIX + " second"),
 				PREFIX + " second " + Instant.now().atZone(DEADLINE_SECOND_CHANCE.getZone()));
@@ -95,7 +96,7 @@ public class Grader421 implements CodeGrader<RuntimeException> {
 
 	private final ExecutorService executors;
 
-	public Grader421() {
+	public Gradr421() {
 		executors = Executors.newCachedThreadPool();
 	}
 

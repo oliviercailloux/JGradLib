@@ -70,9 +70,17 @@ public class GitFileSystemWithHistoryFetcherByPrefix implements GitFileSystemWit
 	@Override
 	public ImmutableSet<GitHubUsername> getAuthors() {
 		final RepositoryFetcher fetcher = RepositoryFetcher.withPrefix(prefix);
+		LOGGER.debug("Getting authors using {}, count {}.", prefix, count);
 		final ImmutableSet<RepositoryCoordinatesWithPrefix> coordinatess = fetcher.fetch();
-		return coordinatess.stream().limit(count).map(RepositoryCoordinatesWithPrefix::getUsername)
-				.map(GitHubUsername::given).filter(accepted).collect(ImmutableSet.toImmutableSet());
+		final ImmutableSet<GitHubUsername> unfiltered = coordinatess.stream().limit(count)
+				.map(RepositoryCoordinatesWithPrefix::getUsername).map(GitHubUsername::given)
+				.collect(ImmutableSet.toImmutableSet());
+		final ImmutableSet<GitHubUsername> filtered = unfiltered.stream().filter(accepted)
+				.collect(ImmutableSet.toImmutableSet());
+		if (filtered.isEmpty()) {
+			LOGGER.warn("Filtered to nothing, from {} then {}.", coordinatess, unfiltered);
+		}
+		return filtered;
 	}
 
 	@Override

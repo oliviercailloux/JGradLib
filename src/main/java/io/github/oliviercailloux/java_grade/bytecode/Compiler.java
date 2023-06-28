@@ -206,7 +206,7 @@ public class Compiler {
 
 		final ImmutableList.Builder<String> builder = ImmutableList.builder();
 		{
-			builder.add("--release", "11");
+			builder.add("--release", "17");
 		}
 		if (useStrictWarnings) {
 			/** Could instead use options such as "-warn:+allDeadCode,allDeprecation…". */

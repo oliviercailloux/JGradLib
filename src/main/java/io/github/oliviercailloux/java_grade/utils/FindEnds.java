@@ -30,7 +30,7 @@ public class FindEnds {
 	}
 
 	public static void main(String[] args) {
-		final ImmutableSet<RepositoryCoordinatesWithPrefix> ended = FindEnds.withPrefix("commit").getEnded();
+		final ImmutableSet<RepositoryCoordinatesWithPrefix> ended = FindEnds.withPrefix("colors").getEnded();
 		LOGGER.info("Ended: {}.", ended);
 	}
 
@@ -61,7 +61,7 @@ public class FindEnds {
 			final List<Ref> remoteRefs = Unchecker.wrappingWith(IllegalStateException::new)
 					.getUsing(() -> git.branchList().setListMode(ListMode.REMOTE).call());
 			LOGGER.info("Remote refs for {}: {}.", coord, remoteRefs);
-			return remoteRefs.stream().anyMatch(r -> r.getName().equals("refs/remotes/origin/END"));
+			return remoteRefs.stream().anyMatch(r -> r.getName().equalsIgnoreCase("refs/remotes/origin/end"));
 		}
 	}
 }

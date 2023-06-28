@@ -274,8 +274,19 @@ public class ByTimeGrader<X extends Exception> implements Grader<X> {
 		final ImmutableSortedSet<Instant> timestamps = history.getTimestamps().values().stream()
 				.collect(ImmutableSortedSet.toImmutableSortedSet(Comparator.naturalOrder()));
 		final Instant latestCommitTimeOnTime = Optional.ofNullable(timestamps.floor(deadline)).orElse(Instant.MIN);
+		/*
+		 * TODO We occasionally want to override this and return slightly more backwards
+		 * in time when wanting to grade two attempts of a given student, in case of a
+		 * double grading.
+		 */
+//		final Instant overridingDeadline = LocalDateTime.parse("2023-04-20T23:59:59").atZone(ZoneId.of("Europe/Paris"))
+//				.toInstant();
+//		final Instant latestCommitTimeOnTime = Optional.ofNullable(timestamps.floor(overridingDeadline))
+//				.orElse(Instant.MIN);
 		final ImmutableSortedSet<Instant> consideredTimestamps = timestamps.subSet(latestCommitTimeOnTime, true, max,
 				true);
+		LOGGER.debug("From {} with deadline {} and max {}, using latest {} and {}.", timestamps, deadline, max,
+				latestCommitTimeOnTime, consideredTimestamps);
 		verify(consideredTimestamps.isEmpty() == history.graph().nodes().isEmpty());
 		verify(consideredTimestamps.isEmpty() || !consideredTimestamps.last().isAfter(max));
 		return consideredTimestamps;

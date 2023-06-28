@@ -1,6 +1,7 @@
 package io.github.oliviercailloux.bytecode;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -15,8 +16,11 @@ import io.github.classgraph.ClassInfoList;
 import io.github.classgraph.MethodInfo;
 import io.github.classgraph.MethodInfoList;
 import io.github.classgraph.ScanResult;
+import io.github.oliviercailloux.exercices.car.Person;
+import io.github.oliviercailloux.jaris.exceptions.TryCatchAll;
 import io.github.oliviercailloux.java_grade.bytecode.Compiler;
 import io.github.oliviercailloux.java_grade.bytecode.Instanciator;
+import io.github.oliviercailloux.java_grade.bytecode.RestrictingClassLoader;
 import io.github.oliviercailloux.persons_manager.PersonsManager;
 import java.lang.reflect.Method;
 import java.net.URL;
@@ -179,6 +183,39 @@ public class InstanciatorTests {
 			final Method method = methodInfo.loadClassAndGetMethod();
 			method.invoke(null);
 		}
+	}
+
+	@Test
+	void testInvoke() throws Exception {
+		final TryCatchAll<Optional<String>> obtained = Instanciator.invoke(ImmutableList.of("elem", "heh"),
+				String.class, "get", ImmutableList.of(0));
+		assertTrue(obtained.map(o -> o.map(s -> s.equals("elem")).orElse(false), c -> false), "" + obtained);
+	}
+
+	@Test
+	void testInvokeNoSuch() throws Exception {
+		URLClassLoader loader = RestrictingClassLoader.noPermissions(Path.of("src/main/java/").toUri().toURL(),
+				getClass().getClassLoader());
+
+		LOGGER.info("Loading {}.", this.getClass().getCanonicalName());
+		final TryCatchAll<Person> mPerson = Instanciator.given(loader).invokeConstructor(
+				this.getClass().getCanonicalName(), Person.class, ImmutableList.of("nameHHKorig", 71));
+		assertEquals(NoSuchMethodException.class, mPerson.getCause().map(Object::getClass).orElseThrow());
+		final TryCatchAll<Optional<String>> obtained = Instanciator.invoke(ImmutableList.of("elem", "heh"),
+				String.class, "invalid", ImmutableList.of(0));
+		assertEquals(NoSuchMethodException.class, obtained.getCause().map(Object::getClass).orElseThrow());
+
+		final TryCatchAll<Optional<Void>> noSuch = Instanciator.invoke(ImmutableList.of("elem", "heh"), Void.class,
+				"renameNON", ImmutableList.of("a new name!"));
+		assertEquals(NoSuchMethodException.class, noSuch.getCause().map(Object::getClass).orElseThrow());
+
+		final TryCatchAll<InstanciatorTests> thisOne = Instanciator.given(loader)
+				.invokeConstructor(this.getClass().getCanonicalName(), InstanciatorTests.class, ImmutableList.of());
+		assertEquals(InstanciatorTests.class, thisOne.getResult().map(Object::getClass).orElseThrow());
+
+		final TryCatchAll<InstanciatorTests> chained = thisOne
+				.andConsume(t -> Instanciator.invoke(t, Void.class, "renameNON", ImmutableList.of("a new name!")));
+		assertEquals(NoSuchMethodException.class, chained.getCause().map(Object::getClass).orElseThrow());
 	}
 
 	public static void empty() {

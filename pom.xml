@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 	<parent>
 		<groupId>io.github.oliviercailloux</groupId>
@@ -133,11 +135,11 @@
 				</exclusion>
 			</exclusions>
 		</dependency>
-        <dependency>
-            <groupId>jakarta.mail</groupId>
-            <artifactId>jakarta.mail-api</artifactId>
+		<dependency>
+			<groupId>jakarta.mail</groupId>
+			<artifactId>jakarta.mail-api</artifactId>
 			<version>2.1.1</version>
-        </dependency>
+		</dependency>
 		<dependency>
 			<groupId>org.eclipse.angus</groupId>
 			<artifactId>angus-mail</artifactId>
@@ -153,11 +155,24 @@
 			<artifactId>jakarta.activation-api</artifactId>
 			<version>2.1.0</version>
 		</dependency>
-		<!-- org.glassfish.jersey.bundles:jaxrs-ri depends on org.glassfish:javax.json:jar:1.1:runtime 
-			and javax.json.bind:javax.json.bind-api:jar:1.0:runtime and org.eclipse:yasson:… 
-			and repackages a lot of things. org.glassfish.jersey.core:jersey-client:2.27 
-			depends on javax.ws.rs:javax.ws.rs-api:2.1. org.glassfish.jersey.media:jersey-media-json-binding:2.27 
-			depends on org.glassfish:javax.json:1.1 and javax.json.bind:javax.json.bind-api:1.0. -->
+		<dependency>
+			<groupId>org.apache.poi</groupId>
+			<artifactId>poi-ooxml</artifactId>
+			<version>5.2.3</version>
+		</dependency>
+		<!-- org.glassfish.jersey.bundles:jaxrs-ri depends on
+		org.glassfish:javax.json:jar:1.1:runtime 
+			and
+		javax.json.bind:javax.json.bind-api:jar:1.0:runtime and
+		org.eclipse:yasson:… 
+			and repackages a lot of things.
+		org.glassfish.jersey.core:jersey-client:2.27 
+			depends on
+		javax.ws.rs:javax.ws.rs-api:2.1.
+		org.glassfish.jersey.media:jersey-media-json-binding:2.27 
+			depends on
+		org.glassfish:javax.json:1.1 and
+		javax.json.bind:javax.json.bind-api:1.0. -->
 		<dependency>
 			<groupId>org.glassfish.jersey.core</groupId>
 			<artifactId>jersey-client</artifactId>

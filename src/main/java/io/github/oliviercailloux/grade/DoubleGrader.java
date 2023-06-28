@@ -13,7 +13,6 @@ import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
 import io.github.oliviercailloux.gitjfs.GitPathRootSha;
 import io.github.oliviercailloux.grade.DeadlineGrader.LinearPenalizer;
 import io.github.oliviercailloux.jaris.throwing.TOptional;
-import io.github.oliviercailloux.java_grade.graders.Grader421;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -21,11 +20,14 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.util.Optional;
-import java.util.regex.Pattern;
+import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class DoubleGrader implements Grader<IOException> {
+	private static record Cappings(Instant cappedO, Instant cappedS) {
+	}
+
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(DoubleGrader.class);
 
@@ -36,18 +38,28 @@ public class DoubleGrader implements Grader<IOException> {
 	private final ComplexGrader<RuntimeException> gO;
 	private final ComplexGrader<RuntimeException> gS;
 
-	public DoubleGrader(PathGrader<RuntimeException> m) {
+	private Instant deadlineO;
+
+	private Instant deadlineS;
+
+	private Instant capO;
+
+	public DoubleGrader(PathGrader<RuntimeException> m, Instant deadlineO, Instant deadlineS, ZoneId zone, Instant capO,
+			double userWeight) {
+		this.deadlineO = deadlineO;
+		this.deadlineS = deadlineS;
+		this.capO = capO;
 		final GitFsGraderUsingLast<RuntimeException> gitG = GitFsGraderUsingLast.using(m);
 		final LinearPenalizer l = LinearPenalizer.proportionalToLateness(Duration.ofMinutes(5));
 		{
-			final GradePenalizer pO = GradePenalizer.using(l, Grader421.DEADLINE_ORIGINAL.toInstant());
-			gO = ComplexGrader.using(gitG, pO, Grader421.USER_WEIGHT);
+			final GradePenalizer pO = GradePenalizer.using(l, deadlineO);
+			gO = ComplexGrader.using(gitG, pO, userWeight);
 		}
 		{
-			final GradePenalizer pS = GradePenalizer.using(l, Grader421.DEADLINE_SECOND_CHANCE.toInstant());
-			gS = ComplexGrader.using(gitG, pS, Grader421.USER_WEIGHT);
+			final GradePenalizer pS = GradePenalizer.using(l, deadlineS);
+			gS = ComplexGrader.using(gitG, pS, userWeight);
 		}
-		zone = Grader421.DEADLINE_ORIGINAL.getZone();
+		this.zone = zone;
 	}
 
 	@Override
@@ -65,30 +77,46 @@ public class DoubleGrader implements Grader<IOException> {
 		final String commentGeneralCapped = earliestTimeCommitByGitHub
 				.map(t -> "; ignored commits after " + t.atZone(zone).toString() + ", sent by GitHub").orElse("");
 
-		final ImmutableSet<GitHistorySimple> cappedsOriginal = ByTimeGrader.getCapped(beforeCommitByGitHub,
-				Grader421.DEADLINE_ORIGINAL.toInstant(), Grader421.CAP_ORIGINAL);
-//		final ImmutableSet<GitFileSystemHistory> cappedsSecond = ByTimeGrader.getCapped(beforeCommitByGitHub,
-//				Grader421.DEADLINE_SECOND_CHANCE.toInstant(), Instant.MAX);
-		/*
-		 * Need to consider also the identical “second chance”, which may give more
-		 * points (if others have diffs, then only this one will have the original grade
-		 * minus the penalty). Otherwise attempt may be detrimental.
-		 *
-		 * Improvement: consider summing the latenesses.
-		 */
-		final ImmutableSet<GitHistorySimple> cappedsSecond = ByTimeGrader.getCapped(beforeCommitByGitHub,
-				Grader421.DEADLINE_ORIGINAL.toInstant(), Instant.MAX);
+		final ImmutableSet<GitHistorySimple> cappedsOriginal = ByTimeGrader.getCapped(beforeCommitByGitHub, deadlineO,
+				capO);
+		final ImmutableSet<GitHistorySimple> cappedsSecond = ByTimeGrader.getCapped(beforeCommitByGitHub, deadlineS,
+				Instant.MAX);
 
+		/*
+		 * To check while building that criteria are unique (for failing faster), as
+		 * this is required later.
+		 */
+		final Set<Criterion> criteria = Sets.newLinkedHashSet();
+		/*
+		 * Probably possible to get rid of this with a more elegant construction, but as
+		 * a workaround we use this to avoid two identical criteria.
+		 */
+		final Set<Cappings> allCappings = Sets.newLinkedHashSet();
 		final ImmutableSet.Builder<SubMarksTree> cappedBuilder = ImmutableSet.builder();
 		for (GitHistorySimple cappedO : cappedsOriginal) {
-			for (GitHistorySimple cappedS : cappedsSecond) {
+			/*
+			 * Need to consider also the identical “second chance”, which may give more
+			 * points (if others have diffs, then only this one will have the original grade
+			 * minus the penalty). Otherwise attempt may be detrimental.
+			 *
+			 * Improvement: consider summing the latenesses.
+			 */
+			final ImmutableSet.Builder<GitHistorySimple> cappedOAndS = ImmutableSet.builder();
+			cappedOAndS.add(cappedO);
+			cappedOAndS.addAll(cappedsSecond);
+			for (GitHistorySimple cappedS : cappedOAndS.build()) {
 				final MarksTree old = gO.grade(author, cappedO);
 				final MarksTree second = gS.grade(author, cappedS);
 				final GitPathRootSha lastO = ByTimeGrader.last(cappedO);
 				final GitPathRootSha lastS = ByTimeGrader.last(cappedS);
 				final Instant cappedIO = ByTimeGrader.cappedAt(cappedO);
 				final Instant cappedIS = ByTimeGrader.cappedAt(cappedS);
-				verify(!cappedIO.isAfter(Grader421.CAP_ORIGINAL), cappedIO.toString());
+				final Cappings cappings = new Cappings(cappedIO, cappedIS);
+				if (allCappings.contains(cappings)) {
+					LOGGER.debug("Be there, done that already: {}.", cappings);
+					continue;
+				}
+				verify(!cappedIO.isAfter(capO), cappedIO.toString());
 				final ImmutableSet<Path> javasOld = Files.find(lastO, Integer.MAX_VALUE, (p, a) -> matches(p))
 						.collect(ImmutableSet.toImmutableSet());
 				final ImmutableSet<Path> javasSecond = Files.find(lastS, Integer.MAX_VALUE, (p, a) -> matches(p))
@@ -99,7 +127,7 @@ public class DoubleGrader implements Grader<IOException> {
 					final Path javaOld = Iterables.getOnlyElement(javasOld);
 					final Path javaSecond = Iterables.getOnlyElement(javasSecond);
 					final int diff = diff(javaOld, javaSecond);
-					final double propOld = Double.min(20d, diff) / 20d;
+					final double propOld = Double.min(15d, diff) / 15d;
 					final String commentDiff = "Diff between '%s' and '%s' (%s ≠ lines / 20)".formatted(javaOld,
 							javaSecond, diff);
 					diffMark = Mark.given(propOld, commentDiff);
@@ -113,10 +141,16 @@ public class DoubleGrader implements Grader<IOException> {
 						.composite(ImmutableMap.of(C_DIFF, diffMark, C_OLD, old, C_SECOND, second));
 
 				final String cappingAtO = "Capping original at " + cappedIO.atZone(zone).toString() + "; ";
-				final String cappingAtS = cappedsSecond.size() == 1 ? "no capping (second)"
-						: ("capping second at " + cappedIS.atZone(zone).toString());
+//				final String cappingAtS = cappedsSecond.size() == 1 ? "no capping (second)"
+//						: ("capping second at " + cappedIS.atZone(zone).toString());
+				final String cappingAtS = "capping second at " + cappedIS.atZone(zone).toString();
 				final String comment = cappingAtO + cappingAtS + commentGeneralCapped;
-				cappedBuilder.add(SubMarksTree.given(Criterion.given(comment), merged));
+				final Criterion crit = Criterion.given(comment);
+				LOGGER.debug("Adding crit {}.", crit);
+				final boolean isNew = criteria.add(crit);
+				verify(isNew, crit.toString());
+				allCappings.add(cappings);
+				cappedBuilder.add(SubMarksTree.given(crit, merged));
 			}
 		}
 
@@ -131,18 +165,10 @@ public class DoubleGrader implements Grader<IOException> {
 	}
 
 	private boolean matches(Path p) {
-//		final Pattern pattern = Pattern.compile("implements([\\v\\h])+DiceRoller");
-		final Pattern pattern = Pattern.compile("implements([\\v\\h])+Game421");
-		verify(pattern.matcher("implements Game421").find());
-		verify(pattern.matcher("implements\n \t Game421").find());
-		verify(pattern.matcher("implements  Game421").find());
-		verify(!pattern.matcher("implements DiceRoller").find());
-		verify(!pattern.matcher("implements\n \t DiceRoller").find());
-		verify(!pattern.matcher("implements  DiceRoller").find());
-		verify(!pattern.matcher("implements CyclicDiceRoller").find());
-		verify(!pattern.matcher("implementsDiceRoller").find());
-		return p.getFileName() != null && p.getFileName().toString().endsWith(".java")
-				&& pattern.matcher(IO_UNCHECKER.getUsing(() -> Files.readString(p))).find();
+//		final Pattern pattern = Pattern.compile("StringManiper ");
+//		return p.getFileName() != null && p.getFileName().toString().endsWith(".java")
+//				&& pattern.matcher(IO_UNCHECKER.getUsing(() -> Files.readString(p))).find();
+		return String.valueOf(p.getFileName()).equals("StringManiper.java");
 	}
 
 	private int diff(Path javaOld, Path javaSecond) {

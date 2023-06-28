@@ -32,6 +32,48 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class BatchGitHistoryGrader<X extends Exception> {
+	private static class IncrPenalizer {
+		public static IncrPenalizer instance(Duration durationForZero) {
+			return new IncrPenalizer(Math.toIntExact(durationForZero.getSeconds()));
+		}
+
+		private int nbSecondsZero;
+
+		private IncrPenalizer(int nbSecondsZero) {
+			this.nbSecondsZero = nbSecondsZero;
+			checkArgument(nbSecondsZero > 0);
+		}
+
+		public io.github.oliviercailloux.grade.Mark getFractionRemaining(Duration lateness) {
+			/*
+			 * Let x in [0, 1] determine the fraction of lateness we are at (x = 1 when
+			 * lateness == nbSecondsZero).
+			 *
+			 * Let f(x) = the penalty.
+			 *
+			 * We want f(0) = 0; f(1/2) = z (for example, z = 1/3); f(1) = 1.
+			 *
+			 * We want the function to be strictly increasing and convex.
+			 *
+			 * We opt for, letting α = 1/z − 1, f(x) = (α^(2x) − 1)/(α² − 1). (This is the
+			 * function of the form (e^ax − b)/c that satisfies the above constraints.)
+			 *
+			 * Setting z = 1/3, we get α = 2 and f(x) = (4^x − 1)/3.
+			 */
+			final io.github.oliviercailloux.grade.Mark remaining;
+			if (!lateness.isNegative() && !lateness.isZero()) {
+				final double x = Math.min(lateness.getSeconds() / (double) nbSecondsZero, 1d);
+				verify(0d < x);
+				verify(x <= 1d);
+				final double penalty = (Math.pow(4d, x) - 1d) / 3d;
+				remaining = io.github.oliviercailloux.grade.Mark.given(1d - penalty, "Lateness: " + lateness);
+			} else {
+				remaining = io.github.oliviercailloux.grade.Mark.one();
+			}
+			return remaining;
+		}
+	}
+
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(BatchGitHistoryGrader.class);
 
@@ -73,6 +115,14 @@ public class BatchGitHistoryGrader<X extends Exception> {
 				docTitle);
 	}
 
+	public <Y extends Exception> Exam getAndWriteGradesExp(ZonedDateTime deadline, Duration durationForZero,
+			GitFsGrader<Y> grader, double userGradeWeight, Path outWithoutExtension, String docTitle)
+			throws X, Y, IOException {
+		checkArgument(!docTitle.isEmpty());
+		return getGrades(deadline, durationForZero, false, grader, userGradeWeight, TOptional.of(outWithoutExtension),
+				docTitle);
+	}
+
 	public <Y extends Exception> Exam getAndWriteGrades(Grader<Y> ext, Path outWithoutExtension, String docTitle)
 			throws X, Y, IOException {
 		checkArgument(!docTitle.isEmpty());
@@ -80,6 +130,12 @@ public class BatchGitHistoryGrader<X extends Exception> {
 	}
 
 	private <Y extends Exception> Exam getGrades(ZonedDateTime deadline, Duration durationForZero,
+			GitFsGrader<Y> grader, double userGradeWeight, TOptional<Path> outWithoutExtensionOpt, String docTitle)
+			throws X, Y, IOException {
+		return getGrades(deadline, durationForZero, true, grader, userGradeWeight, outWithoutExtensionOpt, docTitle);
+	}
+
+	private <Y extends Exception> Exam getGrades(ZonedDateTime deadline, Duration durationForZero, boolean useLinear,
 			GitFsGrader<Y> grader, double userGradeWeight, TOptional<Path> outWithoutExtensionOpt, String docTitle)
 			throws X, Y, IOException {
 		checkArgument(deadline.equals(MAX_DEADLINE) == (durationForZero.getSeconds() == 0l));
@@ -92,8 +148,13 @@ public class BatchGitHistoryGrader<X extends Exception> {
 		if (!withTimePenalty) {
 			penalizerModifier = new EmptyModifier();
 		} else {
-			final LinearPenalizer penalizer = LinearPenalizer.proportionalToLateness(durationForZero);
-			penalizerModifier = GradePenalizer.using(penalizer, deadline.toInstant());
+			if (useLinear) {
+				final LinearPenalizer penalizer = LinearPenalizer.proportionalToLateness(durationForZero);
+				penalizerModifier = GradePenalizer.using(penalizer, deadline.toInstant());
+			} else {
+				final IncrPenalizer p = IncrPenalizer.instance(durationForZero);
+				penalizerModifier = GradePenalizer.usingFunction(p::getFractionRemaining, deadline.toInstant());
+			}
 		}
 //		final ByTimeGrader<Y> byTimeGrader = ByTimeGrader.using(deadline, grader, penalizerModifier, userGradeWeight);
 //		return getGrades(byTimeGrader, outWithoutExtensionOpt, docTitle);
