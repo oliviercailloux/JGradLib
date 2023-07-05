@@ -141,6 +141,7 @@ public class Instanciator {
 		try {
 			LOGGER.debug("Invoking method using args {}.", args);
 			result = invokeExecutable(instance, method, args);
+			LOGGER.debug("Received {}.", result);
 		} catch (ExceptionInInitializerError | InstantiationException e) {
 			return TryCatchAll.failure(e);
 		} catch (InvocationTargetException e) {

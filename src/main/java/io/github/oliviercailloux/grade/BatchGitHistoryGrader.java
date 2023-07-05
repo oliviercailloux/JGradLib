@@ -139,7 +139,7 @@ public class BatchGitHistoryGrader<X extends Exception> {
 			GitFsGrader<Y> grader, double userGradeWeight, TOptional<Path> outWithoutExtensionOpt, String docTitle)
 			throws X, Y, IOException {
 		checkArgument(deadline.equals(MAX_DEADLINE) == (durationForZero.getSeconds() == 0l));
-		checkArgument(userGradeWeight > 0d);
+		checkArgument(userGradeWeight >= 0d);
 		checkArgument(userGradeWeight < 1d);
 		verify(outWithoutExtensionOpt.isPresent() == !docTitle.isEmpty());
 

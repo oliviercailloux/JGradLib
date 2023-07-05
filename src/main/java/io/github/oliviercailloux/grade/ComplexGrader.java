@@ -46,14 +46,19 @@ public class ComplexGrader<X extends Exception> implements Grader<X> {
 	@Override
 	public MarksTree grade(GitHubUsername author, GitHistorySimple history) throws X {
 		verify(!history.graph().nodes().isEmpty());
-		
+
 		final Instant timeCap = ByTimeGrader.cappedAt(history);
-		
+
 		final MarksTree grade1 = grader.grade(history);
-		
+
 		final Mark userGrade = DeadlineGrader.getUsernameGrade(history, author).asNew();
-		final MarksTree gradeWithUser = MarksTree.composite(ImmutableMap.of(C_USER_NAME, userGrade, C_GRADE, grade1));
-		
+		final MarksTree gradeWithUser;
+		if (userGradeWeight == 0d) {
+			gradeWithUser = grade1;
+		} else {
+			gradeWithUser = MarksTree.composite(ImmutableMap.of(C_USER_NAME, userGrade, C_GRADE, grade1));
+		}
+
 		return penalizerModifier.modify(gradeWithUser, timeCap);
 	}
 
@@ -72,6 +77,9 @@ public class ComplexGrader<X extends Exception> implements Grader<X> {
 
 	private static GradeAggregator getUserNamedAggregator(GitFsGrader<?> grader, double userGradeWeight) {
 		final GradeAggregator basis = grader.getAggregator();
+		if (userGradeWeight == 0d) {
+			return basis;
+		}
 		return GradeAggregator.staticAggregator(ImmutableMap.of(ComplexGrader.C_USER_NAME, userGradeWeight,
 				ComplexGrader.C_GRADE, 1d - userGradeWeight), ImmutableMap.of(ComplexGrader.C_GRADE, basis));
 	}

@@ -2,10 +2,13 @@ package io.github.oliviercailloux.java_grade.graders;
 
 import static com.google.common.base.Verify.verify;
 
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableMultiset;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.UnmodifiableIterator;
+import com.google.common.jimfs.Jimfs;
 import com.google.common.math.DoubleMath;
 import com.google.common.util.concurrent.SimpleTimeLimiter;
 import io.github.oliviercailloux.grade.BatchGitHistoryGrader;
@@ -20,27 +23,46 @@ import io.github.oliviercailloux.grade.MarksTree;
 import io.github.oliviercailloux.grade.MavenCodeGrader;
 import io.github.oliviercailloux.grade.MavenCodeGrader.WarningsBehavior;
 import io.github.oliviercailloux.jaris.exceptions.TryCatchAll;
+import io.github.oliviercailloux.jaris.exceptions.TryCatchAllVoid;
 import io.github.oliviercailloux.jaris.throwing.TSupplier;
 import io.github.oliviercailloux.java_grade.bytecode.Instanciator;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.nio.file.FileSystem;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.Function;
-import java.util.stream.IntStream;
+import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class CompCust implements CodeGrader<RuntimeException> {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(CompCust.class);
+
+	private static final Instant INSTANT_EARLY = Instant.parse("1907-12-03T10:15:30.00Z");
+
+	private static final Instant INSTANT_1 = Instant.parse("2007-12-03T10:15:30.00Z");
+
+	private static final Instant INSTANT_2 = Instant.parse("2020-03-03T10:15:30.00Z");
+
+	private static record OrderNoTime(int customerNbOrders, ImmutableList<String> simples) {
+	}
+
+	private static record OrderTime(int customerNbOrders, Instant time, ImmutableList<String> simples) {
+	}
 
 	public static final String PREFIX = "computer-customer";
 
@@ -49,7 +71,7 @@ public class CompCust implements CodeGrader<RuntimeException> {
 	public static final ZonedDateTime DEADLINE_SECOND_CHANCE = LocalDateTime.parse("2023-06-09T23:59:59")
 			.atZone(ZoneId.of("Europe/Paris"));
 
-	public static final double USER_WEIGHT = 0.0125d;
+	public static final double USER_WEIGHT = 0d;
 
 	public static Mark causeToMark(Throwable e) {
 		final String messagePart = e.getMessage() == null ? "" : " with message ‘%s’".formatted(e.getMessage());
@@ -57,12 +79,13 @@ public class CompCust implements CodeGrader<RuntimeException> {
 	}
 
 	public static void main(String[] args) throws Exception {
-//		original();
-		second();
+		original();
+//		second();
 	}
 
 	public static void original() throws IOException {
 		final GitFileSystemWithHistoryFetcher fetcher = GitFileSystemWithHistoryFetcherByPrefix
+//				.getRetrievingByPrefixAndFiltering(PREFIX, "DarylMartinDipp");
 				.getRetrievingByPrefix(PREFIX);
 		final BatchGitHistoryGrader<RuntimeException> batchGrader = BatchGitHistoryGrader.given(() -> fetcher);
 
@@ -98,35 +121,30 @@ public class CompCust implements CodeGrader<RuntimeException> {
 		LOGGER.info("Done original, closed.");
 	}
 
-	private static final String COMP = "io.github.oliviercailloux.exercices.computer.Computer";
+	private static final String CL_COMP = "io.github.oliviercailloux.exercices.computer.Computer";
 
-	private static final Criterion C0 = Criterion.given("Anything committed");
+	private static final String CL_CUST = "io.github.oliviercailloux.exercices.customer.Customer";
+	private static final Criterion COMP = Criterion.given("Computer");
+	private static final Criterion ADD = Criterion.given("Add");
+	private static final Criterion ONE_THEN_SPURIOUS = Criterion.given("One then spurious");
+	private static final Criterion ONE_THEN_DIV = Criterion.given("One then div");
+	private static final Criterion DUPL_THEN_MULT = Criterion.given("Dupl then mult");
+	private static final Criterion LOGS = Criterion.given("Logs");
+	private static final Criterion INVALID_OP = Criterion.given("Invalid op");
+	private static final Criterion INVALID_STATE_OP = Criterion.given("Invalid state op");
 
-	private static final Criterion CYCLE_ONE = Criterion.given("Cycle with one");
-	private static final Criterion CYCLE_THREE = Criterion.given("Cycle with three");
-	private static final Criterion CYCLE_MANY = Criterion.given("Cycle with many");
-
-	private static final Criterion SIZE_ONE = Criterion.given("Size with one");
-	private static final Criterion SIZE_THREE = Criterion.given("Size with three");
-	private static final Criterion SIZE_MANY = Criterion.given("Size with many");
-
-	private static final Criterion DUPL_ONE = Criterion.given("Dupl with one");
-	private static final Criterion DUPL_THREE = Criterion.given("Dupl with three");
-	private static final Criterion DUPL_MANY = Criterion.given("Dupl with many");
-
-	private static final Criterion AS_SET_ONE = Criterion.given("AsSet with one");
-
-	private static final Criterion AS_SET_THREE = Criterion.given("AsSet with three");
-
-	private static final Criterion AS_SET_MANY = Criterion.given("AsSet with many");
-
-	private static final Criterion SNAPSHOTS_ONE = Criterion.given("Snapshots with one");
-
-	private static final Criterion SNAPSHOTS_THREE = Criterion.given("Snapshots with three");
-
-	private static final Criterion SNAPSHOTS_MANY = Criterion.given("Snapshots with many");
-
-	private static final Criterion EQUALS = Criterion.given("Equality");
+	private static final Criterion CUST = Criterion.given("Customer");
+	private static final Criterion READS_ONE_PRODUCT = Criterion.given("Reads one product");
+	private static final Criterion READS_PRODUCTS = Criterion.given("Reads products");
+	private static final Criterion EMPTY = Criterion.given("Empty");
+	private static final Criterion USING_ONE = Criterion.given("Using one");
+	private static final Criterion PLACING_ONE = Criterion.given("Placing one");
+	private static final Criterion PLACING_TWO = Criterion.given("Placing two");
+	private static final Criterion PLACING_MANY = Criterion.given("Placing many");
+	private static final Criterion PLACING_EARLY = Criterion.given("Placing early");
+	private static final Criterion ALL_WRITE_THROWS = Criterion.given("All write throws");
+	private static final Criterion ALL_ITERATES = Criterion.given("Iterates in order");
+	private static final Criterion ORDERED_WRITES_BACK = Criterion.given("Ordered writes back");
 
 	private final ExecutorService executors;
 
@@ -140,267 +158,359 @@ public class CompCust implements CodeGrader<RuntimeException> {
 	@Override
 	public MarksTree gradeCode(Instanciator instanciator) {
 		final ImmutableMap.Builder<Criterion, MarksTree> builder = ImmutableMap.builder();
-		{
-			builder.put(C0, Mark.one());
-		}
-
-		final ImmutableList<String> inputOne = ImmutableList.of("k", "k", "k");
-		final ImmutableList<String> inputThree = ImmutableList.of("j", "kkk", "123");
-		final ImmutableList<String> inputMany = IntStream.range(0, 30).boxed().map(i -> "elm" + i)
-				.collect(ImmutableList.toImmutableList());
-
-		{
-			final TryCatchAll<Boolean> attempt = TryCatchAll.get(() -> {
-				final Iterable<?> cycling = init(instanciator, inputOne);
-
-				return cycles(ImmutableSet.copyOf(inputOne), cycling);
-			});
-			builder.put(CYCLE_ONE, mark(attempt));
-		}
-
-		{
-			final TryCatchAll<Boolean> attempt = TryCatchAll.get(() -> {
-				final Iterable<?> cycling = init(instanciator, inputThree);
-
-				return cycles(ImmutableSet.copyOf(inputThree), cycling);
-			});
-			builder.put(CYCLE_THREE, mark(attempt));
-		}
-
-		{
-			final TryCatchAll<Boolean> attempt = TryCatchAll.get(() -> {
-				final Iterable<?> cycling = init(instanciator, inputMany);
-
-				return cycles(ImmutableSet.copyOf(inputMany), cycling);
-			});
-			builder.put(CYCLE_MANY, mark(attempt));
-		}
-
-		{
-			final TryCatchAll<Boolean> attempt = TryCatchAll.get(() -> {
-				final Iterable<?> cycling = init(instanciator, inputOne);
-				final int size = Instanciator.invokeProducing(cycling, Integer.class, "size").orThrow();
-				return size == ImmutableSet.copyOf(inputOne).size();
-			});
-			builder.put(SIZE_ONE, mark(attempt));
-		}
-
-		{
-			final TryCatchAll<Boolean> attempt = TryCatchAll.get(() -> {
-				final Iterable<?> cycling = init(instanciator, inputThree);
-				final int size = Instanciator.invokeProducing(cycling, Integer.class, "size").orThrow();
-				return size == ImmutableSet.copyOf(inputThree).size();
-			});
-			builder.put(SIZE_THREE, mark(attempt));
-		}
-
-		{
-			final TryCatchAll<Boolean> attempt = TryCatchAll.get(() -> {
-				final Iterable<?> cycling = init(instanciator, inputMany);
-				final int size = Instanciator.invokeProducing(cycling, Integer.class, "size").orThrow();
-				return size == ImmutableSet.copyOf(inputMany).size();
-			});
-			builder.put(SIZE_MANY, mark(attempt));
-		}
-
-		{
-			final TryCatchAll<Mark> attempt = TryCatchAll.get(() -> {
-				final Iterable<?> cycling = init(instanciator, inputOne);
-				return callWithTimeout(() -> duplicates(ImmutableSet.copyOf(inputOne), cycling));
-			});
-			builder.put(DUPL_ONE, attempt.orMapCause(CompCust::causeToMark));
-		}
-
-		{
-			final TryCatchAll<Mark> attempt = TryCatchAll.get(() -> {
-				final Iterable<?> cycling = init(instanciator, inputThree);
-				return callWithTimeout(() -> duplicates(ImmutableSet.copyOf(inputThree), cycling));
-			});
-			builder.put(DUPL_THREE, attempt.orMapCause(CompCust::causeToMark));
-		}
-
-		{
-			final TryCatchAll<Mark> attempt = TryCatchAll.get(() -> {
-				final Iterable<?> cycling = init(instanciator, inputMany);
-				return callWithTimeout(() -> duplicates(ImmutableSet.copyOf(inputMany), cycling));
-			});
-			builder.put(DUPL_MANY, attempt.orMapCause(CompCust::causeToMark));
-		}
-
-		{
-			final TryCatchAll<Boolean> attempt = TryCatchAll.get(() -> {
-				final Iterable<?> cycling = init(instanciator, inputOne);
-				return transformsToSet(ImmutableSet.copyOf(inputOne), cycling);
-			});
-			builder.put(AS_SET_ONE, mark(attempt));
-		}
-
-		{
-			final TryCatchAll<Boolean> attempt = TryCatchAll.get(() -> {
-				final Iterable<?> cycling = init(instanciator, inputThree);
-				return transformsToSet(ImmutableSet.copyOf(inputThree), cycling);
-			});
-			builder.put(AS_SET_THREE, mark(attempt));
-		}
-
-		{
-			final TryCatchAll<Boolean> attempt = TryCatchAll.get(() -> {
-				final Iterable<?> cycling = init(instanciator, inputMany);
-				return transformsToSet(ImmutableSet.copyOf(inputMany), cycling);
-			});
-			builder.put(AS_SET_MANY, mark(attempt));
-		}
-
-		{
-			final TryCatchAll<Boolean> attempt = TryCatchAll.get(() -> {
-				final Iterable<?> cycling = init(instanciator, inputOne);
-				return snapshots(ImmutableSet.copyOf(inputOne), cycling);
-			});
-			builder.put(SNAPSHOTS_ONE, mark(attempt));
-		}
-
-		{
-			final TryCatchAll<Boolean> attempt = TryCatchAll.get(() -> {
-				final Iterable<?> cycling = init(instanciator, inputThree);
-				return snapshots(ImmutableSet.copyOf(inputThree), cycling);
-			});
-			builder.put(SNAPSHOTS_THREE, mark(attempt));
-		}
-
-		{
-			final TryCatchAll<Boolean> attempt = TryCatchAll.get(() -> {
-				final Iterable<?> cycling = init(instanciator, inputMany);
-				return snapshots(ImmutableSet.copyOf(inputMany), cycling);
-			});
-			builder.put(SNAPSHOTS_MANY, mark(attempt));
-		}
-
-		{
-			final TryCatchAll<Mark> attempt = TryCatchAll.get(() -> {
-				final ImmutableMultiset.Builder<ImmutableList<String>> inputsMultBuilder = ImmutableMultiset.builder();
-				for (int i = 0; i < 59; ++i) {
-					final ImmutableList<String> zero = ImmutableList.of("aa", "aa", "bb", "col" + i);
-					final int shift = i % 3;
-					final ImmutableList<String> part1 = zero.subList(shift, zero.size());
-					final ImmutableList<String> part2 = zero.subList(0, shift);
-					final ImmutableList<String> colors = ImmutableList.<String>builder().addAll(part1).addAll(part2)
-							.build();
-					verify(colors.size() == zero.size(), "Unexpected size.");
-
-					final int occurrences = i < 50 ? 1 : (i - 48);
-
-					inputsMultBuilder.addCopies(colors, occurrences);
-				}
-				final ImmutableMultiset<ImmutableList<String>> inputsMult = inputsMultBuilder.build();
-				Mark mark = Mark.one();
-				final ImmutableList<ImmutableList<String>> inputs = inputsMult.asList();
-				for (ImmutableList<String> input1 : inputs) {
-					final Iterable<?> cycling1 = init(instanciator, input1);
-					for (ImmutableList<String> input2 : inputs) {
-						final Iterable<?> cycling2 = init(instanciator, input2);
-						final boolean obsEquals = cycling1.equals(cycling2);
-						final boolean expectedEquals = ImmutableSet.copyOf(input1).equals(ImmutableSet.copyOf(input2));
-						verify(mark.getPoints() == 1d, "Unexpected points state.");
-						if (obsEquals != expectedEquals) {
-							if (expectedEquals) {
-								mark = Mark.zero(
-										"Using equivalent inputs %s and %s, observed non equal resulting instances"
-												.formatted(input1, input2));
-							} else {
-								mark = Mark.zero("Using different inputs %s and %s, observed equal resulting instances"
-										.formatted(input1, input2));
-							}
-						} else if (expectedEquals) {
-							final boolean equalH = cycling1.hashCode() == cycling2.hashCode();
-							if (!equalH) {
-								mark = Mark.zero(
-										"Using equivalent inputs %s and %s, observed equal resulting instances but different hash codes"
-												.formatted(input1, input2));
-							}
-						}
-						if (mark.getPoints() == 0d) {
-							break;
-						}
-					}
-					if (mark.getPoints() == 0d) {
-						break;
-					}
-				}
-				return mark;
-			});
-			builder.put(EQUALS, attempt.orMapCause(CompCust::causeToMark));
-		}
+		builder.put(COMP, gradeComp(instanciator));
+		builder.put(CUST, gradeCust(instanciator));
 
 		return MarksTree.composite(builder.build());
 	}
 
-	@Override
 	public MarksTree gradeComp(Instanciator instanciator) {
 		final ImmutableMap.Builder<Criterion, MarksTree> builder = ImmutableMap.builder();
 		{
-			builder.put(C0, Mark.one());
-		}
-
-		{
-			final Object comp = instanciator.invokeStatic(COMP, Object.class, "instance", ImmutableList.of()).orThrow();
-			Instanciator.invoke(comp, Void.class, "addOperand", 1d);
-			final Object comp2 = instanciator.invokeStatic(COMP, Object.class, "instance", ImmutableList.of())
-					.orThrow();
-			Instanciator.invoke(comp2, Void.class, "addOperand", 3d);
-			Instanciator.invoke(comp, Void.class, "addOperand", 2d);
-			Instanciator.invoke(comp2, Void.class, "addOperand", 17d);
-			final TryCatchAll<Double> obs = Instanciator.invokeProducing(comp2, Double.class, "apply", "+");
+			final TryCatchAll<Object> comp = instanciator
+					.invokeStatic(CL_COMP, Object.class, "instance", ImmutableList.of()).andApply(o -> o.orElseThrow());
+			LOGGER.debug("Comp: {}.", comp);
+			comp.andApply(c -> Instanciator.invoke(c, Void.class, "addOperand", 1d));
+			final TryCatchAll<Object> comp2 = instanciator
+					.invokeStatic(CL_COMP, Object.class, "instance", ImmutableList.of()).andApply(o -> o.orElseThrow());
+			comp2.andApply(c -> Instanciator.invoke(c, Void.class, "addOperand", 3d));
+			comp.andApply(c -> Instanciator.invoke(c, Void.class, "addOperand", 2d));
+			comp2.andApply(c -> Instanciator.invoke(c, Void.class, "addOperand", 17d));
+			final TryCatchAll<Double> obs = comp2
+					.andApply(c -> Instanciator.invokeProducing(c, Double.class, "apply", "+").orThrow());
 			final MarksTree mapped = markG(obs, o -> DoubleMath.fuzzyEquals(20d, o, 1e-6d));
 			builder.put(ADD, mapped);
 		}
 
 		{
-			final Object comp = instanciator.invokeStatic(COMP, Object.class, "oneOp", ImmutableList.of(30d)).orThrow();
-			Instanciator.invoke(comp, Void.class, "addOperand", 1d);
-			final Object comp2 = instanciator.invokeStatic(COMP, Object.class, "oneOp", ImmutableList.of(3d)).orThrow();
-			Instanciator.invoke(comp2, Void.class, "addOperand", 3d);
-			final TryCatchAll<Optional<Void>> secondAdd = Instanciator.invoke(comp2, Void.class, "addOperand", 17d);
+			final TryCatchAll<Object> comp = instanciator
+					.invokeStatic(CL_COMP, Object.class, "oneOp", ImmutableList.of(30d)).andApply(o -> o.orElseThrow());
+			comp.andApply(c -> Instanciator.invoke(c, Void.class, "addOperand", 1d));
+			final TryCatchAll<Object> comp2 = instanciator
+					.invokeStatic(CL_COMP, Object.class, "oneOp", ImmutableList.of(3d)).andApply(o -> o.orElseThrow());
+			comp2.andApply(c -> Instanciator.invoke(c, Void.class, "addOperand", 3d));
+			final TryCatchAll<Optional<Void>> secondAdd = comp2
+					.andApply(c -> Instanciator.invoke(c, Void.class, "addOperand", 17d).orThrow());
 			final MarksTree mapped = secondAdd.map(r -> Mark.zero("Unexpected answer to spurious add."),
 					c -> Mark.binary(c instanceof IllegalStateException));
 			builder.put(ONE_THEN_SPURIOUS, mapped);
 		}
 
 		{
-			final Object comp = instanciator.invokeStatic(COMP, Object.class, "oneOp", ImmutableList.of(30d)).orThrow();
+			final TryCatchAll<Object> comp = instanciator
+					.invokeStatic(CL_COMP, Object.class, "oneOp", ImmutableList.of(30d)).andApply(o -> o.orElseThrow());
 			Instanciator.invoke(comp, Void.class, "addOperand", 1d);
-			final Object comp2 = instanciator.invokeStatic(COMP, Object.class, "oneOp", ImmutableList.of(3d)).orThrow();
-			Instanciator.invoke(comp2, Void.class, "addOperand", 3d);
-			Instanciator.invoke(comp, Void.class, "addOperand", 5d);
-			Instanciator.invoke(comp2, Void.class, "addOperand", 2d);
-			final TryCatchAll<Double> obs = Instanciator.invokeProducing(comp2, Double.class, "apply", "/");
+			final TryCatchAll<Object> comp2 = instanciator
+					.invokeStatic(CL_COMP, Object.class, "oneOp", ImmutableList.of(3d)).andApply(o -> o.orElseThrow());
+			comp2.andApply(c -> Instanciator.invoke(c, Void.class, "addOperand", 2d));
+			comp.andApply(c -> Instanciator.invoke(c, Void.class, "addOperand", 5d));
+			final TryCatchAll<Double> obs = comp2
+					.andApply(c -> Instanciator.invokeProducing(c, Double.class, "apply", "/").orThrow());
 			final MarksTree mapped = markG(obs, o -> DoubleMath.fuzzyEquals(1.5d, o, 1e-6d));
 			builder.put(ONE_THEN_DIV, mapped);
 		}
 
 		{
-			final Object comp = instanciator.invokeStatic(COMP, Object.class, "duplOp", ImmutableList.of(30d))
-					.orThrow();
-			Instanciator.invoke(comp, Void.class, "addOperand", 1d);
-			final Object comp2 = instanciator.invokeStatic(COMP, Object.class, "duplOp", ImmutableList.of(3d))
-					.orThrow();
-			final TryCatchAll<Double> obs = Instanciator.invokeProducing(comp2, Double.class, "apply", "*");
-			final MarksTree mapped = markG(obs, o -> o);
+			final TryCatchAll<Object> comp = instanciator
+					.invokeStatic(CL_COMP, Object.class, "duplOp", ImmutableList.of(3d)).andApply(o -> o.orElseThrow());
+			instanciator.invokeStatic(CL_COMP, Object.class, "duplOp", ImmutableList.of(30d))
+					.andApply(o -> o.orElseThrow());
+			final TryCatchAll<Double> obs = comp
+					.andApply(c -> Instanciator.invokeProducing(c, Double.class, "apply", "*").orThrow());
+			final MarksTree mapped = markG(obs, o -> DoubleMath.fuzzyEquals(9d, o, 1e-6d));
 			builder.put(DUPL_THEN_MULT, mapped);
 		}
 
 		{
-			final Object comp = instanciator.invokeStatic(COMP, Object.class, "instance", ImmutableList.of()).orThrow();
-			Instanciator.invoke(comp, Void.class, "addOperand", 1d);
-			final Object comp2 = instanciator.invokeStatic(COMP, Object.class, "instance", ImmutableList.of())
-					.orThrow();
-			Instanciator.invoke(comp2, Void.class, "addOperand", 3d);
-			Instanciator.invoke(comp, Void.class, "addOperand", 2d);
-			Instanciator.invoke(comp2, Void.class, "addOperand", 17d);
-			final TryCatchAll<Double> obs = Instanciator.invokeProducing(comp2, Double.class, "apply", "+");
-			final MarksTree mapped = markG(obs, o -> DoubleMath.fuzzyEquals(20d, o, 1e-6d));
+			final ch.qos.logback.classic.Logger rootLogger = (ch.qos.logback.classic.Logger) LoggerFactory
+					.getLogger(Logger.ROOT_LOGGER_NAME);
+			final ListAppender<ILoggingEvent> listAppender = new ListAppender<>();
+			listAppender.start();
+			rootLogger.addAppender(listAppender);
+			final TryCatchAll<Object> comp = instanciator
+					.invokeStatic(CL_COMP, Object.class, "instance", ImmutableList.of()).andApply(o -> o.orElseThrow());
+			comp.andApply(c -> Instanciator.invoke(c, Void.class, "addOperand", 1d));
+			comp.andApply(c -> Instanciator.invoke(c, Void.class, "addOperand", 2d));
+			final TryCatchAll<Double> obs = comp
+					.andApply(c -> Instanciator.invokeProducing(c, Double.class, "apply", "+").orThrow());
+			final List<ILoggingEvent> logsList = listAppender.list;
+			final MarksTree mapped = markG(obs, o -> !logsList.isEmpty());
 			builder.put(LOGS, mapped);
 		}
+
+		{
+			final TryCatchAll<Object> comp = instanciator
+					.invokeStatic(CL_COMP, Object.class, "instance", ImmutableList.of()).andApply(o -> o.orElseThrow());
+			comp.andApply(c -> Instanciator.invoke(c, Void.class, "addOperand", 1d));
+			comp.andApply(c -> Instanciator.invoke(c, Void.class, "addOperand", 2d));
+			final TryCatchAll<Double> secondAdd = comp
+					.andApply(c -> Instanciator.invokeProducing(c, Double.class, "apply", "non-op").orThrow());
+			final MarksTree mapped = secondAdd.map(r -> Mark.zero("Unexpected answer to invalid op."),
+					c -> Mark.binary(c instanceof IllegalArgumentException));
+			builder.put(INVALID_OP, mapped);
+		}
+
+		{
+			final TryCatchAll<Object> comp = instanciator
+					.invokeStatic(CL_COMP, Object.class, "instance", ImmutableList.of()).andApply(o -> o.orElseThrow());
+			comp.andApply(c -> Instanciator.invoke(c, Void.class, "addOperand", 1d));
+			final TryCatchAll<Double> secondAdd = comp
+					.andApply(c -> Instanciator.invokeProducing(c, Double.class, "apply", "+").orThrow());
+			final MarksTree mapped = secondAdd.map(r -> Mark.zero("Unexpected answer to invalid state op."),
+					c -> Mark.binary(c instanceof IllegalStateException));
+			builder.put(INVALID_STATE_OP, mapped);
+		}
 		return MarksTree.composite(builder.build());
+	}
+
+	public MarksTree gradeCust(Instanciator instanciator) {
+		final ImmutableMap.Builder<Criterion, MarksTree> builder = ImmutableMap.builder();
+
+		{
+			final TryCatchAll<Boolean> attempt = TryCatchAll.get(() -> {
+				try (FileSystem fs = Jimfs.newFileSystem()) {
+					final Path path = Files.createDirectories(fs.getPath("somedir")).resolve("somefile");
+					Files.writeString(path, "productxxy" + System.lineSeparator());
+					final List<?> read = instanciator
+							.invokeStatic(CL_CUST, List.class, "readOrders", ImmutableList.of(path)).orThrow()
+							.orElseThrow();
+					return ImmutableList.of("productxxy").equals(read);
+				}
+			});
+			builder.put(READS_ONE_PRODUCT, mark(attempt));
+		}
+
+		{
+			final TryCatchAll<Boolean> attempt = TryCatchAll.get(() -> {
+				try (FileSystem fs = Jimfs.newFileSystem()) {
+					final Path path = Files.createDirectories(fs.getPath("somedir")).resolve("somefile");
+					Files.writeString(path, "productxxy" + System.lineSeparator() + "" + System.lineSeparator()
+							+ "another" + System.lineSeparator() + "" + System.lineSeparator());
+					final List<?> read = instanciator
+							.invokeStatic(CL_CUST, List.class, "readOrders", ImmutableList.of(path)).orThrow()
+							.orElseThrow();
+					return ImmutableList.of("productxxy", "another").equals(read);
+				}
+			});
+			builder.put(READS_PRODUCTS, mark(attempt));
+		}
+
+		{
+			final TryCatchAll<Boolean> attempt = TryCatchAll.get(() -> {
+				final Object cust = instanciator.invokeStatic(CL_CUST, Object.class, "empty", ImmutableList.of())
+						.orThrow().orElseThrow();
+				final Set<?> orders = Instanciator.invokeProducing(cust, Set.class, "allOrders").orThrow();
+				return orders.isEmpty();
+			});
+			builder.put(EMPTY, mark(attempt));
+		}
+
+		{
+			final TryCatchAll<Boolean> attempt = TryCatchAll.get(() -> {
+				try (FileSystem fs = Jimfs.newFileSystem()) {
+					final Path path = Files.createDirectories(fs.getPath("somedir")).resolve("somefile");
+					Files.writeString(path, "productxxy" + System.lineSeparator());
+					final Object cust = instanciator
+							.invokeStatic(CL_CUST, Object.class, "usingOrders", ImmutableList.of(path)).orThrow()
+							.orElseThrow();
+					final ImmutableSet<OrderTime> observed = allOrders(cust);
+					final OrderNoTime expected = new OrderNoTime(1, ImmutableList.of("productxxy"));
+					return allEqual(ImmutableSet.of(expected), observed);
+				}
+			});
+			builder.put(USING_ONE, mark(attempt));
+		}
+
+		{
+			final TryCatchAll<Boolean> attempt = TryCatchAll.get(() -> {
+				final Object cust = instanciator.invokeStatic(CL_CUST, Object.class, "empty", ImmutableList.of())
+						.orThrow().orElseThrow();
+				Instanciator.invoke(cust, Void.class, "placeOrder", ImmutableList.of(INSTANT_1, "productxxy"));
+				final ImmutableMap<Instant, ImmutableList<String>> expected = ImmutableMap.of(INSTANT_1,
+						ImmutableList.of("productxxy"));
+				return equalCust(expected, cust);
+			});
+			builder.put(PLACING_ONE, mark(attempt));
+		}
+
+		{
+			final TryCatchAll<Boolean> attempt = TryCatchAll.get(() -> {
+				final Object cust = instanciator.invokeStatic(CL_CUST, Object.class, "empty", ImmutableList.of())
+						.orThrow().orElseThrow();
+				Instanciator.invoke(cust, Void.class, "placeOrder", ImmutableList.of(INSTANT_1, "productxxy"));
+				Instanciator.invoke(cust, Void.class, "placeOrder", ImmutableList.of(INSTANT_2, "productxxyz"));
+				final ImmutableMap<Instant, ImmutableList<String>> expected = ImmutableMap.of(INSTANT_1,
+						ImmutableList.of("productxxy"), INSTANT_2, ImmutableList.of("productxxyz"));
+				return equalCust(expected, cust);
+			});
+			builder.put(PLACING_TWO, mark(attempt));
+		}
+
+		{
+			final TryCatchAll<Boolean> attempt = TryCatchAll.get(() -> {
+				final Object cust = instanciator.invokeStatic(CL_CUST, Object.class, "empty", ImmutableList.of())
+						.orThrow().orElseThrow();
+				Instanciator.invoke(cust, Void.class, "placeOrder", ImmutableList.of(INSTANT_1, "productxxy"));
+				Instanciator.invoke(cust, Void.class, "placeOrder", ImmutableList.of(INSTANT_2, "productxxyz"));
+				Instanciator.invoke(cust, Void.class, "placeOrder", ImmutableList.of(INSTANT_1, "productxxy2"));
+				Instanciator.invoke(cust, Void.class, "placeOrder", ImmutableList.of(INSTANT_2, "productxxyz2"));
+				final ImmutableMap<Instant, ImmutableList<String>> expected = ImmutableMap.of(INSTANT_1,
+						ImmutableList.of("productxxy", "productxxy2"), INSTANT_2,
+						ImmutableList.of("productxxyz", "productxxyz2"));
+				return equalCust(expected, cust);
+			});
+			builder.put(PLACING_MANY, mark(attempt));
+		}
+
+		{
+			final TryCatchAll<Object> attempt = TryCatchAll.get(() -> {
+				final Object cust = instanciator.invokeStatic(CL_CUST, Object.class, "empty", ImmutableList.of())
+						.orThrow().orElseThrow();
+				Instanciator.invoke(cust, Void.class, "placeOrder", ImmutableList.of(INSTANT_EARLY, "productxxy"))
+						.orThrow().orElseThrow();
+				return cust;
+			});
+			builder.put(PLACING_EARLY, attempt.map(c -> Mark.zero("got %s".formatted(allOrdersOrNull(c))),
+					e -> Mark.binary(e instanceof IllegalArgumentException)));
+		}
+
+		{
+			final TryCatchAllVoid attempt = TryCatchAllVoid.run(() -> {
+				final Object cust = instanciator.invokeStatic(CL_CUST, Object.class, "empty", ImmutableList.of())
+						.orThrow().orElseThrow();
+				final Set<String> all = Instanciator.invokeProducing(cust, Set.class, "allOrders").orThrow();
+				all.add("ploum");
+			});
+			builder.put(ALL_WRITE_THROWS,
+					attempt.map(() -> Mark.zero(), e -> Mark.binary(e instanceof UnsupportedOperationException)));
+		}
+
+		{
+			final TryCatchAll<Boolean> attempt = TryCatchAll.get(() -> {
+				final Object cust = instanciator.invokeStatic(CL_CUST, Object.class, "empty", ImmutableList.of())
+						.orThrow().orElseThrow();
+				final Stream<Instant> latterOnes = Stream.iterate(INSTANT_2, i -> i.plus(Duration.ofMinutes(5l)))
+						.limit(50);
+				final Stream<Instant> formerOnes = Stream.iterate(INSTANT_1, i -> i.plus(Duration.ofMinutes(5l)))
+						.limit(50);
+				final ImmutableList<Instant> instants = Stream.concat(latterOnes, formerOnes)
+						.collect(ImmutableList.toImmutableList());
+				for (Instant instant : instants) {
+					Instanciator.invoke(cust, Void.class, "placeOrder", ImmutableList.of(instant, instant.toString()));
+				}
+				final ImmutableSet<OrderTime> allOrders = allOrders(cust);
+				final ImmutableList<Instant> times = allOrders.stream().map(OrderTime::time)
+						.collect(ImmutableList.toImmutableList());
+				return times.equals(ImmutableList.sortedCopyOf(Comparator.naturalOrder(), instants));
+			});
+			builder.put(ALL_ITERATES, mark(attempt));
+		}
+
+		{
+			final TryCatchAll<Boolean> attempt = TryCatchAll.get(() -> {
+				final Object cust = instanciator.invokeStatic(CL_CUST, Object.class, "empty", ImmutableList.of())
+						.orThrow().orElseThrow();
+				Instanciator.invoke(cust, Void.class, "placeOrder", ImmutableList.of(INSTANT_1, "one"));
+				Instanciator.invoke(cust, Void.class, "placeOrder", ImmutableList.of(INSTANT_2, "two"));
+				final List<String> ordered = ordered(cust, INSTANT_1);
+				ordered.add("anotherone");
+				final List<?> orderedOne = ordered(cust, INSTANT_1);
+				final List<?> orderedTwo = ordered(cust, INSTANT_2);
+				return ImmutableSet.copyOf(orderedOne).equals(ImmutableSet.of("one", "anotherone"))
+						&& orderedTwo.equals(ImmutableList.of("two"));
+			});
+			builder.put(ORDERED_WRITES_BACK, mark(attempt));
+		}
+		return MarksTree.composite(builder.build());
+	}
+
+	private List<String> ordered(final Object cust, final Instant instant) throws Throwable {
+		final Object orders = Instanciator.invokeProducing(cust, Object.class, "ordered", instant).orThrow();
+		final List<String> ordered = Instanciator.invokeProducing(orders, List.class, "simpleOrders").orThrow();
+		return ordered;
+	}
+
+	private boolean equalCust(Map<Instant, ImmutableList<String>> expected, Object observed) throws Throwable {
+		final ImmutableSet<OrderTime> allOrders = allOrders(observed);
+		final ImmutableSet.Builder<OrderTime> indivOrderBuilder = ImmutableSet.builder();
+		for (Instant instant : expected.keySet()) {
+			final OrderTime inst1 = toOrder(
+					Instanciator.invokeProducing(observed, Object.class, "ordered", instant).orThrow());
+			indivOrderBuilder.add(inst1);
+		}
+		final ImmutableSet<OrderTime> indivOrders = indivOrderBuilder.build();
+		final ImmutableSet<OrderTime> expectedIndivs = expected.entrySet().stream()
+				.map(e -> new OrderTime(expected.size(), e.getKey(), e.getValue()))
+				.collect(ImmutableSet.toImmutableSet());
+		return allEqualWithTime(expectedIndivs, indivOrders) && allEqualWithTime(expectedIndivs, allOrders);
+	}
+
+	private ImmutableSet<OrderTime> allOrders(Object cust) throws Throwable {
+		final Set<?> orders = Instanciator.invokeProducing(cust, Set.class, "allOrders").orThrow();
+		final ImmutableSet.Builder<OrderTime> ordersBuilder = ImmutableSet.builder();
+		for (Object order : orders) {
+			final OrderTime asOrder = toOrder(order);
+			ordersBuilder.add(asOrder);
+		}
+		final ImmutableSet<OrderTime> observed = ordersBuilder.build();
+		return observed;
+	}
+
+	private ImmutableSet<OrderTime> allOrdersOrNull(Object cust) {
+		return TryCatchAll.get(() -> allOrders(cust)).orMapCause(e -> null);
+	}
+
+	private boolean allEqual(ImmutableSet<OrderNoTime> expected, ImmutableSet<OrderTime> observed) {
+		if (expected.size() != observed.size()) {
+			return false;
+		}
+		final UnmodifiableIterator<OrderNoTime> it1 = expected.iterator();
+		final UnmodifiableIterator<OrderTime> it2 = observed.iterator();
+		while (it1.hasNext()) {
+			final OrderNoTime e = it1.next();
+			final OrderTime o = it2.next();
+			if (!equals(e, o)) {
+				return false;
+			}
+		}
+		verify(!it2.hasNext());
+		return true;
+	}
+
+	private boolean allEqualWithTime(ImmutableSet<OrderTime> expected, ImmutableSet<OrderTime> observed) {
+		if (expected.size() != observed.size()) {
+			return false;
+		}
+		final UnmodifiableIterator<OrderTime> it1 = expected.iterator();
+		final UnmodifiableIterator<OrderTime> it2 = observed.iterator();
+		while (it1.hasNext()) {
+			final OrderTime e = it1.next();
+			final OrderTime o = it2.next();
+			if (!equals(e, o)) {
+				return false;
+			}
+		}
+		verify(!it2.hasNext());
+		return true;
+	}
+
+	private boolean equals(OrderNoTime expected, OrderTime observed) {
+		return expected.customerNbOrders == observed.customerNbOrders && expected.simples.equals(observed.simples);
+	}
+
+	private boolean equals(OrderTime expected, OrderTime observed) {
+		return expected.customerNbOrders == observed.customerNbOrders && expected.time.equals(observed.time)
+				&& expected.simples.equals(observed.simples);
+	}
+
+	private OrderTime toOrder(Object order) throws Throwable {
+		final Object cust = Instanciator.invokeProducing(order, Object.class, "customer").orThrow();
+		final Set<?> allOrders = Instanciator.invokeProducing(cust, Set.class, "allOrders").orThrow();
+		final Instant time = Instanciator.invokeProducing(order, Instant.class, "time").orThrow();
+		final List<?> theseOrders = Instanciator.invokeProducing(order, List.class, "simpleOrders").orThrow();
+		final ImmutableList<String> theseOrdersAsStrings = theseOrders.stream().map(o -> (String) o)
+				.collect(ImmutableList.toImmutableList());
+		return new OrderTime(allOrders.size(), time, theseOrdersAsStrings);
 	}
 
 	private <T> T callWithTimeout(TSupplier<? extends T, ?> callable) throws Throwable {
@@ -429,33 +539,42 @@ public class CompCust implements CodeGrader<RuntimeException> {
 	}
 
 	@Override
-	/**
-	 * For up to three colors without asSetOfColors() and equality: 7pts. More than
-	 * three colors without asSetOfColors() and equality: 6pts. More than three
-	 * colors, asSetOfColors(): 4 pts. More than three colors, equality: 3 pts.
-	 */
 	public GradeAggregator getCodeAggregator() {
 		final ImmutableMap.Builder<Criterion, Double> builder = ImmutableMap.builder();
-		builder.put(C0, 0.25d);
-		builder.put(CYCLE_ONE, 0.75d);
-		builder.put(CYCLE_THREE, 1.25d);
-		builder.put(SIZE_ONE, 0.75d);
-		builder.put(SIZE_THREE, 0.75d);
-		builder.put(DUPL_ONE, 0.75d);
-		builder.put(DUPL_THREE, 0.75d);
-		builder.put(SNAPSHOTS_ONE, 0.75d);
-		builder.put(SNAPSHOTS_THREE, 0.75d);
+		builder.put(COMP, 6d);
+		builder.put(CUST, 14d);
+		return GradeAggregator.staticAggregator(builder.build(),
+				ImmutableMap.of(COMP, getCompAggregator(), CUST, getCustAggregator()));
+	}
 
-		builder.put(CYCLE_MANY, 1.5d);
-		builder.put(SIZE_MANY, 1.5d);
-		builder.put(DUPL_MANY, 1.5d);
-		builder.put(SNAPSHOTS_MANY, 1.5d);
+	private GradeAggregator getCompAggregator() {
+		final ImmutableMap.Builder<Criterion, Double> innerBuilder = ImmutableMap.builder();
+		innerBuilder.put(ADD, 1d);
+		innerBuilder.put(ONE_THEN_SPURIOUS, 1d);
+		innerBuilder.put(ONE_THEN_DIV, 1d);
+		innerBuilder.put(DUPL_THEN_MULT, 1d);
+		innerBuilder.put(LOGS, 1d);
+		innerBuilder.put(INVALID_OP, 0.5d);
+		innerBuilder.put(INVALID_STATE_OP, 0.5d);
+		return GradeAggregator.staticAggregator(innerBuilder.build(), ImmutableMap.of());
+	}
 
-		builder.put(AS_SET_ONE, 1d);
-		builder.put(AS_SET_THREE, 1d);
-		builder.put(AS_SET_MANY, 2d);
-		builder.put(EQUALS, 3d);
-		return GradeAggregator.staticAggregator(builder.build(), ImmutableMap.of());
+	private GradeAggregator getCustAggregator() {
+		final ImmutableMap.Builder<Criterion, Double> innerBuilder = ImmutableMap.builder();
+		innerBuilder.put(EMPTY, 1.5d);
+		innerBuilder.put(PLACING_ONE, 1d);
+		innerBuilder.put(PLACING_TWO, 1d);
+		innerBuilder.put(PLACING_MANY, 2d);
+		innerBuilder.put(PLACING_EARLY, 0.75d);
+		innerBuilder.put(ALL_WRITE_THROWS, 0.75d);
+
+		innerBuilder.put(READS_ONE_PRODUCT, 0.5d);
+		innerBuilder.put(READS_PRODUCTS, 1d);
+		innerBuilder.put(USING_ONE, 0.5d);
+
+		innerBuilder.put(ALL_ITERATES, 2d);
+		innerBuilder.put(ORDERED_WRITES_BACK, 3d);
+		return GradeAggregator.staticAggregator(innerBuilder.build(), ImmutableMap.of());
 	}
 
 	public void close() {

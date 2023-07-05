@@ -22,7 +22,7 @@ import io.github.oliviercailloux.grade.comm.EmailerDauphineHelper;
 import io.github.oliviercailloux.grade.comm.GradesInEmails;
 import io.github.oliviercailloux.grade.comm.json.JsonStudents;
 import io.github.oliviercailloux.grade.format.json.JsonSimpleGrade;
-import io.github.oliviercailloux.java_grade.graders.CarGrader;
+import io.github.oliviercailloux.java_grade.graders.CompCust;
 import io.github.oliviercailloux.xml.XmlUtils;
 import jakarta.mail.Folder;
 import java.nio.file.Files;
@@ -40,9 +40,10 @@ public class SendEmails {
 
 	public static void main(String[] args) throws Exception {
 //		final String prefix = Colors.PREFIX + " second";
-		final String prefix = CarGrader.PREFIX;
+		final String prefix = CompCust.PREFIX;
 //		final String prefix = Strings.PREFIX + " second";
-//		final String prefix = "Release 2";
+//		final String prefix = "Release 3";
+//		final String prefix = "Présentation";
 
 		final JsonStudents students = JsonStudents.from(Files.readString(WORK_DIR.resolve("usernames.json")));
 		final Exam exam = JsonSimpleGrade.asExam(Files.readString(WORK_DIR.resolve("grades " + prefix + ".json")));

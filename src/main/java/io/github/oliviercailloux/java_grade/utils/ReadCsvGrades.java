@@ -1,6 +1,15 @@
 package io.github.oliviercailloux.java_grade.utils;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Preconditions.checkState;
+import static com.google.common.base.Verify.verify;
+
+import com.github.miachm.sods.Range;
+import com.github.miachm.sods.Sheet;
+import com.github.miachm.sods.SpreadSheet;
 import com.google.common.base.MoreObjects;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.univocity.parsers.annotations.Parsed;
@@ -14,6 +23,7 @@ import io.github.oliviercailloux.grade.Mark;
 import io.github.oliviercailloux.grade.MarksTree;
 import io.github.oliviercailloux.grade.format.json.JsonSimpleGrade;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.StringReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -42,6 +52,17 @@ public class ReadCsvGrades {
 		@Parsed(field = "Commentaire")
 		private String comment;
 
+		public MarkRecord(String name, String first, String email, String uid, String gu, double mark, String comment) {
+			this.name = checkNotNull(name);
+			this.first = checkNotNull(first);
+			this.email = checkNotNull(email);
+			this.uid = checkNotNull(uid);
+			this.gu = checkNotNull(gu);
+			checkArgument(Double.isFinite(mark));
+			this.mark = mark;
+			this.comment = checkNotNull(comment);
+		}
+
 		@Override
 		public boolean equals(Object o2) {
 			if (!(o2 instanceof ReadCsvGrades.MarkRecord)) {
@@ -64,11 +85,49 @@ public class ReadCsvGrades {
 	}
 
 	public static void main(String[] args) throws Exception {
+//		final ImmutableSet<MarkRecord> markRecords = readOds("R3");
+		final ImmutableSet<MarkRecord> markRecords = readOds("Présentations");
 
-//		readCsv();
+//		markRecords = readCsv();
+
+		final ImmutableMap<GitHubUsername, MarksTree> gradeMap = markRecords.stream().collect(
+				ImmutableMap.toImmutableMap(r -> GitHubUsername.given(r.gu), r -> Mark.given(r.mark / 20d, r.comment)));
+		final String exam = JsonSimpleGrade.toJson(new Exam(GradeAggregator.TRIVIAL, gradeMap));
+//		Files.writeString(Path.of("grades Release 3.json"), exam);
+		Files.writeString(Path.of("grades Présentation.json"), exam);
 	}
 
-	private static void readCsv() throws IOException {
+	private static ImmutableSet<MarkRecord> readOds(String sheetName) throws IOException {
+		final ImmutableSet<MarkRecord> markRecords;
+		try (InputStream is = Files.newInputStream(Path.of("../../L3/Projets.ods"))) {
+			final SpreadSheet spread = new SpreadSheet(is);
+			final Sheet sheet = spread.getSheet(sheetName);
+			final Range range = sheet.getDataRange();
+			verify(range.getColumn() == 0);
+			checkState(range.getLastColumn() == 7);
+			verify(range.getRow() == 0);
+			LOGGER.info("Last row: {}.", range.getLastRow());
+			final ImmutableList.Builder<MarkRecord> builder = ImmutableList.builder();
+			for (int row = 1; row <= range.getLastRow(); ++row) {
+				final String name = (String) range.getCell(row, 0).getValue();
+				final String first = (String) range.getCell(row, 1).getValue();
+				final String email = (String) range.getCell(row, 2).getValue();
+				final String uid = range.getCell(row, 3).getValue().toString();
+				final String gu = (String) range.getCell(row, 4).getValue();
+				final double mark = (double) range.getCell(row, 6).getValue();
+				final String comment = (String) range.getCell(row, 7).getValue();
+				final MarkRecord rec = new MarkRecord(name, first, email, uid, gu, mark, comment);
+				LOGGER.info("Adding {}.", rec);
+				builder.add(rec);
+			}
+			final ImmutableList<MarkRecord> recs = builder.build();
+			markRecords = ImmutableSet.copyOf(recs);
+			checkState(recs.size() == markRecords.size());
+		}
+		return markRecords;
+	}
+
+	private static ImmutableSet<MarkRecord> readCsv() throws IOException {
 		final String csv = Files.readString(Path.of("../../L3/Projets.csv"));
 		final StringReader csvReader = new StringReader(csv);
 		final BeanListProcessor<MarkRecord> processor = new BeanListProcessor<>(MarkRecord.class);
@@ -82,10 +141,6 @@ public class ReadCsvGrades {
 				.collect(ImmutableSet.toImmutableSet());
 		settings.setHeaderExtractionEnabled(true);
 		LOGGER.info("Mark records: {}.", markRecords);
-
-		final ImmutableMap<GitHubUsername, MarksTree> gradeMap = markRecords.stream().collect(
-				ImmutableMap.toImmutableMap(r -> GitHubUsername.given(r.gu), r -> Mark.given(r.mark / 20d, r.comment)));
-		final String exam = JsonSimpleGrade.toJson(new Exam(GradeAggregator.TRIVIAL, gradeMap));
-		Files.writeString(Path.of("grades Release 2.json"), exam);
+		return markRecords;
 	}
 }
