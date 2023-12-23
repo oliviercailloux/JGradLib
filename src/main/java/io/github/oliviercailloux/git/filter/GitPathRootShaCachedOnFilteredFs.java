@@ -1,4 +1,4 @@
-package io.github.oliviercailloux.git.fs;
+package io.github.oliviercailloux.git.filter;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Verify.verify;

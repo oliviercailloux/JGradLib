@@ -1,34 +1,38 @@
-package io.github.oliviercailloux.git.fs;
+package io.github.oliviercailloux.git.filter;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Verify.verify;
 
 import io.github.oliviercailloux.gitjfs.ForwardingGitPath;
-import io.github.oliviercailloux.gitjfs.ForwardingGitPathRootRef;
-import io.github.oliviercailloux.gitjfs.GitPath;
-import io.github.oliviercailloux.gitjfs.GitPathRoot;
-import io.github.oliviercailloux.gitjfs.GitPathRootRef;
+import io.github.oliviercailloux.gitjfs.ForwardingGitPathRootSha;
+import io.github.oliviercailloux.gitjfs.GitPathRootSha;
 import java.io.IOException;
 import java.nio.file.LinkOption;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.util.Objects;
 
 /**
- * Similar to a {@link GitPathRootRef} (which it wraps and delegates to) except
+ * Similar to a {@link GitPathRootSha} (which it wraps and delegates to) except
  * linked to a filteredFs.
  */
-final class GitPathRootRefOnFilteredFs extends ForwardingGitPathRootRef implements IGitPathRootOnFilteredFs {
+final class GitPathRootShaOnFilteredFs extends ForwardingGitPathRootSha implements IGitPathRootOnFilteredFs {
 
-	static GitPathRootRefOnFilteredFs wrap(GitFilteringFs fs, GitPathRootRef delegate) {
-		return new GitPathRootRefOnFilteredFs(fs, delegate);
+	static GitPathRootShaOnFilteredFs wrap(GitFilteringFs fs, GitPathRootSha delegate) {
+		return new GitPathRootShaOnFilteredFs(fs, delegate);
 	}
 
 	private final GitFilteringFs fs;
-	private final GitPathRootRef delegate;
+	private final GitPathRootSha delegate;
 
-	private GitPathRootRefOnFilteredFs(GitFilteringFs fs, GitPathRootRef delegate) {
+	private GitPathRootShaOnFilteredFs(GitFilteringFs fs, GitPathRootSha delegate) {
 		this.fs = checkNotNull(fs);
 		this.delegate = checkNotNull(delegate);
+	}
+
+	@Override
+	public GitPathRootShaCachedOnFilteredFs toShaCached() throws IOException, NoSuchFileException {
+		return GitPathRootShaCachedOnFilteredFs.wrap(getFileSystem(), super.toShaCached());
 	}
 
 	@Override
@@ -37,7 +41,7 @@ final class GitPathRootRefOnFilteredFs extends ForwardingGitPathRootRef implemen
 	}
 
 	@Override
-	public GitPathRootRef delegate() {
+	public GitPathRootSha delegate() {
 		return delegate;
 	}
 
@@ -56,16 +60,16 @@ final class GitPathRootRefOnFilteredFs extends ForwardingGitPathRootRef implemen
 		return delegate().toString();
 	}
 
-	@Deprecated
 	@Override
-	public GitPathRoot toAbsolutePath() {
+	@Deprecated
+	public GitPathRootShaOnFilteredFs toAbsolutePath() {
 		verify(delegate.toAbsolutePath().equals(delegate));
 		return this;
 	}
 
-	@Deprecated
 	@Override
-	public GitPathRoot getRoot() {
+	@Deprecated
+	public GitPathRootShaOnFilteredFs getRoot() {
 		verify(delegate.getRoot().equals(delegate));
 		return this;
 	}
@@ -79,38 +83,38 @@ final class GitPathRootRefOnFilteredFs extends ForwardingGitPathRootRef implemen
 
 	@Override
 	@Deprecated
-	public GitPathRoot getParent() {
+	public GitPathRootShaOnFilteredFs getParent() {
 		verify(delegate.getParent() == null);
 		return null;
 	}
 
 	@Override
-	public GitPath getName(int index) {
+	public GitPathOnFilteredFs getName(int index) {
 		return GitPathOnFilteredFs.wrap(fs, delegate.getName(index));
 	}
 
 	@Override
-	public GitPath subpath(int beginIndex, int endIndex) {
+	public GitPathOnFilteredFs subpath(int beginIndex, int endIndex) {
 		return GitPathOnFilteredFs.wrap(fs, delegate.subpath(beginIndex, endIndex));
 	}
 
 	@Override
-	public GitPath normalize() {
+	public GitPathOnFilteredFs normalize() {
 		return GitPathOnFilteredFs.wrap(fs, delegate.normalize());
 	}
 
 	@Override
-	public GitPath resolve(Path other) {
+	public GitPathOnFilteredFs resolve(Path other) {
 		return GitPathOnFilteredFs.wrap(fs, delegate.resolve(other));
 	}
 
 	@Override
-	public GitPath relativize(Path other) {
+	public GitPathOnFilteredFs relativize(Path other) {
 		return GitPathOnFilteredFs.wrap(fs, delegate.relativize(other));
 	}
 
 	@Override
-	public GitPath toRealPath(LinkOption... options) throws IOException {
+	public GitPathOnFilteredFs toRealPath(LinkOption... options) throws IOException {
 		return GitPathOnFilteredFs.wrap(fs, delegate.toRealPath(options));
 	}
 

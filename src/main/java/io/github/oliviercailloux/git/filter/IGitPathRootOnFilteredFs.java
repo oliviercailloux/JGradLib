@@ -1,4 +1,4 @@
-package io.github.oliviercailloux.git.fs;
+package io.github.oliviercailloux.git.filter;
 
 import io.github.oliviercailloux.gitjfs.GitPathRoot;
 

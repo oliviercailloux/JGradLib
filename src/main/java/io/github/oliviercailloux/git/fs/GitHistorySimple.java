@@ -11,6 +11,7 @@ import com.google.common.collect.Sets;
 import com.google.common.graph.Graph;
 import com.google.common.graph.ImmutableGraph;
 import io.github.oliviercailloux.git.GitHubHistory;
+import io.github.oliviercailloux.git.filter.GitFilteringFs;
 import io.github.oliviercailloux.gitjfs.Commit;
 import io.github.oliviercailloux.gitjfs.GitFileSystem;
 import io.github.oliviercailloux.gitjfs.GitPathRootShaCached;

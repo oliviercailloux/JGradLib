@@ -11,6 +11,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.UnmodifiableIterator;
 import com.google.common.graph.ImmutableGraph;
 import io.github.oliviercailloux.factogit.JGit;
+import io.github.oliviercailloux.git.filter.GitFilteringFs;
 import io.github.oliviercailloux.gitjfs.GitDfsFileSystem;
 import io.github.oliviercailloux.gitjfs.GitFileSystemProvider;
 import io.github.oliviercailloux.gitjfs.GitPathRootSha;
