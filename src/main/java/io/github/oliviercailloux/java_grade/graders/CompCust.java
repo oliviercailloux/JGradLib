@@ -85,8 +85,8 @@ public class CompCust implements CodeGrader<RuntimeException> {
 
 	public static void original() throws IOException {
 		final GitFileSystemWithHistoryFetcher fetcher = GitFileSystemWithHistoryFetcherByPrefix
-//				.getRetrievingByPrefixAndFiltering(PREFIX, "DarylMartinDipp");
-				.getRetrievingByPrefix(PREFIX);
+				.getRetrievingByPrefixAndFilteringAndUsingCommitDates(PREFIX, "Student");
+//				.getRetrievingByPrefix(PREFIX);
 		final BatchGitHistoryGrader<RuntimeException> batchGrader = BatchGitHistoryGrader.given(() -> fetcher);
 
 		final CompCust grader = new CompCust();
@@ -103,7 +103,7 @@ public class CompCust implements CodeGrader<RuntimeException> {
 
 	public static void second() throws IOException {
 		final GitFileSystemWithHistoryFetcher fetcher = GitFileSystemWithHistoryFetcherByPrefix
-				.getRetrievingByPrefixAndFiltering(PREFIX, "Arvindesss");
+				.getRetrievingByPrefixAndFiltering(PREFIX, "Student");
 //				.getRetrievingByPrefix(PREFIX);
 
 		final BatchGitHistoryGrader<RuntimeException> batchGrader = BatchGitHistoryGrader.given(() -> fetcher);

@@ -77,9 +77,16 @@ public class Instanciator {
 		final Object[] argsArray = args.toArray();
 		try {
 			if (executable instanceof Method m) {
+				/*
+				 * TODO using this is required to avoid an IllegalAccessException when invoking
+				 * a public static factory method that uses an anonymous instance and returns
+				 * it.
+				 */
+				m.trySetAccessible();
 				return m.invoke(instance.orElse(null), argsArray);
 			} else if (executable instanceof Constructor<?> c) {
 				checkArgument(instance.isEmpty());
+				c.trySetAccessible();
 				return c.newInstance(argsArray);
 			} else {
 				throw new VerifyException();

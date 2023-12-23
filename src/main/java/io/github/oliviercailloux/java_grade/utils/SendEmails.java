@@ -21,8 +21,9 @@ import io.github.oliviercailloux.grade.comm.Emailer;
 import io.github.oliviercailloux.grade.comm.EmailerDauphineHelper;
 import io.github.oliviercailloux.grade.comm.GradesInEmails;
 import io.github.oliviercailloux.grade.comm.json.JsonStudents;
+import io.github.oliviercailloux.grade.format.HtmlGrades;
 import io.github.oliviercailloux.grade.format.json.JsonSimpleGrade;
-import io.github.oliviercailloux.java_grade.graders.CompCust;
+import io.github.oliviercailloux.jaris.collections.CollectionUtils;
 import io.github.oliviercailloux.xml.XmlUtils;
 import jakarta.mail.Folder;
 import java.nio.file.Files;
@@ -31,6 +32,7 @@ import java.util.Map;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.w3c.dom.Document;
 
 public class SendEmails {
 	@SuppressWarnings("unused")
@@ -40,13 +42,16 @@ public class SendEmails {
 
 	public static void main(String[] args) throws Exception {
 //		final String prefix = Colors.PREFIX + " second";
-		final String prefix = CompCust.PREFIX;
+//		final String prefix = CompCust.PREFIX;
 //		final String prefix = Strings.PREFIX + " second";
-//		final String prefix = "Release 3";
+		final String prefix = "";
 //		final String prefix = "Présentation";
 
 		final JsonStudents students = JsonStudents.from(Files.readString(WORK_DIR.resolve("usernames.json")));
-		final Exam exam = JsonSimpleGrade.asExam(Files.readString(WORK_DIR.resolve("grades " + prefix + ".json")));
+//		final JsonObject jsonS = PrintableJsonObjectFactory.wrapRawString(Files.readString(WORK_DIR.resolve("usernames.json"))).asJsonObject();
+//		final StudentOnGitHubKnown studentsK = JsonStudentOnGitHubKnown.asStudentOnGitHubKnown(jsonS);
+		final Exam exam = JsonSimpleGrade.asExam(
+				Files.readString(WORK_DIR.resolve("grades" + (prefix.equals("") ? "" : " ") + prefix + ".json")));
 
 		final boolean allKnown = students.getInstitutionalStudentsByGitHubUsername().keySet()
 				.containsAll(exam.getUsernames());
@@ -84,7 +89,8 @@ public class SendEmails {
 			final ImmutableSet<EmailAddress> addresses = gradesByEmail.keySet().stream()
 					.map(EmailAddressAndPersonal::getAddress).collect(ImmutableSet.toImmutableSet());
 			gradesInEmails.filterRecipients(addresses);
-			final ImmutableMap<EmailAddress, Grade> lastGrades = gradesInEmails.getLastGrades(prefix);
+			final String prefixOrFinal = prefix.equals("") ? "final" : prefix;
+			final ImmutableMap<EmailAddress, Grade> lastGrades = gradesInEmails.getLastGrades(prefixOrFinal);
 			LOGGER.debug("Searching grades sent to {}, got those sent to {}.", addresses, lastGrades.keySet());
 
 //			checkState(!lastGrades.isEmpty());
@@ -117,8 +123,16 @@ public class SendEmails {
 				}
 			}
 
-			final ImmutableSet<Email> emails = gradesDiffering.entrySet().stream().map(
-					e -> GradesInEmails.asEmail(getDestination(e.getKey()), prefix, e.getValue(), stats, quartiles))
+//			final String json = JsonSimpleGrade.toJson(gradesByEmail);
+			final String title = "grades " + prefix + " sent";
+//			Files.writeString(Path.of(title + ".json"), json);
+			final ImmutableMap<String, Grade> gradesByStr = CollectionUtils.transformKeys(lastGrades,
+					e -> students.getInstitutionalStudentsByEmail().get(e).getUsername());
+			final Document doc = HtmlGrades.asHtmlGrades(gradesByStr, title, 20d);
+			Files.writeString(Path.of(title + ".html"), XmlUtils.asString(doc));
+
+			final ImmutableSet<Email> emails = gradesDiffering.entrySet().stream().map(e -> GradesInEmails
+					.asEmail(getDestination(e.getKey()), prefixOrFinal, e.getValue(), stats, quartiles))
 					.collect(ImmutableSet.toImmutableSet());
 
 			final Optional<Email> first = emails.stream().findFirst();

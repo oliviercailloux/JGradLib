@@ -14,6 +14,8 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.MoreCollectors;
 import com.google.common.graph.GraphBuilder;
 import com.google.common.graph.Traverser;
+import io.github.oliviercailloux.git.common.GitUri;
+import io.github.oliviercailloux.git.factory.GitCloner;
 import io.github.oliviercailloux.git.git_hub.model.GitHubToken;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.git.git_hub.model.v3.CommitGitHubDescription;

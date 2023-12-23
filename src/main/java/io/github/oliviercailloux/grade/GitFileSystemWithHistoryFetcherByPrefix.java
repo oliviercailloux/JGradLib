@@ -5,8 +5,8 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableSet;
-import io.github.oliviercailloux.git.GitCloner;
 import io.github.oliviercailloux.git.GitHubHistory;
+import io.github.oliviercailloux.git.factory.GitCloner;
 import io.github.oliviercailloux.git.fs.GitHistorySimple;
 import io.github.oliviercailloux.git.git_hub.model.GitHubToken;
 import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
@@ -33,6 +33,12 @@ public class GitFileSystemWithHistoryFetcherByPrefix implements GitFileSystemWit
 
 	public static GitFileSystemWithHistoryFetcher getRetrievingByPrefixAndUsingCommitDates(String prefix) {
 		return new GitFileSystemWithHistoryFetcherByPrefix(prefix, Integer.MAX_VALUE, Predicates.alwaysTrue(), true);
+	}
+
+	public static GitFileSystemWithHistoryFetcher getRetrievingByPrefixAndFilteringAndUsingCommitDates(String prefix,
+			String accepted) {
+		return new GitFileSystemWithHistoryFetcherByPrefix(prefix, Integer.MAX_VALUE,
+				Predicate.isEqual(GitHubUsername.given(accepted)), true);
 	}
 
 	public static GitFileSystemWithHistoryFetcher getRetrievingByPrefixAndFiltering(String prefix, String accepted) {
@@ -104,6 +110,7 @@ public class GitFileSystemWithHistoryFetcherByPrefix implements GitFileSystemWit
 		final GitHubHistory gitHubHistory = fetcherQl.getReversedGitHubHistory(coordinates);
 		if (useCommitDates) {
 			lastHistory = GitHistorySimple.usingCommitterDates(lastGitFs);
+			LOGGER.info("Last history: {}.", lastHistory);
 		} else {
 			lastHistory = GitHistorySimple.create(lastGitFs, gitHubHistory.getConsistentPushDates());
 		}

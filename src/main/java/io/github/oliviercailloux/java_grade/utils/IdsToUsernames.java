@@ -26,6 +26,7 @@ public class IdsToUsernames {
 	public static final Unchecker<StandardException, IllegalStateException> SUPANN_UNCHECKER = Unchecker
 			.wrappingWith(IllegalStateException::new);
 
+	/** Broken (I think) since API change in Supann. */
 	public static void main(String[] args) throws Exception {
 		QueriesHelper.setDefaultAuthenticator();
 		final SupannQuerier supannQuerier = new SupannQuerier();
@@ -47,13 +48,13 @@ public class IdsToUsernames {
 
 	private static InstitutionalStudent toInstitutional(Student student) {
 		checkNotNull(student);
-		final String id = student.getId();
+		final String id = student.getUuid();
 		checkArgument(id != null);
-		final JAXBElement<String> firstname = student.getFirstname();
+		final JAXBElement<String> firstname = student.getSurname();
 		checkArgument(firstname != null && !firstname.isNil());
-		final JAXBElement<String> lastname = student.getLastname();
+		final JAXBElement<String> lastname = student.getGivenName();
 		checkArgument(lastname != null && !lastname.isNil());
-		final JAXBElement<String> login = student.getLogin();
+		final JAXBElement<String> login = student.getSupannAliasLogin();
 		checkArgument(login != null && !login.isNil());
 		return InstitutionalStudent.withU(Integer.parseInt(id), login.getValue(), firstname.getValue(),
 				lastname.getValue(), student.getMail().getValue());

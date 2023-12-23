@@ -2,7 +2,7 @@ package io.github.oliviercailloux.git.git_hub.model;
 
 import static java.util.Objects.requireNonNull;
 
-import io.github.oliviercailloux.git.GitUri;
+import io.github.oliviercailloux.git.common.GitUri;
 import jakarta.json.JsonObject;
 import java.net.URI;
 

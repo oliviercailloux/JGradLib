@@ -7,6 +7,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.google.common.base.Verify;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.graph.GraphBuilder;
+import io.github.oliviercailloux.git.common.GitUri;
+import io.github.oliviercailloux.git.factory.GitCloner;
 import io.github.oliviercailloux.utils.Utils;
 import java.io.File;
 import java.io.IOException;

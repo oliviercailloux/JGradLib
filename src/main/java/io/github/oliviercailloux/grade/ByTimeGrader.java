@@ -285,8 +285,8 @@ public class ByTimeGrader<X extends Exception> implements Grader<X> {
 //				.orElse(Instant.MIN);
 		final ImmutableSortedSet<Instant> consideredTimestamps = timestamps.subSet(latestCommitTimeOnTime, true, max,
 				true);
-		LOGGER.debug("From {} with deadline {} and max {}, using latest {} and {}.", timestamps, deadline, max,
-				latestCommitTimeOnTime, consideredTimestamps);
+		LOGGER.debug("From history {} and {} with deadline {} and max {}, using latest {}: {}.", history, timestamps,
+				deadline, max, max, latestCommitTimeOnTime, consideredTimestamps);
 		verify(consideredTimestamps.isEmpty() == history.graph().nodes().isEmpty());
 		verify(consideredTimestamps.isEmpty() || !consideredTimestamps.last().isAfter(max));
 		return consideredTimestamps;
