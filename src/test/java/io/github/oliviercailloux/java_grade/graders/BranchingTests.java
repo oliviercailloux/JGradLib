@@ -34,9 +34,9 @@ import com.google.common.jimfs.Configuration;
 import com.google.common.jimfs.Jimfs;
 
 import io.github.oliviercailloux.factogit.JGit;
-import io.github.oliviercailloux.git.GitUtils;
 import io.github.oliviercailloux.git.filter.GitHistory;
 import io.github.oliviercailloux.git.filter.GitHistorySimple;
+import io.github.oliviercailloux.git.filter.GitHistoryUtils;
 import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
 import io.github.oliviercailloux.gitjfs.GitFileSystem;
 import io.github.oliviercailloux.gitjfs.GitFileSystemProvider;
@@ -142,7 +142,7 @@ class BranchingTests {
 
 			try (Repository repository = JGit.createRepository(personIdent, graph, links)) {
 				try (GitFileSystem gitFs = GitFileSystemProvider.instance().newFileSystemFromRepository(repository)) {
-					final GitHistory history = GitUtils.getHistory(gitFs);
+					final GitHistory history = GitHistoryUtils.getHistory(gitFs);
 					final ObjectId startId = history.getRoots().stream().collect(MoreCollectors.onlyElement());
 					LOGGER.info("Start id: {}", startId.getName());
 					final GitPathRoot startPath = gitFs.getPathRoot(startId);
@@ -248,7 +248,7 @@ class BranchingTests {
 
 			try (Repository repository = JGit.createRepository(personIdent, graph, links)) {
 				try (GitFileSystem gitFs = GitFileSystemProvider.instance().newFileSystemFromRepository(repository)) {
-					final GitHistory history = GitUtils.getHistory(gitFs);
+					final GitHistory history = GitHistoryUtils.getHistory(gitFs);
 					final ObjectId startId = history.getRoots().stream().collect(MoreCollectors.onlyElement());
 					LOGGER.info("Start id: {}", startId.getName());
 					final GitPathRoot startPath = gitFs.getPathRoot(startId);

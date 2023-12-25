@@ -27,6 +27,7 @@ import com.google.common.graph.GraphBuilder;
 import io.github.oliviercailloux.git.common.GitUri;
 import io.github.oliviercailloux.git.factory.GitCloner;
 import io.github.oliviercailloux.git.filter.GitHistory;
+import io.github.oliviercailloux.git.filter.GitHistoryUtils;
 import io.github.oliviercailloux.utils.Utils;
 
 class GitUtilsTests {
@@ -38,7 +39,7 @@ class GitUtilsTests {
 		Git.init().setDirectory(workTreePath.toFile()).call().close();
 
 		try (Repository repository = new FileRepository(gitDirPath.toFile())) {
-			final GitHistory historyEmpty = GitUtils.getHistory(repository);
+			final GitHistory historyEmpty = GitHistoryUtils.getHistory(repository);
 			assertEquals(GraphBuilder.directed().build(), historyEmpty.getGraph());
 		}
 
@@ -55,7 +56,7 @@ class GitUtilsTests {
 		}
 
 		try (Repository repository = new FileRepository(gitDirPath.toFile())) {
-			final GitHistory historyOne = GitUtils.getHistory(repository);
+			final GitHistory historyOne = GitHistoryUtils.getHistory(repository);
 			assertEquals(ImmutableSet.of(newCommit), historyOne.getGraph().nodes());
 			assertEquals(ImmutableSet.of(newCommit), historyOne.getRoots());
 		}
@@ -67,7 +68,7 @@ class GitUtilsTests {
 		Git.init().setGitDir(gitDirPath.toFile()).call().close();
 
 		try (Repository repository = new FileRepository(gitDirPath.toFile())) {
-			final GitHistory historyEmpty = GitUtils.getHistory(repository);
+			final GitHistory historyEmpty = GitHistoryUtils.getHistory(repository);
 			assertEquals(GraphBuilder.directed().build(), historyEmpty.getGraph());
 		}
 	}
@@ -108,7 +109,7 @@ class GitUtilsTests {
 	private static GitHistory getHistory(File repoFile) throws IOException {
 		final GitHistory history;
 		try (Repository repository = new FileRepository(repoFile)) {
-			history = GitUtils.getHistory(repository);
+			history = GitHistoryUtils.getHistory(repository);
 		}
 		return history;
 	}

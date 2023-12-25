@@ -1,4 +1,4 @@
-package io.github.oliviercailloux.git;
+package io.github.oliviercailloux.git.filter;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static io.github.oliviercailloux.jaris.exceptions.Unchecker.IO_UNCHECKER;
@@ -38,9 +38,9 @@ import io.github.oliviercailloux.gitjfs.GitPathRootSha;
 import io.github.oliviercailloux.gitjfs.GitPathRootShaCached;
 import io.github.oliviercailloux.utils.Utils;
 
-public class GitUtils {
+public class GitHistoryUtils {
 	@SuppressWarnings("unused")
-	private static final Logger LOGGER = LoggerFactory.getLogger(GitUtils.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(GitHistoryUtils.class);
 
 	/**
 	 * TODO seems like an incorrect assumption (corrected somewhere else!)

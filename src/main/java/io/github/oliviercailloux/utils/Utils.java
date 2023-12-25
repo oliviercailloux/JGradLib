@@ -103,7 +103,7 @@ public class Utils {
 	}
 
 	/**
-	 * @deprecated use the jaris version
+	 * @deprecated use the jaris version (and remove the copy of this one in GitHistory?)
 	 */
 	public static <E, F extends E> Graph<E> asGraph(SuccessorsFunction<F> successorsFunction, Set<F> roots) {
 		checkNotNull(successorsFunction);

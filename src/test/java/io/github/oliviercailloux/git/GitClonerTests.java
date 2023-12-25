@@ -44,6 +44,7 @@ import com.google.common.graph.Traverser;
 import io.github.oliviercailloux.git.common.GitUri;
 import io.github.oliviercailloux.git.factory.GitCloner;
 import io.github.oliviercailloux.git.filter.GitHistory;
+import io.github.oliviercailloux.git.filter.GitHistoryUtils;
 import io.github.oliviercailloux.git.git_hub.model.GitHubToken;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.git.git_hub.model.v3.CommitGitHubDescription;
@@ -77,7 +78,7 @@ class GitClonerTests {
 		final GitHistory historyFromHttpsClone;
 		final ObjectId masterId;
 		try (Repository repo = new FileRepository(httpsPath.resolve(".git").toFile())) {
-			historyFromHttpsClone = GitUtils.getHistory(repo);
+			historyFromHttpsClone = GitHistoryUtils.getHistory(repo);
 			final Ref master = repo.exactRef("refs/heads/master");
 			masterId = master.getObjectId();
 		}
@@ -96,7 +97,7 @@ class GitClonerTests {
 		cloner.download(GitUri.fromUri(URI.create("ssh://git@github.com/oliviercailloux/testrel.git")), sshPath)
 				.close();
 		try (Repository repo2 = new FileRepository(sshPath.resolve(".git").toFile())) {
-			assertEquals(historyFromHttpsClone, GitUtils.getHistory(repo2));
+			assertEquals(historyFromHttpsClone, GitHistoryUtils.getHistory(repo2));
 		}
 
 		final Path filePath = Utils.getTempDirectory().resolve("testrel cloned using file transport to ssh clone "
@@ -108,7 +109,7 @@ class GitClonerTests {
 		 * the clone. Thus, their histories might differ.
 		 */
 		try (Repository repo3 = new FileRepository(filePath.resolve(".git").toFile())) {
-			final GitHistory historyFromFileClone = GitUtils.getHistory(repo3);
+			final GitHistory historyFromFileClone = GitHistoryUtils.getHistory(repo3);
 			final ImmutableList<ObjectId> commitsToMasterInFileClone = ImmutableList.copyOf(
 					Traverser.forGraph(historyFromFileClone.getGraph()::predecessors).depthFirstPostOrder(masterId));
 			assertEquals(commitsToMaster, commitsToMasterInFileClone);
@@ -132,7 +133,7 @@ class GitClonerTests {
 		cloner.download(GitUri.fromUri(sshPath.toUri()), filePath).close();
 		final GitHistory enlargedHistory;
 		try (Repository repo = new FileRepository(filePath.resolve(".git").toFile())) {
-			enlargedHistory = GitUtils.getHistory(repo);
+			enlargedHistory = GitHistoryUtils.getHistory(repo);
 		}
 		assertNotEquals(historyFromHttpsClone, enlargedHistory);
 		final ImmutableSet<ObjectId> expectedEnlargedCommits = ImmutableSet.<ObjectId>builder().addAll(commitsToMaster)
@@ -287,7 +288,7 @@ class GitClonerTests {
 			assertFalse(repository.getRefDatabase().hasRefs());
 			/* To be checked. */
 //			assertThrows(IllegalArgumentException.class, () -> GitCloner.create().clone(emptyUri, repository));
-			assertThrows(IllegalArgumentException.class, () -> GitUtils.getHistory(repository));
+			assertThrows(IllegalArgumentException.class, () -> GitHistoryUtils.getHistory(repository));
 		}
 
 		try (DfsRepository repository = new InMemoryRepository(new DfsRepositoryDescription("myrepo"))) {
@@ -295,7 +296,7 @@ class GitClonerTests {
 			assertFalse(repository.getRefDatabase().hasRefs());
 			GitCloner.create().clone(emptyUri, repository);
 			assertEquals(GitHistory.create(GraphBuilder.directed().build(), ImmutableMap.of()),
-					GitUtils.getHistory(repository));
+					GitHistoryUtils.getHistory(repository));
 		}
 	}
 

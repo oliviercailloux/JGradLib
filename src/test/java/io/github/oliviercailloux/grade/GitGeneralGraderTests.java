@@ -29,7 +29,7 @@ import com.google.common.jimfs.Configuration;
 import com.google.common.jimfs.Jimfs;
 
 import io.github.oliviercailloux.factogit.JGit;
-import io.github.oliviercailloux.git.GitUtils;
+import io.github.oliviercailloux.git.filter.GitHistoryUtils;
 import io.github.oliviercailloux.git.filter.GitHistory;
 import io.github.oliviercailloux.git.filter.GitHistorySimple;
 import io.github.oliviercailloux.gitjfs.GitFileSystem;
@@ -94,7 +94,7 @@ public class GitGeneralGraderTests {
 			try (Repository repository = JGit.createRepository(personIdent, Utils.asGraph(ImmutableList.of(c1, c2, c3)),
 					links);
 					GitFileSystem gitFs = GitFileSystemProvider.instance().newFileSystemFromRepository(repository)) {
-				final GitHistory history = GitUtils.getHistory(gitFs);
+				final GitHistory history = GitHistoryUtils.getHistory(gitFs);
 				final ImmutableGraph<ObjectId> graph = history.getGraph();
 				final ObjectId o1 = Iterables.getOnlyElement(history.getRoots());
 				final ObjectId o2 = Iterables.getOnlyElement(graph.successors(o1));

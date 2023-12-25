@@ -33,6 +33,7 @@ import io.github.oliviercailloux.factogit.JGit;
 import io.github.oliviercailloux.git.common.GitUri;
 import io.github.oliviercailloux.git.factory.GitCloner;
 import io.github.oliviercailloux.git.filter.GitHistory;
+import io.github.oliviercailloux.git.filter.GitHistoryUtils;
 import io.github.oliviercailloux.utils.Utils;
 
 class GitHistoryTests {
@@ -55,7 +56,7 @@ class GitHistoryTests {
 				.call().getRepository()) {
 			assertTrue(repository.getObjectDatabase().exists());
 			assertFalse(repository.getRefDatabase().hasRefs());
-			final GitHistory history = GitUtils.getHistory(repository);
+			final GitHistory history = GitHistoryUtils.getHistory(repository);
 			assertEquals(ImmutableSet.of(), history.getRoots());
 			assertEquals(ImmutableSet.of(), history.getLeaves());
 			assertEquals(ImmutableMap.of(), history.getTimestamps());
@@ -68,7 +69,7 @@ class GitHistoryTests {
 		try (Repository repository = new FileRepositoryBuilder().setGitDir(Path.of("inexistent").toFile()).build()) {
 			assertFalse(repository.getObjectDatabase().exists());
 			assertFalse(repository.getRefDatabase().hasRefs());
-			assertThrows(IllegalArgumentException.class, () -> GitUtils.getHistory(repository));
+			assertThrows(IllegalArgumentException.class, () -> GitHistoryUtils.getHistory(repository));
 		}
 	}
 
@@ -102,7 +103,7 @@ class GitHistoryTests {
 	void testHistoryBasic() throws Exception {
 		try (Repository repo = new InMemoryRepository(new DfsRepositoryDescription())) {
 			final ImmutableList<ObjectId> commits = JGit.createBasicRepo(repo);
-			final GitHistory history = GitUtils.getHistory(repo);
+			final GitHistory history = GitHistoryUtils.getHistory(repo);
 			assertEquals(2, history.getGraph().nodes().size());
 			assertEquals(commits.get(0), Iterables.getOnlyElement(history.getRoots()));
 			assertEquals(commits.get(1), Iterables.getOnlyElement(history.getLeaves()));
@@ -115,7 +116,7 @@ class GitHistoryTests {
 			repo.create(true);
 			GitCloner.create().clone(GitUri.fromUri(new URI("https", "github.com", "/oliviercailloux/CLut", null)),
 					repo);
-			final GitHistory history = GitUtils.getHistory(repo);
+			final GitHistory history = GitHistoryUtils.getHistory(repo);
 			final ObjectId parent = ObjectId.fromString("21af8bffc747eaee04217b9c8bb9e3e4a3a6293d");
 			final ObjectId child = ObjectId.fromString("c145866575e55309f943ad2c2b4d547b926f38d0");
 			final ObjectId childChild = ObjectId.fromString("4016d7b1b09e2a188fb99d30d1ca5b0f726a4a3d");
