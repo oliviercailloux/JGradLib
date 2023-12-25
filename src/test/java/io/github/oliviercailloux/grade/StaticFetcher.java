@@ -4,7 +4,8 @@ import static com.google.common.base.Preconditions.checkArgument;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import io.github.oliviercailloux.git.fs.GitHistorySimple;
+
+import io.github.oliviercailloux.git.filter.GitHistorySimple;
 import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
 import java.io.IOException;
 import java.util.Map;

@@ -4,7 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.google.common.collect.ImmutableMap;
 import io.github.oliviercailloux.factogit.JGit;
-import io.github.oliviercailloux.git.fs.GitHistorySimple;
+import io.github.oliviercailloux.git.filter.GitHistorySimple;
 import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
 import io.github.oliviercailloux.gitjfs.GitFileSystem;
 import io.github.oliviercailloux.gitjfs.GitFileSystemProvider;

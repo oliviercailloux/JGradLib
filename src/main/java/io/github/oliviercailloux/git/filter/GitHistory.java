@@ -1,4 +1,4 @@
-package io.github.oliviercailloux.git;
+package io.github.oliviercailloux.git.filter;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
@@ -28,7 +28,10 @@ import org.slf4j.LoggerFactory;
  * probably, for push dates coming from GitHub, which are incomplete. Better,
  * for that specific use case, complete the information, as done in
  * {@link GitHubHistory}.
+ * 
+ * @deprecated I think that the intent is to rather use {@link GitHistorySimple}.
  */
+@Deprecated
 public class GitHistory {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(GitHistory.class);

@@ -11,7 +11,7 @@ import com.google.common.graph.MutableGraph;
 import com.google.common.jimfs.Configuration;
 import com.google.common.jimfs.Jimfs;
 import io.github.oliviercailloux.factogit.JGit;
-import io.github.oliviercailloux.git.fs.GitHistorySimple;
+import io.github.oliviercailloux.git.filter.GitHistorySimple;
 import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
 import io.github.oliviercailloux.gitjfs.GitFileSystem;
 import io.github.oliviercailloux.gitjfs.GitFileSystemProvider;

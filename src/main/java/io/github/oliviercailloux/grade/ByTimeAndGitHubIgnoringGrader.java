@@ -3,7 +3,8 @@ package io.github.oliviercailloux.grade;
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedSet;
-import io.github.oliviercailloux.git.fs.GitHistorySimple;
+
+import io.github.oliviercailloux.git.filter.GitHistorySimple;
 import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
 import io.github.oliviercailloux.jaris.throwing.TOptional;
 import java.io.IOException;

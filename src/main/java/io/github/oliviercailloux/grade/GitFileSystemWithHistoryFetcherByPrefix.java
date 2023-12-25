@@ -7,7 +7,7 @@ import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableSet;
 import io.github.oliviercailloux.git.GitHubHistory;
 import io.github.oliviercailloux.git.factory.GitCloner;
-import io.github.oliviercailloux.git.fs.GitHistorySimple;
+import io.github.oliviercailloux.git.filter.GitHistorySimple;
 import io.github.oliviercailloux.git.git_hub.model.GitHubToken;
 import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinatesWithPrefix;

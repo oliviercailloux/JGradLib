@@ -3,6 +3,18 @@ package io.github.oliviercailloux.git;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Verify.verify;
 
+import java.time.Instant;
+import java.util.ArrayDeque;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Queue;
+import java.util.Set;
+import java.util.function.Function;
+
+import org.eclipse.jgit.lib.ObjectId;
+
 import com.google.common.collect.HashMultiset;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -13,16 +25,8 @@ import com.google.common.graph.Graph;
 import com.google.common.graph.GraphBuilder;
 import com.google.common.graph.Graphs;
 import com.google.common.graph.ImmutableGraph;
-import java.time.Instant;
-import java.util.ArrayDeque;
-import java.util.Comparator;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Queue;
-import java.util.Set;
-import java.util.function.Function;
-import org.eclipse.jgit.lib.ObjectId;
+
+import io.github.oliviercailloux.git.filter.GitHistory;
 
 /**
  * Interface GitHistory.

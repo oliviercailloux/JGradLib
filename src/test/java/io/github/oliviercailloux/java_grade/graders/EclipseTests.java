@@ -9,7 +9,7 @@ import com.google.common.collect.Maps;
 import com.google.common.graph.Graph;
 import com.google.common.graph.Graphs;
 import io.github.oliviercailloux.git.factory.GitCloner;
-import io.github.oliviercailloux.git.fs.GitHistorySimple;
+import io.github.oliviercailloux.git.filter.GitHistorySimple;
 import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
 import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinates;
 import io.github.oliviercailloux.gitjfs.GitFileSystem;

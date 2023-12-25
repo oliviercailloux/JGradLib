@@ -4,17 +4,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.google.common.base.Verify;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.graph.GraphBuilder;
-import io.github.oliviercailloux.git.common.GitUri;
-import io.github.oliviercailloux.git.factory.GitCloner;
-import io.github.oliviercailloux.utils.Utils;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Path;
 import java.time.Instant;
+
 import org.eclipse.jgit.api.CommitCommand;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.internal.storage.file.FileRepository;
@@ -24,6 +19,15 @@ import org.eclipse.jgit.lib.Ref;
 import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.junit.jupiter.api.Test;
+
+import com.google.common.base.Verify;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.graph.GraphBuilder;
+
+import io.github.oliviercailloux.git.common.GitUri;
+import io.github.oliviercailloux.git.factory.GitCloner;
+import io.github.oliviercailloux.git.filter.GitHistory;
+import io.github.oliviercailloux.utils.Utils;
 
 class GitUtilsTests {
 

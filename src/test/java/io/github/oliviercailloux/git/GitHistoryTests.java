@@ -5,21 +5,11 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.google.common.base.Strings;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterables;
-import com.google.common.graph.GraphBuilder;
-import com.google.common.graph.ImmutableGraph;
-import io.github.oliviercailloux.factogit.JGit;
-import io.github.oliviercailloux.git.common.GitUri;
-import io.github.oliviercailloux.git.factory.GitCloner;
-import io.github.oliviercailloux.utils.Utils;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
+
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.errors.RepositoryNotFoundException;
 import org.eclipse.jgit.internal.storage.dfs.DfsRepositoryDescription;
@@ -30,6 +20,20 @@ import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
+import com.google.common.graph.GraphBuilder;
+import com.google.common.graph.ImmutableGraph;
+
+import io.github.oliviercailloux.factogit.JGit;
+import io.github.oliviercailloux.git.common.GitUri;
+import io.github.oliviercailloux.git.factory.GitCloner;
+import io.github.oliviercailloux.git.filter.GitHistory;
+import io.github.oliviercailloux.utils.Utils;
 
 class GitHistoryTests {
 	@SuppressWarnings("unused")

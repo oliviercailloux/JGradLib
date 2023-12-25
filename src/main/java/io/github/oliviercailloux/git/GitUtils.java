@@ -3,17 +3,6 @@ package io.github.oliviercailloux.git;
 import static com.google.common.base.Preconditions.checkArgument;
 import static io.github.oliviercailloux.jaris.exceptions.Unchecker.IO_UNCHECKER;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.graph.Graph;
-import com.google.common.graph.Graphs;
-import com.google.common.graph.ImmutableGraph;
-import io.github.oliviercailloux.gitjfs.GitFileSystem;
-import io.github.oliviercailloux.gitjfs.GitPathRoot;
-import io.github.oliviercailloux.gitjfs.GitPathRootSha;
-import io.github.oliviercailloux.gitjfs.GitPathRootShaCached;
-import io.github.oliviercailloux.utils.Utils;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.time.Instant;
@@ -24,6 +13,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.TimeZone;
 import java.util.function.Function;
+
 import org.eclipse.jgit.lib.Constants;
 import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.lib.PersonIdent;
@@ -33,6 +23,20 @@ import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.revwalk.RevWalk;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.graph.Graph;
+import com.google.common.graph.Graphs;
+import com.google.common.graph.ImmutableGraph;
+
+import io.github.oliviercailloux.git.filter.GitHistory;
+import io.github.oliviercailloux.gitjfs.GitFileSystem;
+import io.github.oliviercailloux.gitjfs.GitPathRoot;
+import io.github.oliviercailloux.gitjfs.GitPathRootSha;
+import io.github.oliviercailloux.gitjfs.GitPathRootShaCached;
+import io.github.oliviercailloux.utils.Utils;
 
 public class GitUtils {
 	@SuppressWarnings("unused")
