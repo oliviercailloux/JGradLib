@@ -45,36 +45,16 @@ import org.eclipse.jgit.lib.ObjectId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class GraderVarious  {
+public class GraderVarious {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(GraderVarious.class);
 
-	public GraderVarious() {
-	}
-
-	public MarksTree gradeCode() {
+	public void gradeCode() {
 		final TryCatchAll<Integer> tryTarget = TryCatchAll.get(() -> 3);
-		final TryCatchAll<Integer> instance = tryTarget.andApply(
-				target -> null);
-		final String invocationErrorStr = instance.map(r -> "", c -> "Invocation failed: %s".formatted(c));
-		if (!invocationErrorStr.isEmpty()) {
-			return Mark.zero(invocationErrorStr);
-		}
+		final TryCatchAll<Integer> instance = tryTarget.andApply(target -> null);
 
-		{
-			TConsumer<? super Integer, ?> consumer = Integer::byteValue;
-			final TryCatchAll<Integer> got = instance.andConsume(consumer);
-			LOGGER.info("Got: {}.", got);
-		}
-
-		return null;
-	}
-
-	public GradeAggregator getCodeAggregator() {
-		return null;
-	}
-
-	public void close() {
-		
+		TConsumer<? super Integer, ?> consumer = Integer::byteValue;
+		final TryCatchAll<Integer> got = tryTarget.andConsume(consumer);
+		LOGGER.info("Got: {}.", got);
 	}
 }
