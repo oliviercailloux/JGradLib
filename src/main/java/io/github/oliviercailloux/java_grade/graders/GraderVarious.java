@@ -52,9 +52,9 @@ public class GraderVarious implements CodeGrader<RuntimeException> {
 	public GraderVarious() {
 	}
 
-	private TryCatchAll<Various> newInstance(Instanciator instanciator) {
-		final TryCatchAll<Various> tryTarget = TryCatchAll.get(() -> instanciator.getInstanceOrThrow(Various.class));
-		final TryCatchAll<Various> instance = tryTarget.andApply(
+	private TryCatchAll<Integer> newInstance(Instanciator instanciator) {
+		final TryCatchAll<Integer> tryTarget = TryCatchAll.get(() -> 3);
+		final TryCatchAll<Integer> instance = tryTarget.andApply(
 				target -> null);
 		return instance;
 	}
@@ -62,16 +62,16 @@ public class GraderVarious implements CodeGrader<RuntimeException> {
 	@Override
 	public MarksTree gradeCode(Instanciator instanciator) {
 
-		final TryCatchAll<Various> v0 = newInstance(instanciator);
+		final TryCatchAll<Integer> v0 = newInstance(instanciator);
 		final String invocationErrorStr = v0.map(r -> "", c -> "Invocation failed: %s".formatted(c));
 		if (!invocationErrorStr.isEmpty()) {
 			return Mark.zero(invocationErrorStr);
 		}
 
 		{
-			final TryCatchAll<Various> v = newInstance(instanciator);
-			TConsumer<? super Various, ?> consumer = Various::log;
-			final TryCatchAll<Various> got = v.andConsume(consumer);
+			final TryCatchAll<Integer> v = newInstance(instanciator);
+			TConsumer<? super Integer, ?> consumer = Integer::byteValue;
+			final TryCatchAll<Integer> got = v.andConsume(consumer);
 			LOGGER.info("Got: {}.", got);
 		}
 
