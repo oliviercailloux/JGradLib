@@ -23,6 +23,7 @@ import io.github.oliviercailloux.grade.MavenCodeGrader;
 import io.github.oliviercailloux.grade.MavenCodeGrader.BasicCompiler;
 import io.github.oliviercailloux.grade.utils.LogCaptor;
 import io.github.oliviercailloux.jaris.exceptions.TryCatchAll;
+import io.github.oliviercailloux.jaris.throwing.TConsumer;
 import io.github.oliviercailloux.java_grade.bytecode.Compiler.CompilationResultExt;
 import io.github.oliviercailloux.java_grade.bytecode.Instanciator;
 import io.github.oliviercailloux.java_grade.bytecode.MyCompiler;
@@ -138,7 +139,8 @@ public class GraderVarious implements CodeGrader<RuntimeException> {
 		{
 			final TryCatchAll<Various> v = newInstance(instanciator);
 			final int before = logCaptor.getEvents().size();
-			final TryCatchAll<Various> got = v.andConsume(Various::log);
+			TConsumer<? super Various, ?> consumer = Various::log;
+			final TryCatchAll<Various> got = v.andConsume(consumer);
 			final int after = logCaptor.getEvents().size();
 			final boolean pass = after > before;
 			builder.put(C_LOG, Mark.binary(pass, "", got.map(r -> "Nothing logged", c -> "Obtained %s".formatted(c))));
