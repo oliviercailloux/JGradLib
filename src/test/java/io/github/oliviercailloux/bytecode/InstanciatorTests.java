@@ -49,7 +49,8 @@ public class InstanciatorTests {
 			Compiler.intolerant(ImmutableList.of(), work).compile(ImmutableList.of(sourcePath));
 
 			final URL url = work.toUri().toURL();
-			try (URLClassLoader loader = new URLClassLoader(new URL[] { url }, getClass().getClassLoader())) {
+			try (URLClassLoader loader =
+					new URLClassLoader(new URL[] {url}, getClass().getClassLoader())) {
 				final Instanciator instanciator = Instanciator.given(loader);
 				assertTrue(instanciator.getInstance(List.class, "newInstance").isEmpty());
 				assertTrue(instanciator.getInstance(Function.class, "newInstanceWrongName").isEmpty());
@@ -60,14 +61,16 @@ public class InstanciatorTests {
 
 	@Test
 	void testGetInstancePackagePrivate() throws Exception {
-		final Path sourcePath = Path.of(getClass().getResource("MyPackagePrivateIdentityFunction.java").toURI());
+		final Path sourcePath =
+				Path.of(getClass().getResource("MyPackagePrivateIdentityFunction.java").toURI());
 		try (FileSystem jimFs = Jimfs.newFileSystem(Configuration.unix())) {
 			final Path work = jimFs.getPath("");
 
 			Compiler.intolerant(ImmutableList.of(), work).compile(ImmutableList.of(sourcePath));
 
 			final URL url = work.toUri().toURL();
-			try (URLClassLoader loader = new URLClassLoader(new URL[] { url }, getClass().getClassLoader())) {
+			try (URLClassLoader loader =
+					new URLClassLoader(new URL[] {url}, getClass().getClassLoader())) {
 				final Instanciator instanciator = Instanciator.given(loader);
 				assertTrue(instanciator.getInstance(List.class, "newInstance").isEmpty());
 				assertTrue(instanciator.getInstance(Function.class, "newInstanceWrongName").isEmpty());
@@ -82,23 +85,27 @@ public class InstanciatorTests {
 		final Path sourcePath2 = Path.of(getClass().getResource("SourceWithNoWarnings.java").toURI());
 		final ClassLoader parent = getClass().getClassLoader();
 		final Package thisPackage = getClass().getPackage();
-		assertThrows(ClassNotFoundException.class, () -> parent.loadClass(thisPackage + ".MyFunctionRequiring"));
-		assertThrows(ClassNotFoundException.class, () -> parent.loadClass(thisPackage + ".SourceWithNoWarnings"));
+		assertThrows(ClassNotFoundException.class,
+				() -> parent.loadClass(thisPackage + ".MyFunctionRequiring"));
+		assertThrows(ClassNotFoundException.class,
+				() -> parent.loadClass(thisPackage + ".SourceWithNoWarnings"));
 		try (FileSystem jimFs = Jimfs.newFileSystem(Configuration.unix())) {
 			final Path work = jimFs.getPath("");
 
 			Compiler.intolerant(ImmutableList.of(), work).compile(ImmutableList.of(sourcePath1, sourcePath2));
 			final Path destSourceWithNoWarnings = work.resolve(thisPackage.getName().replace('.', '/'))
 					.resolve("SourceWithNoWarnings.class");
-//			Files.delete(destSourceWithNoWarnings);
+			// Files.delete(destSourceWithNoWarnings);
 			assertTrue(Files.isRegularFile(destSourceWithNoWarnings));
 			final URL url = work.toUri().toURL();
-			try (URLClassLoader loader = new URLClassLoader(new URL[] { url }, getClass().getClassLoader())) {
+			try (URLClassLoader loader =
+					new URLClassLoader(new URL[] {url}, getClass().getClassLoader())) {
 				final Instanciator instanciator = Instanciator.given(loader);
 				assertTrue(instanciator.getInstance(List.class, "newInstance").isEmpty());
 				assertTrue(instanciator.getInstance(Function.class, "newInstanceWrongName").isEmpty());
 				@SuppressWarnings("rawtypes")
-				final Optional<Function> functionOpt = instanciator.getInstance(Function.class, "newInstance");
+				final Optional<Function> functionOpt =
+						instanciator.getInstance(Function.class, "newInstance");
 				assertTrue(functionOpt.isPresent());
 
 				final Object ret = assertDoesNotThrow(() -> functionOpt.get().apply("t"));
@@ -109,14 +116,16 @@ public class InstanciatorTests {
 
 	@Test
 	void testInstanceThrowing() throws Exception {
-		final Path sourcePath = Path.of(getClass().getResource("MyIdentityFunctionThrowing.java").toURI());
+		final Path sourcePath =
+				Path.of(getClass().getResource("MyIdentityFunctionThrowing.java").toURI());
 		try (FileSystem jimFs = Jimfs.newFileSystem(Configuration.unix())) {
 			final Path work = jimFs.getPath("");
 
 			Compiler.intolerant(ImmutableList.of(), work).compile(ImmutableList.of(sourcePath));
 
 			final URL url = work.toUri().toURL();
-			try (URLClassLoader loader = new URLClassLoader(new URL[] { url }, getClass().getClassLoader())) {
+			try (URLClassLoader loader =
+					new URLClassLoader(new URL[] {url}, getClass().getClassLoader())) {
 				final Instanciator instanciator = Instanciator.given(loader);
 				assertTrue(instanciator.getInstance(Function.class, "newInstance").isEmpty());
 				final ReflectiveOperationException lastException = instanciator.getLastException();
@@ -137,14 +146,14 @@ public class InstanciatorTests {
 		LOGGER.debug("Scanning.");
 		try (ScanResult scanResult = graph.scan()) {
 			LOGGER.info("Scan found: {}.", scanResult.getAllClasses().size());
-			final ClassInfoList implementingClasses = scanResult
-					.getClassesImplementing(PersonsManager.class.getTypeName());
+			final ClassInfoList implementingClasses =
+					scanResult.getClassesImplementing(PersonsManager.class.getTypeName());
 			LOGGER.info("Implementing: {}.", implementingClasses.size());
 			final ClassInfo info = implementingClasses.directOnly().getStandardClasses().stream()
 					.collect(MoreCollectors.onlyElement());
 			final MethodInfoList methodInfoList = info.getDeclaredMethodInfo("empty");
-			LOGGER.debug("Found {} classes, implementing: {}, with method: {}.", scanResult.getAllClasses().size(),
-					implementingClasses.size(), methodInfoList);
+			LOGGER.debug("Found {} classes, implementing: {}, with method: {}.",
+					scanResult.getAllClasses().size(), implementingClasses.size(), methodInfoList);
 			final MethodInfo methodInfo = methodInfoList.stream().collect(MoreCollectors.onlyElement());
 			assertTrue(methodInfo.isPublic());
 			final Method method = methodInfo.loadClassAndGetMethod();
@@ -167,8 +176,8 @@ public class InstanciatorTests {
 		}
 		try (ScanResult scanResult = graph.scan()) {
 			LOGGER.debug("Scan found: {}.", scanResult.getAllClasses().size());
-			final ClassInfoList implementingClasses = scanResult
-					.getClassesImplementing(PersonsManager.class.getTypeName());
+			final ClassInfoList implementingClasses =
+					scanResult.getClassesImplementing(PersonsManager.class.getTypeName());
 			LOGGER.debug("Implementing: {}.", implementingClasses.size());
 			final ClassInfo info = implementingClasses.directOnly().getStandardClasses().stream()
 					.collect(MoreCollectors.onlyElement());
@@ -176,8 +185,8 @@ public class InstanciatorTests {
 			final Method directMethod = info.loadClass().getMethod("empty");
 			directMethod.invoke(null);
 			final MethodInfoList methodInfoList = info.getDeclaredMethodInfo("empty");
-			LOGGER.debug("Found {} classes, implementing: {}, with method: {}.", scanResult.getAllClasses().size(),
-					implementingClasses.size(), methodInfoList);
+			LOGGER.debug("Found {} classes, implementing: {}, with method: {}.",
+					scanResult.getAllClasses().size(), implementingClasses.size(), methodInfoList);
 			final MethodInfo methodInfo = methodInfoList.stream().collect(MoreCollectors.onlyElement());
 			assertTrue(methodInfo.isPublic());
 			final Method method = methodInfo.loadClassAndGetMethod();
@@ -187,39 +196,43 @@ public class InstanciatorTests {
 
 	@Test
 	void testInvoke() throws Exception {
-		final TryCatchAll<Optional<String>> obtained = Instanciator.invoke(ImmutableList.of("elem", "heh"),
-				String.class, "get", ImmutableList.of(0));
-		assertTrue(obtained.map(o -> o.map(s -> s.equals("elem")).orElse(false), c -> false), "" + obtained);
+		final TryCatchAll<Optional<String>> obtained = Instanciator
+				.invoke(ImmutableList.of("elem", "heh"), String.class, "get", ImmutableList.of(0));
+		Function<? super String, Boolean> mapper = s -> s.equals("elem");
+		assertTrue(obtained.map(o -> o.map(mapper).orElse(false), c -> false), "" + obtained);
 	}
 
 	@Test
 	void testInvokeNoSuch() throws Exception {
-		URLClassLoader loader = RestrictingClassLoader.noPermissions(Path.of("src/main/java/").toUri().toURL(),
-				getClass().getClassLoader());
+		URLClassLoader loader = RestrictingClassLoader
+				.noPermissions(Path.of("src/main/java/").toUri().toURL(), getClass().getClassLoader());
 
 		LOGGER.info("Loading {}.", this.getClass().getCanonicalName());
 		final TryCatchAll<Person> mPerson = Instanciator.given(loader).invokeConstructor(
 				this.getClass().getCanonicalName(), Person.class, ImmutableList.of("nameHHKorig", 71));
-		assertEquals(NoSuchMethodException.class, mPerson.getCause().map(Object::getClass).orElseThrow());
-		final TryCatchAll<Optional<String>> obtained = Instanciator.invoke(ImmutableList.of("elem", "heh"),
-				String.class, "invalid", ImmutableList.of(0));
-		assertEquals(NoSuchMethodException.class, obtained.getCause().map(Object::getClass).orElseThrow());
+		assertEquals(NoSuchMethodException.class,
+				mPerson.getCause().map(Object::getClass).orElseThrow());
+		final TryCatchAll<Optional<String>> obtained = Instanciator
+				.invoke(ImmutableList.of("elem", "heh"), String.class, "invalid", ImmutableList.of(0));
+		assertEquals(NoSuchMethodException.class,
+				obtained.getCause().map(Object::getClass).orElseThrow());
 
-		final TryCatchAll<Optional<Void>> noSuch = Instanciator.invoke(ImmutableList.of("elem", "heh"), Void.class,
-				"renameNON", ImmutableList.of("a new name!"));
-		assertEquals(NoSuchMethodException.class, noSuch.getCause().map(Object::getClass).orElseThrow());
+		final TryCatchAll<Optional<Void>> noSuch = Instanciator.invoke(ImmutableList.of("elem", "heh"),
+				Void.class, "renameNON", ImmutableList.of("a new name!"));
+		assertEquals(NoSuchMethodException.class,
+				noSuch.getCause().map(Object::getClass).orElseThrow());
 
-		final TryCatchAll<InstanciatorTests> thisOne = Instanciator.given(loader)
-				.invokeConstructor(this.getClass().getCanonicalName(), InstanciatorTests.class, ImmutableList.of());
+		final TryCatchAll<InstanciatorTests> thisOne = Instanciator.given(loader).invokeConstructor(
+				this.getClass().getCanonicalName(), InstanciatorTests.class, ImmutableList.of());
 		assertEquals(InstanciatorTests.class, thisOne.getResult().map(Object::getClass).orElseThrow());
 
-		final TryCatchAll<InstanciatorTests> chained = thisOne
-				.andConsume(t -> Instanciator.invoke(t, Void.class, "renameNON", ImmutableList.of("a new name!")));
-		assertEquals(NoSuchMethodException.class, chained.getCause().map(Object::getClass).orElseThrow());
+		final TryCatchAll<InstanciatorTests> chained = thisOne.andConsume(
+				t -> Instanciator.invoke(t, Void.class, "renameNON", ImmutableList.of("a new name!")));
+		assertEquals(NoSuchMethodException.class,
+				chained.getCause().map(Object::getClass).orElseThrow());
 	}
 
 	public static void empty() {
 		LOGGER.info("Called.");
 	}
-
 }
