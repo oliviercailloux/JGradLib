@@ -504,6 +504,6 @@ public class DeadlineGrader {
   @Override
   public String toString() {
     return MoreObjects.toStringHelper(this).add("Git grader", grader).add("Deadline", deadline)
-      	.add("Penalizer", penalizer).toString();
-	}
+        .add("Penalizer", penalizer).toString();
+  }
 }

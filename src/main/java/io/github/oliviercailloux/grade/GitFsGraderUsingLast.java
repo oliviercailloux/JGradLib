@@ -6,26 +6,26 @@ import io.github.oliviercailloux.git.filter.GitHistorySimple;
 import io.github.oliviercailloux.gitjfs.GitPathRootSha;
 
 public class GitFsGraderUsingLast<X extends Exception> implements GitFsGrader<X> {
-	public static <X extends Exception> GitFsGraderUsingLast<X> using(PathGrader<X> g) {
-		return new GitFsGraderUsingLast<>(g);
-	}
+  public static <X extends Exception> GitFsGraderUsingLast<X> using(PathGrader<X> g) {
+    return new GitFsGraderUsingLast<>(g);
+  }
 
-	private final PathGrader<X> g;
+  private final PathGrader<X> g;
 
-	private GitFsGraderUsingLast(PathGrader<X> g) {
-		this.g = g;
-	}
+  private GitFsGraderUsingLast(PathGrader<X> g) {
+    this.g = g;
+  }
 
-	@Override
-	public MarksTree grade(GitHistorySimple data) throws X {
-		verify(!data.graph().nodes().isEmpty());
+  @Override
+  public MarksTree grade(GitHistorySimple data) throws X {
+    verify(!data.graph().nodes().isEmpty());
 
-		final GitPathRootSha leaf = ByTimeGrader.last(data);
-		return g.grade(leaf);
-	}
+    final GitPathRootSha leaf = ByTimeGrader.last(data);
+    return g.grade(leaf);
+  }
 
-	@Override
-	public GradeAggregator getAggregator() {
-		return g.getAggregator();
-	}
+  @Override
+  public GradeAggregator getAggregator() {
+    return g.getAggregator();
+  }
 }

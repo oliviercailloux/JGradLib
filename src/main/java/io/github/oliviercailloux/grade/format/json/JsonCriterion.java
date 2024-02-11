@@ -9,22 +9,22 @@ import jakarta.json.bind.JsonbException;
 import jakarta.json.bind.adapter.JsonbAdapter;
 
 public class JsonCriterion implements JsonbAdapter<Criterion, JsonValue> {
-	private static final JsonCriterion INSTANCE = new JsonCriterion();
+  private static final JsonCriterion INSTANCE = new JsonCriterion();
 
-	public static JsonbAdapter<Criterion, JsonValue> instance() {
-		return INSTANCE;
-	}
+  public static JsonbAdapter<Criterion, JsonValue> instance() {
+    return INSTANCE;
+  }
 
-	@Override
-	public JsonValue adaptToJson(Criterion criterion) {
-		return Json.createValue(criterion.getName());
-	}
+  @Override
+  public JsonValue adaptToJson(Criterion criterion) {
+    return Json.createValue(criterion.getName());
+  }
 
-	@Override
-	public Criterion adaptFromJson(JsonValue str) throws JsonbException {
-		if (!str.getValueType().equals(ValueType.STRING)) {
-			throw new JsonbException("Unexpected criterion: " + str);
-		}
-		return Criterion.given(((JsonString) str).getString());
-	}
+  @Override
+  public Criterion adaptFromJson(JsonValue str) throws JsonbException {
+    if (!str.getValueType().equals(ValueType.STRING)) {
+      throw new JsonbException("Unexpected criterion: " + str);
+    }
+    return Criterion.given(((JsonString) str).getString());
+  }
 }

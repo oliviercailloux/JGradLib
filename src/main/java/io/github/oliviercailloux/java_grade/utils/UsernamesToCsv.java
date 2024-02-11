@@ -12,22 +12,22 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 
 public class UsernamesToCsv {
-	private static final Path WORK_DIR = Paths.get("../../Java L3/");
+  private static final Path WORK_DIR = Paths.get("../../Java L3/");
 
-	public static void main(String[] args) throws Exception {
-		final JsonStudents students =
-				JsonStudents.from(Files.readString(WORK_DIR.resolve("usernames.json")));
-		final ImmutableMap<GitHubUsername, StudentOnGitHubKnown> usernames =
-				students.getStudentsKnownByGitHubUsername();
+  public static void main(String[] args) throws Exception {
+    final JsonStudents students =
+        JsonStudents.from(Files.readString(WORK_DIR.resolve("usernames.json")));
+    final ImmutableMap<GitHubUsername, StudentOnGitHubKnown> usernames =
+        students.getStudentsKnownByGitHubUsername();
 
-		final StringWriter stringWriter = new StringWriter();
-		final CsvWriter writer = new CsvWriter(stringWriter, new CsvWriterSettings());
-		writer.writeHeaders("GitHub username", "GitHub URL");
-		for (GitHubUsername username : usernames.keySet()) {
-			writer.writeRow(username.getUsername(), username.getUrl());
-		}
-		writer.close();
+    final StringWriter stringWriter = new StringWriter();
+    final CsvWriter writer = new CsvWriter(stringWriter, new CsvWriterSettings());
+    writer.writeHeaders("GitHub username", "GitHub URL");
+    for (GitHubUsername username : usernames.keySet()) {
+      writer.writeRow(username.getUsername(), username.getUrl());
+    }
+    writer.close();
 
-		Files.writeString(Path.of("out.csv"), stringWriter.toString());
-	}
+    Files.writeString(Path.of("out.csv"), stringWriter.toString());
+  }
 }

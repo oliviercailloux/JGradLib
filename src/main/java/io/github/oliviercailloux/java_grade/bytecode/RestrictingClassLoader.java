@@ -10,28 +10,28 @@ import java.security.Permissions;
 
 public class RestrictingClassLoader extends URLClassLoader {
 
-	public static RestrictingClassLoader noPermissions(URL url, ClassLoader parent) {
-		return new RestrictingClassLoader(url, parent, new Permissions());
-	}
+  public static RestrictingClassLoader noPermissions(URL url, ClassLoader parent) {
+    return new RestrictingClassLoader(url, parent, new Permissions());
+  }
 
-	public static RestrictingClassLoader granting(URL url, ClassLoader parent,
-			PermissionCollection permissions) {
-		return new RestrictingClassLoader(url, parent, permissions);
-	}
+  public static RestrictingClassLoader granting(URL url, ClassLoader parent,
+      PermissionCollection permissions) {
+    return new RestrictingClassLoader(url, parent, permissions);
+  }
 
-	private final PermissionCollection permissions;
+  private final PermissionCollection permissions;
 
-	public RestrictingClassLoader(URL url, ClassLoader parent, PermissionCollection permissions) {
-		super(new URL[] {url}, parent);
-		this.permissions = checkNotNull(permissions);
-	}
+  public RestrictingClassLoader(URL url, ClassLoader parent, PermissionCollection permissions) {
+    super(new URL[] {url}, parent);
+    this.permissions = checkNotNull(permissions);
+  }
 
-	public PermissionCollection getPermissions() {
-		return permissions;
-	}
+  public PermissionCollection getPermissions() {
+    return permissions;
+  }
 
-	@Override
-	protected PermissionCollection getPermissions(CodeSource codesource) {
-		return permissions;
-	}
+  @Override
+  protected PermissionCollection getPermissions(CodeSource codesource) {
+    return permissions;
+  }
 }

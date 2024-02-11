@@ -6,5 +6,5 @@ import java.nio.file.Path;
 import java.util.Set;
 
 public interface MyCompiler {
-	public CompilationResultExt compile(Path compiledDir, Set<Path> javaPaths) throws IOException;
+  public CompilationResultExt compile(Path compiledDir, Set<Path> javaPaths) throws IOException;
 }

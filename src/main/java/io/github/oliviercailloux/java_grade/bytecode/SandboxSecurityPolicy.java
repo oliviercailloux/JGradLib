@@ -13,20 +13,20 @@ import org.slf4j.LoggerFactory;
  */
 @SuppressWarnings({"removal", "deprecation"})
 public class SandboxSecurityPolicy extends Policy {
-	@SuppressWarnings("unused")
-	private static final Logger LOGGER = LoggerFactory.getLogger(SandboxSecurityPolicy.class);
+  @SuppressWarnings("unused")
+  private static final Logger LOGGER = LoggerFactory.getLogger(SandboxSecurityPolicy.class);
 
-	public static void setSecurity() {
-		final SandboxSecurityPolicy myPolicy = new SandboxSecurityPolicy();
-		Policy.setPolicy(myPolicy);
-		System.setSecurityManager(new SecurityManager());
-	}
+  public static void setSecurity() {
+    final SandboxSecurityPolicy myPolicy = new SandboxSecurityPolicy();
+    Policy.setPolicy(myPolicy);
+    System.setSecurityManager(new SecurityManager());
+  }
 
-	@Override
-	public boolean implies(ProtectionDomain domain, Permission permission) {
-		if (domain.getClassLoader() instanceof RestrictingClassLoader) {
-			return domain.getPermissions().implies(permission);
-		}
-		return true;
-	}
+  @Override
+  public boolean implies(ProtectionDomain domain, Permission permission) {
+    if (domain.getClassLoader() instanceof RestrictingClassLoader) {
+      return domain.getPermissions().implies(permission);
+    }
+    return true;
+  }
 }

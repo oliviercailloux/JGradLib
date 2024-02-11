@@ -31,81 +31,81 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class HarvestIds {
-	@SuppressWarnings("unused")
-	private static final Logger LOGGER = LoggerFactory.getLogger(HarvestIds.class);
+  @SuppressWarnings("unused")
+  private static final Logger LOGGER = LoggerFactory.getLogger(HarvestIds.class);
 
-	public static Optional<Integer> getId(GitFileSystem fs) throws IOException {
-		final Pattern digitPattern = Marks.extendWhite("\\d+");
-		final ImmutableSet.Builder<Integer> builder = ImmutableSet.builder();
-		for (Path root : fs.getRootDirectories()) {
-			final Path path = root.resolve("myid.txt");
-			final String content;
-			if (Files.exists(path)) {
-				content = Files.readString(path);
-			} else {
-				content = "";
-			}
-			final Matcher matcher = digitPattern.matcher(content);
-			final boolean found = matcher.find();
-			if (found) {
-				final String digits = matcher.group("basis");
-				final int id = Integer.parseInt(digits);
-				builder.add(id);
-			}
-		}
-		final ImmutableSet<Integer> ids = builder.build();
-		if (ids.size() >= 2) {
-			LOGGER.warn("Multiple ids: {}.", ids);
-		}
-		return ids.stream().collect(MoreCollectors.toOptional());
-	}
+  public static Optional<Integer> getId(GitFileSystem fs) throws IOException {
+    final Pattern digitPattern = Marks.extendWhite("\\d+");
+    final ImmutableSet.Builder<Integer> builder = ImmutableSet.builder();
+    for (Path root : fs.getRootDirectories()) {
+      final Path path = root.resolve("myid.txt");
+      final String content;
+      if (Files.exists(path)) {
+        content = Files.readString(path);
+      } else {
+        content = "";
+      }
+      final Matcher matcher = digitPattern.matcher(content);
+      final boolean found = matcher.find();
+      if (found) {
+        final String digits = matcher.group("basis");
+        final int id = Integer.parseInt(digits);
+        builder.add(id);
+      }
+    }
+    final ImmutableSet<Integer> ids = builder.build();
+    if (ids.size() >= 2) {
+      LOGGER.warn("Multiple ids: {}.", ids);
+    }
+    return ids.stream().collect(MoreCollectors.toOptional());
+  }
 
-	public static void main(String[] args) throws Exception {
-		new HarvestIds().proceed();
-	}
+  public static void main(String[] args) throws Exception {
+    new HarvestIds().proceed();
+  }
 
-	private final String prefix;
-	private final Pattern pattern;
+  private final String prefix;
+  private final Pattern pattern;
 
-	public HarvestIds() {
-		prefix = "commit";
-		pattern = Pattern.compile(prefix + "-(.*)");
-	}
+  public HarvestIds() {
+    prefix = "commit";
+    pattern = Pattern.compile(prefix + "-(.*)");
+  }
 
-	public void proceed() throws IOException {
-		final ImmutableList<RepositoryCoordinatesWithPrefix> repositories;
-		try (GitHubFetcherV3 fetcher = GitHubFetcherV3.using(GitHubToken.getRealInstance())) {
-			repositories = fetcher.getRepositoriesWithPrefix("oliviercailloux-org", prefix);
-		}
-		final ImmutableList<RepositoryCoordinatesWithPrefix> effectiveRepositories = repositories;
-		final ImmutableList<RepositoryCoordinatesWithPrefix> matching =
-				effectiveRepositories.stream().filter(r -> pattern.matcher(r.getRepositoryName()).matches())
-						.collect(ImmutableList.toImmutableList());
+  public void proceed() throws IOException {
+    final ImmutableList<RepositoryCoordinatesWithPrefix> repositories;
+    try (GitHubFetcherV3 fetcher = GitHubFetcherV3.using(GitHubToken.getRealInstance())) {
+      repositories = fetcher.getRepositoriesWithPrefix("oliviercailloux-org", prefix);
+    }
+    final ImmutableList<RepositoryCoordinatesWithPrefix> effectiveRepositories = repositories;
+    final ImmutableList<RepositoryCoordinatesWithPrefix> matching =
+        effectiveRepositories.stream().filter(r -> pattern.matcher(r.getRepositoryName()).matches())
+            .collect(ImmutableList.toImmutableList());
 
-		final ImmutableMap<RepositoryCoordinatesWithPrefix, Optional<Integer>> idsOpt =
-				matching.stream().collect(ImmutableMap.toImmutableMap(Function.identity(),
-						IO_UNCHECKER.wrapFunction(this::getId)));
+    final ImmutableMap<RepositoryCoordinatesWithPrefix, Optional<Integer>> idsOpt =
+        matching.stream().collect(ImmutableMap.toImmutableMap(Function.identity(),
+            IO_UNCHECKER.wrapFunction(this::getId)));
 
-		final ImmutableMap<RepositoryCoordinatesWithPrefix, Integer> ids =
-				idsOpt.entrySet().stream().filter(e -> e.getValue().isPresent())
-						.collect(ImmutableMap.toImmutableMap(Entry::getKey, e -> e.getValue().get()));
+    final ImmutableMap<RepositoryCoordinatesWithPrefix, Integer> ids =
+        idsOpt.entrySet().stream().filter(e -> e.getValue().isPresent())
+            .collect(ImmutableMap.toImmutableMap(Entry::getKey, e -> e.getValue().get()));
 
-		final ImmutableMap<String, Integer> idsByGitHubUsername = ids.entrySet().stream()
-				.collect(ImmutableMap.toImmutableMap(e -> e.getKey().getUsername(), Entry::getValue));
+    final ImmutableMap<String, Integer> idsByGitHubUsername = ids.entrySet().stream()
+        .collect(ImmutableMap.toImmutableMap(e -> e.getKey().getUsername(), Entry::getValue));
 
-		final PrintableJsonObject asJson =
-				JsonbUtils.toJsonObject(idsByGitHubUsername, JsonStudentOnGitHubKnown.asAdapter());
-		Files.writeString(Path.of("gh-id.json"), asJson.toString());
-	}
+    final PrintableJsonObject asJson =
+        JsonbUtils.toJsonObject(idsByGitHubUsername, JsonStudentOnGitHubKnown.asAdapter());
+    Files.writeString(Path.of("gh-id.json"), asJson.toString());
+  }
 
-	private Optional<Integer> getId(RepositoryCoordinates coordinates) throws IOException {
-		LOGGER.info("Proceeding with {}.", coordinates);
-		try (
-				FileRepository repository = GitCloner.create().download(coordinates.asGitUri(),
-						Utils.getTempDirectory().resolve(coordinates.getRepositoryName()));
-				GitFileSystem fs =
-						GitFileSystemProvider.instance().newFileSystemFromFileRepository(repository)) {
-			return getId(fs);
-		}
-	}
+  private Optional<Integer> getId(RepositoryCoordinates coordinates) throws IOException {
+    LOGGER.info("Proceeding with {}.", coordinates);
+    try (
+        FileRepository repository = GitCloner.create().download(coordinates.asGitUri(),
+            Utils.getTempDirectory().resolve(coordinates.getRepositoryName()));
+        GitFileSystem fs =
+            GitFileSystemProvider.instance().newFileSystemFromFileRepository(repository)) {
+      return getId(fs);
+    }
+  }
 }

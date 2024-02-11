@@ -10,23 +10,23 @@ import java.lang.reflect.Method;
 
 public class JsonHelper {
 
-	private static final class FieldAccessStrategy implements PropertyVisibilityStrategy {
-		@Override
-		public boolean isVisible(Field field) {
-			return true;
-		}
+  private static final class FieldAccessStrategy implements PropertyVisibilityStrategy {
+    @Override
+    public boolean isVisible(Field field) {
+      return true;
+    }
 
-		@Override
-		public boolean isVisible(Method method) {
-			return false;
-		}
-	}
+    @Override
+    public boolean isVisible(Method method) {
+      return false;
+    }
+  }
 
-	public static Jsonb getJsonb(@SuppressWarnings("rawtypes") JsonbAdapter... adapters) {
-		final PropertyVisibilityStrategy propertyVisibilityStrategy = new FieldAccessStrategy();
+  public static Jsonb getJsonb(@SuppressWarnings("rawtypes") JsonbAdapter... adapters) {
+    final PropertyVisibilityStrategy propertyVisibilityStrategy = new FieldAccessStrategy();
 
-		final Jsonb jsonb = JsonbBuilder.create(new JsonbConfig().withFormatting(true)
-				.withPropertyVisibilityStrategy(propertyVisibilityStrategy).withAdapters(adapters));
-		return jsonb;
-	}
+    final Jsonb jsonb = JsonbBuilder.create(new JsonbConfig().withFormatting(true)
+        .withPropertyVisibilityStrategy(propertyVisibilityStrategy).withAdapters(adapters));
+    return jsonb;
+  }
 }

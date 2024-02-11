@@ -33,23 +33,23 @@ import org.w3c.dom.DocumentFragment;
 import org.w3c.dom.Element;
 
 public class HtmlGrades {
-	private static final double DEFAULT_DENOMINATOR = 20d;
+  private static final double DEFAULT_DENOMINATOR = 20d;
 
-	private static final NumberFormat FORMATTER = NumberFormat.getNumberInstance(Locale.ENGLISH);
+  private static final NumberFormat FORMATTER = NumberFormat.getNumberInstance(Locale.ENGLISH);
 
-	public static HtmlGrades newInstance() {
-		return new HtmlGrades();
-	}
+  public static HtmlGrades newInstance() {
+    return new HtmlGrades();
+  }
 
-	public static Document asHtml(Grade grade, String title, double denominator) {
-		final HtmlGrades htmler = newInstance();
-		htmler.setTitle(title);
-		htmler.setDenominator(denominator);
-		return htmler.asHtml(grade);
-	}
+  public static Document asHtml(Grade grade, String title, double denominator) {
+    final HtmlGrades htmler = newInstance();
+    htmler.setTitle(title);
+    htmler.setDenominator(denominator);
+    return htmler.asHtml(grade);
+  }
 
-	public static Document asHtml(Map<String, ? extends Grade> grades, String generalTitle,
-			double denominator) {
+  public static Document asHtml(Map<String, ? extends Grade> grades, String generalTitle,
+      double denominator) {
 		final HtmlDocument document = HtmlDocument.newInstance();
 		document.setTitle(generalTitle);
 		document.getBody().appendChild(document.createTitle1(generalTitle));
