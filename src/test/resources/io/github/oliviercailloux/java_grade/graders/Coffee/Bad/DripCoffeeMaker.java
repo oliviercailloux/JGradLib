@@ -18,50 +18,50 @@ import static com.google.common.base.Verify.verify;
  */
 public class DripCoffeeMaker implements CoffeeMachine {
 
-	private static final double MAX_STRENGTH = 10d;
-	private static final int SECONDS_FOR_COFFEE = 120;
-	private static final double WATT_HOURS_FOR_COFFEE = 83d;
-	private int countProduced;
-	/**
-	 * In [0d, {@link #MAX_STRENGTH}]
-	 */
-	private double lastStrength;
+  private static final double MAX_STRENGTH = 10d;
+  private static final int SECONDS_FOR_COFFEE = 120;
+  private static final double WATT_HOURS_FOR_COFFEE = 83d;
+  private int countProduced;
+  /**
+   * In [0d, {@link #MAX_STRENGTH}]
+   */
+  private double lastStrength;
 
-	public DripCoffeeMaker() {
-		countProduced = 0;
-		lastStrength = -1d;
-	}
+  public DripCoffeeMaker() {
+    countProduced = 0;
+    lastStrength = -1d;
+  }
 
-	@Override
-	public double getMaxStrength() {
-		return MAX_STRENGTH - 1d;
-	}
+  @Override
+  public double getMaxStrength() {
+    return MAX_STRENGTH - 1d;
+  }
 
-	@Override
-	public int getTimeForCoffee(double strength) {
-//		checkArgument(strength <= getMaxStrength());
-//		checkArgument(0d <= strength);
-		return (strength == 0d ? 0 : SECONDS_FOR_COFFEE) + 2;
-	}
+  @Override
+  public int getTimeForCoffee(double strength) {
+//    checkArgument(strength <= getMaxStrength());
+//    checkArgument(0d <= strength);
+    return (strength == 0d ? 0 : SECONDS_FOR_COFFEE) + 2;
+  }
 
-	@Override
-	public void produceCoffee(double strength) {
-//		checkArgument(strength <= getMaxStrength());
-//		checkArgument(0d <= strength);
-		lastStrength = strength;
-		++countProduced;
-	}
+  @Override
+  public void produceCoffee(double strength) {
+//    checkArgument(strength <= getMaxStrength());
+//    checkArgument(0d <= strength);
+    lastStrength = strength;
+    ++countProduced;
+  }
 
-	@Override
-	public int getNumberOfCoffeesProduced() {
-		return countProduced + 1;
-	}
+  @Override
+  public int getNumberOfCoffeesProduced() {
+    return countProduced + 1;
+  }
 
-	@Override
-	public double getEnergySpent() throws IllegalStateException {
-//		checkState(countProduced > 0);
-//		verify(lastStrength >= 0d);
-		return (lastStrength == 0d ? 0d : WATT_HOURS_FOR_COFFEE) + 40d;
-	}
+  @Override
+  public double getEnergySpent() throws IllegalStateException {
+//    checkState(countProduced > 0);
+//    verify(lastStrength >= 0d);
+    return (lastStrength == 0d ? 0d : WATT_HOURS_FOR_COFFEE) + 40d;
+  }
 
 }

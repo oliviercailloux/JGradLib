@@ -6,14 +6,14 @@ import java.lang.reflect.Method;
 
 public class MethodVisibility implements PropertyVisibilityStrategy {
 
-	@Override
-	public boolean isVisible(Field field) {
-		return false;
-	}
+  @Override
+  public boolean isVisible(Field field) {
+    return false;
+  }
 
-	@Override
-	public boolean isVisible(Method method) {
-		return true;
-	}
+  @Override
+  public boolean isVisible(Method method) {
+    return true;
+  }
 
 }

@@ -19,70 +19,70 @@ import java.util.Map;
  */
 class MyPersonsManager implements PersonsManager {
 
-	public static PersonsManager empty() {
-		return new MyPersonsManager();
-	}
+  public static PersonsManager empty() {
+    return new MyPersonsManager();
+  }
 
-	public static PersonsManager given(Iterable<Person> persons) {
-		final MyPersonsManager manager = new MyPersonsManager();
-		manager.setPersons(ImmutableList.copyOf(persons));
-		return manager;
-	}
+  public static PersonsManager given(Iterable<Person> persons) {
+    final MyPersonsManager manager = new MyPersonsManager();
+    manager.setPersons(ImmutableList.copyOf(persons));
+    return manager;
+  }
 
-	@Override
-	public void setPersons(List<Person> persons) {
-		//
-	}
+  @Override
+  public void setPersons(List<Person> persons) {
+    //
+  }
 
-	@Override
-	public void setTaskForce(Person... persons) {
-		//
-	}
+  @Override
+  public void setTaskForce(Person... persons) {
+    //
+  }
 
-	@Override
-	public int size() {
-		return 1;
-	}
+  @Override
+  public int size() {
+    return 1;
+  }
 
-	@Override
-	public boolean contains(String name) {
-		return false;
-	}
+  @Override
+  public boolean contains(String name) {
+    return false;
+  }
 
-	@Override
-	public boolean contains(InputStream personNameAsStream) throws IOException {
-		return true;
-	}
+  @Override
+  public boolean contains(InputStream personNameAsStream) throws IOException {
+    return true;
+  }
 
-	@Override
-	public Map<Integer, Person> toMap() {
-		return null;
-	}
+  @Override
+  public Map<Integer, Person> toMap() {
+    return null;
+  }
 
-	@Override
-	public Iterator<Person> personIterator() {
-		return null;
-	}
+  @Override
+  public Iterator<Person> personIterator() {
+    return null;
+  }
 
-	@Override
-	public Iterator<Integer> idIterator() {
-		return null;
-	}
+  @Override
+  public Iterator<Integer> idIterator() {
+    return null;
+  }
 
-	@Override
-	public RedundancyCounter getRedundancyCounter() {
-		return new RedundancyCounter() {
+  @Override
+  public RedundancyCounter getRedundancyCounter() {
+    return new RedundancyCounter() {
 
-			@Override
-			public int getUniqueCount() {
-				return 0;
-			}
+      @Override
+      public int getUniqueCount() {
+        return 0;
+      }
 
-			@Override
-			public int getRedundancyCount() {
-				return 0;
-			}
-		};
-	}
+      @Override
+      public int getRedundancyCount() {
+        return 0;
+      }
+    };
+  }
 
 }

@@ -29,143 +29,143 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class Fake implements GitFsGrader<RuntimeException> {
-	@SuppressWarnings("unused")
-	private static final Logger LOGGER = LoggerFactory.getLogger(Fake.class);
+  @SuppressWarnings("unused")
+  private static final Logger LOGGER = LoggerFactory.getLogger(Fake.class);
 
-	public static final String PREFIX = "fake";
+  public static final String PREFIX = "fake";
 
-	public static void main(String[] args) throws Exception {
-		/*
-		 * TODO exception ioE on stream.
-		 *
-		 * TODO weights all equal
-		 *
-		 * TODO min aggregator!
-		 *
-		 * TODO Owa is a sort of average weighter?
-		 *
-		 * TODO comment at node levels? (Using commit X, then a set of criteria)
-		 *
-		 * TODO does batch send non empty graphs only?
-		 */
-		final BatchGitHistoryGrader<RuntimeException> grader = BatchGitHistoryGrader
-				.given(() -> GitFileSystemWithHistoryFetcherByPrefix.getRetrievingByPrefix(PREFIX));
-		grader.getAndWriteGrades(new Fake(), 0.25d, Path.of("grades " + PREFIX), PREFIX + " " + Instant.now());
-	}
+  public static void main(String[] args) throws Exception {
+    /*
+     * TODO exception ioE on stream.
+     *
+     * TODO weights all equal
+     *
+     * TODO min aggregator!
+     *
+     * TODO Owa is a sort of average weighter?
+     *
+     * TODO comment at node levels? (Using commit X, then a set of criteria)
+     *
+     * TODO does batch send non empty graphs only?
+     */
+    final BatchGitHistoryGrader<RuntimeException> grader = BatchGitHistoryGrader
+        .given(() -> GitFileSystemWithHistoryFetcherByPrefix.getRetrievingByPrefix(PREFIX));
+    grader.getAndWriteGrades(new Fake(), 0.25d, Path.of("grades " + PREFIX), PREFIX + " " + Instant.now());
+  }
 
-	private static final Criterion C0 = Criterion.given("Anything committed");
+  private static final Criterion C0 = Criterion.given("Anything committed");
 
-	private static final Criterion C1 = Criterion.given("First commit");
-	private static final Criterion C_TWO = Criterion.given("Exactly two files");
-	private static final Criterion C_CONTENTS_A = Criterion.given("Contents A");
-	private static final Criterion C_CONTENTS_S = Criterion.given("Contents S");
-	private static final Criterion C_EXISTS_A = Criterion.given("Exists A");
-	private static final Criterion C_EXISTS_S = Criterion.given("Exists S");
-	private static final Criterion C_ONE = Criterion.given("Exactly one file");
-	private static final Criterion C_NO_A = Criterion.given("! exists A");
-	private static final Criterion C2 = Criterion.given("Second commit");
+  private static final Criterion C1 = Criterion.given("First commit");
+  private static final Criterion C_TWO = Criterion.given("Exactly two files");
+  private static final Criterion C_CONTENTS_A = Criterion.given("Contents A");
+  private static final Criterion C_CONTENTS_S = Criterion.given("Contents S");
+  private static final Criterion C_EXISTS_A = Criterion.given("Exists A");
+  private static final Criterion C_EXISTS_S = Criterion.given("Exists S");
+  private static final Criterion C_ONE = Criterion.given("Exactly one file");
+  private static final Criterion C_NO_A = Criterion.given("! exists A");
+  private static final Criterion C2 = Criterion.given("Second commit");
 
-	@Override
-	public MarksTree grade(GitHistorySimple data) {
-		verify(!data.graph().nodes().isEmpty());
+  @Override
+  public MarksTree grade(GitHistorySimple data) {
+    verify(!data.graph().nodes().isEmpty());
 
-		final ImmutableSet<GitPathRootShaCached> commitsOrdered = data.roots().stream()
-				.flatMap(r -> Graphs.reachableNodes(data.graph(), r).stream()).collect(ImmutableSet.toImmutableSet());
-		final ImmutableSet<GitPathRootShaCached> commitsOrderedExceptRoots = Sets
-				.difference(commitsOrdered, data.roots()).immutableCopy();
-		LOGGER.info("Commits ordered (except for roots): {}.", commitsOrderedExceptRoots);
-		final int nbCommits = commitsOrderedExceptRoots.size();
+    final ImmutableSet<GitPathRootShaCached> commitsOrdered = data.roots().stream()
+        .flatMap(r -> Graphs.reachableNodes(data.graph(), r).stream()).collect(ImmutableSet.toImmutableSet());
+    final ImmutableSet<GitPathRootShaCached> commitsOrderedExceptRoots = Sets
+        .difference(commitsOrdered, data.roots()).immutableCopy();
+    LOGGER.info("Commits ordered (except for roots): {}.", commitsOrderedExceptRoots);
+    final int nbCommits = commitsOrderedExceptRoots.size();
 
-		final MarksTree anyCommitMark = Mark.binary(!commitsOrderedExceptRoots.isEmpty(),
-				String.format("Found %s commit%s, not counting the root ones", nbCommits, nbCommits == 1 ? "" : "s"),
-				"");
+    final MarksTree anyCommitMark = Mark.binary(!commitsOrderedExceptRoots.isEmpty(),
+        String.format("Found %s commit%s, not counting the root ones", nbCommits, nbCommits == 1 ? "" : "s"),
+        "");
 
-		final Comparator<MarksTree> byPoints = Comparator
-				.comparing(m -> Grade.given(firstCommitDiscriminator(), m).mark().getPoints());
-		final GitPathRootShaCached firstCommit = commitsOrderedExceptRoots.stream()
-				.sorted(Comparator.comparing(this::firstCommitMark, byPoints.reversed())).findFirst()
-				.orElse(data.roots().iterator().next());
-		final MarksTree firstCommitMark = firstCommitMark(firstCommit);
+    final Comparator<MarksTree> byPoints = Comparator
+        .comparing(m -> Grade.given(firstCommitDiscriminator(), m).mark().getPoints());
+    final GitPathRootShaCached firstCommit = commitsOrderedExceptRoots.stream()
+        .sorted(Comparator.comparing(this::firstCommitMark, byPoints.reversed())).findFirst()
+        .orElse(data.roots().iterator().next());
+    final MarksTree firstCommitMark = firstCommitMark(firstCommit);
 
-		final Comparator<MarksTree> byPointsSecond = Comparator
-				.comparing(m -> Grade.given(secondCommitDiscriminator(), m).mark().getPoints());
-		final GitPathRootShaCached secondCommit = Graphs.reachableNodes(data.graph(), firstCommit).stream()
-				.sorted(Comparator.comparing(this::secondCommitMark, byPointsSecond.reversed())).findFirst()
-				.orElse(data.roots().iterator().next());
-		final MarksTree secondCommitMark = secondCommitMark(secondCommit);
+    final Comparator<MarksTree> byPointsSecond = Comparator
+        .comparing(m -> Grade.given(secondCommitDiscriminator(), m).mark().getPoints());
+    final GitPathRootShaCached secondCommit = Graphs.reachableNodes(data.graph(), firstCommit).stream()
+        .sorted(Comparator.comparing(this::secondCommitMark, byPointsSecond.reversed())).findFirst()
+        .orElse(data.roots().iterator().next());
+    final MarksTree secondCommitMark = secondCommitMark(secondCommit);
 
-		return MarksTree.composite(ImmutableMap.of(C0, anyCommitMark, C1, firstCommitMark, C2, secondCommitMark));
-	}
+    return MarksTree.composite(ImmutableMap.of(C0, anyCommitMark, C1, firstCommitMark, C2, secondCommitMark));
+  }
 
-	@Override
-	public GradeAggregator getAggregator() {
-		return GradeAggregator.staticAggregator(ImmutableMap.of(C0, 1d, C1, 1d, C2, 1d),
-				ImmutableMap.of(C1, firstCommitAggregator(), C2, secondCommitAggregator()));
-	}
+  @Override
+  public GradeAggregator getAggregator() {
+    return GradeAggregator.staticAggregator(ImmutableMap.of(C0, 1d, C1, 1d, C2, 1d),
+        ImmutableMap.of(C1, firstCommitAggregator(), C2, secondCommitAggregator()));
+  }
 
-	private MarksTree firstCommitMark(GitPathRoot root) {
-		try {
-			final long nbFiles = Files.find(root, Integer.MAX_VALUE, (p, a) -> Files.isRegularFile(p)).count();
-			final boolean exactlyTwo = nbFiles == 2;
-			final GitPath pathS = root.resolve("Some file.txt");
-			final GitPath pathA = root.resolve("Some folder/Another file.txt");
-			final boolean existsS = Files.exists(pathS);
-			final boolean existsA = Files.exists(pathA);
-			final String contentS = existsS ? Files.readString(pathS) : "";
-			final String contentA = existsA ? Files.readString(pathA) : "";
-			final Pattern patternS = Pattern.compile("A file!\\v+More content!\\v*");
-			final boolean rightS = patternS.matcher(contentS).matches();
-			verify(patternS.matcher("A file!\nMore content!").matches());
-			verify(patternS.matcher("A file!\nMore content!\n").matches());
-			verify(patternS.matcher("A file!\n\nMore content!\n").matches());
-			final boolean rightA = contentA.matches("More content!\\v*");
-			final String id = root.getCommit().id().getName().substring(0, 6);
-			final String comment = "Using commit " + id;
-			final MarksTree mark = MarksTree.composite(ImmutableMap.of(C_TWO, Mark.binary(exactlyTwo, comment, comment),
-					C_EXISTS_S, Mark.binary(existsS), C_EXISTS_A, Mark.binary(existsA), C_CONTENTS_S,
-					Mark.binary(rightS), C_CONTENTS_A, Mark.binary(rightA)));
-			LOGGER.debug("Commit {}; Seen content {}, matches? {}; score {}.", id, contentS, rightS,
-					Grade.given(firstCommitAggregator(), mark).mark().getPoints());
-			return mark;
-		} catch (IOException e) {
-			throw new IllegalStateException(e);
-		}
-	}
+  private MarksTree firstCommitMark(GitPathRoot root) {
+    try {
+      final long nbFiles = Files.find(root, Integer.MAX_VALUE, (p, a) -> Files.isRegularFile(p)).count();
+      final boolean exactlyTwo = nbFiles == 2;
+      final GitPath pathS = root.resolve("Some file.txt");
+      final GitPath pathA = root.resolve("Some folder/Another file.txt");
+      final boolean existsS = Files.exists(pathS);
+      final boolean existsA = Files.exists(pathA);
+      final String contentS = existsS ? Files.readString(pathS) : "";
+      final String contentA = existsA ? Files.readString(pathA) : "";
+      final Pattern patternS = Pattern.compile("A file!\\v+More content!\\v*");
+      final boolean rightS = patternS.matcher(contentS).matches();
+      verify(patternS.matcher("A file!\nMore content!").matches());
+      verify(patternS.matcher("A file!\nMore content!\n").matches());
+      verify(patternS.matcher("A file!\n\nMore content!\n").matches());
+      final boolean rightA = contentA.matches("More content!\\v*");
+      final String id = root.getCommit().id().getName().substring(0, 6);
+      final String comment = "Using commit " + id;
+      final MarksTree mark = MarksTree.composite(ImmutableMap.of(C_TWO, Mark.binary(exactlyTwo, comment, comment),
+          C_EXISTS_S, Mark.binary(existsS), C_EXISTS_A, Mark.binary(existsA), C_CONTENTS_S,
+          Mark.binary(rightS), C_CONTENTS_A, Mark.binary(rightA)));
+      LOGGER.debug("Commit {}; Seen content {}, matches? {}; score {}.", id, contentS, rightS,
+          Grade.given(firstCommitAggregator(), mark).mark().getPoints());
+      return mark;
+    } catch (IOException e) {
+      throw new IllegalStateException(e);
+    }
+  }
 
-	private GradeAggregator firstCommitAggregator() {
-		return GradeAggregator.MIN;
-	}
+  private GradeAggregator firstCommitAggregator() {
+    return GradeAggregator.MIN;
+  }
 
-	private GradeAggregator firstCommitDiscriminator() {
-		return GradeAggregator.staticAggregator(
-				ImmutableMap.of(C_TWO, 1d, C_EXISTS_S, 1d, C_EXISTS_A, 1d, C_CONTENTS_S, 1d, C_CONTENTS_A, 1d),
-				ImmutableMap.of());
-	}
+  private GradeAggregator firstCommitDiscriminator() {
+    return GradeAggregator.staticAggregator(
+        ImmutableMap.of(C_TWO, 1d, C_EXISTS_S, 1d, C_EXISTS_A, 1d, C_CONTENTS_S, 1d, C_CONTENTS_A, 1d),
+        ImmutableMap.of());
+  }
 
-	private MarksTree secondCommitMark(GitPathRoot root) {
-		try {
-			final long nbFiles = Files.find(root, Integer.MAX_VALUE, (p, a) -> Files.isRegularFile(p)).count();
-			final boolean exactlyOne = nbFiles == 1;
-			final GitPath pathS = root.resolve("Some file.txt");
-			final GitPath pathA = root.resolve("Some folder/Another file.txt");
-			final boolean existsS = Files.exists(pathS);
-			final boolean existsA = Files.exists(pathA);
-			final String contentS = existsS ? Files.readString(pathS) : "";
-			final boolean rightS = contentS.matches("A file!\\v+More content!\\v*");
-			final String comment = "Using commit " + root.getCommit().id().getName().substring(0, 6);
-			return MarksTree.composite(ImmutableMap.of(C_ONE, Mark.binary(exactlyOne, comment, comment), C_EXISTS_S,
-					Mark.binary(existsS), C_NO_A, Mark.binary(!existsA), C_CONTENTS_S, Mark.binary(rightS)));
-		} catch (IOException e) {
-			throw new IllegalStateException(e);
-		}
-	}
+  private MarksTree secondCommitMark(GitPathRoot root) {
+    try {
+      final long nbFiles = Files.find(root, Integer.MAX_VALUE, (p, a) -> Files.isRegularFile(p)).count();
+      final boolean exactlyOne = nbFiles == 1;
+      final GitPath pathS = root.resolve("Some file.txt");
+      final GitPath pathA = root.resolve("Some folder/Another file.txt");
+      final boolean existsS = Files.exists(pathS);
+      final boolean existsA = Files.exists(pathA);
+      final String contentS = existsS ? Files.readString(pathS) : "";
+      final boolean rightS = contentS.matches("A file!\\v+More content!\\v*");
+      final String comment = "Using commit " + root.getCommit().id().getName().substring(0, 6);
+      return MarksTree.composite(ImmutableMap.of(C_ONE, Mark.binary(exactlyOne, comment, comment), C_EXISTS_S,
+          Mark.binary(existsS), C_NO_A, Mark.binary(!existsA), C_CONTENTS_S, Mark.binary(rightS)));
+    } catch (IOException e) {
+      throw new IllegalStateException(e);
+    }
+  }
 
-	private GradeAggregator secondCommitAggregator() {
-		return GradeAggregator.MIN;
-	}
+  private GradeAggregator secondCommitAggregator() {
+    return GradeAggregator.MIN;
+  }
 
-	private GradeAggregator secondCommitDiscriminator() {
-		return GradeAggregator.staticAggregator(
-				ImmutableMap.of(C_ONE, 1d, C_EXISTS_S, 1d, C_NO_A, 1d, C_CONTENTS_S, 1d), ImmutableMap.of());
-	}
+  private GradeAggregator secondCommitDiscriminator() {
+    return GradeAggregator.staticAggregator(
+        ImmutableMap.of(C_ONE, 1d, C_EXISTS_S, 1d, C_NO_A, 1d, C_CONTENTS_S, 1d), ImmutableMap.of());
+  }
 }

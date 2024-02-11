@@ -38,76 +38,76 @@ import io.github.oliviercailloux.java_grade.graders.Commit;
 import io.github.oliviercailloux.utils.Utils;
 
 public class GitGeneralGraderTests {
-	@SuppressWarnings("unused")
-	private static final Logger LOGGER = LoggerFactory.getLogger(GitGeneralGraderTests.class);
+  @SuppressWarnings("unused")
+  private static final Logger LOGGER = LoggerFactory.getLogger(GitGeneralGraderTests.class);
 
-	@SuppressWarnings("unused")
-	@Test
-	@Disabled("To be implemented")
-	void testEmpty() throws Exception {
-		try (Repository repository = new InMemoryRepository(new DfsRepositoryDescription("myrepo"));
-				GitFileSystem gitFs = GitFileSystemProvider.instance().newFileSystemFromRepository(repository)) {
-			assertTrue(repository.getObjectDatabase().exists());
-			assertFalse(repository.getRefDatabase().hasRefs());
+  @SuppressWarnings("unused")
+  @Test
+  @Disabled("To be implemented")
+  void testEmpty() throws Exception {
+    try (Repository repository = new InMemoryRepository(new DfsRepositoryDescription("myrepo"));
+        GitFileSystem gitFs = GitFileSystemProvider.instance().newFileSystemFromRepository(repository)) {
+      assertTrue(repository.getObjectDatabase().exists());
+      assertFalse(repository.getRefDatabase().hasRefs());
 
-			final GitHistorySimple empty = GitHistorySimple.create(gitFs, ImmutableMap.of());
-//			final GitGeneralGrader general = GitGeneralGrader.using("dummy", DeadlineGrader.given(new Commit(), Commit.DEADLINE));
-//			general.
-//			final IGrade grade = general;
-//			LOGGER.debug("Grade: {}.", JsonGrade.asJson(grade));
-//			assertEquals(0d, grade.getPoints());
-		}
+      final GitHistorySimple empty = GitHistorySimple.create(gitFs, ImmutableMap.of());
+//      final GitGeneralGrader general = GitGeneralGrader.using("dummy", DeadlineGrader.given(new Commit(), Commit.DEADLINE));
+//      general.
+//      final IGrade grade = general;
+//      LOGGER.debug("Grade: {}.", JsonGrade.asJson(grade));
+//      assertEquals(0d, grade.getPoints());
+    }
 
-	}
+  }
 
-	@SuppressWarnings("unused")
-	@Test
-	@Disabled("To be implemented")
-	void testAlmost() throws Exception {
-		try (FileSystem jimFs = Jimfs.newFileSystem(Configuration.unix())) {
-			final Path c1 = Files.createDirectories(jimFs.getPath("c1/"));
-			final Path c2 = Files.createDirectories(jimFs.getPath("c2/"));
-			final Path c3 = Files.createDirectories(jimFs.getPath("c3/"));
-			final Path links = Files.createDirectories(jimFs.getPath("links/"));
+  @SuppressWarnings("unused")
+  @Test
+  @Disabled("To be implemented")
+  void testAlmost() throws Exception {
+    try (FileSystem jimFs = Jimfs.newFileSystem(Configuration.unix())) {
+      final Path c1 = Files.createDirectories(jimFs.getPath("c1/"));
+      final Path c2 = Files.createDirectories(jimFs.getPath("c2/"));
+      final Path c3 = Files.createDirectories(jimFs.getPath("c3/"));
+      final Path links = Files.createDirectories(jimFs.getPath("links/"));
 
-			{
-				Files.writeString(c1.resolve("afile.txt"), "coucou");
-			}
-			{
-				Files.writeString(c2.resolve("afile.txt"), "coucou");
-				Files.writeString(c2.resolve("myid.txt"), "222");
-			}
-			{
-				Files.writeString(c3.resolve("afile.txt"), "coucou");
-				Files.writeString(c3.resolve("myid.txt"), "222");
-				Files.writeString(Files.createDirectories(c3.resolve("sub/a/")).resolve("another file.txt"), "coucou");
-			}
-			{
-				final Path origin = Files.createDirectories(links.resolve(Constants.R_REMOTES + "origin/"));
-				Files.createSymbolicLink(origin.resolve("coucou"), c1);
-				Files.createSymbolicLink(origin.resolve("main"), c2);
-				Files.createSymbolicLink(origin.resolve("dev"), c3);
-			}
+      {
+        Files.writeString(c1.resolve("afile.txt"), "coucou");
+      }
+      {
+        Files.writeString(c2.resolve("afile.txt"), "coucou");
+        Files.writeString(c2.resolve("myid.txt"), "222");
+      }
+      {
+        Files.writeString(c3.resolve("afile.txt"), "coucou");
+        Files.writeString(c3.resolve("myid.txt"), "222");
+        Files.writeString(Files.createDirectories(c3.resolve("sub/a/")).resolve("another file.txt"), "coucou");
+      }
+      {
+        final Path origin = Files.createDirectories(links.resolve(Constants.R_REMOTES + "origin/"));
+        Files.createSymbolicLink(origin.resolve("coucou"), c1);
+        Files.createSymbolicLink(origin.resolve("main"), c2);
+        Files.createSymbolicLink(origin.resolve("dev"), c3);
+      }
 
-			final PersonIdent personIdent = new PersonIdent("Me", "email");
+      final PersonIdent personIdent = new PersonIdent("Me", "email");
 
-			try (Repository repository = JGit.createRepository(personIdent, Utils.asGraph(ImmutableList.of(c1, c2, c3)),
-					links);
-					GitFileSystem gitFs = GitFileSystemProvider.instance().newFileSystemFromRepository(repository)) {
-				final GitHistory history = GitHistoryUtils.getHistory(gitFs);
-				final ImmutableGraph<ObjectId> graph = history.getGraph();
-				final ObjectId o1 = Iterables.getOnlyElement(history.getRoots());
-				final ObjectId o2 = Iterables.getOnlyElement(graph.successors(o1));
-				final ObjectId o3 = Iterables.getOnlyElement(graph.successors(o2));
-				final Map<ObjectId, Instant> times = ImmutableMap.of(o1, Commit.DEADLINE.toInstant(), o2,
-						Commit.DEADLINE.toInstant(), o3, Commit.DEADLINE.toInstant().plus(Duration.ofMinutes(4)));
-				final GitHistorySimple withTimes = GitHistorySimple.create(gitFs, times);
+      try (Repository repository = JGit.createRepository(personIdent, Utils.asGraph(ImmutableList.of(c1, c2, c3)),
+          links);
+          GitFileSystem gitFs = GitFileSystemProvider.instance().newFileSystemFromRepository(repository)) {
+        final GitHistory history = GitHistoryUtils.getHistory(gitFs);
+        final ImmutableGraph<ObjectId> graph = history.getGraph();
+        final ObjectId o1 = Iterables.getOnlyElement(history.getRoots());
+        final ObjectId o2 = Iterables.getOnlyElement(graph.successors(o1));
+        final ObjectId o3 = Iterables.getOnlyElement(graph.successors(o2));
+        final Map<ObjectId, Instant> times = ImmutableMap.of(o1, Commit.DEADLINE.toInstant(), o2,
+            Commit.DEADLINE.toInstant(), o3, Commit.DEADLINE.toInstant().plus(Duration.ofMinutes(4)));
+        final GitHistorySimple withTimes = GitHistorySimple.create(gitFs, times);
 
-//				final IGrade grade = GitGeneralGrader.grade(withTimes, Commit.DEADLINE, "Not me", new Commit());
-//				LOGGER.debug("Grade: {}.", JsonGrade.asJson(grade));
-//				assertEquals(0.65d, grade.getPoints(), 1e-5d);
-			}
-		}
+//        final IGrade grade = GitGeneralGrader.grade(withTimes, Commit.DEADLINE, "Not me", new Commit());
+//        LOGGER.debug("Grade: {}.", JsonGrade.asJson(grade));
+//        assertEquals(0.65d, grade.getPoints(), 1e-5d);
+      }
+    }
 
-	}
+  }
 }

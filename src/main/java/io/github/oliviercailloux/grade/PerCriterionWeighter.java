@@ -11,14 +11,14 @@ import java.util.Set;
  */
 public interface PerCriterionWeighter extends CriteriaWeighter {
 
-	/**
-	 * @throws AggregatorException iff the given criterion is rejected.
-	 */
-	public double weight(Criterion criterion) throws AggregatorException;
+  /**
+   * @throws AggregatorException iff the given criterion is rejected.
+   */
+  public double weight(Criterion criterion) throws AggregatorException;
 
-	@Override
-	default ImmutableMap<Criterion, Double> weightsFromCriteria(Set<Criterion> criteria) throws AggregatorException {
-		return criteria.stream().collect(ImmutableMap.toImmutableMap(c -> c, this::weight));
-	}
+  @Override
+  default ImmutableMap<Criterion, Double> weightsFromCriteria(Set<Criterion> criteria) throws AggregatorException {
+    return criteria.stream().collect(ImmutableMap.toImmutableMap(c -> c, this::weight));
+  }
 
 }

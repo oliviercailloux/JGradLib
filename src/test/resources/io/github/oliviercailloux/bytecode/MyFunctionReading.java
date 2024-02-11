@@ -5,17 +5,17 @@ import java.util.function.Function;
 
 public class MyFunctionReading implements Function<String, String> {
 
-	public static Function<String, String> newInstance() {
-		return new MyFunctionReading();
-	}
+  public static Function<String, String> newInstance() {
+    return new MyFunctionReading();
+  }
 
-	private MyFunctionReading() {
-		/** Empty private constructor. */
-	}
+  private MyFunctionReading() {
+    /** Empty private constructor. */
+  }
 
-	@Override
-	public String apply(String t) {
-		return Policy.getPolicy().toString();
-	}
+  @Override
+  public String apply(String t) {
+    return Policy.getPolicy().toString();
+  }
 
 }

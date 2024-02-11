@@ -6,13 +6,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class GraderVarious {
-	@SuppressWarnings("unused")
-	private static final Logger LOGGER = LoggerFactory.getLogger(GraderVarious.class);
+  @SuppressWarnings("unused")
+  private static final Logger LOGGER = LoggerFactory.getLogger(GraderVarious.class);
 
-	public void gradeCode() {
-		final TryCatchAll<Integer> tryTarget = TryCatchAll.get(() -> 3);
-		TConsumer<? super Integer, ?> consumer = Integer::byteValue;
-		final TryCatchAll<Integer> got = tryTarget.andConsume(consumer);
-		LOGGER.info("Got: {}.", got);
-	}
+  public void gradeCode() {
+    final TryCatchAll<Integer> tryTarget = TryCatchAll.get(() -> 3);
+    TConsumer<? super Integer, ?> consumer = Integer::byteValue;
+    final TryCatchAll<Integer> got = tryTarget.andConsume(consumer);
+    LOGGER.info("Got: {}.", got);
+  }
 }

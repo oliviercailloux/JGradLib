@@ -6,18 +6,18 @@ import java.util.function.Function;
 
 public class MyFunctionCheckingFilePermission implements Function<String, String> {
 
-	public static Function<String, String> newInstance() {
-		return new MyFunctionCheckingFilePermission();
-	}
+  public static Function<String, String> newInstance() {
+    return new MyFunctionCheckingFilePermission();
+  }
 
-	private MyFunctionCheckingFilePermission() {
-		/** Empty private constructor. */
-	}
+  private MyFunctionCheckingFilePermission() {
+    /** Empty private constructor. */
+  }
 
-	@Override
-	public String apply(String t) {
-		AccessController.checkPermission(new FilePermission("/-", "read"));
-		return "ok";
-	}
+  @Override
+  public String apply(String t) {
+    AccessController.checkPermission(new FilePermission("/-", "read"));
+    return "ok";
+  }
 
 }

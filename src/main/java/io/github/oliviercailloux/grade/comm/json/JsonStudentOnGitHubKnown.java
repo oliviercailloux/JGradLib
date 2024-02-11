@@ -15,39 +15,39 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class JsonStudentOnGitHubKnown {
-	@SuppressWarnings("unused")
-	private static final Logger LOGGER = LoggerFactory.getLogger(JsonStudentOnGitHubKnown.class);
+  @SuppressWarnings("unused")
+  private static final Logger LOGGER = LoggerFactory.getLogger(JsonStudentOnGitHubKnown.class);
 
-	public static PrintableJsonObject asJson(StudentOnGitHubKnown student) {
-		final PrintableJsonObject mcJson = JsonbUtils.toJsonObject(student.getInstitutionalStudent());
-		LOGGER.debug("Created {}.", mcJson);
-		final JsonObject json = Json.createObjectBuilder()
-				.add("gitHubUsername", student.getGitHubUsername().getUsername())
-				.addAll(Json.createObjectBuilder(mcJson)).build();
-		return PrintableJsonObjectFactory.wrapObject(json);
-	}
+  public static PrintableJsonObject asJson(StudentOnGitHubKnown student) {
+    final PrintableJsonObject mcJson = JsonbUtils.toJsonObject(student.getInstitutionalStudent());
+    LOGGER.debug("Created {}.", mcJson);
+    final JsonObject json = Json.createObjectBuilder()
+        .add("gitHubUsername", student.getGitHubUsername().getUsername())
+        .addAll(Json.createObjectBuilder(mcJson)).build();
+    return PrintableJsonObjectFactory.wrapObject(json);
+  }
 
-	public static PrintableJsonValue asJsonFromList(List<StudentOnGitHubKnown> students) {
-		return JsonbUtils.toJsonValue(students, asAdapter());
-	}
+  public static PrintableJsonValue asJsonFromList(List<StudentOnGitHubKnown> students) {
+    return JsonbUtils.toJsonValue(students, asAdapter());
+  }
 
-	public static StudentOnGitHubKnown asStudentOnGitHubKnown(JsonObject json) {
-		final GitHubUsername gitHubUsername = GitHubUsername.given(json.getString("gitHubUsername"));
-		final InstitutionalStudent mc = JsonbUtils.fromJson(json.toString(), InstitutionalStudent.class);
-		return StudentOnGitHubKnown.with(gitHubUsername, mc);
-	}
+  public static StudentOnGitHubKnown asStudentOnGitHubKnown(JsonObject json) {
+    final GitHubUsername gitHubUsername = GitHubUsername.given(json.getString("gitHubUsername"));
+    final InstitutionalStudent mc = JsonbUtils.fromJson(json.toString(), InstitutionalStudent.class);
+    return StudentOnGitHubKnown.with(gitHubUsername, mc);
+  }
 
-	public static JsonbAdapter<StudentOnGitHubKnown, JsonObject> asAdapter() {
-		return new JsonbAdapter<>() {
-			@Override
-			public JsonObject adaptToJson(StudentOnGitHubKnown obj) throws Exception {
-				return asJson(obj);
-			}
+  public static JsonbAdapter<StudentOnGitHubKnown, JsonObject> asAdapter() {
+    return new JsonbAdapter<>() {
+      @Override
+      public JsonObject adaptToJson(StudentOnGitHubKnown obj) throws Exception {
+        return asJson(obj);
+      }
 
-			@Override
-			public StudentOnGitHubKnown adaptFromJson(JsonObject obj) throws Exception {
-				return asStudentOnGitHubKnown(obj);
-			}
-		};
-	}
+      @Override
+      public StudentOnGitHubKnown adaptFromJson(JsonObject obj) throws Exception {
+        return asStudentOnGitHubKnown(obj);
+      }
+    };
+  }
 }

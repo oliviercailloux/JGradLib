@@ -27,94 +27,94 @@ import java.util.Set;
  */
 class MyPersonsManager implements PersonsManager {
 
-	private static class MyRedundancyCounter implements RedundancyCounter {
-		private MyPersonsManager manager;
+  private static class MyRedundancyCounter implements RedundancyCounter {
+    private MyPersonsManager manager;
 
-		private MyRedundancyCounter(MyPersonsManager manager) {
-			this.manager = checkNotNull(manager);
-		}
+    private MyRedundancyCounter(MyPersonsManager manager) {
+      this.manager = checkNotNull(manager);
+    }
 
-		@Override
-		public int getRedundancyCount() {
-			return manager.lastListSize - manager.size();
-		}
+    @Override
+    public int getRedundancyCount() {
+      return manager.lastListSize - manager.size();
+    }
 
-		@Override
-		public int getUniqueCount() {
-			return manager.size();
-		}
+    @Override
+    public int getUniqueCount() {
+      return manager.size();
+    }
 
-	}
+  }
 
-	public static PersonsManager empty() {
-		return new MyPersonsManager();
-	}
+  public static PersonsManager empty() {
+    return new MyPersonsManager();
+  }
 
-	public static PersonsManager given(Iterable<Person> persons) {
-		final MyPersonsManager manager = new MyPersonsManager();
-		manager.setPersons(ImmutableList.copyOf(persons));
-		return manager;
-	}
+  public static PersonsManager given(Iterable<Person> persons) {
+    final MyPersonsManager manager = new MyPersonsManager();
+    manager.setPersons(ImmutableList.copyOf(persons));
+    return manager;
+  }
 
-	private Set<Person> persons;
-	private int lastListSize;
+  private Set<Person> persons;
+  private int lastListSize;
 
-	MyPersonsManager() {
-		persons = new LinkedHashSet<>();
-		lastListSize = 0;
-	}
+  MyPersonsManager() {
+    persons = new LinkedHashSet<>();
+    lastListSize = 0;
+  }
 
-	@Override
-	public void setPersons(List<Person> persons) {
-		this.persons = new LinkedHashSet<>();
-		this.persons.addAll(persons);
-		lastListSize = persons.size();
-	}
+  @Override
+  public void setPersons(List<Person> persons) {
+    this.persons = new LinkedHashSet<>();
+    this.persons.addAll(persons);
+    lastListSize = persons.size();
+  }
 
-	@Override
-	public void setTaskForce(Person... persons) {
-		final ImmutableList<Person> personsList = ImmutableList.copyOf(persons);
-		checkArgument(personsList.size() == 1 || personsList.size() == 2);
-		setPersons(personsList);
-	}
+  @Override
+  public void setTaskForce(Person... persons) {
+    final ImmutableList<Person> personsList = ImmutableList.copyOf(persons);
+    checkArgument(personsList.size() == 1 || personsList.size() == 2);
+    setPersons(personsList);
+  }
 
-	@Override
-	public int size() {
-		return persons.size();
-	}
+  @Override
+  public int size() {
+    return persons.size();
+  }
 
-	@Override
-	public boolean contains(String name) {
-		return persons.stream().anyMatch(p -> p.getName().equals(name));
-	}
+  @Override
+  public boolean contains(String name) {
+    return persons.stream().anyMatch(p -> p.getName().equals(name));
+  }
 
-	@Override
-	public boolean contains(InputStream personNameAsStream) throws IOException {
-		return contains(new String(personNameAsStream.readAllBytes(), StandardCharsets.UTF_8));
-	}
+  @Override
+  public boolean contains(InputStream personNameAsStream) throws IOException {
+    return contains(new String(personNameAsStream.readAllBytes(), StandardCharsets.UTF_8));
+  }
 
-	@Override
-	public Map<Integer, Person> toMap() {
-		return persons.stream().collect(ImmutableMap.toImmutableMap(Person::getId, p -> p));
-	}
+  @Override
+  public Map<Integer, Person> toMap() {
+    return persons.stream().collect(ImmutableMap.toImmutableMap(Person::getId, p -> p));
+  }
 
-	@Override
-	public Iterator<Person> personIterator() {
-		return persons.iterator();
-	}
+  @Override
+  public Iterator<Person> personIterator() {
+    return persons.iterator();
+  }
 
-	@Override
-	public Iterator<Integer> idIterator() {
-		return Iterators.transform(persons.iterator(), Person::getId);
-	}
+  @Override
+  public Iterator<Integer> idIterator() {
+    return Iterators.transform(persons.iterator(), Person::getId);
+  }
 
-	@Override
-	public RedundancyCounter getRedundancyCounter() {
-		return new MyRedundancyCounter(this);
-	}
+  @Override
+  public RedundancyCounter getRedundancyCounter() {
+    return new MyRedundancyCounter(this);
+  }
 
-	@Override
-	public String toString() {
-		return "PersonsManager with " + size() + " entries";
-	}
+  @Override
+  public String toString() {
+    return "PersonsManager with " + size() + " entries";
+  }
 }

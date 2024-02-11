@@ -6,7 +6,7 @@ import io.github.oliviercailloux.grade.MarksTree;
 import io.github.oliviercailloux.grade.SubMarksTree;
 
 public record RootedMarksTree(GitPathRootShaCached root, MarksTree tree) {
-	public SubMarksTree commented() {
-		return SubMarksTree.given(Criterion.given("Using " + root.getCommit().id().getName()), tree);
-	}
+  public SubMarksTree commented() {
+    return SubMarksTree.given(Criterion.given("Using " + root.getCommit().id().getName()), tree);
+  }
 }

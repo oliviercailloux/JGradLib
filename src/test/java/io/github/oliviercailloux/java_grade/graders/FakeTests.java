@@ -36,74 +36,74 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 class FakeTests {
-	@SuppressWarnings("unused")
-	private static final Logger LOGGER = LoggerFactory.getLogger(FakeTests.class);
-	private static final GitHubUsername USERNAME = GitHubUsername.given("user");
+  @SuppressWarnings("unused")
+  private static final Logger LOGGER = LoggerFactory.getLogger(FakeTests.class);
+  private static final GitHubUsername USERNAME = GitHubUsername.given("user");
 
-	@Test
-	void testEmpty() throws Exception {
-		try (Repository repository = new InMemoryRepository(new DfsRepositoryDescription("myrepo"));
-				GitFileSystem gitFs = GitFileSystemProvider.instance().newFileSystemFromRepository(repository)) {
+  @Test
+  void testEmpty() throws Exception {
+    try (Repository repository = new InMemoryRepository(new DfsRepositoryDescription("myrepo"));
+        GitFileSystem gitFs = GitFileSystemProvider.instance().newFileSystemFromRepository(repository)) {
 
-			final GitHistorySimple gitH = GitHistorySimple.usingCommitterDates(gitFs);
-			final BatchGitHistoryGrader<RuntimeException> batchGrader = BatchGitHistoryGrader
-					.given(() -> StaticFetcher.single(USERNAME, gitH));
+      final GitHistorySimple gitH = GitHistorySimple.usingCommitterDates(gitFs);
+      final BatchGitHistoryGrader<RuntimeException> batchGrader = BatchGitHistoryGrader
+          .given(() -> StaticFetcher.single(USERNAME, gitH));
 
-			final ZonedDateTime nowTime = ZonedDateTime.parse("2022-01-01T10:00:00+01:00[Europe/Paris]");
-			final Exam exam = batchGrader.getGrades(nowTime.plus(30, ChronoUnit.MINUTES),
-					Duration.of(1, ChronoUnit.HOURS), new Fake(), 0.1d);
+      final ZonedDateTime nowTime = ZonedDateTime.parse("2022-01-01T10:00:00+01:00[Europe/Paris]");
+      final Exam exam = batchGrader.getGrades(nowTime.plus(30, ChronoUnit.MINUTES),
+          Duration.of(1, ChronoUnit.HOURS), new Fake(), 0.1d);
 
-			assertEquals(ImmutableSet.of(USERNAME), exam.getUsernames());
-			assertEquals(0d, exam.getGrade(USERNAME).mark().getPoints());
-		}
-	}
+      assertEquals(ImmutableSet.of(USERNAME), exam.getUsernames());
+      assertEquals(0d, exam.getGrade(USERNAME).mark().getPoints());
+    }
+  }
 
-	@Test
-	void testPerfect() throws Exception {
-		try (FileSystem jimFs = Jimfs.newFileSystem(Configuration.unix())) {
-			final Path c1 = Files.createDirectories(jimFs.getPath("c1/"));
-			final Path c2 = Files.createDirectories(jimFs.getPath("c2/"));
-			final Path c3 = Files.createDirectories(jimFs.getPath("c3/"));
-			final Path links = Files.createDirectories(jimFs.getPath("links/"));
+  @Test
+  void testPerfect() throws Exception {
+    try (FileSystem jimFs = Jimfs.newFileSystem(Configuration.unix())) {
+      final Path c1 = Files.createDirectories(jimFs.getPath("c1/"));
+      final Path c2 = Files.createDirectories(jimFs.getPath("c2/"));
+      final Path c3 = Files.createDirectories(jimFs.getPath("c3/"));
+      final Path links = Files.createDirectories(jimFs.getPath("links/"));
 
-			{
-				Files.writeString(c1.resolve("Some file.txt"), "A file!\n");
-				Files.writeString(Files.createDirectories(c1.resolve("Some folder/")).resolve("Another file.txt"),
-						"More content!\n");
-			}
-			{
-				Files.writeString(c2.resolve("Some file.txt"), "A file!\nMore content!\n");
-				Files.writeString(Files.createDirectories(c2.resolve("Some folder/")).resolve("Another file.txt"),
-						"More content!\n");
-			}
-			{
-				Files.writeString(c3.resolve("Some file.txt"), "A file!\nMore content!\n");
-			}
-			{
-				final Path origin = Files.createDirectories(links.resolve(Constants.R_REMOTES + "origin/"));
-				Files.createSymbolicLink(origin.resolve("main"), c3);
-			}
+      {
+        Files.writeString(c1.resolve("Some file.txt"), "A file!\n");
+        Files.writeString(Files.createDirectories(c1.resolve("Some folder/")).resolve("Another file.txt"),
+            "More content!\n");
+      }
+      {
+        Files.writeString(c2.resolve("Some file.txt"), "A file!\nMore content!\n");
+        Files.writeString(Files.createDirectories(c2.resolve("Some folder/")).resolve("Another file.txt"),
+            "More content!\n");
+      }
+      {
+        Files.writeString(c3.resolve("Some file.txt"), "A file!\nMore content!\n");
+      }
+      {
+        final Path origin = Files.createDirectories(links.resolve(Constants.R_REMOTES + "origin/"));
+        Files.createSymbolicLink(origin.resolve("main"), c3);
+      }
 
-			final PersonIdent personIdent = new PersonIdent(USERNAME.getUsername(), "email");
+      final PersonIdent personIdent = new PersonIdent(USERNAME.getUsername(), "email");
 
-			final ImmutableGraph<Path> graph = Utils.asGraph(ImmutableList.of(c1, c2, c3));
-			try (Repository repository = JGit.createRepository(personIdent, graph, links)) {
-				try (GitFileSystem gitFs = GitFileSystemProvider.instance().newFileSystemFromRepository(repository)) {
-					final GitHistorySimple gitH = GitHistorySimple.usingCommitterDates(gitFs);
-					final BatchGitHistoryGrader<RuntimeException> batchGrader = BatchGitHistoryGrader
-							.given(() -> StaticFetcher.single(USERNAME, gitH));
-					final Exam exam = batchGrader.getGrades(BatchGitHistoryGrader.MAX_DEADLINE, Duration.ofMinutes(0),
-							new Fake(), 0.1d);
+      final ImmutableGraph<Path> graph = Utils.asGraph(ImmutableList.of(c1, c2, c3));
+      try (Repository repository = JGit.createRepository(personIdent, graph, links)) {
+        try (GitFileSystem gitFs = GitFileSystemProvider.instance().newFileSystemFromRepository(repository)) {
+          final GitHistorySimple gitH = GitHistorySimple.usingCommitterDates(gitFs);
+          final BatchGitHistoryGrader<RuntimeException> batchGrader = BatchGitHistoryGrader
+              .given(() -> StaticFetcher.single(USERNAME, gitH));
+          final Exam exam = batchGrader.getGrades(BatchGitHistoryGrader.MAX_DEADLINE, Duration.ofMinutes(0),
+              new Fake(), 0.1d);
 
-					Files.writeString(Path.of("test grades.json"), JsonSimpleGrade.toJson(exam));
-					Files.writeString(Path.of("test grades.html"), XmlUtils
-							.asString(HtmlGrades.asHtml(exam.getGrade(USERNAME), "fake " + Instant.now(), 20d)));
-					assertEquals(ImmutableSet.of(USERNAME), exam.getUsernames());
-					assertEquals(1d, exam.getGrade(USERNAME).mark().getPoints());
-				}
-			}
-		}
+          Files.writeString(Path.of("test grades.json"), JsonSimpleGrade.toJson(exam));
+          Files.writeString(Path.of("test grades.html"), XmlUtils
+              .asString(HtmlGrades.asHtml(exam.getGrade(USERNAME), "fake " + Instant.now(), 20d)));
+          assertEquals(ImmutableSet.of(USERNAME), exam.getUsernames());
+          assertEquals(1d, exam.getGrade(USERNAME).mark().getPoints());
+        }
+      }
+    }
 
-	}
+  }
 
 }

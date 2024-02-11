@@ -10,22 +10,22 @@ import io.github.oliviercailloux.utils.Utils;
 
 public class MyFunctionCopying implements Function<String, String> {
 
-	public static Function<String, String> newInstance() {
-		return new MyFunctionCopying();
-	}
+  public static Function<String, String> newInstance() {
+    return new MyFunctionCopying();
+  }
 
-	private MyFunctionCopying() {
-		/** Empty private constructor. */
-	}
+  private MyFunctionCopying() {
+    /** Empty private constructor. */
+  }
 
-	@Override
-	public String apply(String t) {
-		try {
-			Utils.copyRecursively(Path.of(""), Path.of("ploum"));
-		} catch(IOException e) {
-			throw new UncheckedIOException(e);
-		}
-		return "ok";
-	}
+  @Override
+  public String apply(String t) {
+    try {
+      Utils.copyRecursively(Path.of(""), Path.of("ploum"));
+    } catch(IOException e) {
+      throw new UncheckedIOException(e);
+    }
+    return "ok";
+  }
 
 }

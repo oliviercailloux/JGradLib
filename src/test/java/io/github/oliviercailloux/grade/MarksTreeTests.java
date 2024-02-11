@@ -22,54 +22,54 @@ import com.google.common.collect.ImmutableSet;
 import org.junit.jupiter.api.Test;
 
 public class MarksTreeTests {
-	@Test
-	void testMarksTree1_11_111() throws Exception {
-		final MarksTree tree = MarksTreeTestsHelper.get1_11_111();
-		assertEquals(ImmutableSet.of(c1), tree.getCriteria());
-		assertEquals(Mark.one(), tree.getMark(p111));
-		assertThrows(Exception.class, () -> tree.getMark(p1));
-		assertThrows(Exception.class, () -> tree.getMark(p11));
-		assertThrows(Exception.class, () -> tree.getMark(p1Double));
-		assertThrows(Exception.class, () -> tree.getMark(p1Triple));
-		assertThrows(Exception.class, () -> tree.getMark(p1Quadruple));
-		assertEquals(ImmutableSet.of(p111), tree.getPathsToMarks());
-		assertEquals(MarksTreeTestsHelper.get11_111(), tree.getTree(c1));
-		assertEquals(MarksTreeTestsHelper.get11_111(), tree.getTree(p1));
-		assertEquals(MarksTree.composite(ImmutableMap.of(c111, Mark.one())), tree.getTree(c1).getTree(c11));
-		assertEquals(MarksTree.composite(ImmutableMap.of(c111, Mark.one())), tree.getTree(p11));
-		assertTrue(tree.hasPath(p1));
-		assertTrue(tree.hasPath(p11));
-		assertTrue(tree.hasPath(p111));
-		assertFalse(tree.hasPath(p1111));
-		assertFalse(tree.hasPath(p2));
-		assertFalse(tree.hasPath(p12));
-		assertTrue(tree.isComposite());
-		assertFalse(tree.isMark());
-	}
+  @Test
+  void testMarksTree1_11_111() throws Exception {
+    final MarksTree tree = MarksTreeTestsHelper.get1_11_111();
+    assertEquals(ImmutableSet.of(c1), tree.getCriteria());
+    assertEquals(Mark.one(), tree.getMark(p111));
+    assertThrows(Exception.class, () -> tree.getMark(p1));
+    assertThrows(Exception.class, () -> tree.getMark(p11));
+    assertThrows(Exception.class, () -> tree.getMark(p1Double));
+    assertThrows(Exception.class, () -> tree.getMark(p1Triple));
+    assertThrows(Exception.class, () -> tree.getMark(p1Quadruple));
+    assertEquals(ImmutableSet.of(p111), tree.getPathsToMarks());
+    assertEquals(MarksTreeTestsHelper.get11_111(), tree.getTree(c1));
+    assertEquals(MarksTreeTestsHelper.get11_111(), tree.getTree(p1));
+    assertEquals(MarksTree.composite(ImmutableMap.of(c111, Mark.one())), tree.getTree(c1).getTree(c11));
+    assertEquals(MarksTree.composite(ImmutableMap.of(c111, Mark.one())), tree.getTree(p11));
+    assertTrue(tree.hasPath(p1));
+    assertTrue(tree.hasPath(p11));
+    assertTrue(tree.hasPath(p111));
+    assertFalse(tree.hasPath(p1111));
+    assertFalse(tree.hasPath(p2));
+    assertFalse(tree.hasPath(p12));
+    assertTrue(tree.isComposite());
+    assertFalse(tree.isMark());
+  }
 
-	@Test
-	void testMarksTree1_1_1() throws Exception {
-		final MarksTree tree = MarksTreeTestsHelper.get1_1_1();
-		assertEquals(ImmutableSet.of(c1), tree.getCriteria());
-		assertEquals(Mark.one(), tree.getMark(p1Triple));
-		assertThrows(Exception.class, () -> tree.getMark(p1));
-		assertThrows(Exception.class, () -> tree.getMark(p11));
-		assertThrows(Exception.class, () -> tree.getMark(p1Double));
-		assertThrows(Exception.class, () -> tree.getMark(p1Quadruple));
-		assertEquals(ImmutableSet.of(p1Triple), tree.getPathsToMarks());
-		assertEquals(MarksTreeTestsHelper.get1_1(), tree.getTree(c1));
-		assertEquals(MarksTreeTestsHelper.get1_1(), tree.getTree(p1));
-		assertEquals(MarksTree.composite(ImmutableMap.of(c1, Mark.one())), tree.getTree(c1).getTree(c1));
-		assertEquals(MarksTree.composite(ImmutableMap.of(c1, Mark.one())), tree.getTree(p1Double));
-		assertTrue(tree.hasPath(p1));
-		assertTrue(tree.hasPath(p1Double));
-		assertTrue(tree.hasPath(p1Triple));
-		assertFalse(tree.hasPath(p11));
-		assertFalse(tree.hasPath(p111));
-		assertFalse(tree.hasPath(p1Quadruple));
-		assertFalse(tree.hasPath(p2));
-		assertFalse(tree.hasPath(p12));
-		assertTrue(tree.isComposite());
-		assertFalse(tree.isMark());
-	}
+  @Test
+  void testMarksTree1_1_1() throws Exception {
+    final MarksTree tree = MarksTreeTestsHelper.get1_1_1();
+    assertEquals(ImmutableSet.of(c1), tree.getCriteria());
+    assertEquals(Mark.one(), tree.getMark(p1Triple));
+    assertThrows(Exception.class, () -> tree.getMark(p1));
+    assertThrows(Exception.class, () -> tree.getMark(p11));
+    assertThrows(Exception.class, () -> tree.getMark(p1Double));
+    assertThrows(Exception.class, () -> tree.getMark(p1Quadruple));
+    assertEquals(ImmutableSet.of(p1Triple), tree.getPathsToMarks());
+    assertEquals(MarksTreeTestsHelper.get1_1(), tree.getTree(c1));
+    assertEquals(MarksTreeTestsHelper.get1_1(), tree.getTree(p1));
+    assertEquals(MarksTree.composite(ImmutableMap.of(c1, Mark.one())), tree.getTree(c1).getTree(c1));
+    assertEquals(MarksTree.composite(ImmutableMap.of(c1, Mark.one())), tree.getTree(p1Double));
+    assertTrue(tree.hasPath(p1));
+    assertTrue(tree.hasPath(p1Double));
+    assertTrue(tree.hasPath(p1Triple));
+    assertFalse(tree.hasPath(p11));
+    assertFalse(tree.hasPath(p111));
+    assertFalse(tree.hasPath(p1Quadruple));
+    assertFalse(tree.hasPath(p2));
+    assertFalse(tree.hasPath(p12));
+    assertTrue(tree.isComposite());
+    assertFalse(tree.isMark());
+  }
 }

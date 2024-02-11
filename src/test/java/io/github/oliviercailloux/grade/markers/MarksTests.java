@@ -11,29 +11,29 @@ import org.junit.jupiter.api.Test;
 
 class MarksTests {
 
-	@Test
-	void testFileMatching() throws Exception {
-		try (FileSystem fs = Jimfs.newFileSystem()) {
-			final Path file = fs.getPath("file.txt");
-			final String exactTarget = "Hello, world";
-			final Pattern approximateTarget = Pattern.compile("[\\h\\v]*\"?Hello,?\\h*world\"?[\\h\\v]*",
-					Pattern.CASE_INSENSITIVE);
+  @Test
+  void testFileMatching() throws Exception {
+    try (FileSystem fs = Jimfs.newFileSystem()) {
+      final Path file = fs.getPath("file.txt");
+      final String exactTarget = "Hello, world";
+      final Pattern approximateTarget = Pattern.compile("[\\h\\v]*\"?Hello,?\\h*world\"?[\\h\\v]*",
+          Pattern.CASE_INSENSITIVE);
 
-			Files.writeString(file, "Hello, world");
-			assertEquals(1.0d, Marks.fileMatchesGrade(file, exactTarget, approximateTarget).getPoints());
+      Files.writeString(file, "Hello, world");
+      assertEquals(1.0d, Marks.fileMatchesGrade(file, exactTarget, approximateTarget).getPoints());
 
-			Files.writeString(file, "Hello, world \n");
-			assertEquals(1.0d, Marks.fileMatchesGrade(file, exactTarget, approximateTarget).getPoints());
+      Files.writeString(file, "Hello, world \n");
+      assertEquals(1.0d, Marks.fileMatchesGrade(file, exactTarget, approximateTarget).getPoints());
 
-			Files.writeString(file, "  hello world \r\n");
-			assertEquals(0.9d, Marks.fileMatchesGrade(file, exactTarget, approximateTarget).getPoints());
+      Files.writeString(file, "  hello world \r\n");
+      assertEquals(0.9d, Marks.fileMatchesGrade(file, exactTarget, approximateTarget).getPoints());
 
-			Files.writeString(file, "phello world \r\n");
-			assertEquals(0.5d, Marks.fileMatchesGrade(file, exactTarget, approximateTarget).getPoints());
+      Files.writeString(file, "phello world \r\n");
+      assertEquals(0.5d, Marks.fileMatchesGrade(file, exactTarget, approximateTarget).getPoints());
 
-			assertEquals(0d, Marks.fileMatchesGrade(fs.getPath("nonexistentfile.txt"), exactTarget, approximateTarget)
-					.getPoints());
-		}
-	}
+      assertEquals(0d, Marks.fileMatchesGrade(fs.getPath("nonexistentfile.txt"), exactTarget, approximateTarget)
+          .getPoints());
+    }
+  }
 
 }

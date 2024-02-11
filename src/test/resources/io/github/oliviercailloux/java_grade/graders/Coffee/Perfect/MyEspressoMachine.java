@@ -18,51 +18,51 @@ import com.google.common.math.DoubleMath;
  */
 public class MyEspressoMachine implements EspressoMachine {
 
-	private static final double MAX_STRENGTH = 20d;
-	private static final double POWER = 2000d;
-	private int countProduced;
-	private double lastStrength;
+  private static final double MAX_STRENGTH = 20d;
+  private static final double POWER = 2000d;
+  private int countProduced;
+  private double lastStrength;
 
-	public MyEspressoMachine() {
-		countProduced = 0;
-		lastStrength = -1d;
-	}
+  public MyEspressoMachine() {
+    countProduced = 0;
+    lastStrength = -1d;
+  }
 
-	@Override
-	public double getMaxStrength() {
-		return MAX_STRENGTH;
-	}
+  @Override
+  public double getMaxStrength() {
+    return MAX_STRENGTH;
+  }
 
-	@Override
-	public int getTimeForCoffee(double strength) {
-		checkArgument(strength <= getMaxStrength());
-		checkArgument(0d <= strength);
-		return strength == 0d ? 0 : 140 + DoubleMath.roundToInt(2 * strength, RoundingMode.HALF_UP);
-	}
+  @Override
+  public int getTimeForCoffee(double strength) {
+    checkArgument(strength <= getMaxStrength());
+    checkArgument(0d <= strength);
+    return strength == 0d ? 0 : 140 + DoubleMath.roundToInt(2 * strength, RoundingMode.HALF_UP);
+  }
 
-	@Override
-	public void produceCoffee(double strength) {
-		checkArgument(strength <= getMaxStrength());
-		checkArgument(0d <= strength);
-		lastStrength = strength;
-		++countProduced;
-	}
+  @Override
+  public void produceCoffee(double strength) {
+    checkArgument(strength <= getMaxStrength());
+    checkArgument(0d <= strength);
+    lastStrength = strength;
+    ++countProduced;
+  }
 
-	@Override
-	public int getNumberOfCoffeesProduced() {
-		return countProduced;
-	}
+  @Override
+  public int getNumberOfCoffeesProduced() {
+    return countProduced;
+  }
 
-	@Override
-	public double getPower() {
-		return POWER;
-	}
+  @Override
+  public double getPower() {
+    return POWER;
+  }
 
-	@Override
-	public double getEnergySpent() throws IllegalStateException {
-		checkState(countProduced > 0);
-		verify(lastStrength >= 0d);
-		return lastStrength == 0d ? 0d : 15d + POWER * getTimeForCoffee(lastStrength) / 3600d;
-	}
+  @Override
+  public double getEnergySpent() throws IllegalStateException {
+    checkState(countProduced > 0);
+    verify(lastStrength >= 0d);
+    return lastStrength == 0d ? 0d : 15d + POWER * getTimeForCoffee(lastStrength) / 3600d;
+  }
 
 }
