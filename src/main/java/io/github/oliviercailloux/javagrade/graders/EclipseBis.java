@@ -11,7 +11,6 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.MoreCollectors;
 import com.google.common.collect.Sets;
 import com.google.common.graph.Graphs;
-
 import io.github.oliviercailloux.git.filter.GitHistorySimple;
 import io.github.oliviercailloux.gitjfs.GitPath;
 import io.github.oliviercailloux.gitjfs.GitPathRoot;

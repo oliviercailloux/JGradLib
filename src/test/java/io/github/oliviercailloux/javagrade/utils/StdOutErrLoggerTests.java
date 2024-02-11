@@ -1,7 +1,5 @@
 package io.github.oliviercailloux.javagrade.utils;
 
-import io.github.oliviercailloux.javagrade.utils.StdOutErrLogger;
-
 public class StdOutErrLoggerTests {
   public static void main(String[] args) {
     System.out.println("Hello not redirected");

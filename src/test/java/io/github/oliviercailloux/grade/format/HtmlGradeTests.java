@@ -6,8 +6,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.io.Resources;
 import io.github.oliviercailloux.grade.Grade;
 import io.github.oliviercailloux.grade.GradeTestsHelper;
-import io.github.oliviercailloux.grade.IGrade;
-import io.github.oliviercailloux.grade.WeightingGrade;
 import io.github.oliviercailloux.xml.XmlUtils;
 import java.nio.charset.StandardCharsets;
 import org.junit.jupiter.api.Test;

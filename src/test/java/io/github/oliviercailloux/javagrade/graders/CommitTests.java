@@ -23,7 +23,6 @@ import io.github.oliviercailloux.grade.GitWork;
 import io.github.oliviercailloux.grade.IGrade;
 import io.github.oliviercailloux.grade.format.json.JsonGrade;
 import io.github.oliviercailloux.jaris.collections.GraphUtils;
-import io.github.oliviercailloux.javagrade.graders.Commit;
 import io.github.oliviercailloux.utils.Utils;
 import java.nio.file.FileSystem;
 import java.nio.file.Files;

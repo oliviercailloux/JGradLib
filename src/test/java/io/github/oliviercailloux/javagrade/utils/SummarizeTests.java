@@ -10,7 +10,6 @@ import io.github.oliviercailloux.grade.IGrade.CriteriaPath;
 import io.github.oliviercailloux.grade.WeightingGrade;
 import io.github.oliviercailloux.grade.WeightingGrade.WeightedGrade;
 import io.github.oliviercailloux.grade.old.Mark;
-import io.github.oliviercailloux.javagrade.utils.Summarizer;
 import org.junit.jupiter.api.Test;
 
 public class SummarizeTests {

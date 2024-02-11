@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.github.oliviercailloux.grade.IGrade;
 import io.github.oliviercailloux.javagrade.JavaGradeUtils;
-import io.github.oliviercailloux.javagrade.graders.WorkersGrader;
 import io.github.oliviercailloux.utils.Utils;
 import java.nio.file.Path;
 import org.junit.jupiter.api.Test;

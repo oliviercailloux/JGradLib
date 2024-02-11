@@ -9,7 +9,6 @@ import io.github.oliviercailloux.jaris.io.PathUtils;
 import io.github.oliviercailloux.javagrade.JavaGradeUtils;
 import io.github.oliviercailloux.javagrade.bytecode.Compiler;
 import io.github.oliviercailloux.javagrade.bytecode.Compiler.CompilationResult;
-import io.github.oliviercailloux.javagrade.graders.Coffee;
 import io.github.oliviercailloux.utils.Utils;
 import java.io.IOException;
 import java.net.URISyntaxException;

@@ -19,8 +19,6 @@ import io.github.oliviercailloux.gitjfs.GitPathRootShaCached;
 import io.github.oliviercailloux.grade.GitWork;
 import io.github.oliviercailloux.grade.IGrade;
 import io.github.oliviercailloux.grade.format.json.JsonGrade;
-import io.github.oliviercailloux.javagrade.graders.Commit;
-import io.github.oliviercailloux.javagrade.graders.GitBranching;
 import java.nio.file.FileSystem;
 import java.nio.file.Files;
 import java.nio.file.Path;

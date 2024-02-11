@@ -17,7 +17,6 @@ import io.github.oliviercailloux.grade.Exam;
 import io.github.oliviercailloux.grade.StaticFetcher;
 import io.github.oliviercailloux.grade.format.HtmlGrades;
 import io.github.oliviercailloux.grade.format.json.JsonSimpleGrade;
-import io.github.oliviercailloux.javagrade.graders.Fake;
 import io.github.oliviercailloux.utils.Utils;
 import io.github.oliviercailloux.xml.XmlUtils;
 import java.nio.file.FileSystem;
