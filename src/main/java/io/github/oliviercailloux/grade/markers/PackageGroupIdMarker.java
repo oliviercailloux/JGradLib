@@ -11,8 +11,8 @@ class PackageGroupIdMarker {
 	public static boolean hasPrefix(Path relativizedPath, List<String> groupIdElements) {
 		final ImmutableList<String> pathAsStrings = Streams.stream(relativizedPath).map(Path::toString)
 				.collect(ImmutableList.toImmutableList());
-		LOGGER.debug("Obtained from {}, path as strings: {}; comparing to group: {}.", relativizedPath, pathAsStrings,
-				groupIdElements);
+		LOGGER.debug("Obtained from {}, path as strings: {}; comparing to group: {}.", relativizedPath,
+				pathAsStrings, groupIdElements);
 
 		if (pathAsStrings.size() < groupIdElements.size()) {
 			return false;

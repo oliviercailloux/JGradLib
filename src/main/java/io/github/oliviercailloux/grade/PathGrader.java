@@ -6,5 +6,4 @@ public interface PathGrader<X extends Exception> {
 	MarksTree grade(Path workDir) throws X;
 
 	public GradeAggregator getAggregator();
-
 }

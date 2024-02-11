@@ -52,5 +52,4 @@ public final class OwaAggregator implements OwaWeighter {
 	public String toString() {
 		return MoreObjects.toStringHelper(this).add("weights", weights).toString();
 	}
-
 }

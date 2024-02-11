@@ -66,8 +66,8 @@ public class SummarizeEmails {
 
 	private static final Criterion C_CC_JAVA = Criterion.given("java");
 
-	private static final ImmutableSet<Criterion> C_CCS = ImmutableSet.of(C_CC_1_TWO_FILES, C_CC_2_BR, C_CC_3_STRINGS,
-			C_CC_4_CAR, C_CC_5_COLORS_1, C_CC_6_COLORS_2, C_CC_7_COMP_CUST);
+	private static final ImmutableSet<Criterion> C_CCS = ImmutableSet.of(C_CC_1_TWO_FILES, C_CC_2_BR,
+			C_CC_3_STRINGS, C_CC_4_CAR, C_CC_5_COLORS_1, C_CC_6_COLORS_2, C_CC_7_COMP_CUST);
 
 	private static final Criterion C_PROJECT = Criterion.given("Project");
 
@@ -79,20 +79,21 @@ public class SummarizeEmails {
 
 	private static final Criterion C_PROJECT_PRES = Criterion.given("Présentation");
 
-	private static final ImmutableSet<Criterion> C_PRS = ImmutableSet.of(C_PROJECT_1, C_PROJECT_2, C_PROJECT_3,
-			C_PROJECT_PRES);
+	private static final ImmutableSet<Criterion> C_PRS =
+			ImmutableSet.of(C_PROJECT_1, C_PROJECT_2, C_PROJECT_3, C_PROJECT_PRES);
 
 	private static final ImmutableSet<Criterion> CS = Sets.union(C_CCS, C_PRS).immutableCopy();
 
 	public static void main(String[] args) throws Exception {
 		/*
-		 * keys: [two-files, branching, strings, car, strings second, Release 1, colors,
-		 * colors second, Release 2, Release 3, Présentation, computer-customer]. colors
-		 * second is a different one strings second replaces strings
+		 * keys: [two-files, branching, strings, car, strings second, Release 1, colors, colors second,
+		 * Release 2, Release 3, Présentation, computer-customer]. colors second is a different one
+		 * strings second replaces strings
 		 */
 		final JsonStudents students = JsonStudents.from(Files.readString(Path.of("usernames.json")));
-		final ImmutableMap<EmailAddress, StudentOnGitHubKnown> usernames = students.getStudentsKnownByGitHubUsername()
-				.values().stream().collect(ImmutableBiMap.toImmutableBiMap(s -> s.getEmail().getAddress(), s -> s));
+		final ImmutableMap<EmailAddress, StudentOnGitHubKnown> usernames =
+				students.getStudentsKnownByGitHubUsername().values().stream()
+						.collect(ImmutableBiMap.toImmutableBiMap(s -> s.getEmail().getAddress(), s -> s));
 
 		final ImmutableTable<EmailAddress, String, Grade> lastGrades;
 		try (GradesInEmails gradesInEmails = GradesInEmails.newInstance()) {
@@ -107,9 +108,10 @@ public class SummarizeEmails {
 			LOGGER.info("Got {} grades, keys: {}.", lastGrades.size(), lastGrades.columnKeySet());
 		}
 
-		final ImmutableSet<Criterion> unused = ImmutableSet.of(Criterion.given("strings"), Criterion.given("final"));
-		final ImmutableSet<Criterion> observedCrits = lastGrades.columnKeySet().stream().map(Criterion::given)
-				.collect(ImmutableSet.toImmutableSet());
+		final ImmutableSet<Criterion> unused =
+				ImmutableSet.of(Criterion.given("strings"), Criterion.given("final"));
+		final ImmutableSet<Criterion> observedCrits = lastGrades.columnKeySet().stream()
+				.map(Criterion::given).collect(ImmutableSet.toImmutableSet());
 		final ImmutableSet<Criterion> expected = Sets.union(CS, unused).immutableCopy();
 		checkState(observedCrits.equals(expected), Sets.symmetricDifference(observedCrits, expected));
 
@@ -117,21 +119,22 @@ public class SummarizeEmails {
 		for (EmailAddress id : lastGrades.rowKeySet()) {
 			LOGGER.debug("Considering {}.", id);
 			final ImmutableMap<String, Grade> grades = lastGrades.row(id);
-			final ImmutableMap<Criterion, Grade> gradesByC = CollectionUtils.transformKeys(grades, Criterion::given);
-			final ImmutableMap<Criterion, MarksTree> marksByC = ImmutableMap
-					.copyOf(Maps.transformValues(gradesByC, Grade::toMarksTree));
+			final ImmutableMap<Criterion, Grade> gradesByC =
+					CollectionUtils.transformKeys(grades, Criterion::given);
+			final ImmutableMap<Criterion, MarksTree> marksByC =
+					ImmutableMap.copyOf(Maps.transformValues(gradesByC, Grade::toMarksTree));
 			final CompositeMarksTree mark = toTree(marksByC);
 			marksBuilder.put(id, mark);
 		}
 		final ImmutableMap<EmailAddress, MarksTree> marks = marksBuilder.build();
-		final ImmutableMap<GitHubUsername, MarksTree> marksGh = CollectionUtils.transformKeys(marks,
-				e -> usernames.get(e).getGitHubUsername());
+		final ImmutableMap<GitHubUsername, MarksTree> marksGh =
+				CollectionUtils.transformKeys(marks, e -> usernames.get(e).getGitHubUsername());
 
 		final ImmutableMap.Builder<Criterion, GradeAggregator> builder = ImmutableMap.builder();
 		for (Criterion criterion : CS) {
 			final ImmutableMap<EmailAddress, Grade> grades = lastGrades.column(criterion.getName());
-			final ImmutableSet<GradeAggregator> aggrs = grades.values().stream().map(Grade::toAggregator)
-					.collect(ImmutableSet.toImmutableSet());
+			final ImmutableSet<GradeAggregator> aggrs =
+					grades.values().stream().map(Grade::toAggregator).collect(ImmutableSet.toImmutableSet());
 			checkState(aggrs.size() == 1);
 			final GradeAggregator aggr = Iterables.getOnlyElement(aggrs);
 			builder.put(criterion, aggr);
@@ -151,22 +154,23 @@ public class SummarizeEmails {
 	}
 
 	private static CompositeMarksTree toTree(Map<Criterion, MarksTree> marks) {
-		final CompositeMarksTree gitMark = CompositeMarksTree.givenGrades(
-				ImmutableMap.of(C_CC_1_TWO_FILES, marks.get(C_CC_1_TWO_FILES), C_CC_2_BR, marks.get(C_CC_2_BR)));
-		final CompositeMarksTree colorsMark = CompositeMarksTree.givenGrades(ImmutableMap.of(C_CC_5_COLORS_1,
-				marks.get(C_CC_5_COLORS_1), C_CC_6_COLORS_2, marks.get(C_CC_6_COLORS_2)));
+		final CompositeMarksTree gitMark = CompositeMarksTree.givenGrades(ImmutableMap
+				.of(C_CC_1_TWO_FILES, marks.get(C_CC_1_TWO_FILES), C_CC_2_BR, marks.get(C_CC_2_BR)));
+		final CompositeMarksTree colorsMark =
+				CompositeMarksTree.givenGrades(ImmutableMap.of(C_CC_5_COLORS_1, marks.get(C_CC_5_COLORS_1),
+						C_CC_6_COLORS_2, marks.get(C_CC_6_COLORS_2)));
 		final CompositeMarksTree interMark;
 		if (marks.containsKey(C_CC_4_CAR)) {
-			interMark = CompositeMarksTree.givenGrades(ImmutableMap.of(C_CC_3_STRINGS, marks.get(C_CC_3_STRINGS),
-					C_CC_4_CAR, marks.get(C_CC_4_CAR), C_CC_COLORS, colorsMark));
+			interMark = CompositeMarksTree.givenGrades(ImmutableMap.of(C_CC_3_STRINGS,
+					marks.get(C_CC_3_STRINGS), C_CC_4_CAR, marks.get(C_CC_4_CAR), C_CC_COLORS, colorsMark));
 		} else {
-			interMark = CompositeMarksTree
-					.givenGrades(ImmutableMap.of(C_CC_3_STRINGS, marks.get(C_CC_3_STRINGS), C_CC_COLORS, colorsMark));
+			interMark = CompositeMarksTree.givenGrades(
+					ImmutableMap.of(C_CC_3_STRINGS, marks.get(C_CC_3_STRINGS), C_CC_COLORS, colorsMark));
 		}
-		final CompositeMarksTree javaMark = CompositeMarksTree.givenGrades(
-				ImmutableMap.of(C_CC_JAVA_INTERMEDIATE, interMark, C_CC_7_COMP_CUST, marks.get(C_CC_7_COMP_CUST)));
-		final CompositeMarksTree ccMark = CompositeMarksTree
-				.givenGrades(ImmutableMap.of(C_CC_GIT, gitMark, C_CC_JAVA, javaMark));
+		final CompositeMarksTree javaMark = CompositeMarksTree.givenGrades(ImmutableMap
+				.of(C_CC_JAVA_INTERMEDIATE, interMark, C_CC_7_COMP_CUST, marks.get(C_CC_7_COMP_CUST)));
+		final CompositeMarksTree ccMark =
+				CompositeMarksTree.givenGrades(ImmutableMap.of(C_CC_GIT, gitMark, C_CC_JAVA, javaMark));
 		final ImmutableSet.Builder<SubMarksTree> builder = ImmutableSet.builder();
 		for (Criterion criterion : C_PRS) {
 			checkArgument(marks.containsKey(criterion));
@@ -176,36 +180,39 @@ public class SummarizeEmails {
 		}
 		final ImmutableSet<SubMarksTree> prSubs = builder.build();
 		final CompositeMarksTree prMark = CompositeMarksTree.givenSubGrades(prSubs);
-		final CompositeMarksTree mark = CompositeMarksTree
-				.givenGrades(ImmutableMap.of(C_CC, ccMark, C_PROJECT, prMark));
+		final CompositeMarksTree mark =
+				CompositeMarksTree.givenGrades(ImmutableMap.of(C_CC, ccMark, C_PROJECT, prMark));
 		return mark;
 	}
 
 	private static GradeAggregator aggregator(Map<Criterion, GradeAggregator> subs) {
 		checkArgument(subs.keySet().equals(CS));
 
-//		final GradeAggregator git = GradeAggregator
-//				.staticAggregator(ImmutableMap.of(C_CC_1_TWO_FILES, 0.35, C_CC_2_BR, 0.65),
-		final GradeAggregator git = GradeAggregator.owa(ImmutableList.of(0.65d, 0.35d),
-				ImmutableMap.of(C_CC_1_TWO_FILES, subs.get(C_CC_1_TWO_FILES), C_CC_2_BR, subs.get(C_CC_2_BR)));
-		final GradeAggregator colors = GradeAggregator
-				.staticAggregator(ImmutableMap.of(C_CC_5_COLORS_1, 1d, C_CC_6_COLORS_2, 9d), ImmutableMap
-						.of(C_CC_5_COLORS_1, subs.get(C_CC_5_COLORS_1), C_CC_6_COLORS_2, subs.get(C_CC_6_COLORS_2)));
-//		final GradeAggregator inter = GradeAggregator.staticAggregator(
-//				ImmutableMap.of(C_CC_3_STRINGS, 7d, C_CC_4_CAR, 8d, C_CC_COLORS, 5d), ImmutableMap.of(C_CC_3_STRINGS,
-		final GradeAggregator inter = GradeAggregator.owa(ImmutableList.of(8d, 7d, 5d), ImmutableMap.of(C_CC_3_STRINGS,
-				subs.get(C_CC_3_STRINGS), C_CC_4_CAR, subs.get(C_CC_4_CAR), C_CC_COLORS, colors));
+		// final GradeAggregator git = GradeAggregator
+		// .staticAggregator(ImmutableMap.of(C_CC_1_TWO_FILES, 0.35, C_CC_2_BR, 0.65),
+		final GradeAggregator git = GradeAggregator.owa(ImmutableList.of(0.65d, 0.35d), ImmutableMap
+				.of(C_CC_1_TWO_FILES, subs.get(C_CC_1_TWO_FILES), C_CC_2_BR, subs.get(C_CC_2_BR)));
+		final GradeAggregator colors = GradeAggregator.staticAggregator(
+				ImmutableMap.of(C_CC_5_COLORS_1, 1d, C_CC_6_COLORS_2, 9d), ImmutableMap.of(C_CC_5_COLORS_1,
+						subs.get(C_CC_5_COLORS_1), C_CC_6_COLORS_2, subs.get(C_CC_6_COLORS_2)));
+		// final GradeAggregator inter = GradeAggregator.staticAggregator(
+		// ImmutableMap.of(C_CC_3_STRINGS, 7d, C_CC_4_CAR, 8d, C_CC_COLORS, 5d),
+		// ImmutableMap.of(C_CC_3_STRINGS,
+		final GradeAggregator inter =
+				GradeAggregator.owa(ImmutableList.of(8d, 7d, 5d), ImmutableMap.of(C_CC_3_STRINGS,
+						subs.get(C_CC_3_STRINGS), C_CC_4_CAR, subs.get(C_CC_4_CAR), C_CC_COLORS, colors));
 		final GradeAggregator java = GradeAggregator.staticAggregator(
-				ImmutableMap.of(C_CC_JAVA_INTERMEDIATE, 12d, C_CC_7_COMP_CUST, 8d),
-				ImmutableMap.of(C_CC_JAVA_INTERMEDIATE, inter, C_CC_7_COMP_CUST, subs.get(C_CC_7_COMP_CUST)));
-		final GradeAggregator cc = GradeAggregator.staticAggregator(ImmutableMap.of(C_CC_GIT, 3d, C_CC_JAVA, 17d),
-				ImmutableMap.of(C_CC_GIT, git, C_CC_JAVA, java));
+				ImmutableMap.of(C_CC_JAVA_INTERMEDIATE, 12d, C_CC_7_COMP_CUST, 8d), ImmutableMap
+						.of(C_CC_JAVA_INTERMEDIATE, inter, C_CC_7_COMP_CUST, subs.get(C_CC_7_COMP_CUST)));
+		final GradeAggregator cc =
+				GradeAggregator.staticAggregator(ImmutableMap.of(C_CC_GIT, 3d, C_CC_JAVA, 17d),
+						ImmutableMap.of(C_CC_GIT, git, C_CC_JAVA, java));
 
 		final Map<Criterion, GradeAggregator> prSubs = Maps.filterKeys(subs, c -> C_PRS.contains(c));
 		final GradeAggregator pr = GradeAggregator.staticAggregator(
-				ImmutableMap.of(C_PROJECT_1, 9d, C_PROJECT_2, 9d, C_PROJECT_3, 16d, C_PROJECT_PRES, 6d), prSubs);
+				ImmutableMap.of(C_PROJECT_1, 9d, C_PROJECT_2, 9d, C_PROJECT_3, 16d, C_PROJECT_PRES, 6d),
+				prSubs);
 		return GradeAggregator.staticAggregator(ImmutableMap.of(C_CC, 12d, C_PROJECT, 8d),
 				ImmutableMap.of(C_CC, cc, C_PROJECT, pr));
 	}
-
 }

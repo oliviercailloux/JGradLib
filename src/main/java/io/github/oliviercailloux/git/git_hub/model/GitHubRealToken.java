@@ -8,5 +8,4 @@ public class GitHubRealToken extends GitHubToken {
 		super(token);
 		checkState(token.length() >= 1);
 	}
-
 }

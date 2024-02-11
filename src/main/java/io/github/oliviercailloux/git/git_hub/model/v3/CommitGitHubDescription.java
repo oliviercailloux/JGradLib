@@ -58,5 +58,4 @@ public class CommitGitHubDescription {
 	public ObjectId getSha() {
 		return ObjectId.fromString(json.getString("sha"));
 	}
-
 }

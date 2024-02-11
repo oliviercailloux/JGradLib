@@ -38,9 +38,8 @@ import java.util.function.Predicate;
 
 /**
  *
- * Either is a {@link ImapSearchPredicate#FALSE}, or contains no FALSE. This
- * permits to ensure that the Javamail implementation is not at a loss with such
- * thing.
+ * Either is a {@link ImapSearchPredicate#FALSE}, or contains no FALSE. This permits to ensure that
+ * the Javamail implementation is not at a loss with such thing.
  *
  */
 public class ImapSearchPredicate implements Predicate<Message> {
@@ -60,13 +59,17 @@ public class ImapSearchPredicate implements Predicate<Message> {
 		}
 	}
 
-	public static ImapSearchPredicate TRUE = new ImapSearchPredicate(new TrueSearchTerm(), Predicates.alwaysTrue());
-	public static ImapSearchPredicate FALSE = new ImapSearchPredicate(new FalseSearchTerm(), Predicates.alwaysFalse());
+	public static ImapSearchPredicate TRUE =
+			new ImapSearchPredicate(new TrueSearchTerm(), Predicates.alwaysTrue());
+	public static ImapSearchPredicate FALSE =
+			new ImapSearchPredicate(new FalseSearchTerm(), Predicates.alwaysFalse());
 
-	public static ImapSearchPredicate recipientAddressEquals(RecipientType recipientType, String address) {
+	public static ImapSearchPredicate recipientAddressEquals(RecipientType recipientType,
+			String address) {
 		checkArgument(address.toLowerCase(Locale.ROOT).equals(address));
 		final EmailAddress emailAddress = EmailAddress.given(address);
-		return new ImapSearchPredicate(new RecipientTerm(recipientType, emailAddress.asInternetAddress()),
+		return new ImapSearchPredicate(
+				new RecipientTerm(recipientType, emailAddress.asInternetAddress()),
 				(m) -> recipientAddressEquals(recipientType, address, m));
 	}
 
@@ -77,11 +80,11 @@ public class ImapSearchPredicate implements Predicate<Message> {
 				(m) -> fromAddressEquals(address, m));
 	}
 
-	public static ImapSearchPredicate recipientFullAddressContains(RecipientType recipientType, String subString) {
+	public static ImapSearchPredicate recipientFullAddressContains(RecipientType recipientType,
+			String subString) {
 		/**
-		 * “In all search keys that use strings, a message matches the key if the string
-		 * is a substring of the field. The matching is case-insensitive.” --
-		 * https://tools.ietf.org/html/rfc3501
+		 * “In all search keys that use strings, a message matches the key if the string is a substring
+		 * of the field. The matching is case-insensitive.” -- https://tools.ietf.org/html/rfc3501
 		 */
 		checkArgument(subString.toLowerCase(Locale.ROOT).equals(subString));
 		return new ImapSearchPredicate(new RecipientStringTerm(recipientType, subString),
@@ -90,7 +93,8 @@ public class ImapSearchPredicate implements Predicate<Message> {
 
 	public static ImapSearchPredicate fromFullAddressContains(String subString) {
 		checkArgument(subString.toLowerCase(Locale.ROOT).equals(subString));
-		return new ImapSearchPredicate(new FromStringTerm(subString), (m) -> fromFullAddressContains(subString, m));
+		return new ImapSearchPredicate(new FromStringTerm(subString),
+				(m) -> fromFullAddressContains(subString, m));
 	}
 
 	public static ImapSearchPredicate subjectContains(String subString) {
@@ -103,16 +107,18 @@ public class ImapSearchPredicate implements Predicate<Message> {
 		if (range.hasLowerBound()) {
 			final Instant min = range.lowerEndpoint();
 			switch (range.lowerBoundType()) {
-			case OPEN:
-				lowerPredicate = new ImapSearchPredicate(new SentDateTerm(ComparisonTerm.GT, Date.from(min)),
-						m -> getSentDate(m).isAfter(min));
-				break;
-			case CLOSED:
-				lowerPredicate = new ImapSearchPredicate(new SentDateTerm(ComparisonTerm.GE, Date.from(min)),
-						m -> !getSentDate(m).isBefore(min));
-				break;
-			default:
-				throw new VerifyException();
+				case OPEN:
+					lowerPredicate =
+							new ImapSearchPredicate(new SentDateTerm(ComparisonTerm.GT, Date.from(min)),
+									m -> getSentDate(m).isAfter(min));
+					break;
+				case CLOSED:
+					lowerPredicate =
+							new ImapSearchPredicate(new SentDateTerm(ComparisonTerm.GE, Date.from(min)),
+									m -> !getSentDate(m).isBefore(min));
+					break;
+				default:
+					throw new VerifyException();
 			}
 		} else {
 			lowerPredicate = TRUE;
@@ -122,16 +128,18 @@ public class ImapSearchPredicate implements Predicate<Message> {
 		if (range.hasUpperBound()) {
 			final Instant max = range.upperEndpoint();
 			switch (range.upperBoundType()) {
-			case OPEN:
-				upperPredicate = new ImapSearchPredicate(new SentDateTerm(ComparisonTerm.LT, Date.from(max)),
-						m -> getSentDate(m).isBefore(max));
-				break;
-			case CLOSED:
-				upperPredicate = new ImapSearchPredicate(new SentDateTerm(ComparisonTerm.LE, Date.from(max)),
-						m -> !getSentDate(m).isAfter(max));
-				break;
-			default:
-				throw new VerifyException();
+				case OPEN:
+					upperPredicate =
+							new ImapSearchPredicate(new SentDateTerm(ComparisonTerm.LT, Date.from(max)),
+									m -> getSentDate(m).isBefore(max));
+					break;
+				case CLOSED:
+					upperPredicate =
+							new ImapSearchPredicate(new SentDateTerm(ComparisonTerm.LE, Date.from(max)),
+									m -> !getSentDate(m).isAfter(max));
+					break;
+				default:
+					throw new VerifyException();
 			}
 		} else {
 			upperPredicate = TRUE;
@@ -152,8 +160,8 @@ public class ImapSearchPredicate implements Predicate<Message> {
 			return TRUE;
 		}
 
-		final ImmutableList<SearchTerm> terms = realPredicates.stream().map(p -> p.term)
-				.collect(ImmutableList.toImmutableList());
+		final ImmutableList<SearchTerm> terms =
+				realPredicates.stream().map(p -> p.term).collect(ImmutableList.toImmutableList());
 
 		final OrTerm orTerm = new OrTerm(terms.toArray(new SearchTerm[terms.size()]));
 
@@ -163,9 +171,11 @@ public class ImapSearchPredicate implements Predicate<Message> {
 		return new ImapSearchPredicate(orTerm, predicate);
 	}
 
-	private static boolean recipientAddressEquals(RecipientType recipientType, String address, Message m) {
+	private static boolean recipientAddressEquals(RecipientType recipientType, String address,
+			Message m) {
 		return Arrays.stream(MESSAGING_UNCHECKER.getUsing(() -> m.getRecipients(recipientType)))
-				.map(a -> (InternetAddress) a).anyMatch(a -> a.getAddress().toLowerCase(Locale.ROOT).equals(address));
+				.map(a -> (InternetAddress) a)
+				.anyMatch(a -> a.getAddress().toLowerCase(Locale.ROOT).equals(address));
 	}
 
 	private static boolean fromAddressEquals(String address, Message m) {
@@ -173,19 +183,22 @@ public class ImapSearchPredicate implements Predicate<Message> {
 				.anyMatch(a -> a.getAddress().toLowerCase(Locale.ROOT).equals(address));
 	}
 
-	private static boolean recipientFullAddressContains(RecipientType recipientType, String subString, Message m) {
+	private static boolean recipientFullAddressContains(RecipientType recipientType, String subString,
+			Message m) {
 		return Arrays.stream(MESSAGING_UNCHECKER.getUsing(() -> m.getRecipients(recipientType)))
 				.map(a -> (InternetAddress) a).map(InternetAddress::toUnicodeString)
 				.anyMatch(s -> s.toLowerCase(Locale.ROOT).contains(subString));
 	}
 
 	private static boolean fromFullAddressContains(String subString, Message m) {
-		return Arrays.stream(MESSAGING_UNCHECKER.getUsing(() -> m.getFrom())).map(a -> (InternetAddress) a)
+		return Arrays.stream(MESSAGING_UNCHECKER.getUsing(() -> m.getFrom()))
+				.map(a -> (InternetAddress) a)
 				.anyMatch(a -> a.toUnicodeString().toLowerCase(Locale.ROOT).contains(subString));
 	}
 
 	private static boolean subjectContains(String subString, Message m) {
-		return MESSAGING_UNCHECKER.getUsing(() -> m.getSubject()).toLowerCase(Locale.ROOT).contains(subString);
+		return MESSAGING_UNCHECKER.getUsing(() -> m.getSubject()).toLowerCase(Locale.ROOT)
+				.contains(subString);
 	}
 
 	private static Instant getSentDate(Message m) {

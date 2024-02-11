@@ -34,5 +34,4 @@ public class SearchResults {
 	public boolean isIncomplete() {
 		return json.getBoolean("incomplete_results");
 	}
-
 }

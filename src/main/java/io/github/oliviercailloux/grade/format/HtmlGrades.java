@@ -48,7 +48,8 @@ public class HtmlGrades {
 		return htmler.asHtml(grade);
 	}
 
-	public static Document asHtml(Map<String, ? extends Grade> grades, String generalTitle, double denominator) {
+	public static Document asHtml(Map<String, ? extends Grade> grades, String generalTitle,
+			double denominator) {
 		final HtmlDocument document = HtmlDocument.newInstance();
 		document.setTitle(generalTitle);
 		document.getBody().appendChild(document.createTitle1(generalTitle));
@@ -56,14 +57,15 @@ public class HtmlGrades {
 		for (String key : grades.keySet()) {
 			final Grade grade = grades.get(key);
 			document.getBody().appendChild(document.createTitle2(key));
-			document.getBody()
-					.appendChild(getDescription(new SubGrade(Criterion.given("Grade"), grade), document, denominator));
+			document.getBody().appendChild(
+					getDescription(new SubGrade(Criterion.given("Grade"), grade), document, denominator));
 		}
 
 		return document.getDocument();
 	}
 
-	public static Document asHtmlGrades(Map<String, ? extends Grade> grades, String generalTitle, double denominator) {
+	public static Document asHtmlGrades(Map<String, ? extends Grade> grades, String generalTitle,
+			double denominator) {
 		final HtmlDocument document = HtmlDocument.newInstance();
 		document.setTitle(generalTitle);
 		document.getBody().appendChild(document.createTitle1(generalTitle));
@@ -71,14 +73,15 @@ public class HtmlGrades {
 		for (String key : grades.keySet()) {
 			final Grade grade = grades.get(key);
 			document.getBody().appendChild(document.createTitle2(key));
-			document.getBody()
-					.appendChild(getDescription(new SubGrade(Criterion.given("Grade"), grade), document, denominator));
+			document.getBody().appendChild(
+					getDescription(new SubGrade(Criterion.given("Grade"), grade), document, denominator));
 		}
 
 		return document.getDocument();
 	}
 
-	private static DocumentFragment getDescription(SubGrade critGrade, HtmlDocument document, double denominator) {
+	private static DocumentFragment getDescription(SubGrade critGrade, HtmlDocument document,
+			double denominator) {
 		checkNotNull(critGrade);
 		checkNotNull(document);
 		final DocumentFragment fragment = document.getDocument().createDocumentFragment();
@@ -88,7 +91,8 @@ public class HtmlGrades {
 
 		final Mark mark = grade.mark();
 		final String comment = mark.getComment();
-		final String overDenominator = denominator == 100d ? "%" : " / " + FORMATTER.format(denominator);
+		final String overDenominator =
+				denominator == 100d ? "%" : " / " + FORMATTER.format(denominator);
 		final String pointsText = FORMATTER.format(mark.getPoints() * denominator)
 				/* TODO */
 				+ (criterion.getName().equals("Itération 4 UML") ? "" : overDenominator);
@@ -103,15 +107,17 @@ public class HtmlGrades {
 			if (aggregator instanceof ParametricWeighter a) {
 				final Grade multipliedGrade = grade.getGrade(a.multipliedCriterion());
 				final Grade weightingGrade = grade.getGrade(a.weightingCriterion());
-				final String basePointsText = FORMATTER.format(multipliedGrade.mark().getPoints() * denominator)
-						+ overDenominator;
-				final String baseFactor = " × " + FORMATTER.format(weightingGrade.mark().getPoints() * 100) + "%";
+				final String basePointsText =
+						FORMATTER.format(multipliedGrade.mark().getPoints() * denominator) + overDenominator;
+				final String baseFactor =
+						" × " + FORMATTER.format(weightingGrade.mark().getPoints() * 100) + "%";
 
 				final Optional<Grade> unknownGrade = unknown(grade).map(grade::getGrade);
-				final String unknownFactor = " × " + FORMATTER.format(100d - weightingGrade.mark().getPoints() * 100)
-						+ "%";
-				final Optional<String> unknownPoints = unknownGrade.map(g -> " + "
-						+ FORMATTER.format(g.mark().getPoints() * denominator) + overDenominator + unknownFactor);
+				final String unknownFactor =
+						" × " + FORMATTER.format(100d - weightingGrade.mark().getPoints() * 100) + "%";
+				final Optional<String> unknownPoints =
+						unknownGrade.map(g -> " + " + FORMATTER.format(g.mark().getPoints() * denominator)
+								+ overDenominator + unknownFactor);
 
 				explanation = basePointsText + baseFactor + unknownPoints.orElse("");
 			} else if (aggregator instanceof AbsoluteAggregator) {
@@ -130,7 +136,8 @@ public class HtmlGrades {
 			}
 		}
 		final String explanationSeparator = explanation.isEmpty() ? "" : ": ";
-		final String criterionSumary = criterion.getName() + " — " + explanation + explanationSeparator + pointsText;
+		final String criterionSumary =
+				criterion.getName() + " — " + explanation + explanationSeparator + pointsText;
 		fragment.appendChild(document.createParagraph(criterionSumary));
 
 		if (!isMark) {
@@ -176,7 +183,8 @@ public class HtmlGrades {
 					final Grade subGradeAsGrade = grade.getGrade(subCriterion);
 					final SubGrade subGrade = new SubGrade(subCriterion, subGradeAsGrade);
 					final double subWeight = grade.getWeight(subCriterion);
-					final DocumentFragment description = getDescription(subGrade, document, denominator * subWeight);
+					final DocumentFragment description =
+							getDescription(subGrade, document, denominator * subWeight);
 					final Element li = document.createXhtmlElement("li");
 					li.appendChild(description);
 
@@ -202,10 +210,13 @@ public class HtmlGrades {
 		final MarkAggregator aggregator = grade.getMarkAggregator();
 		final ParametricWeighter a = (ParametricWeighter) aggregator;
 		final ImmutableSet<Criterion> subCriteria = grade.toMarksTree().getCriteria();
-		verify(grade.toMarksTree().getCriteria().size() == 2 || grade.toMarksTree().getCriteria().size() == 3);
-		final ImmutableSet<Criterion> known = ImmutableSet.of(a.multipliedCriterion(), a.weightingCriterion());
+		verify(grade.toMarksTree().getCriteria().size() == 2
+				|| grade.toMarksTree().getCriteria().size() == 3);
+		final ImmutableSet<Criterion> known =
+				ImmutableSet.of(a.multipliedCriterion(), a.weightingCriterion());
 		verify(grade.toMarksTree().getCriteria().containsAll(known));
-		return subCriteria.stream().filter(c -> !known.contains(c)).collect(MoreCollectors.toOptional());
+		return subCriteria.stream().filter(c -> !known.contains(c))
+				.collect(MoreCollectors.toOptional());
 	}
 
 	private String title;
@@ -262,21 +273,22 @@ public class HtmlGrades {
 		final String introText = "Hi! This is an automated e-mail containing your grade: " + title;
 		document.getBody().appendChild(document.createParagraph(introText));
 
-		document.getBody()
-				.appendChild(getDescription(new SubGrade(Criterion.given("Grade"), grade), document, denominator));
+		document.getBody().appendChild(
+				getDescription(new SubGrade(Criterion.given("Grade"), grade), document, denominator));
 
-		if (quantiles.containsKey(1) && quantiles.containsKey(2) && quantiles.containsKey(3) && stats != null) {
+		if (quantiles.containsKey(1) && quantiles.containsKey(2) && quantiles.containsKey(3)
+				&& stats != null) {
 			final Element p = document.createXhtmlElement("p");
-			p.appendChild(document.createAnchor(URI.create("https://en.wikipedia.org/wiki/Quartile"), "Quartiles"));
-			final String quartilesString = ": [" + format(quantiles.get(1)) + " | " + format(quantiles.get(2)) + " | "
-					+ format(quantiles.get(3)) + "].";
+			p.appendChild(
+					document.createAnchor(URI.create("https://en.wikipedia.org/wiki/Quartile"), "Quartiles"));
+			final String quartilesString = ": [" + format(quantiles.get(1)) + " | "
+					+ format(quantiles.get(2)) + " | " + format(quantiles.get(3)) + "].";
 			p.appendChild(document.createTextNode(quartilesString));
 			p.appendChild(document.createTextNode(" Mean: " + format(stats.mean())));
 			if (stats.count() >= 2) {
 				p.appendChild(document.createTextNode("; "));
-				p.appendChild(document.createAnchor(
-						URI.create(
-								"https://en.wikipedia.org/wiki/Standard_deviation#Corrected_sample_standard_deviation"),
+				p.appendChild(document.createAnchor(URI.create(
+						"https://en.wikipedia.org/wiki/Standard_deviation#Corrected_sample_standard_deviation"),
 						"sd"));
 				p.appendChild(document.createTextNode(": " + format(stats.sampleStandardDeviation())));
 			}

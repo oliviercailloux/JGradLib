@@ -12,5 +12,4 @@ public class FindEndsTests {
   void testFindEnds() throws Exception {
     assertEquals(ImmutableSet.of(), FindEnds.withPrefix("commit").getEnded());
   }
-
 }

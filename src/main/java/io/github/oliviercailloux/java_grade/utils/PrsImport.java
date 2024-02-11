@@ -24,7 +24,7 @@ public class PrsImport {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(PrsImport.class);
 
-	private static record CsvEntry(GitHubUsername username, Mark mark) {
+	private static record CsvEntry (GitHubUsername username, Mark mark) {
 		public CsvEntry(Record r) {
 			this(GitHubUsername.given(r.getString("GitHub username")),
 					Mark.given(r.getDouble("Note") / 20d, r.getString("Commentaire")));
@@ -37,12 +37,13 @@ public class PrsImport {
 		final CsvParserSettings settings = new CsvParserSettings();
 		settings.setHeaderExtractionEnabled(true);
 		final CsvParser parser = new CsvParser(settings);
-//		parser.beginParsing(new StringReader(prsString));
-		final IterableResult<Record, ParsingContext> iterable = parser.iterateRecords(new StringReader(prsString));
-		final ImmutableSet<CsvEntry> entries = StreamSupport.stream(iterable.spliterator(), false).map(CsvEntry::new)
-				.collect(ImmutableSet.toImmutableSet());
-		final ImmutableMap<GitHubUsername, MarksTree> marksByUsername = entries.stream()
-				.collect(ImmutableMap.toImmutableMap(CsvEntry::username, CsvEntry::mark));
+		// parser.beginParsing(new StringReader(prsString));
+		final IterableResult<Record, ParsingContext> iterable =
+				parser.iterateRecords(new StringReader(prsString));
+		final ImmutableSet<CsvEntry> entries = StreamSupport.stream(iterable.spliterator(), false)
+				.map(CsvEntry::new).collect(ImmutableSet.toImmutableSet());
+		final ImmutableMap<GitHubUsername, MarksTree> marksByUsername =
+				entries.stream().collect(ImmutableMap.toImmutableMap(CsvEntry::username, CsvEntry::mark));
 		final Exam exam = new Exam(GradeAggregator.TRIVIAL, marksByUsername);
 		final String json = JsonSimpleGrade.toJson(exam);
 		Files.writeString(Path.of("Bonus Itération 4 UML.json"), json);

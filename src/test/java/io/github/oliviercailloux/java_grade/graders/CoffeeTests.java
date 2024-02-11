@@ -28,7 +28,8 @@ public class CoffeeTests {
     compile(subPath, compiledDir);
 
     final IGrade codeGrade = JavaGradeUtils.gradeSecurely(compiledDir, Coffee::grade);
-//    Files.writeString(Path.of("out.html"), XmlUtils.toString(HtmlGrades.asHtml(codeGrade, "bad")));
+    // Files.writeString(Path.of("out.html"), XmlUtils.toString(HtmlGrades.asHtml(codeGrade,
+    // "bad")));
     assertEquals(0d, codeGrade.getPoints(), 1e-6d);
   }
 
@@ -44,10 +45,12 @@ public class CoffeeTests {
 
   public void compile(String subPath, Path compiledDir) throws URISyntaxException, IOException {
     final Path src = Path.of(getClass().getResource(".").toURI()).resolve(subPath);
-    final ImmutableSet<Path> javas = PathUtils.getMatchingChildren(src,
-        p -> p.getFileName().toString().endsWith(".java"));
-//    CheckedStream.<Path, IOException>wrapping(javas.stream()).map(p -> Files.readString(p)).forEach(LOGGER::info);
-    final CompilationResult eclipseResult = Compiler.eclipseCompileUsingOurClasspath(javas, compiledDir);
+    final ImmutableSet<Path> javas =
+        PathUtils.getMatchingChildren(src, p -> p.getFileName().toString().endsWith(".java"));
+    // CheckedStream.<Path, IOException>wrapping(javas.stream()).map(p ->
+    // Files.readString(p)).forEach(LOGGER::info);
+    final CompilationResult eclipseResult =
+        Compiler.eclipseCompileUsingOurClasspath(javas, compiledDir);
     assertTrue(eclipseResult.compiled, eclipseResult.err);
     assertEquals(0, eclipseResult.countWarnings(), eclipseResult.err);
   }

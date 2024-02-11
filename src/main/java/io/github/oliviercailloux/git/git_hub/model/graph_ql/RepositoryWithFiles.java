@@ -51,8 +51,8 @@ public class RepositoryWithFiles {
 							LOGGER.warn("Ignoring binary file.");
 						}
 						return !binary;
-					})).collect(ImmutableMap.<SimpleEntry<Path, JsonObject>, Path, String>toImmutableMap(
-							SimpleEntry::getKey, (e) -> e.getValue().getString("text")));
+					})).collect(ImmutableMap.<SimpleEntry<Path, JsonObject>, Path,
+							String>toImmutableMap(SimpleEntry::getKey, (e) -> e.getValue().getString("text")));
 		}
 	}
 
@@ -82,13 +82,13 @@ public class RepositoryWithFiles {
 
 	public URI getURI(Path completePath) {
 		/**
-		 * TODO obtain a uri, but https://developer.github.com/v4/object/treeentry/ does
-		 * not give it. Test this method.
+		 * TODO obtain a uri, but https://developer.github.com/v4/object/treeentry/ does not give it.
+		 * Test this method.
 		 */
 		try {
 			return new URI(repository.getURI().getScheme(), repository.getURI().getHost(),
 					repository.getURI().getPath() + "/blob/master/" + completePath.toString(), null);
-//			return new URL(repository.getURI(), "blob/master/" + Utils.getEncoded(completePath));
+			// return new URL(repository.getURI(), "blob/master/" + Utils.getEncoded(completePath));
 		} catch (URISyntaxException e) {
 			throw new IllegalArgumentException(e);
 		}

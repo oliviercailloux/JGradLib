@@ -50,28 +50,32 @@ public class CsvGrades<K> {
 
 	public static final double DEFAULT_DENOMINATOR = 20d;
 
-	public static final Function<String, ImmutableMap<String, String>> STUDENT_NAME_FUNCTION = s -> ImmutableMap
-			.of("Name", s);
+	public static final Function<String, ImmutableMap<String, String>> STUDENT_NAME_FUNCTION =
+			s -> ImmutableMap.of("Name", s);
 
-	public static final Function<GitHubUsername, ImmutableMap<String, String>> STUDENT_USERNAME_FUNCTION = s -> ImmutableMap
-			.of("Username", s.getUsername());
+	public static final Function<GitHubUsername,
+			ImmutableMap<String, String>> STUDENT_USERNAME_FUNCTION =
+					s -> ImmutableMap.of("Username", s.getUsername());
 
-	public static final Function<Object, ImmutableMap<String, String>> STUDENT_GENERIC_NAME_FUNCTION = s -> ImmutableMap
-			.of("Name", s.toString());
+	public static final Function<Object, ImmutableMap<String, String>> STUDENT_GENERIC_NAME_FUNCTION =
+			s -> ImmutableMap.of("Name", s.toString());
 
-	public static final Function<StudentOnGitHub, ImmutableMap<String, String>> STUDENT_IDENTITY_FUNCTION = s -> ImmutableMap
-			.of("Name", s.hasInstitutionalPart() ? s.toInstitutionalStudent().getLastName() : "unknown",
+	public static final Function<StudentOnGitHub,
+			ImmutableMap<String, String>> STUDENT_IDENTITY_FUNCTION = s -> ImmutableMap.of("Name",
+					s.hasInstitutionalPart() ? s.toInstitutionalStudent().getLastName() : "unknown",
 					"GitHub username", s.getGitHubUsername().getUsername());
 
-	public static final Function<StudentOnGitHubKnown, ImmutableMap<String, String>> STUDENT_KNOWN_IDENTITY_FUNCTION = s -> ImmutableMap
-			.of("Name", s.getLastName(), "GitHub username", s.getGitHubUsername().getUsername());
+	public static final Function<StudentOnGitHubKnown,
+			ImmutableMap<String, String>> STUDENT_KNOWN_IDENTITY_FUNCTION = s -> ImmutableMap.of("Name",
+					s.getLastName(), "GitHub username", s.getGitHubUsername().getUsername());
 
-	public static <K> CsvGrades<K> newInstance(Function<K, ? extends Map<String, String>> identityFunction,
-			double denominator) {
+	public static <K> CsvGrades<K>
+			newInstance(Function<K, ? extends Map<String, String>> identityFunction, double denominator) {
 		return new CsvGrades<>(identityFunction, denominator);
 	}
 
-	public static record GenericExam<K> (GradeAggregator aggregator, ImmutableMap<K, ? extends MarksTree> trees) {
+	public static record GenericExam<K> (GradeAggregator aggregator,
+			ImmutableMap<K, ? extends MarksTree> trees) {
 		public GenericExam(GradeAggregator aggregator, Map<K, ? extends MarksTree> trees) {
 			this(aggregator, ImmutableMap.copyOf(trees));
 		}
@@ -105,8 +109,8 @@ public class CsvGrades<K> {
 		}
 
 		public DoubleStream points(CriteriaPath path) {
-			return getUsernames().stream().map(this::getGrade)
-					.mapToDouble(g -> g.toMarksTree().hasPath(path) ? g.getGrade(path).mark().getPoints() : 0d);
+			return getUsernames().stream().map(this::getGrade).mapToDouble(
+					g -> g.toMarksTree().hasPath(path) ? g.getGrade(path).mark().getPoints() : 0d);
 		}
 
 		public double points(K key, CriteriaPath path) {
@@ -126,12 +130,13 @@ public class CsvGrades<K> {
 
 	private static <K> PerCriterionWeightingExam<K> toPerCriterionWeightingExam(GenericExam<K> exam) {
 		final PerCriterionWeightingExam<K> newExam = new PerCriterionWeightingExam<>(
-				Grade.transformToPerCriterionWeighting(exam.aggregator()),
-				Maps.toMap(exam.getUsernames(), u -> Grade.adaptMarksForPerCriterionWeighting(exam.getGrade(u))));
+				Grade.transformToPerCriterionWeighting(exam.aggregator()), Maps.toMap(exam.getUsernames(),
+						u -> Grade.adaptMarksForPerCriterionWeighting(exam.getGrade(u))));
 
 		verify(exam.getUsernames().equals(newExam.getUsernames()));
-		verify(exam.getUsernames().stream().allMatch(u -> DoubleMath.fuzzyEquals(exam.getGrade(u).mark().getPoints(),
-				newExam.getGrade(u).mark().getPoints(), 1e-6d)));
+		verify(exam.getUsernames().stream()
+				.allMatch(u -> DoubleMath.fuzzyEquals(exam.getGrade(u).mark().getPoints(),
+						newExam.getGrade(u).mark().getPoints(), 1e-6d)));
 		return newExam;
 	}
 
@@ -142,11 +147,12 @@ public class CsvGrades<K> {
 		return gradePath.toSimpleString();
 	}
 
-	private static Stream<Map.Entry<Criterion, IGrade>> childrenAsStream(Entry<Criterion, IGrade> parent) {
+	private static Stream<Map.Entry<Criterion, IGrade>>
+			childrenAsStream(Entry<Criterion, IGrade> parent) {
 		final Stream<Entry<Criterion, IGrade>> itself = Stream.of(parent);
 		final IGrade grade = parent.getValue();
-		final Stream<Entry<Criterion, IGrade>> allSubGrades = grade.getSubGrades().entrySet().stream()
-				.flatMap(CsvGrades::childrenAsStream);
+		final Stream<Entry<Criterion, IGrade>> allSubGrades =
+				grade.getSubGrades().entrySet().stream().flatMap(CsvGrades::childrenAsStream);
 		return Stream.concat(itself, allSubGrades);
 	}
 
@@ -172,7 +178,8 @@ public class CsvGrades<K> {
 				.map((cwg) -> CriterionGradeWeight.from(
 						Criterion.given(parent.getCriterion().getName() + "/" + cwg.getCriterion().getName()),
 						cwg.getGrade(), parent.getWeight() * cwg.getWeight()));
-		final Stream<CriterionGradeWeight> flatmappedChildren = mapped.flatMap((cwg) -> asContextualizedStream(cwg));
+		final Stream<CriterionGradeWeight> flatmappedChildren =
+				mapped.flatMap((cwg) -> asContextualizedStream(cwg));
 		return Stream.concat(itself, flatmappedChildren);
 	}
 
@@ -188,13 +195,15 @@ public class CsvGrades<K> {
 		final double upper = bounds.upperEndpoint();
 		final String formattedLower = formatter.format(bounds.lowerEndpoint());
 		final String formattedUpper = formatter.format(bounds.upperEndpoint());
-		return (lower == upper) ? "{" + formattedLower + "}" : "[" + formattedLower + ", " + formattedUpper + "]";
+		return (lower == upper) ? "{" + formattedLower + "}"
+				: "[" + formattedLower + ", " + formattedUpper + "]";
 	}
 
 	private Function<K, ? extends Map<String, String>> identityFunction;
 	private double denominator;
 
-	private CsvGrades(Function<K, ? extends Map<String, String>> identityFunction, double denominator) {
+	private CsvGrades(Function<K, ? extends Map<String, String>> identityFunction,
+			double denominator) {
 		this.identityFunction = checkNotNull(identityFunction);
 		checkArgument(Double.isFinite(denominator));
 		this.denominator = denominator;
@@ -204,7 +213,8 @@ public class CsvGrades<K> {
 		return identityFunction;
 	}
 
-	public CsvGrades<K> setIdentityFunction(Function<K, ? extends Map<String, String>> identityFunction) {
+	public CsvGrades<K>
+			setIdentityFunction(Function<K, ? extends Map<String, String>> identityFunction) {
 		this.identityFunction = checkNotNull(identityFunction);
 		return this;
 	}
@@ -226,26 +236,28 @@ public class CsvGrades<K> {
 		final StringWriter stringWriter = new StringWriter();
 		final CsvWriter writer = new CsvWriter(stringWriter, new CsvWriterSettings());
 
-		final ImmutableMap<K, WeightingGrade> weightingGrades = grades.entrySet().stream()
-				.filter(e -> e.getValue() instanceof WeightingGrade)
-				.collect(ImmutableMap.toImmutableMap(Map.Entry::getKey, e -> (WeightingGrade) e.getValue()));
-		final ImmutableSetMultimap<K, CriterionGradeWeight> perKey = weightingGrades.entrySet().stream()
-				.collect(ImmutableSetMultimap.flatteningToImmutableSetMultimap(Entry::getKey,
-						(e) -> e.getValue().getSubGradesAsSet().stream().flatMap(CsvGrades::asContextualizedStream)));
-		final ImmutableTable<K, Criterion, CriterionGradeWeight> asTable = perKey.entries().stream().collect(
-				ImmutableTable.toImmutableTable(Entry::getKey, (e) -> e.getValue().getCriterion(), Entry::getValue));
+		final ImmutableMap<K, WeightingGrade> weightingGrades =
+				grades.entrySet().stream().filter(e -> e.getValue() instanceof WeightingGrade).collect(
+						ImmutableMap.toImmutableMap(Map.Entry::getKey, e -> (WeightingGrade) e.getValue()));
+		final ImmutableSetMultimap<K,
+				CriterionGradeWeight> perKey = weightingGrades.entrySet().stream().collect(
+						ImmutableSetMultimap.flatteningToImmutableSetMultimap(Entry::getKey, (e) -> e.getValue()
+								.getSubGradesAsSet().stream().flatMap(CsvGrades::asContextualizedStream)));
+		final ImmutableTable<K, Criterion, CriterionGradeWeight> asTable =
+				perKey.entries().stream().collect(ImmutableTable.toImmutableTable(Entry::getKey,
+						(e) -> e.getValue().getCriterion(), Entry::getValue));
 		LOGGER.debug("From {}, obtained {}, as table {}.", grades, perKey, asTable);
 
 		final ImmutableSet<Criterion> allCriteria = asTable.columnKeySet();
 
-		final ImmutableSet<String> identityHeadersFromFunction = keys.stream()
-				.flatMap(k -> identityFunction.apply(k).keySet().stream()).distinct()
-				.collect(ImmutableSet.toImmutableSet());
-		final ImmutableSet<String> identityHeaders = identityHeadersFromFunction.isEmpty() ? ImmutableSet.of("")
-				: identityHeadersFromFunction;
-		final ImmutableList<String> headers = Streams
-				.concat(identityHeaders.stream(), allCriteria.stream().map(Criterion::getName), Stream.of("Points"))
-				.collect(ImmutableList.toImmutableList());
+		final ImmutableSet<String> identityHeadersFromFunction =
+				keys.stream().flatMap(k -> identityFunction.apply(k).keySet().stream()).distinct()
+						.collect(ImmutableSet.toImmutableSet());
+		final ImmutableSet<String> identityHeaders =
+				identityHeadersFromFunction.isEmpty() ? ImmutableSet.of("") : identityHeadersFromFunction;
+		final ImmutableList<String> headers =
+				Streams.concat(identityHeaders.stream(), allCriteria.stream().map(Criterion::getName),
+						Stream.of("Points")).collect(ImmutableList.toImmutableList());
 		writer.writeHeaders(headers);
 
 		final String firstHeader = identityHeaders.iterator().next();
@@ -269,10 +281,12 @@ public class CsvGrades<K> {
 		}
 		writer.writeEmptyRow();
 
-		final ImmutableMap<Criterion, ImmutableSet<Double>> weightsPerCriterion = asTable.columnKeySet().stream()
-				.collect(ImmutableMap.toImmutableMap(c -> c, c -> asTable.column(c).values().stream()
-						.map(CriterionGradeWeight::getWeight).collect(ImmutableSet.toImmutableSet())));
-		final boolean homogeneousWeights = weightsPerCriterion.values().stream().allMatch(s -> s.size() == 1);
+		final ImmutableMap<Criterion,
+				ImmutableSet<Double>> weightsPerCriterion = asTable.columnKeySet().stream()
+						.collect(ImmutableMap.toImmutableMap(c -> c, c -> asTable.column(c).values().stream()
+								.map(CriterionGradeWeight::getWeight).collect(ImmutableSet.toImmutableSet())));
+		final boolean homogeneousWeights =
+				weightsPerCriterion.values().stream().allMatch(s -> s.size() == 1);
 
 		LOGGER.debug("Writing summary data.");
 		{
@@ -323,11 +337,12 @@ public class CsvGrades<K> {
 		{
 			writer.addValue(firstHeader, "Nb > 0");
 			for (Criterion criterion : allCriteria) {
-				final int nb = Math.toIntExact(
-						asTable.column(criterion).values().stream().filter(c -> c.getGrade().getPoints() > 0d).count());
+				final int nb = Math.toIntExact(asTable.column(criterion).values().stream()
+						.filter(c -> c.getGrade().getPoints() > 0d).count());
 				writer.addValue(criterion.getName(), formatter.format(nb));
 			}
-			final int nb = Math.toIntExact(weightingGrades.values().stream().filter(g -> g.getPoints() > 0d).count());
+			final int nb = Math
+					.toIntExact(weightingGrades.values().stream().filter(g -> g.getPoints() > 0d).count());
 			writer.addValue("Points", formatter.format(nb));
 			writer.writeValuesToRow();
 		}
@@ -339,7 +354,8 @@ public class CsvGrades<K> {
 						.filter(c -> c.getGrade().getPoints() == 1d).count());
 				writer.addValue(criterion.getName(), formatter.format(nb));
 			}
-			final int nb = Math.toIntExact(weightingGrades.values().stream().filter(g -> g.getPoints() == 1d).count());
+			final int nb = Math
+					.toIntExact(weightingGrades.values().stream().filter(g -> g.getPoints() == 1d).count());
 			writer.addValue("Points", formatter.format(nb));
 			writer.writeValuesToRow();
 		}
@@ -350,7 +366,8 @@ public class CsvGrades<K> {
 		return stringWriter.toString();
 	}
 
-	public <L extends K> String gradesToCsv(GradeAggregator aggregator, Map<L, ? extends MarksTree> trees) {
+	public <L extends K> String gradesToCsv(GradeAggregator aggregator,
+			Map<L, ? extends MarksTree> trees) {
 		final Set<L> keys = trees.keySet();
 		checkArgument(!keys.isEmpty(), "Can’t determine identity headers with no keys.");
 
@@ -361,15 +378,16 @@ public class CsvGrades<K> {
 		final StringWriter stringWriter = new StringWriter();
 		final CsvWriter writer = new CsvWriter(stringWriter, new CsvWriterSettings());
 
-		final ImmutableSet<String> identityHeadersFromFunction = keys.stream()
-				.flatMap(k -> identityFunction.apply(k).keySet().stream()).collect(ImmutableSet.toImmutableSet());
-		final ImmutableSet<String> identityHeaders = identityHeadersFromFunction.isEmpty() ? ImmutableSet.of("")
-				: identityHeadersFromFunction;
+		final ImmutableSet<String> identityHeadersFromFunction =
+				keys.stream().flatMap(k -> identityFunction.apply(k).keySet().stream())
+						.collect(ImmutableSet.toImmutableSet());
+		final ImmutableSet<String> identityHeaders =
+				identityHeadersFromFunction.isEmpty() ? ImmutableSet.of("") : identityHeadersFromFunction;
 		final ImmutableSet<CriteriaPath> allPaths = exam.allPaths();
 
-		final ImmutableList<String> headers = Streams
-				.concat(identityHeaders.stream(), allPaths.stream().map(CsvGrades::shorten))
-				.collect(ImmutableList.toImmutableList());
+		final ImmutableList<String> headers =
+				Streams.concat(identityHeaders.stream(), allPaths.stream().map(CsvGrades::shorten))
+						.collect(ImmutableList.toImmutableList());
 		writer.writeHeaders(headers);
 
 		final String firstHeader = headers.iterator().next();
@@ -387,8 +405,8 @@ public class CsvGrades<K> {
 		LOGGER.debug("Writing summary data.");
 		{
 			writer.addValue(firstHeader, "Upper bound");
-			allPaths.stream().forEach(
-					p -> writer.addValue(CsvGrades.shorten(p), formatter.format(exam.weight(p) * denominator)));
+			allPaths.stream().forEach(p -> writer.addValue(CsvGrades.shorten(p),
+					formatter.format(exam.weight(p) * denominator)));
 			writer.writeValuesToRow();
 		}
 

@@ -39,31 +39,27 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * In the below list, “checked” means that I checked everything there and
- * extracted the links to build this list, except that I didn’t check details of
- * short posts such as including only two classes, which are too short to
- * bother.
+ * In the below list, “checked” means that I checked everything there and extracted the links to
+ * build this list, except that I didn’t check details of short posts such as including only two
+ * classes, which are too short to bother.
  * <ul>
  * <li>https://github.com/kite-sdk/kite/tree/master/kite-morphlines/kite-morphlines-core/src/main/java/org/kitesdk/morphline/scriptengine/java
- * old but seems correct quality code; though bug in method header which inverts
- * parameters. Kite is a set of libraries, tools, examples, and documentation
- * focused on making it easier to build systems on top of the Hadoop
- * ecosystem.</li>
- * <li>http://stackoverflow.com/a/33963977 (an answer to q 12173294, link
- * below): extends
- * http://javapracs.blogspot.com/2011/06/dynamic-in-memory-compilation-using.html
- * by Rekha Kumari, provides multiple classes compilation. MOST PROMISING?</li>
- * <li>http://pfmiles.github.io/blog/dynamic-java/ in chinese, could be serious?
- * (cited by Seems original.</li>
+ * old but seems correct quality code; though bug in method header which inverts parameters. Kite is
+ * a set of libraries, tools, examples, and documentation focused on making it easier to build
+ * systems on top of the Hadoop ecosystem.</li>
+ * <li>http://stackoverflow.com/a/33963977 (an answer to q 12173294, link below): extends
+ * http://javapracs.blogspot.com/2011/06/dynamic-in-memory-compilation-using.html by Rekha Kumari,
+ * provides multiple classes compilation. MOST PROMISING?</li>
+ * <li>http://pfmiles.github.io/blog/dynamic-java/ in chinese, could be serious? (cited by Seems
+ * original.</li>
  * <li>http://www.soulmachine.me/blog/2015/07/22/compile-and-run-java-source-code-in-memory/
- * references Kite but doesn’t say how it differs from Kite. Seems like copied
- * from Kite, basically. TO EXPLORE</li>
- * <li>https://github.com/trung/InMemoryJavaCompiler (not maintained since
- * end-2017, two years ago) TO EXPLORE LAST?</li>
- * <li>JANINO https://janino-compiler.github.io/ implements a Java compiler,
- * does not reuse</li>
- * <li>https://github.com/OpenHFT/Java-Runtime-Compiler by Peter Lawrey (most
- * maintained, but doesn’t seem OO)</li>
+ * references Kite but doesn’t say how it differs from Kite. Seems like copied from Kite, basically.
+ * TO EXPLORE</li>
+ * <li>https://github.com/trung/InMemoryJavaCompiler (not maintained since end-2017, two years ago)
+ * TO EXPLORE LAST?</li>
+ * <li>JANINO https://janino-compiler.github.io/ implements a Java compiler, does not reuse</li>
+ * <li>https://github.com/OpenHFT/Java-Runtime-Compiler by Peter Lawrey (most maintained, but
+ * doesn’t seem OO)</li>
  * <li>https://stackoverflow.com/questions/3447359/how-to-provide-an-interface-to-javacompiler-when-compiling-a-source-file-dynamic
  * checked</li>
  * <li>https://stackoverflow.com/questions/12173294/compile-code-fully-in-memory-with-javax-tools-javacompiler
@@ -77,9 +73,8 @@ import org.slf4j.LoggerFactory;
  * <li>https://stackoverflow.com/questions/274474/how-do-i-use-jdk6-toolprovider-and-javacompiler-with-the-context-classloader?noredirect=1&lq=1
  * checked</li>
  * <li>https://stackoverflow.com/questions/2315719/using-javax-tools-toolprovider-from-a-custom-classloader?noredirect=1&lq=1
- * advanced discussion, perhaps worth reading? Though the bug report seems
- * mostly unrelated and might be just a misunderstanding (according to the
- * reply).</li>
+ * advanced discussion, perhaps worth reading? Though the bug report seems mostly unrelated and
+ * might be just a misunderstanding (according to the reply).</li>
  * <li>https://stackoverflow.com/questions/37822818/how-do-i-use-dependencies-only-available-in-memory-with-javax-tools-javacompiler?noredirect=1&lq=1
  * checked</li>
  * </ul>
@@ -99,11 +94,10 @@ public class Compiler {
 		return new Compiler(cp, destDir, false);
 	}
 
-	public static ImmutableList<Diagnostic<? extends JavaFileObject>> compile(Collection<Path> classPath, Path destDir,
-			Collection<Path> sources) {
+	public static ImmutableList<Diagnostic<? extends JavaFileObject>>
+			compile(Collection<Path> classPath, Path destDir, Collection<Path> sources) {
 		/**
-		 * Compiler throws if asked to compile no source (even though the doc seems to
-		 * allow it).
+		 * Compiler throws if asked to compile no source (even though the doc seems to allow it).
 		 */
 		if (!sources.iterator().hasNext()) {
 			return ImmutableList.of();
@@ -112,38 +106,40 @@ public class Compiler {
 		return compile(classPath, sources, Optional.of(destDir));
 	}
 
-	private static ImmutableList<Diagnostic<? extends JavaFileObject>> compile(Collection<Path> classPath,
-			Collection<Path> sources, Optional<Path> destDir) {
+	private static ImmutableList<Diagnostic<? extends JavaFileObject>>
+			compile(Collection<Path> classPath, Collection<Path> sources, Optional<Path> destDir) {
 		final JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
 		final boolean compiled;
 		final DiagnosticCollector<JavaFileObject> diagnosticCollector = new DiagnosticCollector<>();
 		/**
-		 * API about diagnostics is unclear, but from the source code of JavacTool, it
-		 * seems like the second one (in the #getTask arguments) overrides the first one
-		 * (in the getStandardFileManager arguments).
+		 * API about diagnostics is unclear, but from the source code of JavacTool, it seems like the
+		 * second one (in the #getTask arguments) overrides the first one (in the getStandardFileManager
+		 * arguments).
 		 */
-		try (StandardJavaFileManager fileManager = compiler.getStandardFileManager(diagnosticCollector, null, null)) {
+		try (StandardJavaFileManager fileManager =
+				compiler.getStandardFileManager(diagnosticCollector, null, null)) {
 			/**
-			 * Have to set explicitly the annotation processor path, otherwise, the
-			 * initialization of annotation processing (involving #getClassLoader) uses the
-			 * class path, which fails if the paths do not refer to File instances, because
-			 * JavacFileManager#getClassLoader(Location location) calls getLocation, which
-			 * tries to return File instances, instead of getLocationAsPaths(Location
-			 * location). See CompilerTests#testBugJdk(). I got an email on the 10th of
-			 * March, 2021, stating that the incident is fixed in https://jdk.java.net/16/.
-			 * I have not checked.
+			 * Have to set explicitly the annotation processor path, otherwise, the initialization of
+			 * annotation processing (involving #getClassLoader) uses the class path, which fails if the
+			 * paths do not refer to File instances, because JavacFileManager#getClassLoader(Location
+			 * location) calls getLocation, which tries to return File instances, instead of
+			 * getLocationAsPaths(Location location). See CompilerTests#testBugJdk(). I got an email on
+			 * the 10th of March, 2021, stating that the incident is fixed in https://jdk.java.net/16/. I
+			 * have not checked.
 			 * https://github.com/openjdk/jdk/blob/master/src/jdk.compiler/share/classes/com/sun/tools/javac/file/JavacFileManager.java#L744
 			 */
-			fileManager.setLocationFromPaths(StandardLocation.ANNOTATION_PROCESSOR_PATH, ImmutableList.of());
+			fileManager.setLocationFromPaths(StandardLocation.ANNOTATION_PROCESSOR_PATH,
+					ImmutableList.of());
 			fileManager.setLocationFromPaths(StandardLocation.CLASS_PATH, classPath);
 			if (destDir.isPresent()) {
-				fileManager.setLocationFromPaths(StandardLocation.CLASS_OUTPUT, ImmutableSet.of(destDir.get()));
+				fileManager.setLocationFromPaths(StandardLocation.CLASS_OUTPUT,
+						ImmutableSet.of(destDir.get()));
 			}
-			final Iterable<? extends JavaFileObject> srcToCompileObjs = fileManager
-					.getJavaFileObjectsFromPaths(sources);
+			final Iterable<? extends JavaFileObject> srcToCompileObjs =
+					fileManager.getJavaFileObjectsFromPaths(sources);
 			final StringWriter compilationOutputReceiver = new StringWriter();
-			compiled = compiler.getTask(compilationOutputReceiver, fileManager, diagnosticCollector, ImmutableList.of(),
-					null, srcToCompileObjs).call();
+			compiled = compiler.getTask(compilationOutputReceiver, fileManager, diagnosticCollector,
+					ImmutableList.of(), null, srcToCompileObjs).call();
 			final String compilationOutput = compilationOutputReceiver.toString();
 			if (!compilationOutput.isEmpty()) {
 				throw new UnsupportedOperationException();
@@ -151,42 +147,42 @@ public class Compiler {
 		} catch (IOException e) {
 			throw new UncheckedIOException(e);
 		}
-		final List<Diagnostic<? extends JavaFileObject>> diagnostics = diagnosticCollector.getDiagnostics();
+		final List<Diagnostic<? extends JavaFileObject>> diagnostics =
+				diagnosticCollector.getDiagnostics();
 		LOGGER.debug("Compiled and got: {}.", diagnostics);
 		verify(compiled == diagnostics.isEmpty());
 		if (compiled) {
-//			SourceScanner.scan()
+			// SourceScanner.scan()
 			/**
-			 * Seems impossible to check that the file gets created, because seems
-			 * impossible to (elegantly) obtain the package name or output exact location of
-			 * the file.
+			 * Seems impossible to check that the file gets created, because seems impossible to
+			 * (elegantly) obtain the package name or output exact location of the file.
 			 */
 		}
 		return ImmutableList.copyOf(diagnostics);
 	}
 
 	/**
-	 * Note that this will fail if the properties file is in a resource, not in a
-	 * reachable file.
+	 * Note that this will fail if the properties file is in a resource, not in a reachable file.
 	 *
 	 * @throws IOException
 	 *
 	 * @see https://help.eclipse.org/2020-03/index.jsp?topic=%2Forg.eclipse.jdt.doc.user%2Ftasks%2Ftask-using_batch_compiler.htm
 	 */
-	public static CompilationResult eclipseCompile(List<Path> classPath, Set<Path> targets) throws IOException {
+	public static CompilationResult eclipseCompile(List<Path> classPath, Set<Path> targets)
+			throws IOException {
 		return eclipseCompile(classPath, targets, true);
 	}
 
-	public static CompilationResult eclipseCompileUsingOurClasspath(Set<Path> targets, Path destinationDir)
-			throws IOException {
+	public static CompilationResult eclipseCompileUsingOurClasspath(Set<Path> targets,
+			Path destinationDir) throws IOException {
 		final List<File> classpath = new ClassGraph().getClasspathFiles();
-		final ImmutableSet<Path> classpathPaths = classpath.stream().map(File::toPath)
-				.collect(ImmutableSet.toImmutableSet());
+		final ImmutableSet<Path> classpathPaths =
+				classpath.stream().map(File::toPath).collect(ImmutableSet.toImmutableSet());
 		return eclipseCompile(classpathPaths.asList(), targets, true, Optional.of(destinationDir));
 	}
 
-	public static CompilationResult eclipseCompile(List<Path> classPath, Set<Path> targets, boolean useStrictWarnings)
-			throws IOException {
+	public static CompilationResult eclipseCompile(List<Path> classPath, Set<Path> targets,
+			boolean useStrictWarnings) throws IOException {
 		return eclipseCompile(classPath, targets, useStrictWarnings, Optional.empty());
 	}
 
@@ -196,8 +192,8 @@ public class Compiler {
 	 * @throws IOException
 	 *
 	 */
-	public static CompilationResult eclipseCompile(List<Path> classPath, Set<Path> targets, boolean useStrictWarnings,
-			Optional<Path> destination) throws IOException {
+	public static CompilationResult eclipseCompile(List<Path> classPath, Set<Path> targets,
+			boolean useStrictWarnings, Optional<Path> destination) throws IOException {
 		// TODO what if targets is empty?
 		checkArgument(targets.stream().allMatch(Files::exists));
 
@@ -217,7 +213,8 @@ public class Compiler {
 			verify(propertiesPath.getFileSystem().provider().getScheme().equals("file"));
 			builder.add("-properties", propertiesPath.toString());
 		}
-		checkArgument(classPath.stream().allMatch(p -> p.getFileSystem().provider().getScheme().equals("file")));
+		checkArgument(
+				classPath.stream().allMatch(p -> p.getFileSystem().provider().getScheme().equals("file")));
 		{
 			builder.add("-classpath",
 					classPath.stream().map(Path::toString).collect(Collectors.joining(File.pathSeparator)));
@@ -228,8 +225,8 @@ public class Compiler {
 			builder.add("-d", destinationPath.toString());
 		}
 
-		final boolean targetsAreFiles = targets.stream()
-				.allMatch(p -> p.getFileSystem().provider().getScheme().equals("file"));
+		final boolean targetsAreFiles =
+				targets.stream().allMatch(p -> p.getFileSystem().provider().getScheme().equals("file"));
 		final ImmutableSet<Path> effectiveTargets;
 		final Optional<Path> toDelete;
 		if (targetsAreFiles) {
@@ -238,8 +235,8 @@ public class Compiler {
 		} else {
 			final Path newStartPath = Files.createTempDirectory("sources");
 			toDelete = Optional.of(newStartPath);
-			final ImmutableMap<Path, Path> corrPaths = Maps.toMap(targets,
-					p -> newStartPath.resolve(p.relativize(p.getRoot()).toString()));
+			final ImmutableMap<Path, Path> corrPaths =
+					Maps.toMap(targets, p -> newStartPath.resolve(p.relativize(p.getRoot()).toString()));
 			LOGGER.debug("Corr: {}.", corrPaths.values());
 			CheckedStream.<Path, IOException>wrapping(targets.stream())
 					.peek(p -> Files.createDirectories(corrPaths.get(p).getParent()))
@@ -252,8 +249,8 @@ public class Compiler {
 		}
 		final ImmutableList<String> args = builder.build();
 
-		final boolean compiled = BatchCompiler.compile(args.toArray(new String[args.size()]), new PrintWriter(out),
-				new PrintWriter(err), null);
+		final boolean compiled = BatchCompiler.compile(args.toArray(new String[args.size()]),
+				new PrintWriter(out), new PrintWriter(err), null);
 
 		LOGGER.debug("Compiled with output: {}, error: {}.", out, err);
 
@@ -349,12 +346,13 @@ public class Compiler {
 		this.tolerateFailure = tolerateFailure;
 	}
 
-	public ImmutableList<Diagnostic<? extends JavaFileObject>> compile(Collection<Path> srcToCompile) {
-		final ImmutableList<Diagnostic<? extends JavaFileObject>> output = Compiler.compile(cp, destDir, srcToCompile);
+	public ImmutableList<Diagnostic<? extends JavaFileObject>>
+			compile(Collection<Path> srcToCompile) {
+		final ImmutableList<Diagnostic<? extends JavaFileObject>> output =
+				Compiler.compile(cp, destDir, srcToCompile);
 		if (!tolerateFailure) {
 			verify(output.isEmpty(), output.toString());
 		}
 		return output;
 	}
-
 }

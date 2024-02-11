@@ -12,8 +12,7 @@ public class MyScoreManager implements ScoreManager {
   }
 
   @Override
-  public void incrementScore() {
-  }
+  public void incrementScore() {}
 
   @Override
   public int getCurrentScore() {
@@ -26,7 +25,5 @@ public class MyScoreManager implements ScoreManager {
   }
 
   @Override
-  public void addListener(ScoreListener listener) {
-  }
-
+  public void addListener(ScoreListener listener) {}
 }

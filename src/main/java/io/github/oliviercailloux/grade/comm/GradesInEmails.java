@@ -53,7 +53,8 @@ public class GradesInEmails implements AutoCloseable {
 
   public static final String MIME_SUBTYPE = "json";
 
-  private static ImmutableList<MimeBodyPart> getParts(MimeMessage source) throws IOException, MessagingException {
+  private static ImmutableList<MimeBodyPart> getParts(MimeMessage source)
+      throws IOException, MessagingException {
     final MimeMultipart multipart = (MimeMultipart) source.getContent();
     final ImmutableList.Builder<MimeBodyPart> partsBuilder = ImmutableList.<MimeBodyPart>builder();
     for (int i = 0; i < multipart.getCount(); ++i) {
@@ -64,8 +65,8 @@ public class GradesInEmails implements AutoCloseable {
     return parts;
   }
 
-  public static Email asEmail(EmailAddressAndPersonal studentAddress, String gradeName, Grade grade, Stats stats,
-      Map<Integer, Double> quartiles) {
+  public static Email asEmail(EmailAddressAndPersonal studentAddress, String gradeName, Grade grade,
+      Stats stats, Map<Integer, Double> quartiles) {
     final HtmlGrades htmler = HtmlGrades.newInstance();
     htmler.setTitle("Grade " + gradeName);
     if (stats.count() >= 20) {
@@ -73,8 +74,8 @@ public class GradesInEmails implements AutoCloseable {
       htmler.setQuantiles(quartiles);
     }
     final Document doc = htmler.asHtml(grade);
-    final Email email = Email.withDocumentAndFile(doc, FILE_NAME, JsonSimpleGrade.toJson(grade).toString(),
-        MIME_SUBTYPE, studentAddress);
+    final Email email = Email.withDocumentAndFile(doc, FILE_NAME,
+        JsonSimpleGrade.toJson(grade).toString(), MIME_SUBTYPE, studentAddress);
     return email;
   }
 
@@ -130,8 +131,8 @@ public class GradesInEmails implements AutoCloseable {
 
   private Optional<GradeMessage> getGradeMessage(Message source) {
     try {
-      LOGGER.debug("Getting GradeMessage from message {}, content type: {}.", source.getMessageNumber(),
-          source.getContentType());
+      LOGGER.debug("Getting GradeMessage from message {}, content type: {}.",
+          source.getMessageNumber(), source.getContentType());
       if (!(source instanceof MimeMessage)) {
         return Optional.empty();
       }
@@ -156,7 +157,8 @@ public class GradesInEmails implements AutoCloseable {
 
   private Grade getGrade(MimeBodyPart part) {
     final Grade grade;
-    try (InputStreamReader reader = new InputStreamReader(part.getInputStream(), StandardCharsets.UTF_8)) {
+    try (InputStreamReader reader =
+        new InputStreamReader(part.getInputStream(), StandardCharsets.UTF_8)) {
       final String content = CharStreams.toString(reader);
       grade = JsonSimpleGrade.asGrade(content);
     } catch (IOException e) {
@@ -183,7 +185,7 @@ public class GradesInEmails implements AutoCloseable {
     final ImmutableSet<EmailAddress> intersection = (recipients == null
         ? seen.stream().map(a -> (InternetAddress) a).map(a -> EmailAddress.given(a.getAddress()))
         : recipients.stream().filter(r -> seen.contains(r.asInternetAddress())))
-        .collect(ImmutableSet.toImmutableSet());
+            .collect(ImmutableSet.toImmutableSet());
     verify(!intersection.isEmpty(), seen.toString());
     checkState(intersection.size() <= 1);
     return Iterables.getOnlyElement(intersection);
@@ -192,35 +194,37 @@ public class GradesInEmails implements AutoCloseable {
   /**
    * @param recipients {@code null} for no filter.
    */
-  private ImmutableSet<Message> getMessagesTo(Set<EmailAddress> recipients, String subjectStartsWith) {
-    final ImapSearchPredicate subjectContains = ImapSearchPredicate.subjectContains(subjectStartsWith);
+  private ImmutableSet<Message> getMessagesTo(Set<EmailAddress> recipients,
+      String subjectStartsWith) {
+    final ImapSearchPredicate subjectContains =
+        ImapSearchPredicate.subjectContains(subjectStartsWith);
     final ImapSearchPredicate matchesAddress = recipients == null ? ImapSearchPredicate.TRUE
         : ImapSearchPredicate.orList(recipients.stream()
             .map(r -> ImapSearchPredicate.recipientAddressEquals(RecipientType.TO, r.getAddress()))
             .collect(ImmutableSet.toImmutableSet()));
     /**
-     * If too complex, we search everything, because Zoho (and, I suspect, many
-     * others) do not implement this correctly.
+     * If too complex, we search everything, because Zoho (and, I suspect, many others) do not
+     * implement this correctly.
      */
-    final ImapSearchPredicate effectiveMatchesAddress = (recipients == null || recipients.size() >= 2)
-        ? ImapSearchPredicate.TRUE
-        : matchesAddress;
-    final ImapSearchPredicate sentWithin = sentFilter == null ? ImapSearchPredicate.TRUE
-        : ImapSearchPredicate.sentWithin(sentFilter);
+    final ImapSearchPredicate effectiveMatchesAddress =
+        (recipients == null || recipients.size() >= 2) ? ImapSearchPredicate.TRUE : matchesAddress;
+    final ImapSearchPredicate sentWithin =
+        sentFilter == null ? ImapSearchPredicate.TRUE : ImapSearchPredicate.sentWithin(sentFilter);
 
-    final ImapSearchPredicate searchTerm = subjectContains.andSatisfy(effectiveMatchesAddress)
-        .andSatisfy(sentWithin);
+    final ImapSearchPredicate searchTerm =
+        subjectContains.andSatisfy(effectiveMatchesAddress).andSatisfy(sentWithin);
 
     /** We filter manually in all cases for simplicity of the code. */
     final ImmutableSet<Message> matchingWidened = emailer.searchIn(folder, searchTerm);
     LOGGER.debug("Got all '{}' messages ({}).", subjectStartsWith, matchingWidened.size());
     emailer.fetchHeaders(folder, matchingWidened);
     /**
-     * We also need to filter for subjects really starting with the predicate, not
-     * just containing it.
+     * We also need to filter for subjects really starting with the predicate, not just containing
+     * it.
      */
-    final ImmutableSet<Message> matching = matchingWidened.stream().filter(matchesAddress.getPredicate()).filter(
-        m -> MESSAGING_UNCHECKER.getUsing(() -> m.getSubject()).toLowerCase().startsWith(subjectStartsWith))
+    final ImmutableSet<Message> matching = matchingWidened.stream()
+        .filter(matchesAddress.getPredicate()).filter(m -> MESSAGING_UNCHECKER
+            .getUsing(() -> m.getSubject()).toLowerCase().startsWith(subjectStartsWith))
         .collect(ImmutableSet.toImmutableSet());
     LOGGER.debug("Got all '{}' matching messages ({}).", subjectStartsWith, matching.size());
     return matching;
@@ -229,44 +233,48 @@ public class GradesInEmails implements AutoCloseable {
   public ImmutableTable<EmailAddress, String, Grade> getLastGrades() {
     checkState(folder != null);
 
-    final ImmutableTable<EmailAddress, String, Grade> grades = getLastGradesToInternal(recipientsFilter,
-        "Grade ".toLowerCase());
+    final ImmutableTable<EmailAddress, String, Grade> grades =
+        getLastGradesToInternal(recipientsFilter, "Grade ".toLowerCase());
     return grades;
   }
 
   /**
    * @param recipients {@code null} for no filter.
    */
-  private ImmutableTable<EmailAddress, String, Grade> getLastGradesToInternal(Set<EmailAddress> recipients,
-      String subjectPattern) {
+  private ImmutableTable<EmailAddress, String, Grade>
+      getLastGradesToInternal(Set<EmailAddress> recipients, String subjectPattern) {
     final ImmutableSet<Message> matching = getMessagesTo(recipients, subjectPattern);
     /**
-     * First, reduce the number of messages to fetch (which takes about 30 seconds
-     * for 500 messages).
+     * First, reduce the number of messages to fetch (which takes about 30 seconds for 500
+     * messages).
      */
-    final Comparator<Message> comparing = Comparator
-        .comparing(MESSAGING_UNCHECKER.wrapFunction(Message::getSentDate));
-    final ImmutableTable<EmailAddress, String, Message> messages = matching.stream()
-        .collect(ImmutableTable.toImmutableTable(m -> getUniqueRecipientAmong(m, recipients),
-            m -> getGradeSubject(m), m -> m, (m1, m2) -> Stream.of(m1, m2).max(comparing).get()));
+    final Comparator<Message> comparing =
+        Comparator.comparing(MESSAGING_UNCHECKER.wrapFunction(Message::getSentDate));
+    final ImmutableTable<EmailAddress, String,
+        Message> messages = matching.stream()
+            .collect(ImmutableTable.toImmutableTable(m -> getUniqueRecipientAmong(m, recipients),
+                m -> getGradeSubject(m), m -> m,
+                (m1, m2) -> Stream.of(m1, m2).max(comparing).get()));
 
     emailer.fetchMessages(folder, ImmutableSet.copyOf(messages.values()));
 
-    final Table<EmailAddress, String, Optional<Grade>> gradesOpt = Tables.transformValues(messages, this::toGrade);
-    return gradesOpt.cellSet().stream().filter(c -> c.getValue().isPresent()).collect(
-        ImmutableTable.toImmutableTable(c -> c.getRowKey(), c -> c.getColumnKey(), o -> o.getValue().get()));
+    final Table<EmailAddress, String, Optional<Grade>> gradesOpt =
+        Tables.transformValues(messages, this::toGrade);
+    return gradesOpt.cellSet().stream().filter(c -> c.getValue().isPresent()).collect(ImmutableTable
+        .toImmutableTable(c -> c.getRowKey(), c -> c.getColumnKey(), o -> o.getValue().get()));
   }
 
   public Optional<Grade> getLastGradeTo(EmailAddress recipient, String prefix) {
     checkArgument(recipientsFilter == null || recipientsFilter.contains(recipient));
-    return Optional
-        .ofNullable(getLastGradesToInternal(ImmutableSet.of(recipient), ("Grade " + prefix).toLowerCase())
+    return Optional.ofNullable(
+        getLastGradesToInternal(ImmutableSet.of(recipient), ("Grade " + prefix).toLowerCase())
             .column(prefix).get(recipient));
   }
 
   public ImmutableMap<EmailAddress, Grade> getLastGrades(String prefix) {
     checkState(folder != null);
-    return getLastGradesToInternal(recipientsFilter, ("Grade " + prefix).toLowerCase()).column(prefix);
+    return getLastGradesToInternal(recipientsFilter, ("Grade " + prefix).toLowerCase())
+        .column(prefix);
   }
 
   @Override

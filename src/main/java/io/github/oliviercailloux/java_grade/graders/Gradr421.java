@@ -38,42 +38,47 @@ public class Gradr421 implements CodeGrader<RuntimeException> {
 
 	public static final String PREFIX = "421";
 
-	public static final ZonedDateTime DEADLINE_ORIGINAL = ZonedDateTime
-			.parse("2022-04-08T14:17:00+02:00[Europe/Paris]");
-	public static final Instant CAP_ORIGINAL = DEADLINE_ORIGINAL.toInstant().plus(Duration.ofMinutes(10));
+	public static final ZonedDateTime DEADLINE_ORIGINAL =
+			ZonedDateTime.parse("2022-04-08T14:17:00+02:00[Europe/Paris]");
+	public static final Instant CAP_ORIGINAL =
+			DEADLINE_ORIGINAL.toInstant().plus(Duration.ofMinutes(10));
 
-	public static final ZonedDateTime DEADLINE_SECOND_CHANCE = ZonedDateTime
-			.parse("2022-06-17T00:00:00+01:00[Europe/Paris]");
+	public static final ZonedDateTime DEADLINE_SECOND_CHANCE =
+			ZonedDateTime.parse("2022-06-17T00:00:00+01:00[Europe/Paris]");
 
 	public static final double USER_WEIGHT = 0.025d;
 
 	public static void main(String[] args) throws Exception {
-//		original();
+		// original();
 		second();
 	}
 
 	public static void original() throws IOException {
-		final GitFileSystemWithHistoryFetcher fetcher = GitFileSystemWithHistoryFetcherByPrefix
-				.getRetrievingByPrefix(PREFIX);
-		final BatchGitHistoryGrader<RuntimeException> batchGrader = BatchGitHistoryGrader.given(() -> fetcher);
+		final GitFileSystemWithHistoryFetcher fetcher =
+				GitFileSystemWithHistoryFetcherByPrefix.getRetrievingByPrefix(PREFIX);
+		final BatchGitHistoryGrader<RuntimeException> batchGrader =
+				BatchGitHistoryGrader.given(() -> fetcher);
 
 		final Gradr421 grader421 = new Gradr421();
-		final MavenCodeGrader<RuntimeException> m = MavenCodeGrader.basic(grader421, UncheckedIOException::new);
+		final MavenCodeGrader<RuntimeException> m =
+				MavenCodeGrader.basic(grader421, UncheckedIOException::new);
 
-		batchGrader.getAndWriteGrades(DEADLINE_ORIGINAL, Duration.ofMinutes(5), GitFsGraderUsingLast.using(m),
-				USER_WEIGHT, Path.of("grades " + PREFIX + " original"),
+		batchGrader.getAndWriteGrades(DEADLINE_ORIGINAL, Duration.ofMinutes(5),
+				GitFsGraderUsingLast.using(m), USER_WEIGHT, Path.of("grades " + PREFIX + " original"),
 				PREFIX + " original " + Instant.now().atZone(DEADLINE_ORIGINAL.getZone()));
 		grader421.close();
 		LOGGER.info("Done original, closed.");
 	}
 
 	public static void second() throws IOException {
-		final GitFileSystemWithHistoryFetcher fetcher = GitFileSystemWithHistoryFetcherByPrefix
-				.getRetrievingByPrefix(PREFIX);
-		final BatchGitHistoryGrader<RuntimeException> batchGrader = BatchGitHistoryGrader.given(() -> fetcher);
+		final GitFileSystemWithHistoryFetcher fetcher =
+				GitFileSystemWithHistoryFetcherByPrefix.getRetrievingByPrefix(PREFIX);
+		final BatchGitHistoryGrader<RuntimeException> batchGrader =
+				BatchGitHistoryGrader.given(() -> fetcher);
 
 		final Gradr421 grader421 = new Gradr421();
-		final MavenCodeGrader<RuntimeException> m = MavenCodeGrader.basic(grader421, UncheckedIOException::new);
+		final MavenCodeGrader<RuntimeException> m =
+				MavenCodeGrader.basic(grader421, UncheckedIOException::new);
 		final DoubleGrader doubleGrader = new DoubleGrader(m, DEADLINE_ORIGINAL.toInstant(),
 				DEADLINE_SECOND_CHANCE.toInstant(), DEADLINE_ORIGINAL.getZone(), CAP_ORIGINAL, USER_WEIGHT);
 
@@ -101,9 +106,10 @@ public class Gradr421 implements CodeGrader<RuntimeException> {
 	}
 
 	private TryCatchAll<Game421> newGame(Instanciator instanciator) {
-		final TryCatchAll<Game421> tryTarget = TryCatchAll.get(() -> instanciator.getInstanceOrThrow(Game421.class));
-		final TryCatchAll<Game421> game = tryTarget.andApply(
-				target -> SimpleTimeLimiter.create(executors).newProxy(target, Game421.class, Duration.ofSeconds(5)));
+		final TryCatchAll<Game421> tryTarget =
+				TryCatchAll.get(() -> instanciator.getInstanceOrThrow(Game421.class));
+		final TryCatchAll<Game421> game = tryTarget.andApply(target -> SimpleTimeLimiter
+				.create(executors).newProxy(target, Game421.class, Duration.ofSeconds(5)));
 		return game;
 	}
 
@@ -117,7 +123,8 @@ public class Gradr421 implements CodeGrader<RuntimeException> {
 		final ConstantDiceRoller constant422 = new ConstantDiceRoller(roll422);
 
 		final TryCatchAll<Game421> game0 = newGame(instanciator);
-		final boolean invocationFailed = game0.map(r -> false, c -> c instanceof InvocationTargetException);
+		final boolean invocationFailed =
+				game0.map(r -> false, c -> c instanceof InvocationTargetException);
 		if (invocationFailed) {
 			return Mark.zero("Invocation failed: " + game0.toString());
 		}
@@ -139,16 +146,19 @@ public class Gradr421 implements CodeGrader<RuntimeException> {
 		}
 
 		{
-			final TryCatchAll<Game421> game = newGame(instanciator).andConsume(g -> g.setRoller(constant422));
+			final TryCatchAll<Game421> game =
+					newGame(instanciator).andConsume(g -> g.setRoller(constant422));
 			final boolean initSuccessful = game.isSuccess();
 			final TryCatchAll<Boolean> got = game.andApply(g -> g.tryGet421(-14));
-			final boolean pass = initSuccessful && got.map(r -> false, c -> c instanceof IllegalArgumentException);
+			final boolean pass =
+					initSuccessful && got.map(r -> false, c -> c instanceof IllegalArgumentException);
 
 			builder.put(Criterion.given("Illegal argument"), Mark.binary(pass, "", got.toString()));
 		}
 
 		{
-			final TryCatchAll<Game421> game = newGame(instanciator).andConsume(g -> g.setRoller(constant422));
+			final TryCatchAll<Game421> game =
+					newGame(instanciator).andConsume(g -> g.setRoller(constant422));
 			final TryCatchAll<Boolean> got = game.andApply(g -> g.tryGet421(0));
 			final boolean pass = got.map(b -> !b, c -> false);
 
@@ -158,19 +168,21 @@ public class Gradr421 implements CodeGrader<RuntimeException> {
 		{
 			final TryCatchAll<Boolean> got421;
 			{
-				final TryCatchAll<Game421> game = newGame(instanciator).andConsume(g -> g.setRoller(constant421));
+				final TryCatchAll<Game421> game =
+						newGame(instanciator).andConsume(g -> g.setRoller(constant421));
 				got421 = game.andApply(g -> g.tryGet421(1));
 			}
 			final TryCatchAll<Boolean> got422;
 			{
-				final TryCatchAll<Game421> game = newGame(instanciator).andConsume(g -> g.setRoller(constant422));
+				final TryCatchAll<Game421> game =
+						newGame(instanciator).andConsume(g -> g.setRoller(constant422));
 				got422 = game.andApply(g -> g.tryGet421(1));
 			}
 
 			final boolean pass421 = got421.map(b -> b, c -> false);
 			final boolean pass422 = got422.map(b -> !b, c -> false);
-			builder.put(Criterion.given("One"), Mark.binary(pass421 && pass422, "", String
-					.format("On successful roll: %s; on failed roll: %s.", got421.toString(), got422.toString())));
+			builder.put(Criterion.given("One"), Mark.binary(pass421 && pass422, "", String.format(
+					"On successful roll: %s; on failed roll: %s.", got421.toString(), got422.toString())));
 		}
 
 		{
@@ -179,27 +191,31 @@ public class Gradr421 implements CodeGrader<RuntimeException> {
 			{
 				final Stream<ImmutableList<Integer>> streamFirst = Stream.generate(() -> roll422);
 				final Stream<ImmutableList<Integer>> streamSecond = Stream.generate(() -> roll421);
-				final ImmutableList<ImmutableList<Integer>> rolls = Stream
-						.concat(streamFirst.limit(50), streamSecond.limit(50)).collect(ImmutableList.toImmutableList());
+				final ImmutableList<ImmutableList<Integer>> rolls =
+						Stream.concat(streamFirst.limit(50), streamSecond.limit(50))
+								.collect(ImmutableList.toImmutableList());
 				final PredictedDiceRoller roller = new PredictedDiceRoller(rolls);
-				final TryCatchAll<Game421> game = newGame(instanciator).andConsume(g -> g.setRoller(roller));
+				final TryCatchAll<Game421> game =
+						newGame(instanciator).andConsume(g -> g.setRoller(roller));
 				got421 = game.andApply(g -> g.tryGet421(60));
 			}
 			final TryCatchAll<Boolean> got422;
 			{
 				final Stream<ImmutableList<Integer>> streamFirst = Stream.generate(() -> roll422);
 				final Stream<ImmutableList<Integer>> streamSecond = Stream.generate(() -> roll421);
-				final ImmutableList<ImmutableList<Integer>> rolls = Stream
-						.concat(streamFirst.limit(70), streamSecond.limit(30)).collect(ImmutableList.toImmutableList());
+				final ImmutableList<ImmutableList<Integer>> rolls =
+						Stream.concat(streamFirst.limit(70), streamSecond.limit(30))
+								.collect(ImmutableList.toImmutableList());
 				final PredictedDiceRoller roller = new PredictedDiceRoller(rolls);
-				final TryCatchAll<Game421> game = newGame(instanciator).andConsume(g -> g.setRoller(roller));
+				final TryCatchAll<Game421> game =
+						newGame(instanciator).andConsume(g -> g.setRoller(roller));
 				got422 = game.andApply(g -> g.tryGet421(60));
 			}
 
 			final boolean pass421 = got421.map(b -> b, c -> false);
 			final boolean pass422 = got422.map(b -> !b, c -> false);
-			builder.put(Criterion.given("Sixty"), Mark.binary(pass421 && pass422, "", String
-					.format("On successful roll: %s; on failed roll: %s.", got421.toString(), got422.toString())));
+			builder.put(Criterion.given("Sixty"), Mark.binary(pass421 && pass422, "", String.format(
+					"On successful roll: %s; on failed roll: %s.", got421.toString(), got422.toString())));
 		}
 
 		return MarksTree.composite(builder.build());

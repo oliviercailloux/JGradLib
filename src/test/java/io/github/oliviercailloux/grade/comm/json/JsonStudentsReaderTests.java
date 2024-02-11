@@ -34,7 +34,8 @@ class JsonStudentsReaderTests {
   }
 
   private InstitutionalStudent getInst2() {
-    return InstitutionalStudent.withU(2190401, "unknown", "", "last", EmailAddress.given("first.last@example.eu"));
+    return InstitutionalStudent.withU(2190401, "unknown", "", "last",
+        EmailAddress.given("first.last@example.eu"));
   }
 
   private ImmutableMap<GitHubUsername, StudentOnGitHub> getGH() {

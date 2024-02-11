@@ -31,8 +31,8 @@ public interface CodeGraderOld<X extends Exception> extends PathGrader<X> {
   default MarksTree grade(Path projectPath) throws X {
     try {
       final ImmutableSet<Path> possibleDirs = possibleDirs(projectPath);
-      final ImmutableMap<Path, MarksTree> gradedProjects = CollectionUtils.toMap(possibleDirs,
-          this::gradePomProjectWrapping);
+      final ImmutableMap<Path, MarksTree> gradedProjects =
+          CollectionUtils.toMap(possibleDirs, this::gradePomProjectWrapping);
       verify(!gradedProjects.isEmpty());
       final ImmutableMap<Criterion, MarksTree> gradedProjectsByCrit = CollectionUtils
           .transformKeys(gradedProjects, p -> Criterion.given("Using project dir " + p.toString()));
@@ -43,19 +43,22 @@ public interface CodeGraderOld<X extends Exception> extends PathGrader<X> {
   }
 
   public static ImmutableSet<Path> possibleDirs(Path projectPath) throws IOException {
-    final ImmutableSet<Path> poms = PathUtils.getMatchingChildren(projectPath, p -> p.endsWith("pom.xml"));
+    final ImmutableSet<Path> poms =
+        PathUtils.getMatchingChildren(projectPath, p -> p.endsWith("pom.xml"));
     LOGGER.debug("Poms: {}.", poms);
     final ImmutableSet<Path> pomsWithJava;
-    pomsWithJava = CheckedStream
-        .<Path, IOException>wrapping(poms.stream()).filter(p -> !PathUtils
-            .getMatchingChildren(p, s -> String.valueOf(s.getFileName()).endsWith(".java")).isEmpty())
+    pomsWithJava = CheckedStream.<Path, IOException>wrapping(poms.stream())
+        .filter(p -> !PathUtils
+            .getMatchingChildren(p, s -> String.valueOf(s.getFileName()).endsWith(".java"))
+            .isEmpty())
         .collect(ImmutableSet.toImmutableSet());
     LOGGER.debug("Poms with java: {}.", pomsWithJava);
     final ImmutableSet<Path> possibleDirs;
     if (pomsWithJava.isEmpty()) {
       possibleDirs = ImmutableSet.of(projectPath);
     } else {
-      possibleDirs = pomsWithJava.stream().map(Path::getParent).collect(ImmutableSet.toImmutableSet());
+      possibleDirs =
+          pomsWithJava.stream().map(Path::getParent).collect(ImmutableSet.toImmutableSet());
     }
     return possibleDirs;
   }
@@ -78,10 +81,13 @@ public interface CodeGraderOld<X extends Exception> extends PathGrader<X> {
       // srcDir = projectDirectory.resolve("src/main/java/");
       srcDir = pomDirectory;
     }
-    final ImmutableSet<Path> javaPaths = Files.exists(srcDir)
-        ? PathUtils.getMatchingChildren(srcDir, p -> String.valueOf(p.getFileName()).endsWith(".java"))
-        : ImmutableSet.of();
-    final CompilationResult eclipseResult = Compiler.eclipseCompileUsingOurClasspath(javaPaths, compiledDir);
+    final ImmutableSet<Path> javaPaths =
+        Files.exists(srcDir)
+            ? PathUtils.getMatchingChildren(srcDir,
+                p -> String.valueOf(p.getFileName()).endsWith(".java"))
+            : ImmutableSet.of();
+    final CompilationResult eclipseResult =
+        Compiler.eclipseCompileUsingOurClasspath(javaPaths, compiledDir);
     final Pattern pathPattern = Pattern.compile("/tmp/sources[0-9]*/");
     final String eclipseStr = pathPattern.matcher(eclipseResult.err).replaceAll("/…/");
     final MarksTree projectGrade;
@@ -124,6 +130,7 @@ public interface CodeGraderOld<X extends Exception> extends PathGrader<X> {
 
   @Override
   default GradeAggregator getAggregator() {
-    return GradeAggregator.min(GradeAggregator.parametric(CODE_CRITERION, WARNING_CRITERION, getCodeAggregator()));
+    return GradeAggregator
+        .min(GradeAggregator.parametric(CODE_CRITERION, WARNING_CRITERION, getCodeAggregator()));
   }
 }

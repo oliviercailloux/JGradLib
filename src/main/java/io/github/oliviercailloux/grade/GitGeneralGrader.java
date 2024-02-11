@@ -39,8 +39,8 @@ import name.falgout.jeffrey.throwing.stream.ThrowingStream;
 /**
  * An instance of this should have a deadline and a grader.
  *
- * Then this is a grader given a GitWork: a GitOnlineUsername (renaming of
- * GitHubUsername) and a GitFileSystemHistory.
+ * Then this is a grader given a GitWork: a GitOnlineUsername (renaming of GitHubUsername) and a
+ * GitFileSystemHistory.
  *
  * Note that out of the repository coordinates comes the GitWork.
  */
@@ -48,7 +48,8 @@ public class GitGeneralGrader {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(GitGeneralGrader.class);
 
-	public static GitGeneralGrader using(RepositoryFetcher repositoryFetcher, DeadlineGrader deadlineGrader) {
+	public static GitGeneralGrader using(RepositoryFetcher repositoryFetcher,
+			DeadlineGrader deadlineGrader) {
 		return new GitGeneralGrader(repositoryFetcher.fetch(), deadlineGrader,
 				Path.of("grades " + repositoryFetcher.getPrefix() + ".json"));
 	}
@@ -60,8 +61,8 @@ public class GitGeneralGrader {
 	private final DeadlineGrader deadlineGrader;
 	private Path out;
 
-	private GitGeneralGrader(Set<RepositoryCoordinatesWithPrefix> repositories, DeadlineGrader deadlineGrader,
-			Path out) {
+	private GitGeneralGrader(Set<RepositoryCoordinatesWithPrefix> repositories,
+			DeadlineGrader deadlineGrader, Path out) {
 		this.repositories = checkNotNull(repositories);
 		this.excludeCommitsByGitHub = false;
 		this.excludedAuthors = ImmutableSet.of();
@@ -102,19 +103,21 @@ public class GitGeneralGrader {
 		}
 		final ImmutableMap<String, IGrade> grades = builder.build();
 		Files.writeString(out, JsonbUtils.toJsonObject(grades, JsonGrade.asAdapter()).toString());
-//		Files.writeString(Path.of("grades.html"), XmlUtils.asString(HtmlGrades.asHtmlGrades(grades, "Grades", 20d)));
-//		final ImmutableSet<String> unames = grades.keySet();
-//		final Set<StudentOnGitHub> stds = unames.stream().map((String u) -> StudentOnGitHub.with(u))
-//				.collect(ImmutableSet.toImmutableSet());
-//		Files.writeString(Path.of("grades.csv"),
-//				CsvGrades.asCsv(Maps.asMap(stds, s -> grades.get(s.getGitHubUsername().getUsername()))));
+		// Files.writeString(Path.of("grades.html"), XmlUtils.asString(HtmlGrades.asHtmlGrades(grades,
+		// "Grades", 20d)));
+		// final ImmutableSet<String> unames = grades.keySet();
+		// final Set<StudentOnGitHub> stds = unames.stream().map((String u) -> StudentOnGitHub.with(u))
+		// .collect(ImmutableSet.toImmutableSet());
+		// Files.writeString(Path.of("grades.csv"),
+		// CsvGrades.asCsv(Maps.asMap(stds, s -> grades.get(s.getGitHubUsername().getUsername()))));
 		LOGGER.debug("Grades: {}.", grades);
 	}
 
 	IGrade grade(RepositoryCoordinatesWithPrefix coordinates) throws IOException {
 		final Path dir = Utils.getTempDirectory().resolve(coordinates.getRepositoryName());
 		try (FileRepository repository = getFileRepo(coordinates, dir);
-				GitFileSystem gitFs = GitFileSystemProvider.instance().newFileSystemFromRepository(repository)) {
+				GitFileSystem gitFs =
+						GitFileSystemProvider.instance().newFileSystemFromRepository(repository)) {
 			final GitHistory pushHistory;
 			{
 				final GitHubHistory gitHubHistory;
@@ -125,8 +128,8 @@ public class GitGeneralGrader {
 					LOGGER.warn("Patched: {}.", gitHubHistory.getPatchedPushCommits());
 				}
 				pushHistory = gitHubHistory.getConsistentPushHistory();
-				verify(pushHistory.getGraph().equals(
-						Utils.asImmutableGraph(gitFs.graph(), IO_UNCHECKER.wrapFunction(r -> r.getCommit().id()))));
+				verify(pushHistory.getGraph().equals(Utils.asImmutableGraph(gitFs.graph(),
+						IO_UNCHECKER.wrapFunction(r -> r.getCommit().id()))));
 				LOGGER.debug("Push history: {}.", pushHistory);
 			}
 
@@ -136,7 +139,8 @@ public class GitGeneralGrader {
 		}
 	}
 
-	private FileRepository getFileRepo(RepositoryCoordinatesWithPrefix coordinates, Path dir) throws IOException {
+	private FileRepository getFileRepo(RepositoryCoordinatesWithPrefix coordinates, Path dir)
+			throws IOException {
 		if (fromDir) {
 			return (FileRepository) new FileRepositoryBuilder().setWorkTree(dir.toFile()).build();
 		}
@@ -147,24 +151,24 @@ public class GitGeneralGrader {
 		final GitHistorySimple manual;
 		final ImmutableSet<GitPathRoot> excludedByGitHub;
 		if (excludeCommitsByGitHub) {
-			final ThrowingStream<GitPathRootShaCached, IOException> stream = ThrowingStream
-					.of(work.getHistory().graph().nodes().stream(), IOException.class);
+			final ThrowingStream<GitPathRootShaCached, IOException> stream =
+					ThrowingStream.of(work.getHistory().graph().nodes().stream(), IOException.class);
 			manual = work.getHistory().filteredCommits(c -> !JavaMarkHelper.committerIsGitHub(c));
-			excludedByGitHub = stream.filter(JavaMarkHelper::committerIsGitHub).collect(ImmutableSet.toImmutableSet());
+			excludedByGitHub =
+					stream.filter(JavaMarkHelper::committerIsGitHub).collect(ImmutableSet.toImmutableSet());
 		} else {
 			manual = work.getHistory();
 			excludedByGitHub = ImmutableSet.of();
 		}
 
-		final GitHistorySimple filteredHistory = manual.filteredCommits(c -> !excludedAuthors.contains(c.authorName()));
+		final GitHistorySimple filteredHistory =
+				manual.filteredCommits(c -> !excludedAuthors.contains(c.authorName()));
 		final IGrade grade = deadlineGrader.grade(GitWork.given(work.getAuthor(), filteredHistory));
 		final String spaceBefore = grade.getComment().isEmpty() ? "" : " ";
 		final String added = excludedByGitHub.isEmpty() ? ""
-				: spaceBefore
-						+ "(Ignored commits by GitHub: " + excludedByGitHub.stream()
-								.map(r -> r.getStaticCommitId().getName().toString()).collect(Collectors.joining(", "))
+				: spaceBefore + "(Ignored commits by GitHub: " + excludedByGitHub.stream()
+						.map(r -> r.getStaticCommitId().getName().toString()).collect(Collectors.joining(", "))
 						+ ")";
 		return grade.withComment(grade.getComment() + added);
 	}
-
 }

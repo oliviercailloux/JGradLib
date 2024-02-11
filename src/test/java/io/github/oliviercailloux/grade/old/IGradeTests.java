@@ -58,10 +58,11 @@ public class IGradeTests {
 
   @Test
   void testTree() throws Exception {
-    final IGrade grade = JsonGrade.asGrade(PrintableJsonObjectFactory.wrapPrettyPrintedString(
-        Resources.toString(JsonbGradeTests.class.getResource("ComplexGrade.json"), StandardCharsets.UTF_8)));
-//    final IGrade grade = JsonGrade
-//        .asGrade(PrintableJsonObjectFactory.wrapPrettyPrintedString(Files.readString(Path.of("grade.json"))));
+    final IGrade grade =
+        JsonGrade.asGrade(PrintableJsonObjectFactory.wrapPrettyPrintedString(Resources.toString(
+            JsonbGradeTests.class.getResource("ComplexGrade.json"), StandardCharsets.UTF_8)));
+    // final IGrade grade = JsonGrade
+    // .asGrade(PrintableJsonObjectFactory.wrapPrettyPrintedString(Files.readString(Path.of("grade.json"))));
     final GradeStructure actual = grade.toTree();
     LOGGER.info("Structure: {}.", actual);
     assertEquals(GradeStructure.from(ImmutableSet.of("C1/criterion", "C2")), actual);
@@ -69,21 +70,22 @@ public class IGradeTests {
 
   @Test
   void testBuildKeepsOrderOfKeys() throws Exception {
-    final IGrade grade = WeightingGrade.from(ImmutableMap.of(CriteriaPath.from("user.name"),
-        WeightedGrade.given(Mark.one(), 1d), CriteriaPath.from("main"), WeightedGrade.given(Mark.one(), 1d)));
+    final IGrade grade = WeightingGrade
+        .from(ImmutableMap.of(CriteriaPath.from("user.name"), WeightedGrade.given(Mark.one(), 1d),
+            CriteriaPath.from("main"), WeightedGrade.given(Mark.one(), 1d)));
     assertEquals(ImmutableList.of(Criterion.given("user.name"), Criterion.given("main")),
         grade.getSubGrades().keySet().asList());
     final GradeStructure tree = grade.toTree();
-    assertEquals(ImmutableList.of(CriteriaPath.ROOT, CriteriaPath.from("user.name"), CriteriaPath.from("main")),
-        ImmutableList.copyOf(tree.asGraph().nodes()));
+    assertEquals(ImmutableList.of(CriteriaPath.ROOT, CriteriaPath.from("user.name"),
+        CriteriaPath.from("main")), ImmutableList.copyOf(tree.asGraph().nodes()));
     assertEquals(ImmutableList.of(Criterion.given("user.name"), Criterion.given("main")),
         tree.getSuccessorCriteria(CriteriaPath.ROOT).asList());
   }
 
   @Test
   void testDissolve() throws Exception {
-    final IGrade grade = WeightingGrade
-        .from(ImmutableMap.of(CriteriaPath.from("c1"), WeightedGrade.given(Mark.given(0.5d, ""), 4d),
+    final IGrade grade = WeightingGrade.from(
+        ImmutableMap.of(CriteriaPath.from("c1"), WeightedGrade.given(Mark.given(0.5d, ""), 4d),
             CriteriaPath.from("c2"), WeightedGrade.given(Mark.one(), 1d)));
     final Criterion c1 = Criterion.given("c1");
     final Criterion c2 = Criterion.given("c2");
@@ -120,8 +122,8 @@ public class IGradeTests {
   void testDissolveStructure() throws Exception {
     final WeightedGrade one = WeightedGrade.given(Mark.one(), 1d);
     final CriteriaPath w = CriteriaPath.from("Warnings");
-    final IGrade grade = WeightingGrade.from(
-        ImmutableMap.of(CriteriaPath.from("Impl/Class1"), one, CriteriaPath.from("Impl/Class2"), one, w, one));
+    final IGrade grade = WeightingGrade.from(ImmutableMap.of(CriteriaPath.from("Impl/Class1"), one,
+        CriteriaPath.from("Impl/Class2"), one, w, one));
     final Criterion wc = Criterion.given("Warnings");
     final IGrade dissolved = grade.withDissolved(wc);
 

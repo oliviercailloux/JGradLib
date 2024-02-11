@@ -52,7 +52,8 @@ public class ReadCsvGrades {
 		@Parsed(field = "Commentaire")
 		private String comment;
 
-		public MarkRecord(String name, String first, String email, String uid, String gu, double mark, String comment) {
+		public MarkRecord(String name, String first, String email, String uid, String gu, double mark,
+				String comment) {
 			this.name = checkNotNull(name);
 			this.first = checkNotNull(first);
 			this.email = checkNotNull(email);
@@ -79,21 +80,24 @@ public class ReadCsvGrades {
 
 		@Override
 		public String toString() {
-			final String cmt = (comment != null && comment.length() >= 15) ? comment.substring(0, 10) : comment;
-			return MoreObjects.toStringHelper(this).add("Name", name).add("Mark", mark).add("Comment", cmt).toString();
+			final String cmt =
+					(comment != null && comment.length() >= 15) ? comment.substring(0, 10) : comment;
+			return MoreObjects.toStringHelper(this).add("Name", name).add("Mark", mark)
+					.add("Comment", cmt).toString();
 		}
 	}
 
 	public static void main(String[] args) throws Exception {
-//		final ImmutableSet<MarkRecord> markRecords = readOds("R3");
+		// final ImmutableSet<MarkRecord> markRecords = readOds("R3");
 		final ImmutableSet<MarkRecord> markRecords = readOds("Présentations");
 
-//		markRecords = readCsv();
+		// markRecords = readCsv();
 
-		final ImmutableMap<GitHubUsername, MarksTree> gradeMap = markRecords.stream().collect(
-				ImmutableMap.toImmutableMap(r -> GitHubUsername.given(r.gu), r -> Mark.given(r.mark / 20d, r.comment)));
+		final ImmutableMap<GitHubUsername, MarksTree> gradeMap =
+				markRecords.stream().collect(ImmutableMap.toImmutableMap(r -> GitHubUsername.given(r.gu),
+						r -> Mark.given(r.mark / 20d, r.comment)));
 		final String exam = JsonSimpleGrade.toJson(new Exam(GradeAggregator.TRIVIAL, gradeMap));
-//		Files.writeString(Path.of("grades Release 3.json"), exam);
+		// Files.writeString(Path.of("grades Release 3.json"), exam);
 		Files.writeString(Path.of("grades Présentation.json"), exam);
 	}
 
@@ -137,8 +141,8 @@ public class ReadCsvGrades {
 		final CsvParser reader = new CsvParser(settings);
 		reader.parse(csvReader);
 		final List<MarkRecord> all = processor.getBeans();
-		final ImmutableSet<MarkRecord> markRecords = all.stream().filter(t -> t.mark != null)
-				.collect(ImmutableSet.toImmutableSet());
+		final ImmutableSet<MarkRecord> markRecords =
+				all.stream().filter(t -> t.mark != null).collect(ImmutableSet.toImmutableSet());
 		settings.setHeaderExtractionEnabled(true);
 		LOGGER.info("Mark records: {}.", markRecords);
 		return markRecords;

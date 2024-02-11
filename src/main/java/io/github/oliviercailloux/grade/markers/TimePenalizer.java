@@ -8,14 +8,13 @@ public interface TimePenalizer {
 	}
 
 	/**
-	 * @return zero if tardiness is negative or null, one if tardiness is greater
-	 *         than or equal to {@link #getOvertimeBound()}.
+	 * @return zero if tardiness is negative or null, one if tardiness is greater than or equal to
+	 *         {@link #getOvertimeBound()}.
 	 */
 	public double penalty(Duration tardiness);
 
 	/**
-	 * @return a strictly positive duration such that the penalty is maximal at that
-	 *         point.
+	 * @return a strictly positive duration such that the penalty is maximal at that point.
 	 */
 	public Duration getTardinessBound();
 }

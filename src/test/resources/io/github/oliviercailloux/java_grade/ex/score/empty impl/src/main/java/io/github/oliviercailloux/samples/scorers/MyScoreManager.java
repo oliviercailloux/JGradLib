@@ -10,5 +10,4 @@ public class MyScoreManager implements ScoreManager {
   public static MyScoreManager newInstance() {
     return new MyScoreManager();
   }
-
 }

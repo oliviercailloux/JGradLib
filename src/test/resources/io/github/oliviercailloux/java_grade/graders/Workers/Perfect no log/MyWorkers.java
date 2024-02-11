@@ -13,7 +13,6 @@ import org.slf4j.LoggerFactory;
 
 public class MyWorkers implements Workers {
 
-
   public static MyWorkers empty() {
     return new MyWorkers();
   }

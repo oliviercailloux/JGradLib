@@ -43,13 +43,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Is given a deadline. And a penalizer. Function that grades a git work. Cap at
- * various points (obtain pairs of git work and lateness); ask penalizer, obtain
- * grade. Then take the best grade and aggregates.
+ * Is given a deadline. And a penalizer. Function that grades a git work. Cap at various points
+ * (obtain pairs of git work and lateness); ask penalizer, obtain grade. Then take the best grade
+ * and aggregates.
  * <p>
- * TODO refactor the whole thing into a unique grader that delegates; rather
- * than a chain. Make sure we can grade as well the github-committed bits, with
- * a penalty (supplemental to the time penalty!).
+ * TODO refactor the whole thing into a unique grader that delegates; rather than a chain. Make sure
+ * we can grade as well the github-committed bits, with a penalty (supplemental to the time
+ * penalty!).
  */
 public class DeadlineGrader {
 	@SuppressWarnings("unused")
@@ -67,23 +67,24 @@ public class DeadlineGrader {
 		public IGrade grade(GitWork work) throws IOException {
 			final GitHistorySimple history = work.getHistory();
 			final Mark userGrade = getUsernameGrade(history, work.getAuthor());
-			final ImmutableSet<GitPathRootShaCached> latestTiedPathsOnTime = PathToGitGrader.getLatest(history);
+			final ImmutableSet<GitPathRootShaCached> latestTiedPathsOnTime =
+					PathToGitGrader.getLatest(history);
 			checkArgument(!latestTiedPathsOnTime.isEmpty());
 			LOGGER.debug("Considering {}.", latestTiedPathsOnTime);
-			final IGrade mainGrade = CheckedStream
-					.<GitPathRootShaCached, IOException>wrapping(latestTiedPathsOnTime.stream()).map(simpleWorkGrader)
-					.min(TComparator.comparing(IGrade::getPoints)).get();
+			final IGrade mainGrade =
+					CheckedStream.<GitPathRootShaCached, IOException>wrapping(latestTiedPathsOnTime.stream())
+							.map(simpleWorkGrader).min(TComparator.comparing(IGrade::getPoints)).get();
 			return WeightingGrade.from(ImmutableSet.of(
 					CriterionGradeWeight.from(Criterion.given("user.name"), userGrade, USER_GRADE_WEIGHT),
 					CriterionGradeWeight.from(Criterion.given("main"), mainGrade, 1d - USER_GRADE_WEIGHT)));
 		}
 
 		/**
-		 * Returns all latest commits that have no children, have been authored the
-		 * latest among the remaining ones, and have been committed the latest among the
-		 * remaining ones.
+		 * Returns all latest commits that have no children, have been authored the latest among the
+		 * remaining ones, and have been committed the latest among the remaining ones.
 		 */
-		private static ImmutableSet<GitPathRootShaCached> getLatest(GitHistorySimple history) throws IOException {
+		private static ImmutableSet<GitPathRootShaCached> getLatest(GitHistorySimple history)
+				throws IOException {
 			final ImmutableSet<GitPathRootShaCached> leaves = history.leaves();
 			// final GitFileSystemHistory leavesHistory = history.filter(c ->
 			// leaves.contains(c));
@@ -105,14 +106,14 @@ public class DeadlineGrader {
 			// .filter(c ->
 			// c.getCommit().getCommitterDate().toInstant().equals(latestCommittedDate));
 
-			final Comparator<GitPathRootShaCached> byAuthorDate = Comparator.comparing(c -> c.getCommit().authorDate());
-			final Comparator<GitPathRootShaCached> byCommitDate = Comparator
-					.comparing(c -> c.getCommit().committerDate());
-			final TComparator<GitPathRootShaCached, IOException> byDate = (t1, t2) -> byAuthorDate
-					.thenComparing(byCommitDate).compare(t1, t2);
+			final Comparator<GitPathRootShaCached> byAuthorDate =
+					Comparator.comparing(c -> c.getCommit().authorDate());
+			final Comparator<GitPathRootShaCached> byCommitDate =
+					Comparator.comparing(c -> c.getCommit().committerDate());
+			final TComparator<GitPathRootShaCached, IOException> byDate =
+					(t1, t2) -> byAuthorDate.thenComparing(byCommitDate).compare(t1, t2);
 			return Utils.<GitPathRootShaCached, IOException>getMaximalElements(leaves, byDate);
 		}
-
 	}
 
 	private static class InstanciatorToPathGrader {
@@ -124,28 +125,34 @@ public class DeadlineGrader {
 		}
 
 		public IGrade grade(Path work) throws IOException {
-			final ImmutableSet<Path> poms = PathUtils.getMatchingChildren(work, p -> p.endsWith("pom.xml"));
+			final ImmutableSet<Path> poms =
+					PathUtils.getMatchingChildren(work, p -> p.endsWith("pom.xml"));
 			LOGGER.debug("Poms: {}.", poms);
-			final ImmutableSet<Path> pomsWithJava = CheckedStream.<Path, IOException>wrapping(poms.stream())
-					.filter(p -> !PathUtils
-							.getMatchingChildren(p, s -> String.valueOf(s.getFileName()).endsWith(".java")).isEmpty())
-					.collect(ImmutableSet.toImmutableSet());
+			final ImmutableSet<
+					Path> pomsWithJava =
+							CheckedStream.<Path, IOException>wrapping(poms.stream())
+									.filter(p -> !PathUtils.getMatchingChildren(p,
+											s -> String.valueOf(s.getFileName()).endsWith(".java")).isEmpty())
+									.collect(ImmutableSet.toImmutableSet());
 			LOGGER.debug("Poms with java: {}.", pomsWithJava);
 			final ImmutableSet<Path> possibleDirs;
 			if (pomsWithJava.isEmpty()) {
 				possibleDirs = ImmutableSet.of(work);
 			} else {
-				possibleDirs = pomsWithJava.stream().map(Path::getParent).collect(ImmutableSet.toImmutableSet());
+				possibleDirs =
+						pomsWithJava.stream().map(Path::getParent).collect(ImmutableSet.toImmutableSet());
 			}
-			final ImmutableMap<Path, IGrade> gradedProjects = CollectionUtils.toMap(possibleDirs, this::gradeProject);
+			final ImmutableMap<Path, IGrade> gradedProjects =
+					CollectionUtils.toMap(possibleDirs, this::gradeProject);
 			final IGrade grade;
 			verify(!gradedProjects.isEmpty());
 			if (gradedProjects.size() == 1) {
 				grade = Iterables.getOnlyElement(gradedProjects.values());
 			} else {
 				final ImmutableSet<CriterionGradeWeight> cgws = gradedProjects.keySet().stream()
-						.map(p -> CriterionGradeWeight.from(Criterion.given("Using project dir " + p.toString()),
-								gradedProjects.get(p), gradedProjects.get(p).getPoints() > 0d ? 1d : 0d))
+						.map(
+								p -> CriterionGradeWeight.from(Criterion.given("Using project dir " + p.toString()),
+										gradedProjects.get(p), gradedProjects.get(p).getPoints() > 0d ? 1d : 0d))
 						.collect(ImmutableSet.toImmutableSet());
 				grade = WeightingGrade.from(cgws);
 			}
@@ -159,13 +166,16 @@ public class DeadlineGrader {
 			if (hasPom) {
 				srcDir = projectDirectory.resolve("src/main/java/");
 			} else {
-//				srcDir = projectDirectory.resolve("src/main/java/");
+				// srcDir = projectDirectory.resolve("src/main/java/");
 				srcDir = projectDirectory;
 			}
-			final ImmutableSet<Path> javaPaths = Files.exists(srcDir)
-					? PathUtils.getMatchingChildren(srcDir, p -> String.valueOf(p.getFileName()).endsWith(".java"))
-					: ImmutableSet.of();
-			final CompilationResult eclipseResult = Compiler.eclipseCompileUsingOurClasspath(javaPaths, compiledDir);
+			final ImmutableSet<Path> javaPaths =
+					Files.exists(srcDir)
+							? PathUtils.getMatchingChildren(srcDir,
+									p -> String.valueOf(p.getFileName()).endsWith(".java"))
+							: ImmutableSet.of();
+			final CompilationResult eclipseResult =
+					Compiler.eclipseCompileUsingOurClasspath(javaPaths, compiledDir);
 			final Pattern pathPattern = Pattern.compile("/tmp/sources[0-9]*/");
 			final String eclipseStr = pathPattern.matcher(eclipseResult.err).replaceAll("/…/");
 			final IGrade projectGrade;
@@ -197,15 +207,14 @@ public class DeadlineGrader {
 					final double lowWeightWarnings = 0.05d;
 					final double highWeightWarnings = 0.10d;
 					final double weightWarnings = nbWarningsTot == 1 ? lowWeightWarnings : highWeightWarnings;
-					projectGrade = WeightingGrade
-							.from(ImmutableSet.of(CriterionGradeWeight.from(Criterion.given("Code"), codeGrade, 1d),
+					projectGrade = WeightingGrade.from(
+							ImmutableSet.of(CriterionGradeWeight.from(Criterion.given("Code"), codeGrade, 1d),
 									CriterionGradeWeight.from(Criterion.given("Warnings"), warningsGrade,
 											weightWarnings / (1d - weightWarnings))));
 				}
 			}
 			return projectGrade;
 		}
-
 	}
 
 	private static interface Penalizer {
@@ -245,8 +254,8 @@ public class DeadlineGrader {
 				verify(fractionPenalty <= 1d);
 				final WeightingGrade global = WeightingGrade.from(ImmutableSet.of(
 						CriterionGradeWeight.from(Criterion.given("grade"), grade, 1d - fractionPenalty),
-						CriterionGradeWeight.from(Criterion.given("Time penalty"), Mark.zero("Lateness: " + lateness),
-								fractionPenalty)));
+						CriterionGradeWeight.from(Criterion.given("Time penalty"),
+								Mark.zero("Lateness: " + lateness), fractionPenalty)));
 				penalizedGrade = global.withDissolved(Criterion.given("Time penalty")).withoutTopLayer();
 			} else {
 				penalizedGrade = grade;
@@ -255,7 +264,8 @@ public class DeadlineGrader {
 		}
 
 		@Override
-		public io.github.oliviercailloux.grade.Mark getAbsolutePenality(Duration lateness, Grade grade) {
+		public io.github.oliviercailloux.grade.Mark getAbsolutePenality(Duration lateness,
+				Grade grade) {
 			final io.github.oliviercailloux.grade.Mark penalty;
 			if (!lateness.isNegative() && !lateness.isZero()) {
 				final double fractionPenalty = Math.min(lateness.getSeconds() / (double) nbSecondsZero, 1d);
@@ -263,7 +273,8 @@ public class DeadlineGrader {
 				verify(fractionPenalty <= 1d);
 				final double currentPoints = grade.mark().getPoints();
 				final double penaltyPoints = currentPoints * fractionPenalty;
-				penalty = io.github.oliviercailloux.grade.Mark.given(-1d * penaltyPoints, "Lateness: " + lateness);
+				penalty = io.github.oliviercailloux.grade.Mark.given(-1d * penaltyPoints,
+						"Lateness: " + lateness);
 			} else {
 				penalty = io.github.oliviercailloux.grade.Mark.zero();
 			}
@@ -276,7 +287,8 @@ public class DeadlineGrader {
 				final double fractionPenalty = Math.min(lateness.getSeconds() / (double) nbSecondsZero, 1d);
 				verify(0d < fractionPenalty);
 				verify(fractionPenalty <= 1d);
-				remaining = io.github.oliviercailloux.grade.Mark.given(1d - fractionPenalty, "Lateness: " + lateness);
+				remaining = io.github.oliviercailloux.grade.Mark.given(1d - fractionPenalty,
+						"Lateness: " + lateness);
 			} else {
 				remaining = io.github.oliviercailloux.grade.Mark.one();
 			}
@@ -288,8 +300,10 @@ public class DeadlineGrader {
 		return new DeadlineGrader(grader::grade, deadline, LinearPenalizer.DEFAULT_PENALIZER);
 	}
 
-	public static DeadlineGrader usingPathGrader(TFunction<Path, IGrade, IOException> grader, ZonedDateTime deadline) {
-		return new DeadlineGrader(new PathToGitGrader(grader)::grade, deadline, LinearPenalizer.DEFAULT_PENALIZER);
+	public static DeadlineGrader usingPathGrader(TFunction<Path, IGrade, IOException> grader,
+			ZonedDateTime deadline) {
+		return new DeadlineGrader(new PathToGitGrader(grader)::grade, deadline,
+				LinearPenalizer.DEFAULT_PENALIZER);
 	}
 
 	/**
@@ -298,22 +312,23 @@ public class DeadlineGrader {
 	public static DeadlineGrader usingInstantiatorGrader(Function<Instanciator, IGrade> grader,
 			ZonedDateTime deadline) {
 
-		return new DeadlineGrader(new PathToGitGrader(new InstanciatorToPathGrader(grader)::grade)::grade, deadline,
+		return new DeadlineGrader(
+				new PathToGitGrader(new InstanciatorToPathGrader(grader)::grade)::grade, deadline,
 				LinearPenalizer.DEFAULT_PENALIZER);
 	}
 
 	/**
-	 * @return a weighting grade that shows the best grade with weight 1, and the
-	 *         other grades with weight 0, and indicates for each of them where they
-	 *         have been capped.
+	 * @return a weighting grade that shows the best grade with weight 1, and the other grades with
+	 *         weight 0, and indicates for each of them where they have been capped.
 	 */
-	public static IGrade getBestAndSub(IGrade best, ImmutableBiMap<Instant, IGrade> byTime, ZonedDateTime deadline) {
+	public static IGrade getBestAndSub(IGrade best, ImmutableBiMap<Instant, IGrade> byTime,
+			ZonedDateTime deadline) {
 		final IGrade finalGrade;
 		final Instant mainInstant = byTime.inverse().get(best);
 		final ImmutableSet<CriterionGradeWeight> grades = byTime.entrySet().stream()
 				.map(e -> CriterionGradeWeight.from(
-						Criterion.given("Cap at " + e.getKey().atZone(deadline.getZone()).toString()), e.getValue(),
-						e.getKey().equals(mainInstant) ? 1d : 0d))
+						Criterion.given("Cap at " + e.getKey().atZone(deadline.getZone()).toString()),
+						e.getValue(), e.getKey().equals(mainInstant) ? 1d : 0d))
 				.collect(ImmutableSet.toImmutableSet());
 		finalGrade = WeightingGrade.from(grades,
 				"Using best grade, from " + mainInstant.atZone(deadline.getZone()).toString());
@@ -321,11 +336,11 @@ public class DeadlineGrader {
 	}
 
 	public static Mark getUsernameGrade(GitHistorySimple history, GitHubUsername expectedUsername) {
-		final ImmutableSet<String> authors = history.graph().nodes().stream().map(GitPathRootShaCached::getCommit)
-				.map(Commit::authorName).filter(s -> !s.equals("github-classroom[bot]"))
-				.collect(ImmutableSet.toImmutableSet());
-		final ImmutableSet<String> authorsShow = authors.stream().map(s -> "‘" + s + "’")
-				.collect(ImmutableSet.toImmutableSet());
+		final ImmutableSet<String> authors = history.graph().nodes().stream()
+				.map(GitPathRootShaCached::getCommit).map(Commit::authorName)
+				.filter(s -> !s.equals("github-classroom[bot]")).collect(ImmutableSet.toImmutableSet());
+		final ImmutableSet<String> authorsShow =
+				authors.stream().map(s -> "‘" + s + "’").collect(ImmutableSet.toImmutableSet());
 		LOGGER.debug("Authors: {}.", authors);
 		final String authorExpected = expectedUsername.getUsername();
 		return Mark.binary(authors.equals(ImmutableSet.of(authorExpected)), "",
@@ -336,8 +351,8 @@ public class DeadlineGrader {
 	private final ZonedDateTime deadline;
 	private Penalizer penalizer;
 
-	private DeadlineGrader(TFunction<GitWork, IGrade, IOException> gitWorkGrader, ZonedDateTime deadline,
-			Penalizer penalizer) {
+	private DeadlineGrader(TFunction<GitWork, IGrade, IOException> gitWorkGrader,
+			ZonedDateTime deadline, Penalizer penalizer) {
 		this.grader = checkNotNull(gitWorkGrader);
 		this.deadline = checkNotNull(deadline);
 		this.penalizer = checkNotNull(penalizer);
@@ -345,16 +360,18 @@ public class DeadlineGrader {
 
 	private static Instant getLatestCommit(GitHistorySimple history) {
 		checkArgument(!history.graph().nodes().isEmpty());
-		return history.leaves().stream().map(history::getTimestamp).max(Comparator.naturalOrder()).orElseThrow();
+		return history.leaves().stream().map(history::getTimestamp).max(Comparator.naturalOrder())
+				.orElseThrow();
 	}
 
 	/**
-	 * @return the latest instant weakly before the cap, or the cap itself if there
-	 *         are none such instants.
+	 * @return the latest instant weakly before the cap, or the cap itself if there are none such
+	 *         instants.
 	 */
 	private static Instant getLatestBefore(ImmutableSortedSet<Instant> timestamps, Instant cap) {
 		final ImmutableSortedSet<Instant> toCap = timestamps.headSet(cap, true);
-		LOGGER.debug("All timestamps: {}, picking those before {} results in: {}.", timestamps, cap, toCap);
+		LOGGER.debug("All timestamps: {}, picking those before {} results in: {}.", timestamps, cap,
+				toCap);
 		final Instant considerFrom;
 		if (toCap.isEmpty()) {
 			considerFrom = cap;
@@ -374,8 +391,8 @@ public class DeadlineGrader {
 			final ImmutableSortedSet<Instant> fromJustBefore = timestamps.tailSet(latestAll);
 
 			final ImmutableSortedSet<Instant> timestampsNonGitHub = history
-					.filteredCommits(p -> !JavaMarkHelper.committerIsGitHub(p)).getTimestamps().values().stream()
-					.collect(ImmutableSortedSet.toImmutableSortedSet(Comparator.naturalOrder()));
+					.filteredCommits(p -> !JavaMarkHelper.committerIsGitHub(p)).getTimestamps().values()
+					.stream().collect(ImmutableSortedSet.toImmutableSortedSet(Comparator.naturalOrder()));
 			final Instant latestNonGitHub = getLatestBefore(timestampsNonGitHub, deadline.toInstant());
 			final ImmutableSortedSet.Builder<Instant> builder = ImmutableSortedSet.naturalOrder();
 			if (!timestamps.headSet(latestNonGitHub, true).isEmpty()) {
@@ -399,7 +416,8 @@ public class DeadlineGrader {
 		verify(timestamps.containsAll(adjustedConsider));
 
 		return CheckedStream.<Instant, IOException>from(adjustedConsider)
-				.map(timeCap -> history.filtered(r -> r.isAfter(timeCap))).collect(ImmutableSet.toImmutableSet());
+				.map(timeCap -> history.filtered(r -> r.isAfter(timeCap)))
+				.collect(ImmutableSet.toImmutableSet());
 	}
 
 	public Penalizer getPenalizer() {
@@ -415,7 +433,8 @@ public class DeadlineGrader {
 
 		final ImmutableBiMap<Instant, IGrade> byTime = getPenalizedGradesByCap(work);
 
-		final Optional<IGrade> bestGrade = byTime.values().stream().max(Comparator.comparing(IGrade::getPoints));
+		final Optional<IGrade> bestGrade =
+				byTime.values().stream().max(Comparator.comparing(IGrade::getPoints));
 		final IGrade finalGrade;
 		if (bestGrade.isEmpty()) {
 			finalGrade = Mark.zero("No commit found.");
@@ -428,14 +447,14 @@ public class DeadlineGrader {
 	}
 
 	/**
-	 * Is a BiMap because only one grade has no penalty, the other ones have
-	 * different penalties, so they are unique. (Il multiple grades have no penalty,
-	 * this basically means that the student can try several times without
-	 * drawback.)");
+	 * Is a BiMap because only one grade has no penalty, the other ones have different penalties, so
+	 * they are unique. (Il multiple grades have no penalty, this basically means that the student can
+	 * try several times without drawback.)");
 	 *
 	 */
 	private ImmutableBiMap<Instant, IGrade> getPenalizedGradesByCap(GitWork work) throws IOException {
-		final ImmutableSet<GitHistorySimple> toConsider = fromJustBeforeDeadline(work.getHistory(), deadline);
+		final ImmutableSet<GitHistorySimple> toConsider =
+				fromJustBeforeDeadline(work.getHistory(), deadline);
 
 		final ImmutableBiMap.Builder<Instant, IGrade> byTimeBuilder = ImmutableBiMap.builder();
 		for (GitHistorySimple timeCapped : toConsider) {
@@ -452,7 +471,8 @@ public class DeadlineGrader {
 		final Instant latest = getLatestCommit(capped);
 		final Duration lateness = Duration.between(deadline.toInstant(), latest);
 		final IGrade penalizedForTimeGrade = penalizer.penalize(lateness, grade);
-		if (!capped.filteredCommits(r -> JavaMarkHelper.committerIsGitHub(r)).graph().nodes().isEmpty()) {
+		if (!capped.filteredCommits(r -> JavaMarkHelper.committerIsGitHub(r)).graph().nodes()
+				.isEmpty()) {
 			return penalizeForGitHub(penalizedForTimeGrade);
 		}
 		return penalizedForTimeGrade;
@@ -462,7 +482,8 @@ public class DeadlineGrader {
 		final double fractionPenalty = 0.7d;
 		return WeightingGrade.from(ImmutableSet.of(
 				CriterionGradeWeight.from(Criterion.given("grade"), grade, 1d - fractionPenalty),
-				CriterionGradeWeight.from(Criterion.given("Penalty: commit by GitHub"), Mark.zero(), fractionPenalty)));
+				CriterionGradeWeight.from(Criterion.given("Penalty: commit by GitHub"), Mark.zero(),
+						fractionPenalty)));
 	}
 
 	@Override
@@ -471,7 +492,8 @@ public class DeadlineGrader {
 			return false;
 		}
 		final DeadlineGrader t2 = (DeadlineGrader) o2;
-		return grader.equals(t2.grader) && deadline.equals(t2.deadline) && penalizer.equals(t2.penalizer);
+		return grader.equals(t2.grader) && deadline.equals(t2.deadline)
+				&& penalizer.equals(t2.penalizer);
 	}
 
 	@Override
@@ -484,5 +506,4 @@ public class DeadlineGrader {
 		return MoreObjects.toStringHelper(this).add("Git grader", grader).add("Deadline", deadline)
 				.add("Penalizer", penalizer).toString();
 	}
-
 }

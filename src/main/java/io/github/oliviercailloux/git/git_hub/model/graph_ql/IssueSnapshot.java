@@ -13,7 +13,8 @@ import java.util.Set;
  *
  */
 public class IssueSnapshot {
-	public static IssueSnapshot of(Instant birthTime, String name, boolean isOpen, Set<User> assignees) {
+	public static IssueSnapshot of(Instant birthTime, String name, boolean isOpen,
+			Set<User> assignees) {
 		return new IssueSnapshot(birthTime, name, isOpen, assignees);
 	}
 

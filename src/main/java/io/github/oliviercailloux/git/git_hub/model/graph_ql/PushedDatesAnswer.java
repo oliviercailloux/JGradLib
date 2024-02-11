@@ -94,8 +94,8 @@ public class PushedDatesAnswer {
 		private Instant committedDate;
 		private final Optional<Instant> pushedDate;
 
-		private CommitNode(ObjectId oid, ImmutableSet<ObjectId> parents, Instant authoredDate, Instant committedDate,
-				Optional<Instant> pushedDate) {
+		private CommitNode(ObjectId oid, ImmutableSet<ObjectId> parents, Instant authoredDate,
+				Instant committedDate, Optional<Instant> pushedDate) {
 			this.oid = checkNotNull(oid);
 			this.parents = checkNotNull(parents);
 			this.authoredDate = checkNotNull(authoredDate);
@@ -161,9 +161,8 @@ public class PushedDatesAnswer {
 		private final ImmutableSet<CommitNode> commitNodes;
 		private final ImmutableBiMap<ObjectId, CommitNode> oidToNode;
 		/**
-		 * The oids whose parents are known, thus, a subset of those seen in the
-		 * provided json (there’s also those that are designated as parents of a known
-		 * oid, but which are themselves unknown).
+		 * The oids whose parents are known, thus, a subset of those seen in the provided json (there’s
+		 * also those that are designated as parents of a known oid, but which are themselves unknown).
 		 */
 		private final ImmutableSet<ObjectId> knownOids;
 		private final ImmutableGraph<ObjectId> parentsGraph;
@@ -173,8 +172,8 @@ public class PushedDatesAnswer {
 			final ImmutableSetMultimap<ObjectId, CommitNode> byOid = commitNodes.stream()
 					.collect(ImmutableSetMultimap.toImmutableSetMultimap((c) -> c.getOid(), (c) -> c));
 			verify(byOid.size() == byOid.keySet().size());
-			oidToNode = byOid.asMap().entrySet().stream().collect(
-					ImmutableBiMap.toImmutableBiMap((e) -> e.getKey(), (e) -> Iterables.getOnlyElement(e.getValue())));
+			oidToNode = byOid.asMap().entrySet().stream().collect(ImmutableBiMap
+					.toImmutableBiMap((e) -> e.getKey(), (e) -> Iterables.getOnlyElement(e.getValue())));
 
 			knownOids = oidToNode.keySet();
 			parentsGraph = ImmutableGraph.copyOf(Utils.asGraph((o) -> {
@@ -224,11 +223,12 @@ public class PushedDatesAnswer {
 			final ImmutableList<CommitNode> commitNodesList = commitsBuilder.build();
 			checkArgument(!commitNodesList.isEmpty());
 			checkArgument(commitNodesList.get(0).getOid().equals(oid));
-			checkArgument(commitNodesList.size() <= historyTotalCount, String
-					.format("history total count: %s, commit nodes: %s", historyTotalCount, commitNodesList.size()));
-			checkArgument((commitNodesList.size() == historyTotalCount) == !hasNextPage, String
-					.format("history total count: %s, commit nodes: %s", historyTotalCount, commitNodesList.size()));
-			return new CommitWithHistoryNode(oid, historyTotalCount, hasNextPage, endCursor, commitNodesList);
+			checkArgument(commitNodesList.size() <= historyTotalCount, String.format(
+					"history total count: %s, commit nodes: %s", historyTotalCount, commitNodesList.size()));
+			checkArgument((commitNodesList.size() == historyTotalCount) == !hasNextPage, String.format(
+					"history total count: %s, commit nodes: %s", historyTotalCount, commitNodesList.size()));
+			return new CommitWithHistoryNode(oid, historyTotalCount, hasNextPage, endCursor,
+					commitNodesList);
 		}
 
 		private final ObjectId oid;
@@ -237,8 +237,8 @@ public class PushedDatesAnswer {
 		private final String endCursor;
 		private final CommitNodes commitNodes;
 
-		private CommitWithHistoryNode(ObjectId oid, int historyTotalCount, boolean hasNextPage, String endCursor,
-				Iterable<CommitNode> commitNodes) {
+		private CommitWithHistoryNode(ObjectId oid, int historyTotalCount, boolean hasNextPage,
+				String endCursor, Iterable<CommitNode> commitNodes) {
 			this.oid = checkNotNull(oid);
 			this.historyTotalCount = checkNotNull(historyTotalCount);
 			this.hasNextPage = checkNotNull(hasNextPage);
@@ -253,8 +253,7 @@ public class PushedDatesAnswer {
 
 		/**
 		 *
-		 * @return at least the number of commit nodes, and strictly more iff has next
-		 *         page.
+		 * @return at least the number of commit nodes, and strictly more iff has next page.
 		 */
 		public int getHistoryTotalCount() {
 			return historyTotalCount;
@@ -316,16 +315,16 @@ public class PushedDatesAnswer {
 			final Optional<ObjectId> tagOid;
 			final JsonObject commitTarget;
 			switch (targetType) {
-			case "Tag":
-				tagOid = Optional.of(ObjectId.fromString(firstTarget.getString("oid")));
-				commitTarget = firstTarget.getJsonObject("target");
-				break;
-			case "Commit":
-				tagOid = Optional.empty();
-				commitTarget = firstTarget;
-				break;
-			default:
-				throw new IllegalStateException();
+				case "Tag":
+					tagOid = Optional.of(ObjectId.fromString(firstTarget.getString("oid")));
+					commitTarget = firstTarget.getJsonObject("target");
+					break;
+				case "Commit":
+					tagOid = Optional.empty();
+					commitTarget = firstTarget;
+					break;
+				default:
+					throw new IllegalStateException();
 			}
 			final CommitWithHistoryNode commitWithHistory = CommitWithHistoryNode.parse(commitTarget);
 			LOGGER.debug("Tag ref oid: {}.", tagOid);
@@ -359,9 +358,8 @@ public class PushedDatesAnswer {
 	private final ImmutableList<TagNode> tagNodes;
 	private final ImmutableGraph<ObjectId> parentsGraph;
 	/**
-	 * The oids whose parents are known, thus, a subset of those seen in the
-	 * provided json (there’s also those that are designated as parents of a known
-	 * oid, but which are themselves unknown).
+	 * The oids whose parents are known, thus, a subset of those seen in the provided json (there’s
+	 * also those that are designated as parents of a known oid, but which are themselves unknown).
 	 */
 	private final ImmutableSet<ObjectId> knownOids;
 
@@ -369,13 +367,14 @@ public class PushedDatesAnswer {
 		this.headNodes = ImmutableList.copyOf(headNodes);
 		this.tagNodes = ImmutableList.copyOf(tagNodes);
 		final ImmutableSet<CommitWithHistoryNode> commitsWithHistory = getCommitsWithHistory();
-		knownOids = commitsWithHistory.stream().flatMap((c) -> c.getCommitNodes().getKnownOids().stream())
-				.collect(ImmutableSet.toImmutableSet());
-		final ImmutableSet<Entry<ObjectId, CommitNode>> noDupl = commitsWithHistory.stream()
-				.flatMap((c) -> c.getCommitNodes().asBiMap().entrySet().stream())
-				.collect(ImmutableSet.toImmutableSet());
-		final ImmutableBiMap<ObjectId, CommitNode> asBiMap = noDupl.stream()
-				.collect(ImmutableBiMap.toImmutableBiMap(Entry::getKey, Entry::getValue));
+		knownOids =
+				commitsWithHistory.stream().flatMap((c) -> c.getCommitNodes().getKnownOids().stream())
+						.collect(ImmutableSet.toImmutableSet());
+		final ImmutableSet<Entry<ObjectId, CommitNode>> noDupl =
+				commitsWithHistory.stream().flatMap((c) -> c.getCommitNodes().asBiMap().entrySet().stream())
+						.collect(ImmutableSet.toImmutableSet());
+		final ImmutableBiMap<ObjectId, CommitNode> asBiMap =
+				noDupl.stream().collect(ImmutableBiMap.toImmutableBiMap(Entry::getKey, Entry::getValue));
 		parentsGraph = ImmutableGraph.copyOf(Utils.asGraph((o) -> {
 			final CommitNode commitNode = asBiMap.get(o);
 			return commitNode == null ? ImmutableSet.of() : commitNode.getParents();
@@ -387,8 +386,8 @@ public class PushedDatesAnswer {
 				.map((r) -> r.getCommitWithHistory()).collect(ImmutableSet.toImmutableSet());
 		final ImmutableSet<CommitWithHistoryNode> commitsFromTag = getTagNodes().stream()
 				.map((r) -> r.getCommitWithHistory()).collect(ImmutableSet.toImmutableSet());
-		final ImmutableSet<CommitWithHistoryNode> commitsWithHistory = Sets.union(commitsFromHead, commitsFromTag)
-				.immutableCopy();
+		final ImmutableSet<CommitWithHistoryNode> commitsWithHistory =
+				Sets.union(commitsFromHead, commitsFromTag).immutableCopy();
 		return commitsWithHistory;
 	}
 

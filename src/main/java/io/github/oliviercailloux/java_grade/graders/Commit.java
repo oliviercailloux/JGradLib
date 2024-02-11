@@ -40,15 +40,15 @@ public class Commit {
 
 	public static final String PREFIX = "commit";
 
-	public static final ZonedDateTime DEADLINE = ZonedDateTime.parse("2021-01-11T14:10:00+01:00[Europe/Paris]");
+	public static final ZonedDateTime DEADLINE =
+			ZonedDateTime.parse("2021-01-11T14:10:00+01:00[Europe/Paris]");
 
 	public static void main(String[] args) throws Exception {
 		final RepositoryFetcher fetcher = RepositoryFetcher.withPrefix(PREFIX);
 		GitGeneralGrader.using(fetcher, DeadlineGrader.usingGitGrader(Commit::grade, DEADLINE)).grade();
 	}
 
-	private Commit() {
-	}
+	private Commit() {}
 
 	public static WeightingGrade grade(GitWork work) throws IOException {
 		final GitHubUsername author = work.getAuthor();
@@ -62,49 +62,55 @@ public class Commit {
 			final Mark hasCommit = Mark.binary(!history.graph().nodes().isEmpty());
 			final Mark allCommitsRightName = Mark.fromNew(GradeUtils.allAndSomePathsMatchCommit(paths,
 					c -> JavaMarkHelper.committerAndAuthorIs(c, author.getUsername())));
-			final WeightingGrade commitsGrade = WeightingGrade
-					.from(ImmutableSet.of(CriterionGradeWeight.from(Criterion.given("At least one"), hasCommit, 1d),
-							CriterionGradeWeight.from(Criterion.given("Right identity"), allCommitsRightName, 3d)));
+			final WeightingGrade commitsGrade = WeightingGrade.from(ImmutableSet.of(
+					CriterionGradeWeight.from(Criterion.given("At least one"), hasCommit, 1d),
+					CriterionGradeWeight.from(Criterion.given("Right identity"), allCommitsRightName, 3d)));
 			gradeBuilder.add(CriterionGradeWeight.from(Criterion.given("Has commits"), commitsGrade, 2d));
 		}
 
 		final Pattern coucouPattern = Marks.extendWhite("coucou");
 		{
-			final Mark content = Mark
-					.fromNew(GradeUtils.anyMatch(paths, compose(resolve("afile.txt"), contentMatches(coucouPattern))));
+			final Mark content = Mark.fromNew(
+					GradeUtils.anyMatch(paths, compose(resolve("afile.txt"), contentMatches(coucouPattern))));
 			final Mark branchAndContent = Mark.fromNew(GradeUtils.anyRefMatch(refs,
 					isRefBranch("coucou").and(compose(resolve("afile.txt"), contentMatches(coucouPattern)))));
-			final WeightingGrade coucouCommit = WeightingGrade.proportional(
-					Criterion.given("'afile.txt' content (anywhere)"), content, Criterion.given("'coucou' content"),
-					branchAndContent);
-			gradeBuilder.add(CriterionGradeWeight.from(Criterion.given("Commit 'coucou'"), coucouCommit, 3d));
+			final WeightingGrade coucouCommit =
+					WeightingGrade.proportional(Criterion.given("'afile.txt' content (anywhere)"), content,
+							Criterion.given("'coucou' content"), branchAndContent);
+			gradeBuilder
+					.add(CriterionGradeWeight.from(Criterion.given("Commit 'coucou'"), coucouCommit, 3d));
 		}
 		{
 			final Pattern digitPattern = Marks.extendWhite("\\d+");
-			final Mark myIdContent = Mark
-					.fromNew(GradeUtils.anyMatch(paths, compose(resolve("myid.txt"), contentMatches(digitPattern))));
-			final TPredicate<GitPath, IOException> p1 = compose(resolve("myid.txt"), contentMatches(digitPattern));
-			final TPredicate<GitPath, IOException> p2 = compose(resolve("afile.txt"), contentMatches(coucouPattern));
+			final Mark myIdContent = Mark.fromNew(
+					GradeUtils.anyMatch(paths, compose(resolve("myid.txt"), contentMatches(digitPattern))));
+			final TPredicate<GitPath, IOException> p1 =
+					compose(resolve("myid.txt"), contentMatches(digitPattern));
+			final TPredicate<GitPath, IOException> p2 =
+					compose(resolve("afile.txt"), contentMatches(coucouPattern));
 			final TPredicate<GitPath, IOException> both = p1.and(p2);
 			final Mark myIdAndAFileContent = Mark.fromNew(GradeUtils.anyMatch(paths, both));
-			final TPredicate<GitPathRootRef, IOException> branch = isRefBranch("main").or(isRefBranch("master"));
+			final TPredicate<GitPathRootRef, IOException> branch =
+					isRefBranch("main").or(isRefBranch("master"));
 			final Mark mainContent = Mark.fromNew(GradeUtils.anyRefMatch(refs, branch.and(both)));
-			final CriterionGradeWeight myIdGrade = CriterionGradeWeight.from(Criterion.given("'myid.txt' content"),
-					myIdContent, 1d);
-			final CriterionGradeWeight myIdAndAFileGrade = CriterionGradeWeight
-					.from(Criterion.given("'myid.txt' and 'afile.txt' content (anywhere)"), myIdAndAFileContent, 1d);
+			final CriterionGradeWeight myIdGrade =
+					CriterionGradeWeight.from(Criterion.given("'myid.txt' content"), myIdContent, 1d);
+			final CriterionGradeWeight myIdAndAFileGrade = CriterionGradeWeight.from(
+					Criterion.given("'myid.txt' and 'afile.txt' content (anywhere)"), myIdAndAFileContent,
+					1d);
 			final CriterionGradeWeight mainGrade = CriterionGradeWeight
 					.from(Criterion.given("'main' (or 'master') content"), mainContent, 2d);
 			gradeBuilder.add(CriterionGradeWeight.from(Criterion.given("Commit 'main'"),
 					WeightingGrade.from(ImmutableSet.of(myIdGrade, myIdAndAFileGrade, mainGrade)), 3d));
 		}
 		{
-			final Mark anotherFile = Mark
-					.fromNew(GradeUtils.anyMatch(paths, containsFileMatching(isFileNamed("another file.txt"))));
+			final Mark anotherFile = Mark.fromNew(
+					GradeUtils.anyMatch(paths, containsFileMatching(isFileNamed("another file.txt"))));
 			final Mark devRightFile = Mark.fromNew(GradeUtils.anyRefMatch(refs,
 					isRefBranch("dev").and(compose(resolve("sub/a/another file.txt"), Files::exists))));
-			final WeightingGrade commit = WeightingGrade.proportional(Criterion.given("'another file.txt' exists"),
-					anotherFile, Criterion.given("'dev' content"), devRightFile);
+			final WeightingGrade commit =
+					WeightingGrade.proportional(Criterion.given("'another file.txt' exists"), anotherFile,
+							Criterion.given("'dev' content"), devRightFile);
 			gradeBuilder.add(CriterionGradeWeight.from(Criterion.given("Commit 'dev'"), commit, 2d));
 		}
 

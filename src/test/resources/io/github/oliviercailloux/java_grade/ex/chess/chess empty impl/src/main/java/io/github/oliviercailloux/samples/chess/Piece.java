@@ -9,11 +9,9 @@ import java.util.Objects;
 import com.google.common.base.MoreObjects;
 
 /**
- * A piece of the game of chess, with its <em>color</em> ({@code W} for
- * White and {@code B} for Black) and its <em>identifying letter</em>
- * ({@code P} for Pawn, {@code R} for Rook, {@code B} for Bishop,
- * {@code N} for kNight, {@code Q} for Queen, {@code K} for
- * King).
+ * A piece of the game of chess, with its <em>color</em> ({@code W} for White and {@code B} for
+ * Black) and its <em>identifying letter</em> ({@code P} for Pawn, {@code R} for Rook, {@code B} for
+ * Bishop, {@code N} for kNight, {@code Q} for Queen, {@code K} for King).
  * </p>
  * <p>
  * (A better design would use {@link Enum}s.)
@@ -32,7 +30,7 @@ public class Piece {
   }
 
   /**
-   * @param color             one of "W" or "B"
+   * @param color one of "W" or "B"
    * @param identifyingLetter one of "P", "R", "B", "N", "Q", "K"
    * @return the corresponding piece
    */
@@ -94,15 +92,15 @@ public class Piece {
 
     this.identifyingLetter = checkNotNull(identifyingLetter);
     switch (identifyingLetter) {
-    case "P":
-    case "R":
-    case "N":
-    case "B":
-    case "Q":
-    case "K":
-      break;
-    default:
-      throw new IllegalArgumentException();
+      case "P":
+      case "R":
+      case "N":
+      case "B":
+      case "Q":
+      case "K":
+        break;
+      default:
+        throw new IllegalArgumentException();
     }
   }
 
@@ -133,8 +131,8 @@ public class Piece {
   }
 
   /**
-   * Returns {@code true} iff the given object is also a {@link Piece} and
-   * has the same color and identifying letter as this one.
+   * Returns {@code true} iff the given object is also a {@link Piece} and has the same color and
+   * identifying letter as this one.
    */
   @Override
   public boolean equals(Object o2) {
@@ -152,7 +150,7 @@ public class Piece {
 
   @Override
   public String toString() {
-    return MoreObjects.toStringHelper(this).add("Color", color).add("Identifying letter", identifyingLetter)
-        .toString();
+    return MoreObjects.toStringHelper(this).add("Color", color)
+        .add("Identifying letter", identifyingLetter).toString();
   }
 }

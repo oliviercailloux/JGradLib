@@ -36,5 +36,4 @@ public class PayloadCommitDescription {
 	public ObjectId getSha() {
 		return ObjectId.fromString(json.getString("sha"));
 	}
-
 }

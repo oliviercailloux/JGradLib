@@ -13,7 +13,8 @@ public class JsonMapAdapter<V> implements JsonbAdapter<Map<Criterion, V>, Map<St
 	private static final Logger LOGGER = LoggerFactory.getLogger(JsonMapAdapter.class);
 
 	public static <V> Map<String, V> toStringKeys(Map<Criterion, V> criterion) {
-		return criterion.keySet().stream().collect(ImmutableMap.toImmutableMap(Criterion::getName, criterion::get));
+		return criterion.keySet().stream()
+				.collect(ImmutableMap.toImmutableMap(Criterion::getName, criterion::get));
 	}
 
 	public static <V> Map<Criterion, V> toCriterionKeys(Map<String, V> str) {

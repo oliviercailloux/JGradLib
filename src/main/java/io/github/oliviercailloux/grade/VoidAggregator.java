@@ -11,5 +11,4 @@ public final class VoidAggregator extends StaticWeighter implements MarkAggregat
 	private VoidAggregator() {
 		super(ImmutableMap.of());
 	}
-
 }

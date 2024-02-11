@@ -39,7 +39,8 @@ public class GradePenalizer implements GradeModifier {
 	public MarksTree modify(MarksTree original, Instant timeCap) {
 		final Duration lateness = Duration.between(deadline, timeCap);
 		final Mark remaining = penalizer.apply(lateness);
-		LOGGER.debug("Lateness from {} to {} equal to {}; remaining {}.", deadline, timeCap, lateness, remaining);
+		LOGGER.debug("Lateness from {} to {} equal to {}; remaining {}.", deadline, timeCap, lateness,
+				remaining);
 
 		return MarksTree.composite(ImmutableMap.of(C_MAIN, original, C_LATENESS, remaining));
 	}

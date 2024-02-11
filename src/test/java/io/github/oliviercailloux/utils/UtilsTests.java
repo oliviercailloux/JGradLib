@@ -31,7 +31,7 @@ import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@SuppressWarnings({ "removal" })
+@SuppressWarnings({"removal"})
 class UtilsTests {
   @SuppressWarnings("unused")
   private static final Logger LOGGER = LoggerFactory.getLogger(UtilsTests.class);
@@ -71,7 +71,7 @@ class UtilsTests {
     }
   }
 
-//  @Test
+  // @Test
   void testCopyResursivelyReadableFile() throws Exception {
     try (FileSystem jimFs = Jimfs.newFileSystem(Configuration.unix())) {
       final Path source = Path.of("src/main/resources/");
@@ -88,7 +88,8 @@ class UtilsTests {
     SandboxSecurityPolicy.setSecurity();
     assertDoesNotThrow(() -> AccessController.checkPermission(new FilePermission("/-", "read")));
 
-    final Path sourcePath = Path.of(SandboxTests.class.getResource("MyFunctionCopying.java").toURI());
+    final Path sourcePath =
+        Path.of(SandboxTests.class.getResource("MyFunctionCopying.java").toURI());
     try (FileSystem jimFs = Jimfs.newFileSystem(Configuration.unix())) {
       final Path work = jimFs.getPath("");
 
@@ -96,24 +97,27 @@ class UtilsTests {
           .compile(ImmutableList.of(sourcePath));
 
       final URL url = work.toUri().toURL();
-      try (URLClassLoader loader = RestrictingClassLoader.noPermissions(url, getClass().getClassLoader())) {
+      try (URLClassLoader loader =
+          RestrictingClassLoader.noPermissions(url, getClass().getClassLoader())) {
         final Instanciator instanciator = Instanciator.given(loader);
-        final Function<String, String> myFct = instanciator.getInstance(Function.class, "newInstance").get();
+        final Function<String, String> myFct =
+            instanciator.getInstance(Function.class, "newInstance").get();
         /**
-         * Note that this actually fails while attempting to execute the very first
-         * argument check in the copying function, which requires some path access.
+         * Note that this actually fails while attempting to execute the very first argument check
+         * in the copying function, which requires some path access.
          */
         assertThrows(AccessControlException.class, () -> myFct.apply(null));
       }
       final Permissions permissions = new Permissions();
       permissions.add(new AllPermission());
-      try (URLClassLoader loader = RestrictingClassLoader.granting(url, getClass().getClassLoader(),
-          permissions)) {
+      try (URLClassLoader loader =
+          RestrictingClassLoader.granting(url, getClass().getClassLoader(), permissions)) {
         final Instanciator instanciator = Instanciator.given(loader);
-        final Function<String, String> myFct = instanciator.getInstance(Function.class, "newInstance").get();
+        final Function<String, String> myFct =
+            instanciator.getInstance(Function.class, "newInstance").get();
         /**
-         * This succeeds from the security point of view, which makes it fail because of
-         * the argument check.
+         * This succeeds from the security point of view, which makes it fail because of the
+         * argument check.
          */
         assertThrows(IllegalArgumentException.class, () -> myFct.apply(null));
       }

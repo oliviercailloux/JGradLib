@@ -17,8 +17,8 @@ import java.util.Set;
 public class CompositeMarksTree implements MarksTree {
 
   public static CompositeMarksTree givenGrades(Map<Criterion, ? extends MarksTree> subGrades) {
-    return new CompositeMarksTree(subGrades.keySet().stream()
-        .collect(ImmutableMap.toImmutableMap(c -> c, c -> SubMarksTree.given(c, subGrades.get(c)))));
+    return new CompositeMarksTree(subGrades.keySet().stream().collect(
+        ImmutableMap.toImmutableMap(c -> c, c -> SubMarksTree.given(c, subGrades.get(c)))));
   }
 
   public static CompositeMarksTree givenSubGrades(Map<Criterion, SubMarksTree> subGrades) {
@@ -26,8 +26,8 @@ public class CompositeMarksTree implements MarksTree {
   }
 
   public static CompositeMarksTree givenSubGrades(Set<? extends SubMarksTree> subGrades) {
-    return new CompositeMarksTree(
-        subGrades.stream().collect(ImmutableMap.toImmutableMap(SubMarksTree::getCriterion, s -> s)));
+    return new CompositeMarksTree(subGrades.stream()
+        .collect(ImmutableMap.toImmutableMap(SubMarksTree::getCriterion, s -> s)));
   }
 
   /**
@@ -38,7 +38,8 @@ public class CompositeMarksTree implements MarksTree {
   private CompositeMarksTree(Map<Criterion, SubMarksTree> subGrades) {
     this.subGrades = ImmutableMap.copyOf(subGrades);
     checkArgument(!subGrades.isEmpty());
-    checkArgument(subGrades.keySet().stream().allMatch(c -> subGrades.get(c).getCriterion().equals(c)));
+    checkArgument(
+        subGrades.keySet().stream().allMatch(c -> subGrades.get(c).getCriterion().equals(c)));
   }
 
   @Override
@@ -72,7 +73,8 @@ public class CompositeMarksTree implements MarksTree {
   public ImmutableSet<CriteriaPath> getPathsToMarks() {
     final ImmutableSet.Builder<CriteriaPath> builder = ImmutableSet.builder();
     for (Criterion criterion : subGrades.keySet()) {
-      getTree(criterion).getPathsToMarks().stream().map(p -> p.withPrefix(criterion)).forEach(builder::add);
+      getTree(criterion).getPathsToMarks().stream().map(p -> p.withPrefix(criterion))
+          .forEach(builder::add);
     }
     return builder.build();
   }
@@ -121,5 +123,4 @@ public class CompositeMarksTree implements MarksTree {
   public String toString() {
     return MoreObjects.toStringHelper(this).add("subGrades", subGrades).toString();
   }
-
 }

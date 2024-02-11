@@ -18,7 +18,8 @@ public class MarkingPredicates {
 			final Matcher matcher = pattern.matcher(s);
 			final boolean found = matcher.find();
 			final boolean foundAgain = matcher.find();
-			LOGGER.debug("Trying to find in source '{}' the pattern {}: {} and {}.", s, pattern, found, foundAgain);
+			LOGGER.debug("Trying to find in source '{}' the pattern {}: {} and {}.", s, pattern, found,
+					foundAgain);
 			return found && !foundAgain;
 		};
 	}
@@ -31,5 +32,4 @@ public class MarkingPredicates {
 		final Predicate<Path> p1 = (p) -> relativeTo.isPresent();
 		return p1.and((p) -> p.startsWith(relativeTo.get().resolve(start)));
 	}
-
 }

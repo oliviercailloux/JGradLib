@@ -11,5 +11,4 @@ public class PushEvent extends Event {
 	public PushPayload getPushPayload() {
 		return PushPayload.from(getPayload());
 	}
-
 }

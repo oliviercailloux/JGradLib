@@ -145,7 +145,8 @@ public class ExExtractorGrader {
 			final int openAfter = JavaMarkHelper.getOpenFileDescriptorCount();
 			final String obtained = output.toString();
 			if (!thrown && !obtained.toString().isEmpty()) {
-				throw new GradingException(String.format("Did not throw, but yet obtained text: '%s'.", obtained));
+				throw new GradingException(
+						String.format("Did not throw, but yet obtained text: '%s'.", obtained));
 			}
 			testThrows = thrown;
 			commentBuilder.append("\nThrows: ");
@@ -254,7 +255,6 @@ public class ExExtractorGrader {
 			public void showTextStrings(COSArray array) throws IOException {
 				throw ioException;
 			}
-
 		};
 	}
 
@@ -267,18 +267,20 @@ public class ExExtractorGrader {
 			throw new AssertionError(e);
 		}
 		final Class<?> classToLoad;
-		try (URLClassLoader child = new URLClassLoader(new URL[] { url }, this.getClass().getClassLoader())) {
-			final ClassGraph graph = new ClassGraph().overrideClassLoaders(child).enableAllInfo()
-					.whitelistPackages("*");
+		try (URLClassLoader child =
+				new URLClassLoader(new URL[] {url}, this.getClass().getClassLoader())) {
+			final ClassGraph graph =
+					new ClassGraph().overrideClassLoaders(child).enableAllInfo().whitelistPackages("*");
 			final String name;
 			try (ScanResult scanResult = graph.scan()) {
 				final ClassInfoList classes = scanResult.getAllStandardClasses();
 				LOGGER.debug("Size all: {}.", classes.size());
-				final ImmutableList<ClassInfo> extractorUserClasses = classes.stream()
-						.filter((i) -> i.getName().endsWith("." + simpleName)).collect(ImmutableList.toImmutableList());
-//				for (ClassInfo info : classes) {
-//					LOGGER.info("Name: {}.", info.getName());
-//				}
+				final ImmutableList<ClassInfo> extractorUserClasses =
+						classes.stream().filter((i) -> i.getName().endsWith("." + simpleName))
+								.collect(ImmutableList.toImmutableList());
+				// for (ClassInfo info : classes) {
+				// LOGGER.info("Name: {}.", info.getName());
+				// }
 				if (extractorUserClasses.size() >= 2) {
 					throw new GradingException("Multiple impl.");
 				}
@@ -334,10 +336,12 @@ public class ExExtractorGrader {
 					final String written = Files.readString(outPath);
 					writtenOk = written.equals("Hé ≠\n");
 					if (!writtenOk) {
-						throw new GradingException(String.format("Written, but not the right content: '%s'", written));
+						throw new GradingException(
+								String.format("Written, but not the right content: '%s'", written));
 					}
 				}
-			} catch (IOException | IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
+			} catch (IOException | IllegalAccessException | IllegalArgumentException
+					| InvocationTargetException e) {
 				throw new IllegalStateException(e);
 			}
 			comment = (writtenOk ? "" : "No file written; ")
@@ -354,8 +358,8 @@ public class ExExtractorGrader {
 
 	private Optional<Method> getMethod(Class<?> cls, String methodName) {
 		final Method[] methods = cls.getMethods();
-		final ImmutableList<Method> writeFileMethods = Stream.of(methods).filter((m) -> m.getName().equals(methodName))
-				.collect(ImmutableList.toImmutableList());
+		final ImmutableList<Method> writeFileMethods = Stream.of(methods)
+				.filter((m) -> m.getName().equals(methodName)).collect(ImmutableList.toImmutableList());
 		if (writeFileMethods.size() >= 2) {
 			throw new GradingException("Multiple methods.");
 		}
@@ -376,12 +380,14 @@ public class ExExtractorGrader {
 		} catch (MalformedURLException e) {
 			throw new AssertionError(e);
 		}
-		try (URLClassLoader child = new URLClassLoader(new URL[] { url }, this.getClass().getClassLoader())) {
-			final ClassGraph graph = new ClassGraph().overrideClassLoaders(child).enableAllInfo()
-					.whitelistPackages("*");
+		try (URLClassLoader child =
+				new URLClassLoader(new URL[] {url}, this.getClass().getClassLoader())) {
+			final ClassGraph graph =
+					new ClassGraph().overrideClassLoaders(child).enableAllInfo().whitelistPackages("*");
 			final String name;
 			try (ScanResult scanResult = graph.scan()) {
-				final ClassInfoList impl = scanResult.getClassesImplementing(SimpleExtractor.class.getName());
+				final ClassInfoList impl =
+						scanResult.getClassesImplementing(SimpleExtractor.class.getName());
 				if (impl.size() >= 2) {
 					throw new GradingException("Multiple impl.");
 				}
@@ -402,8 +408,8 @@ public class ExExtractorGrader {
 			/**
 			 * Probably doesn’t work when loading a second class having the same name?
 			 */
-			final Class<? extends SimpleExtractor> classToLoad = Class.forName(name, true, child)
-					.asSubclass(SimpleExtractor.class);
+			final Class<? extends SimpleExtractor> classToLoad =
+					Class.forName(name, true, child).asSubclass(SimpleExtractor.class);
 			LOGGER.debug("Class: {}.", classToLoad.getCanonicalName());
 			final Constructor<? extends SimpleExtractor> constructor = classToLoad.getConstructor();
 			final SimpleExtractor created = constructor.newInstance();

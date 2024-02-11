@@ -36,13 +36,13 @@ public class JavaGradeUtils {
 	public static Path getPackage(String code) {
 		final Matcher matcher = Pattern.compile("^package (?<PKG>[^;]+);").matcher(code);
 		final String pkg = matcher.find() ? matcher.group("PKG") : "";
-		final ImmutableList<String> pkgElements = pkg.equals("") ? ImmutableList.of()
-				: ImmutableList.copyOf(pkg.split("."));
-		assert !pkgElements.contains("")
-				: String.format("Pkg: %s, split: %s (%d).", pkg, pkgElements, pkgElements.size());
+		final ImmutableList<String> pkgElements =
+				pkg.equals("") ? ImmutableList.of() : ImmutableList.copyOf(pkg.split("."));
+		assert !pkgElements.contains("") : String.format("Pkg: %s, split: %s (%d).", pkg, pkgElements,
+				pkgElements.size());
 		try {
-			final Path pkgPath = Path
-					.of(pkgElements.stream().collect(Collectors.joining(FileSystems.getDefault().getSeparator())));
+			final Path pkgPath = Path.of(pkgElements.stream()
+					.collect(Collectors.joining(FileSystems.getDefault().getSeparator())));
 			final int pkgCount = pkgPath.getNameCount();
 			final int nbElements = pkgElements.size();
 			assert (pkgCount == 1 && nbElements == 0) || pkgCount == nbElements;
@@ -79,7 +79,8 @@ public class JavaGradeUtils {
 		try {
 			content = Files.readString(sourcePath);
 		} catch (@SuppressWarnings("unused") MalformedInputException e) {
-			content = IO_UNCHECKER.getUsing(() -> Files.readString(sourcePath, StandardCharsets.ISO_8859_1));
+			content =
+					IO_UNCHECKER.getUsing(() -> Files.readString(sourcePath, StandardCharsets.ISO_8859_1));
 		} catch (IOException e) {
 			throw new UncheckedIOException(e);
 		}
@@ -98,7 +99,8 @@ public class JavaGradeUtils {
 		return satisfies;
 	}
 
-	public static IGrade gradeSecurely(Path classPathRoot, Function<Instanciator, IGrade> gradeFunction) {
+	public static IGrade gradeSecurely(Path classPathRoot,
+			Function<Instanciator, IGrade> gradeFunction) {
 		final IGrade implGrade;
 		try (URLClassLoader loader = RestrictingClassLoader.noPermissions(classPathRoot.toUri().toURL(),
 				gradeFunction.getClass().getClassLoader())) {
@@ -131,9 +133,9 @@ public class JavaGradeUtils {
 
 	private static <T> IGrade fromInst(Instanciator instanciator, Class<T> clazz,
 			Function<Supplier<TryCatchAll<T>>, IGrade> gradeFunction) {
-		final Supplier<TryCatchAll<T>> factory = () -> instanciator.tryGetInstance(clazz, "newInstance");
+		final Supplier<TryCatchAll<T>> factory =
+				() -> instanciator.tryGetInstance(clazz, "newInstance");
 		final IGrade implGrade = gradeFunction.apply(factory);
 		return implGrade;
 	}
-
 }

@@ -14,14 +14,15 @@ public class RestrictingClassLoader extends URLClassLoader {
 		return new RestrictingClassLoader(url, parent, new Permissions());
 	}
 
-	public static RestrictingClassLoader granting(URL url, ClassLoader parent, PermissionCollection permissions) {
+	public static RestrictingClassLoader granting(URL url, ClassLoader parent,
+			PermissionCollection permissions) {
 		return new RestrictingClassLoader(url, parent, permissions);
 	}
 
 	private final PermissionCollection permissions;
 
 	public RestrictingClassLoader(URL url, ClassLoader parent, PermissionCollection permissions) {
-		super(new URL[] { url }, parent);
+		super(new URL[] {url}, parent);
 		this.permissions = checkNotNull(permissions);
 	}
 

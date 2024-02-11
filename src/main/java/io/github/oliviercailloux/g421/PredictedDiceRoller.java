@@ -36,5 +36,4 @@ public class PredictedDiceRoller implements DiceRoller {
 	private int iTh(int i) {
 		return rolls.get(current).get(i);
 	}
-
 }

@@ -48,5 +48,4 @@ public class MyScoreManager implements ScoreManager {
   public void addListener(ScoreListener listener) {
     listeners.add(listener);
   }
-
 }

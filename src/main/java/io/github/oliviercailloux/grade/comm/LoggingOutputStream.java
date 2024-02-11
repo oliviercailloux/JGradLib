@@ -14,10 +14,9 @@ import org.slf4j.LoggerFactory;
  *
  * From https://stackoverflow.com/a/11187462, with some modifications.
  *
- * This is really backwards: this class is an outputstream, but it encodes the
- * bytes it is provided with, to pass them to a (character-based) logger. I
- * think that this absurdity is a consequence of having to provide a
- * PrintStream: a PrintStream is both a character and a byte-based stream, thus,
+ * This is really backwards: this class is an outputstream, but it encodes the bytes it is provided
+ * with, to pass them to a (character-based) logger. I think that this absurdity is a consequence of
+ * having to provide a PrintStream: a PrintStream is both a character and a byte-based stream, thus,
  * requires some encoding or decoding.
  */
 class LoggingOutputStream extends OutputStream {
@@ -42,9 +41,9 @@ class LoggingOutputStream extends OutputStream {
 	private byte[] buf;
 
 	/**
-	 * The number of valid bytes in the buffer. This value is always in the range
-	 * <tt>0</tt> through <tt>buf.length</tt>; elements <tt>buf[0]</tt> through
-	 * <tt>buf[count-1]</tt> contain valid byte data.
+	 * The number of valid bytes in the buffer. This value is always in the range <tt>0</tt> through
+	 * <tt>buf.length</tt>; elements <tt>buf[0]</tt> through <tt>buf[count-1]</tt> contain valid byte
+	 * data.
 	 */
 	private int count;
 
@@ -67,10 +66,9 @@ class LoggingOutputStream extends OutputStream {
 	}
 
 	/**
-	 * Closes this output stream and releases any system resources associated with
-	 * this stream. The general contract of {@code close} is that it closes the
-	 * output stream. A closed stream cannot perform output operations and cannot be
-	 * reopened.
+	 * Closes this output stream and releases any system resources associated with this stream. The
+	 * general contract of {@code close} is that it closes the output stream. A closed stream cannot
+	 * perform output operations and cannot be reopened.
 	 */
 	@Override
 	public void close() {
@@ -111,8 +109,8 @@ class LoggingOutputStream extends OutputStream {
 
 		final String buffer = new String(theBytes, StandardCharsets.UTF_8);
 		/**
-		 * Oddly enough, PrintStream seems to flush twice, in automatic mode: once just
-		 * before the EOL, and once just after. We wait for the call just after.
+		 * Oddly enough, PrintStream seems to flush twice, in automatic mode: once just before the EOL,
+		 * and once just after. We wait for the call just after.
 		 */
 		if (!buffer.endsWith(System.lineSeparator())) {
 			return;

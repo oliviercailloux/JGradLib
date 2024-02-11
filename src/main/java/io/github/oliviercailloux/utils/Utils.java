@@ -68,12 +68,11 @@ public class Utils {
 	 * Using nanoseconds, and using the comma as a separator as recommended per
 	 * <a href="https://en.wikipedia.org/wiki/ISO_8601">ISO 8601</a>.
 	 */
-	public static final DateTimeFormatter ISO_BASIC_UTC_FORMATTER = DateTimeFormatter.ofPattern("uuuuMMdd'T'HHmmss','m")
-			.withZone(ZoneOffset.UTC);
+	public static final DateTimeFormatter ISO_BASIC_UTC_FORMATTER =
+			DateTimeFormatter.ofPattern("uuuuMMdd'T'HHmmss','m").withZone(ZoneOffset.UTC);
 
 	/**
-	 * Thanks to https://stackoverflow.com/a/13592567. Slightly modified to avoid
-	 * null values.
+	 * Thanks to https://stackoverflow.com/a/13592567. Slightly modified to avoid null values.
 	 */
 	public static Map<String, ImmutableList<String>> getQuery(URI uri) {
 		if (Strings.isNullOrEmpty(uri.getQuery())) {
@@ -96,8 +95,8 @@ public class Utils {
 	}
 
 	public static Path getTempUniqueDirectory(String prefix) {
-		final Path resolved = getTempDirectory().resolve(
-				prefix + " " + Utils.ISO_BASIC_UTC_FORMATTER.format(Instant.now()) + " " + new Random().nextInt());
+		final Path resolved = getTempDirectory().resolve(prefix + " "
+				+ Utils.ISO_BASIC_UTC_FORMATTER.format(Instant.now()) + " " + new Random().nextInt());
 		verify(!Files.exists(resolved));
 		return resolved;
 	}
@@ -105,7 +104,8 @@ public class Utils {
 	/**
 	 * @deprecated use the jaris version (and remove the copy of this one in GitHistory?)
 	 */
-	public static <E, F extends E> Graph<E> asGraph(SuccessorsFunction<F> successorsFunction, Set<F> roots) {
+	public static <E, F extends E> Graph<E> asGraph(SuccessorsFunction<F> successorsFunction,
+			Set<F> roots) {
 		checkNotNull(successorsFunction);
 		checkNotNull(roots);
 		checkArgument(roots.stream().allMatch(t -> t != null));
@@ -142,9 +142,10 @@ public class Utils {
 	/**
 	 * @deprecated see the Jaris version
 	 */
-	public static <E, F> ImmutableGraph<F> asImmutableGraph(Graph<E> graph, Function<E, F> transformer) {
-		final GraphBuilder<Object> startBuilder = graph.isDirected() ? GraphBuilder.directed()
-				: GraphBuilder.undirected();
+	public static <E, F> ImmutableGraph<F> asImmutableGraph(Graph<E> graph,
+			Function<E, F> transformer) {
+		final GraphBuilder<Object> startBuilder =
+				graph.isDirected() ? GraphBuilder.directed() : GraphBuilder.undirected();
 		startBuilder.allowsSelfLoops(graph.allowsSelfLoops());
 		final ImmutableGraph.Builder<F> builder = startBuilder.immutable();
 		final Set<E> nodes = graph.nodes();
@@ -161,8 +162,9 @@ public class Utils {
 	/**
 	 * Thx https://stackoverflow.com/a/60621544.
 	 */
-	@SuppressWarnings({ "deprecation", "removal" })
-	public static void copyRecursively(Path source, Path target, CopyOption... options) throws IOException {
+	@SuppressWarnings({"deprecation", "removal"})
+	public static void copyRecursively(Path source, Path target, CopyOption... options)
+			throws IOException {
 		if (Files.exists(target)) {
 			checkArgument(!target.toRealPath().startsWith(source.toRealPath()));
 		} else {
@@ -170,8 +172,8 @@ public class Utils {
 		}
 
 		/**
-		 * Note that under restricted security settings, even the toUri() call fails
-		 * (because it tries to construct an absolute path, I think).
+		 * Note that under restricted security settings, even the toUri() call fails (because it tries
+		 * to construct an absolute path, I think).
 		 */
 		if (source.toUri().getScheme().equals("file")) {
 			final SecurityManager securityManager = System.getSecurityManager();
@@ -182,7 +184,8 @@ public class Utils {
 
 		Files.walkFileTree(source, new SimpleFileVisitor<Path>() {
 			@Override
-			public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
+			public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs)
+					throws IOException {
 				LOGGER.debug("Pre-visiting directory {}.", dir);
 				Files.createDirectories(target.resolve(source.relativize(dir).toString()));
 				return FileVisitResult.CONTINUE;
@@ -216,19 +219,21 @@ public class Utils {
 
 	public static <T, X extends Exception> ImmutableSet<T> getMaximalElements(Iterable<T> iterable,
 			TComparator<T, ? extends X> comparator) throws X {
-		final Optional<T> maxOpt = CheckedStream.<T, X>wrapping(Streams.stream(iterable)).max(comparator);
+		final Optional<T> maxOpt =
+				CheckedStream.<T, X>wrapping(Streams.stream(iterable)).max(comparator);
 		if (maxOpt.isEmpty()) {
 			return ImmutableSet.of();
 		}
 		final T max = maxOpt.get();
-		return CheckedStream.<T, X>wrapping(Streams.stream(iterable)).filter(t -> comparator.compare(t, max) == 0)
-				.collect(ImmutableSet.toImmutableSet());
+		return CheckedStream.<T, X>wrapping(Streams.stream(iterable))
+				.filter(t -> comparator.compare(t, max) == 0).collect(ImmutableSet.toImmutableSet());
 	}
 
 	public static ImmutableSet<Path> getPathsMatching(Path root,
 			TPredicate<? super Path, IOException> predicate) throws IOException {
 		final Predicate<? super Path> wrapped = IO_UNCHECKER.wrapPredicate(predicate);
-		try (Stream<Path> foundStream = Files.find(root, Integer.MAX_VALUE, (p, a) -> wrapped.test(p))) {
+		try (
+				Stream<Path> foundStream = Files.find(root, Integer.MAX_VALUE, (p, a) -> wrapped.test(p))) {
 			return foundStream.collect(ImmutableSet.toImmutableSet());
 		} catch (UncheckedIOException e) {
 			throw e.getCause();
@@ -236,11 +241,11 @@ public class Utils {
 	}
 
 	/**
-	 * I believe I found this on SO, but I can’t find the source now. If you find
-	 * it, please write to me.
+	 * I believe I found this on SO, but I can’t find the source now. If you find it, please write to
+	 * me.
 	 *
-	 * @return a collector that collects multiple elements to an empty optional; and
-	 *         a single element to a present optional.
+	 * @return a collector that collects multiple elements to an empty optional; and a single element
+	 *         to a present optional.
 	 */
 	public static <T> Collector<T, ?, Optional<T>> singleOrEmpty() {
 		return Collectors.collectingAndThen(

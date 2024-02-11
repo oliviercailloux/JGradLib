@@ -11,7 +11,7 @@ import java.util.Objects;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@JsonbPropertyOrder({ "criterion", "grade", "weight" })
+@JsonbPropertyOrder({"criterion", "grade", "weight"})
 public class CriterionGradeWeight {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(CriterionGradeWeight.class);
@@ -65,7 +65,7 @@ public class CriterionGradeWeight {
 
 	@Override
 	public String toString() {
-		return MoreObjects.toStringHelper(this).add("criterion", criterion).add("grade", grade).add("weight", weight)
-				.toString();
+		return MoreObjects.toStringHelper(this).add("criterion", criterion).add("grade", grade)
+				.add("weight", weight).toString();
 	}
 }

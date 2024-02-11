@@ -32,5 +32,4 @@ class LinearTimePenalizer implements TimePenalizer {
 	public Duration getTardinessBound() {
 		return Duration.ofSeconds(DoubleMath.roundToLong(1d / lostPerSecond, RoundingMode.UP));
 	}
-
 }

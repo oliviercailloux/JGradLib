@@ -50,7 +50,8 @@ public class Fake implements GitFsGrader<RuntimeException> {
      */
     final BatchGitHistoryGrader<RuntimeException> grader = BatchGitHistoryGrader
         .given(() -> GitFileSystemWithHistoryFetcherByPrefix.getRetrievingByPrefix(PREFIX));
-    grader.getAndWriteGrades(new Fake(), 0.25d, Path.of("grades " + PREFIX), PREFIX + " " + Instant.now());
+    grader.getAndWriteGrades(new Fake(), 0.25d, Path.of("grades " + PREFIX),
+        PREFIX + " " + Instant.now());
   }
 
   private static final Criterion C0 = Criterion.given("Anything committed");
@@ -69,32 +70,33 @@ public class Fake implements GitFsGrader<RuntimeException> {
   public MarksTree grade(GitHistorySimple data) {
     verify(!data.graph().nodes().isEmpty());
 
-    final ImmutableSet<GitPathRootShaCached> commitsOrdered = data.roots().stream()
-        .flatMap(r -> Graphs.reachableNodes(data.graph(), r).stream()).collect(ImmutableSet.toImmutableSet());
-    final ImmutableSet<GitPathRootShaCached> commitsOrderedExceptRoots = Sets
-        .difference(commitsOrdered, data.roots()).immutableCopy();
+    final ImmutableSet<GitPathRootShaCached> commitsOrdered =
+        data.roots().stream().flatMap(r -> Graphs.reachableNodes(data.graph(), r).stream())
+            .collect(ImmutableSet.toImmutableSet());
+    final ImmutableSet<GitPathRootShaCached> commitsOrderedExceptRoots =
+        Sets.difference(commitsOrdered, data.roots()).immutableCopy();
     LOGGER.info("Commits ordered (except for roots): {}.", commitsOrderedExceptRoots);
     final int nbCommits = commitsOrderedExceptRoots.size();
 
-    final MarksTree anyCommitMark = Mark.binary(!commitsOrderedExceptRoots.isEmpty(),
-        String.format("Found %s commit%s, not counting the root ones", nbCommits, nbCommits == 1 ? "" : "s"),
-        "");
+    final MarksTree anyCommitMark = Mark.binary(!commitsOrderedExceptRoots.isEmpty(), String.format(
+        "Found %s commit%s, not counting the root ones", nbCommits, nbCommits == 1 ? "" : "s"), "");
 
-    final Comparator<MarksTree> byPoints = Comparator
-        .comparing(m -> Grade.given(firstCommitDiscriminator(), m).mark().getPoints());
+    final Comparator<MarksTree> byPoints =
+        Comparator.comparing(m -> Grade.given(firstCommitDiscriminator(), m).mark().getPoints());
     final GitPathRootShaCached firstCommit = commitsOrderedExceptRoots.stream()
         .sorted(Comparator.comparing(this::firstCommitMark, byPoints.reversed())).findFirst()
         .orElse(data.roots().iterator().next());
     final MarksTree firstCommitMark = firstCommitMark(firstCommit);
 
-    final Comparator<MarksTree> byPointsSecond = Comparator
-        .comparing(m -> Grade.given(secondCommitDiscriminator(), m).mark().getPoints());
-    final GitPathRootShaCached secondCommit = Graphs.reachableNodes(data.graph(), firstCommit).stream()
-        .sorted(Comparator.comparing(this::secondCommitMark, byPointsSecond.reversed())).findFirst()
-        .orElse(data.roots().iterator().next());
+    final Comparator<MarksTree> byPointsSecond =
+        Comparator.comparing(m -> Grade.given(secondCommitDiscriminator(), m).mark().getPoints());
+    final GitPathRootShaCached secondCommit = Graphs.reachableNodes(data.graph(), firstCommit)
+        .stream().sorted(Comparator.comparing(this::secondCommitMark, byPointsSecond.reversed()))
+        .findFirst().orElse(data.roots().iterator().next());
     final MarksTree secondCommitMark = secondCommitMark(secondCommit);
 
-    return MarksTree.composite(ImmutableMap.of(C0, anyCommitMark, C1, firstCommitMark, C2, secondCommitMark));
+    return MarksTree
+        .composite(ImmutableMap.of(C0, anyCommitMark, C1, firstCommitMark, C2, secondCommitMark));
   }
 
   @Override
@@ -105,7 +107,8 @@ public class Fake implements GitFsGrader<RuntimeException> {
 
   private MarksTree firstCommitMark(GitPathRoot root) {
     try {
-      final long nbFiles = Files.find(root, Integer.MAX_VALUE, (p, a) -> Files.isRegularFile(p)).count();
+      final long nbFiles =
+          Files.find(root, Integer.MAX_VALUE, (p, a) -> Files.isRegularFile(p)).count();
       final boolean exactlyTwo = nbFiles == 2;
       final GitPath pathS = root.resolve("Some file.txt");
       final GitPath pathA = root.resolve("Some folder/Another file.txt");
@@ -121,9 +124,10 @@ public class Fake implements GitFsGrader<RuntimeException> {
       final boolean rightA = contentA.matches("More content!\\v*");
       final String id = root.getCommit().id().getName().substring(0, 6);
       final String comment = "Using commit " + id;
-      final MarksTree mark = MarksTree.composite(ImmutableMap.of(C_TWO, Mark.binary(exactlyTwo, comment, comment),
-          C_EXISTS_S, Mark.binary(existsS), C_EXISTS_A, Mark.binary(existsA), C_CONTENTS_S,
-          Mark.binary(rightS), C_CONTENTS_A, Mark.binary(rightA)));
+      final MarksTree mark =
+          MarksTree.composite(ImmutableMap.of(C_TWO, Mark.binary(exactlyTwo, comment, comment),
+              C_EXISTS_S, Mark.binary(existsS), C_EXISTS_A, Mark.binary(existsA), C_CONTENTS_S,
+              Mark.binary(rightS), C_CONTENTS_A, Mark.binary(rightA)));
       LOGGER.debug("Commit {}; Seen content {}, matches? {}; score {}.", id, contentS, rightS,
           Grade.given(firstCommitAggregator(), mark).mark().getPoints());
       return mark;
@@ -137,14 +141,14 @@ public class Fake implements GitFsGrader<RuntimeException> {
   }
 
   private GradeAggregator firstCommitDiscriminator() {
-    return GradeAggregator.staticAggregator(
-        ImmutableMap.of(C_TWO, 1d, C_EXISTS_S, 1d, C_EXISTS_A, 1d, C_CONTENTS_S, 1d, C_CONTENTS_A, 1d),
-        ImmutableMap.of());
+    return GradeAggregator.staticAggregator(ImmutableMap.of(C_TWO, 1d, C_EXISTS_S, 1d, C_EXISTS_A,
+        1d, C_CONTENTS_S, 1d, C_CONTENTS_A, 1d), ImmutableMap.of());
   }
 
   private MarksTree secondCommitMark(GitPathRoot root) {
     try {
-      final long nbFiles = Files.find(root, Integer.MAX_VALUE, (p, a) -> Files.isRegularFile(p)).count();
+      final long nbFiles =
+          Files.find(root, Integer.MAX_VALUE, (p, a) -> Files.isRegularFile(p)).count();
       final boolean exactlyOne = nbFiles == 1;
       final GitPath pathS = root.resolve("Some file.txt");
       final GitPath pathA = root.resolve("Some folder/Another file.txt");
@@ -153,8 +157,9 @@ public class Fake implements GitFsGrader<RuntimeException> {
       final String contentS = existsS ? Files.readString(pathS) : "";
       final boolean rightS = contentS.matches("A file!\\v+More content!\\v*");
       final String comment = "Using commit " + root.getCommit().id().getName().substring(0, 6);
-      return MarksTree.composite(ImmutableMap.of(C_ONE, Mark.binary(exactlyOne, comment, comment), C_EXISTS_S,
-          Mark.binary(existsS), C_NO_A, Mark.binary(!existsA), C_CONTENTS_S, Mark.binary(rightS)));
+      return MarksTree.composite(ImmutableMap.of(C_ONE, Mark.binary(exactlyOne, comment, comment),
+          C_EXISTS_S, Mark.binary(existsS), C_NO_A, Mark.binary(!existsA), C_CONTENTS_S,
+          Mark.binary(rightS)));
     } catch (IOException e) {
       throw new IllegalStateException(e);
     }
@@ -166,6 +171,7 @@ public class Fake implements GitFsGrader<RuntimeException> {
 
   private GradeAggregator secondCommitDiscriminator() {
     return GradeAggregator.staticAggregator(
-        ImmutableMap.of(C_ONE, 1d, C_EXISTS_S, 1d, C_NO_A, 1d, C_CONTENTS_S, 1d), ImmutableMap.of());
+        ImmutableMap.of(C_ONE, 1d, C_EXISTS_S, 1d, C_NO_A, 1d, C_CONTENTS_S, 1d),
+        ImmutableMap.of());
   }
 }

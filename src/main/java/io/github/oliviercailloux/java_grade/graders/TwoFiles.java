@@ -37,10 +37,12 @@ public class TwoFiles implements GitFsGrader<RuntimeException> {
 	public static final String PREFIX = "two-files";
 
 	public static void main(String[] args) throws Exception {
-		final BatchGitHistoryGrader<RuntimeException> grader = BatchGitHistoryGrader
-				.given(() -> GitFileSystemWithHistoryFetcherByPrefix.getRetrievingByPrefixAndUsingCommitDates(PREFIX));
-		grader.getAndWriteGrades(ZonedDateTime.parse("2023-03-22T14:18:00+01:00[Europe/Paris]"), Duration.ofMinutes(5),
-				new TwoFiles(), 0.15d, Path.of("grades " + PREFIX), PREFIX + " " + Instant.now());
+		final BatchGitHistoryGrader<RuntimeException> grader =
+				BatchGitHistoryGrader.given(() -> GitFileSystemWithHistoryFetcherByPrefix
+						.getRetrievingByPrefixAndUsingCommitDates(PREFIX));
+		grader.getAndWriteGrades(ZonedDateTime.parse("2023-03-22T14:18:00+01:00[Europe/Paris]"),
+				Duration.ofMinutes(5), new TwoFiles(), 0.15d, Path.of("grades " + PREFIX),
+				PREFIX + " " + Instant.now());
 	}
 
 	private static final Criterion C0 = Criterion.given("Anything committed");
@@ -48,7 +50,8 @@ public class TwoFiles implements GitFsGrader<RuntimeException> {
 	private static final Criterion C2 = Criterion.given("Commit that modifies Another file");
 	private static final Criterion C3 = Criterion.given("Commit that deletes Another file");
 
-	private static record ConsecutiveCommits(GitPathRootShaCached parent, GitPathRootShaCached child) {
+	private static record ConsecutiveCommits (GitPathRootShaCached parent,
+			GitPathRootShaCached child) {
 
 	}
 
@@ -58,16 +61,16 @@ public class TwoFiles implements GitFsGrader<RuntimeException> {
 		verify(!graph.nodes().isEmpty());
 		final GitFileSystem fs = data.fs();
 
-		final ImmutableSet<GitPathRootShaCached> commitsOrdered = data.roots().stream()
-				.flatMap(r -> Graphs.reachableNodes(graph, r).stream()).collect(ImmutableSet.toImmutableSet());
-		final ImmutableSet<GitPathRootShaCached> commitsOrderedExceptRoots = Sets
-				.difference(commitsOrdered, data.roots()).immutableCopy();
+		final ImmutableSet<GitPathRootShaCached> commitsOrdered =
+				data.roots().stream().flatMap(r -> Graphs.reachableNodes(graph, r).stream())
+						.collect(ImmutableSet.toImmutableSet());
+		final ImmutableSet<GitPathRootShaCached> commitsOrderedExceptRoots =
+				Sets.difference(commitsOrdered, data.roots()).immutableCopy();
 		LOGGER.info("Commits ordered (except for roots): {}.", commitsOrderedExceptRoots);
 		final int nbCommits = commitsOrderedExceptRoots.size();
 
-		final MarksTree anyCommitMark = Mark.binary(!commitsOrderedExceptRoots.isEmpty(),
-				String.format("Found %s commit%s, not counting the root ones", nbCommits, nbCommits == 1 ? "" : "s"),
-				"");
+		final MarksTree anyCommitMark = Mark.binary(!commitsOrderedExceptRoots.isEmpty(), String.format(
+				"Found %s commit%s, not counting the root ones", nbCommits, nbCommits == 1 ? "" : "s"), "");
 
 		final ImmutableSet.Builder<ConsecutiveCommits> builder = ImmutableSet.builder();
 		for (GitPathRootShaCached child : commitsOrderedExceptRoots) {
@@ -91,7 +94,8 @@ public class TwoFiles implements GitFsGrader<RuntimeException> {
 
 	@Override
 	public GradeAggregator getAggregator() {
-		return GradeAggregator.staticAggregator(ImmutableMap.of(C0, 2d, C1, 4d, C2, 7d, C3, 4d), ImmutableMap.of());
+		return GradeAggregator.staticAggregator(ImmutableMap.of(C0, 2d, C1, 4d, C2, 7d, C3, 4d),
+				ImmutableMap.of());
 	}
 
 	private Mark commit1Mark(ImmutableSet<DiffEntry> diff) {

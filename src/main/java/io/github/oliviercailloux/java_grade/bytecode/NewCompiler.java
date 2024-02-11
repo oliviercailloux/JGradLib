@@ -105,52 +105,57 @@ public class NewCompiler {
 	}
 
 	private StandardJavaFileManager getFileManager() throws IOException {
-		final StandardJavaFileManager fileManager = compiler.getStandardFileManager(fileDiagnostics, Locale.US,
-				StandardCharsets.UTF_8);
+		final StandardJavaFileManager fileManager =
+				compiler.getStandardFileManager(fileDiagnostics, Locale.US, StandardCharsets.UTF_8);
 		/**
-		 * Have to set explicitly the annotation processor path, otherwise, the
-		 * initialization of annotation processing (involving #getClassLoader) uses the
-		 * class path, which fails if the paths do not refer to File instances, because
-		 * JavacFileManager#getClassLoader(Location location) calls getLocation, which
-		 * tries to return File instances, instead of getLocationAsPaths(Location
-		 * location). See CompilerTests#testBugJdk(). I got an email on the 10th of
-		 * March, 2021, stating that the incident is fixed in https://jdk.java.net/16/.
-		 * I have not checked.
+		 * Have to set explicitly the annotation processor path, otherwise, the initialization of
+		 * annotation processing (involving #getClassLoader) uses the class path, which fails if the
+		 * paths do not refer to File instances, because JavacFileManager#getClassLoader(Location
+		 * location) calls getLocation, which tries to return File instances, instead of
+		 * getLocationAsPaths(Location location). See CompilerTests#testBugJdk(). I got an email on the
+		 * 10th of March, 2021, stating that the incident is fixed in https://jdk.java.net/16/. I have
+		 * not checked.
 		 * https://github.com/openjdk/jdk/blob/master/src/jdk.compiler/share/classes/com/sun/tools/javac/file/JavacFileManager.java#L744
 		 */
-		fileManager.setLocationFromPaths(StandardLocation.ANNOTATION_PROCESSOR_PATH, ImmutableList.of());
+		fileManager.setLocationFromPaths(StandardLocation.ANNOTATION_PROCESSOR_PATH,
+				ImmutableList.of());
 		fileManager.setLocationFromPaths(StandardLocation.CLASS_PATH, classPath);
 		if (outputDirectory != null) {
-			fileManager.setLocationFromPaths(StandardLocation.CLASS_OUTPUT, ImmutableSet.of(outputDirectory));
+			fileManager.setLocationFromPaths(StandardLocation.CLASS_OUTPUT,
+					ImmutableSet.of(outputDirectory));
 		}
 		return fileManager;
 	}
 
 	private boolean compile(StandardJavaFileManager fileManager) {
 		final StringWriter compilationOutputReceiver = new StringWriter();
-		final boolean compiled = compiler.getTask(compilationOutputReceiver, fileManager, compilerDiagnostics,
-				ImmutableList.of(), null, fileManager.getJavaFileObjectsFromPaths(sourcePaths)).call();
+		final boolean compiled =
+				compiler
+						.getTask(compilationOutputReceiver, fileManager, compilerDiagnostics,
+								ImmutableList.of(), null, fileManager.getJavaFileObjectsFromPaths(sourcePaths))
+						.call();
 		final String compilationOutput = compilationOutputReceiver.toString();
 		if (!compilationOutput.isEmpty()) {
-			throw new UnsupportedOperationException(getDiagnostics().toString() + ";;" + compilationOutput);
+			throw new UnsupportedOperationException(
+					getDiagnostics().toString() + ";;" + compilationOutput);
 		}
 		return compiled;
 	}
 
 	private ImmutableList<Diagnostic<? extends JavaFileObject>> getDiagnostics() {
-		final ImmutableSet<Diagnostic<? extends JavaFileObject>> fD = ImmutableSet
-				.copyOf(fileDiagnostics.getDiagnostics());
-		final ImmutableSet<Diagnostic<? extends JavaFileObject>> cD = ImmutableSet
-				.copyOf(compilerDiagnostics.getDiagnostics());
-		final ImmutableSet<Diagnostic<? extends JavaFileObject>> inters = Sets.intersection(fD, cD).immutableCopy();
+		final ImmutableSet<Diagnostic<? extends JavaFileObject>> fD =
+				ImmutableSet.copyOf(fileDiagnostics.getDiagnostics());
+		final ImmutableSet<Diagnostic<? extends JavaFileObject>> cD =
+				ImmutableSet.copyOf(compilerDiagnostics.getDiagnostics());
+		final ImmutableSet<Diagnostic<? extends JavaFileObject>> inters =
+				Sets.intersection(fD, cD).immutableCopy();
 		if (!inters.isEmpty()) {
 			throw new UnsupportedOperationException();
 		}
 
-		final ImmutableList.Builder<Diagnostic<? extends JavaFileObject>> builder = ImmutableList
-				.builderWithExpectedSize(fD.size() + cD.size());
+		final ImmutableList.Builder<Diagnostic<? extends JavaFileObject>> builder =
+				ImmutableList.builderWithExpectedSize(fD.size() + cD.size());
 		builder.addAll(fD).addAll(cD);
 		return builder.build();
 	}
-
 }

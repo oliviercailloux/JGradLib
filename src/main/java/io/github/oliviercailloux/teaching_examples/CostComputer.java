@@ -24,9 +24,8 @@ public class CostComputer {
     LOGGER.info("Added heaters.");
 
     // heaters.add(Heater.LG());
-//    heaters.add(Heater.LG());
+    // heaters.add(Heater.LG());
 
     LOGGER.info("Nb of heaters: {}.", heaters.size());
   }
-
 }

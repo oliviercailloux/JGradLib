@@ -55,8 +55,8 @@ public class IssueBare {
 		final JsonArray events = timeline.getJsonArray("nodes");
 		checkState(timeline.getInt("totalCount") == events.size(),
 				String.format("Tot: %s, size: %s.", timeline.getInt("totalCount"), events.size()));
-		return events.stream().map(JsonValue::asJsonObject).map(IssueEvent::from).flatMap(Streams::stream)
-				.collect(Collectors.toList());
+		return events.stream().map(JsonValue::asJsonObject).map(IssueEvent::from)
+				.flatMap(Streams::stream).collect(Collectors.toList());
 	}
 
 	public URI getHtmlURI() {
@@ -83,8 +83,9 @@ public class IssueBare {
 	 * This works for PRs, maybe not for issues.
 	 */
 	public Optional<String> getMilestone() {
-		return Optional.ofNullable(json.get("milestone")).filter(v -> v.getValueType() != ValueType.NULL)
-				.map(v -> (JsonObject) v).map(m -> m.getString("title"));
+		return Optional.ofNullable(json.get("milestone"))
+				.filter(v -> v.getValueType() != ValueType.NULL).map(v -> (JsonObject) v)
+				.map(m -> m.getString("title"));
 	}
 
 	/**
@@ -97,8 +98,8 @@ public class IssueBare {
 		}
 		final JsonObject assignees = assigneesOpt.orElseThrow();
 		checkState(GitHubJsonParser.isConnectionComplete(assignees));
-		return GitHubJsonParser.getContent(assignees).map(a -> a.getString("login")).map(GitHubUsername::given)
-				.collect(ImmutableList.toImmutableList());
+		return GitHubJsonParser.getContent(assignees).map(a -> a.getString("login"))
+				.map(GitHubUsername::given).collect(ImmutableList.toImmutableList());
 	}
 
 	@Override

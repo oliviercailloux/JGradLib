@@ -16,5 +16,4 @@ public class MyFunctionRequiring implements Function<String, String> {
   public String apply(String t) {
     return new SourceWithNoWarnings().toString();
   }
-
 }

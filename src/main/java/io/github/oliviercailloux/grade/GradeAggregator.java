@@ -17,37 +17,35 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * A tree of MarkAggregator instances. Has information about how to aggregate
- * some mark trees. The other ones are said to have an incompatible structure.
- * Compatibility depends only on the structure of the mark tree (i.e., the
- * criteria paths), not on the marks it contains; except that for parametric
- * weighters, the weighting marks may not be negative.
+ * A tree of MarkAggregator instances. Has information about how to aggregate some mark trees. The
+ * other ones are said to have an incompatible structure. Compatibility depends only on the
+ * structure of the mark tree (i.e., the criteria paths), not on the marks it contains; except that
+ * for parametric weighters, the weighting marks may not be negative.
  * </p>
  * <p>
- * A grade aggregator at a given node accepts some sets of criteria and rejects
- * others. The compatible trees are those such that, for each node, the set of
- * child criteria at that node is accepted.
+ * A grade aggregator at a given node accepts some sets of criteria and rejects others. The
+ * compatible trees are those such that, for each node, the set of child criteria at that node is
+ * accepted.
  * </p>
  * <p>
- * A grade aggregator is static (at a given node) iff it is bound to a static
- * weighting mark aggregator at that node; dynamic otherwise.
+ * A grade aggregator is static (at a given node) iff it is bound to a static weighting mark
+ * aggregator at that node; dynamic otherwise.
  * </p>
  * <p>
- * A grade aggregator also has sub-aggregators, associated each to a criterion,
- * the set of which is called its sub-criteria. A static grade aggregator
- * sub-criteria equals the set of criteria known to its mark aggregator. A
- * dynamic grade aggregator sub-criteria is the set of all possible criteria.
+ * A grade aggregator also has sub-aggregators, associated each to a criterion, the set of which is
+ * called its sub-criteria. A static grade aggregator sub-criteria equals the set of criteria known
+ * to its mark aggregator. A dynamic grade aggregator sub-criteria is the set of all possible
+ * criteria.
  * </p>
  * <p>
- * A grade aggregator is trivial iff it is bound to a void mark aggregator,
- * which implies that it is static, and that it has no sub-aggregators.
+ * A grade aggregator is trivial iff it is bound to a void mark aggregator, which implies that it is
+ * static, and that it has no sub-aggregators.
  * </p>
  * <p>
- * Grade aggregators reject, at a given level, the sets of criteria rejected by
- * their underlying mark aggregators (for example, a static grade aggregator
- * rejects every criteria unknown to its static mark aggregator; a dynamic grade
- * aggregator bound to a ParametricWeighter rejects sets of unsuitable size or
- * content…).
+ * Grade aggregators reject, at a given level, the sets of criteria rejected by their underlying
+ * mark aggregators (for example, a static grade aggregator rejects every criteria unknown to its
+ * static mark aggregator; a dynamic grade aggregator bound to a ParametricWeighter rejects sets of
+ * unsuitable size or content…).
  * </p>
  * <p>
  * TODO distinguish two sorts of static weights. Consider this grade.
@@ -64,22 +62,22 @@ import org.slf4j.LoggerFactory;
  * </ul>
  * </li>
  * </ul>
- * Here we want to keep the two levels of weighter so that if the main Grade is
- * a simple mark, it is still aggregated correctly; but in general, we want to
- * display the static weighter flat, i.e., with three criteria instead of one
- * and then two.
+ * Here we want to keep the two levels of weighter so that if the main Grade is a simple mark, it is
+ * still aggregated correctly; but in general, we want to display the static weighter flat, i.e.,
+ * with three criteria instead of one and then two.
  */
 public class GradeAggregator {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(GradeAggregator.class);
 
 	public static final WeightingGradeAggregator TRIVIAL = WeightingGradeAggregator.trivial();
-	public static final WeightingGradeAggregator ABSOLUTE = WeightingGradeAggregator.ABSOLUTE_WEIGHTING;
-	public static final GradeAggregator MIN = new GradeAggregator(MinAggregator.INSTANCE, ImmutableMap.of(),
-			WeightingGradeAggregator.trivial());
+	public static final WeightingGradeAggregator ABSOLUTE =
+			WeightingGradeAggregator.ABSOLUTE_WEIGHTING;
+	public static final GradeAggregator MIN = new GradeAggregator(MinAggregator.INSTANCE,
+			ImmutableMap.of(), WeightingGradeAggregator.trivial());
 
-	public static final GradeAggregator MAX = new GradeAggregator(MaxAggregator.INSTANCE, ImmutableMap.of(),
-			WeightingGradeAggregator.trivial());
+	public static final GradeAggregator MAX = new GradeAggregator(MaxAggregator.INSTANCE,
+			ImmutableMap.of(), WeightingGradeAggregator.trivial());
 
 	public static GradeAggregator min(GradeAggregator defaultSubAggregator) {
 		return new GradeAggregator(MinAggregator.INSTANCE, ImmutableMap.of(), defaultSubAggregator);
@@ -89,7 +87,8 @@ public class GradeAggregator {
 		return new GradeAggregator(MaxAggregator.INSTANCE, subs, TRIVIAL);
 	}
 
-	public static GradeAggregator max(Map<Criterion, GradeAggregator> subs, GradeAggregator defaultSubAggregator) {
+	public static GradeAggregator max(Map<Criterion, GradeAggregator> subs,
+			GradeAggregator defaultSubAggregator) {
 		return new GradeAggregator(MaxAggregator.INSTANCE, subs, defaultSubAggregator);
 	}
 
@@ -105,12 +104,14 @@ public class GradeAggregator {
 		return new GradeAggregator(OwaAggregator.given(weights), subs, TRIVIAL);
 	}
 
-	public static GradeAggregator absolute(Map<Criterion, GradeAggregator> subs, GradeAggregator defaultSubAggregator) {
+	public static GradeAggregator absolute(Map<Criterion, GradeAggregator> subs,
+			GradeAggregator defaultSubAggregator) {
 		return new GradeAggregator(AbsoluteAggregator.INSTANCE, subs, defaultSubAggregator);
 	}
 
 	public static GradeAggregator absolute(GradeAggregator defaultSubAggregator) {
-		return new GradeAggregator(AbsoluteAggregator.INSTANCE, ImmutableMap.of(), defaultSubAggregator);
+		return new GradeAggregator(AbsoluteAggregator.INSTANCE, ImmutableMap.of(),
+				defaultSubAggregator);
 	}
 
 	public static GradeAggregator parametric(Criterion multiplied, Criterion weighting,
@@ -120,7 +121,8 @@ public class GradeAggregator {
 
 	public static GradeAggregator parametric(Criterion multiplied, Criterion weighting,
 			Map<Criterion, GradeAggregator> subs, GradeAggregator defaultSubAggregator) {
-		return new GradeAggregator(ParametricWeighter.given(multiplied, weighting), subs, defaultSubAggregator);
+		return new GradeAggregator(ParametricWeighter.given(multiplied, weighting), subs,
+				defaultSubAggregator);
 	}
 
 	public static GradeAggregator parametric(Criterion multiplied, Criterion weighting,
@@ -146,15 +148,15 @@ public class GradeAggregator {
 		return new GradeAggregator(new StaticWeighter(weights), subs, defaultSub);
 	}
 
-	public static GradeAggregator given(MarkAggregator markAggregator, Map<Criterion, GradeAggregator> subs,
-			GradeAggregator defaultSubAggregator) {
+	public static GradeAggregator given(MarkAggregator markAggregator,
+			Map<Criterion, GradeAggregator> subs, GradeAggregator defaultSubAggregator) {
 		return new GradeAggregator(markAggregator, subs, defaultSubAggregator);
 	}
 
 	private final MarkAggregator markAggregator;
 	/**
-	 * Every key must be part of some set of criteria accepted by the mark
-	 * aggregator. No value equal to the default one.
+	 * Every key must be part of some set of criteria accepted by the mark aggregator. No value equal
+	 * to the default one.
 	 */
 	private final ImmutableMap<Criterion, GradeAggregator> subs;
 	/**
@@ -162,8 +164,8 @@ public class GradeAggregator {
 	 */
 	private final GradeAggregator defaultSubAggregator;
 
-	protected GradeAggregator(MarkAggregator markAggregator, Map<Criterion, ? extends GradeAggregator> subs,
-			GradeAggregator defaultSubAggregator) {
+	protected GradeAggregator(MarkAggregator markAggregator,
+			Map<Criterion, ? extends GradeAggregator> subs, GradeAggregator defaultSubAggregator) {
 		LOGGER.debug("Init given {}, {} and default {}.", markAggregator, subs, defaultSubAggregator);
 		this.markAggregator = checkNotNull(markAggregator);
 		this.subs = ImmutableMap.copyOf(Maps.filterValues(subs, a -> !a.equals(defaultSubAggregator)));
@@ -183,23 +185,20 @@ public class GradeAggregator {
 	}
 
 	/**
-	 * This method is guaranteed to return an aggregator if this aggregator would
-	 * accept the criterion when it is associated to a simple mark (the converse may
-	 * not hold).
+	 * This method is guaranteed to return an aggregator if this aggregator would accept the criterion
+	 * when it is associated to a simple mark (the converse may not hold).
 	 *
-	 * @throws AggregatorException iff this aggregator rejects this criterion
-	 *                             systematically (meaning, whatever set it is part
-	 *                             of); equivalently, iff this aggregator is a
-	 *                             static aggregator and the criterion is unknown to
-	 *                             its static weighter; implying that for trivial
-	 *                             aggregators, his method throws whatever its
-	 *                             argument.
+	 * @throws AggregatorException iff this aggregator rejects this criterion systematically (meaning,
+	 *         whatever set it is part of); equivalently, iff this aggregator is a static aggregator
+	 *         and the criterion is unknown to its static weighter; implying that for trivial
+	 *         aggregators, his method throws whatever its argument.
 	 */
 	public GradeAggregator getGradeAggregator(Criterion criterion) throws AggregatorException {
 		checkNotNull(criterion);
 		if (markAggregator instanceof StaticWeighter staticWeighter) {
-			checkCanAggregate(staticWeighter.weights().containsKey(criterion), "In %s, unknown criterion %s among %s",
-					toString(), criterion.getName(), staticWeighter.weights());
+			checkCanAggregate(staticWeighter.weights().containsKey(criterion),
+					"In %s, unknown criterion %s among %s", toString(), criterion.getName(),
+					staticWeighter.weights());
 		}
 		verify(defaultSubAggregator != null);
 		return subs.getOrDefault(criterion, defaultSubAggregator);
@@ -224,8 +223,8 @@ public class GradeAggregator {
 	}
 
 	/**
-	 * Returns {@code true} iff the given object is an aggregator that accepts the
-	 * same trees and aggregates them all in the same way as this object.
+	 * Returns {@code true} iff the given object is an aggregator that accepts the same trees and
+	 * aggregates them all in the same way as this object.
 	 */
 	@Override
 	public boolean equals(Object o2) {

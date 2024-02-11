@@ -31,9 +31,8 @@ public abstract class AbstractStaticWeighter implements CriteriaWeighter {
 		}
 		final AbstractStaticWeighter t2 = (AbstractStaticWeighter) o2;
 		/*
-		 * If weights is empty, then equality is possible even with different classes: a
-		 * StaticWeighter using empty weights that is not a VoidAggregator has the same
-		 * behavior as a VoidAggregator.
+		 * If weights is empty, then equality is possible even with different classes: a StaticWeighter
+		 * using empty weights that is not a VoidAggregator has the same behavior as a VoidAggregator.
 		 */
 		return (getClass().equals(t2.getClass()) || weights.isEmpty()) && weights.equals(t2.weights);
 	}

@@ -41,13 +41,14 @@ public class IssueWithHistory implements Comparable<IssueWithHistory> {
 	}
 
 	private static Comparator<IssueWithHistory> getComparator() {
-		final Function<? super IssueWithHistory, Optional<Instant>> issueToDoneTime = (i) -> i.getFirstSnapshotDone()
-				.map(IssueSnapshot::getBirthTime);
-		final Comparator<Optional<Instant>> compareOptInst = Comparators
-				.emptiesLast(Comparator.<Instant>naturalOrder());
-		final Comparator<IssueWithHistory> compareDoneTime = Comparator.comparing(issueToDoneTime, compareOptInst);
-		final Comparator<IssueWithHistory> comparator = compareDoneTime
-				.thenComparing(Comparator.comparing((i) -> i.getBare().getNumber()));
+		final Function<? super IssueWithHistory, Optional<Instant>> issueToDoneTime =
+				(i) -> i.getFirstSnapshotDone().map(IssueSnapshot::getBirthTime);
+		final Comparator<Optional<Instant>> compareOptInst =
+				Comparators.emptiesLast(Comparator.<Instant>naturalOrder());
+		final Comparator<IssueWithHistory> compareDoneTime =
+				Comparator.comparing(issueToDoneTime, compareOptInst);
+		final Comparator<IssueWithHistory> comparator =
+				compareDoneTime.thenComparing(Comparator.comparing((i) -> i.getBare().getNumber()));
 		return comparator;
 	}
 
@@ -74,13 +75,12 @@ public class IssueWithHistory implements Comparable<IssueWithHistory> {
 	}
 
 	/**
-	 * @return the earliest snapshot which is closed and has one or two assignees,
-	 *         and is not followed by a snapshot within 3 minutes, and is at least 4
-	 *         minutes in the past (compared to the current time). This guarantees
-	 *         that the selected snapshot will always be the same, once one matches,
-	 *         but still permits a team to assign two persons after the issue is
-	 *         closed (in which case a second snapshot with the second assignee
-	 *         exists just after the first snapshot with the first assignee).
+	 * @return the earliest snapshot which is closed and has one or two assignees, and is not followed
+	 *         by a snapshot within 3 minutes, and is at least 4 minutes in the past (compared to the
+	 *         current time). This guarantees that the selected snapshot will always be the same, once
+	 *         one matches, but still permits a team to assign two persons after the issue is closed
+	 *         (in which case a second snapshot with the second assignee exists just after the first
+	 *         snapshot with the first assignee).
 	 */
 	public Optional<IssueSnapshot> getFirstSnapshotDone() {
 		final Instant fourMinutesInThePast = Instant.now().minus(Duration.ofMinutes(4));
@@ -88,7 +88,8 @@ public class IssueWithHistory implements Comparable<IssueWithHistory> {
 		final PeekingIterator<IssueSnapshot> snapsIt = Iterators.peekingIterator(snaps.iterator());
 		while (snapsIt.hasNext()) {
 			final IssueSnapshot snap = snapsIt.next();
-			LOGGER.debug("Looking at {}, state: {}, assignees: {}.", snap, snap.isOpen(), snap.getAssignees());
+			LOGGER.debug("Looking at {}, state: {}, assignees: {}.", snap, snap.isOpen(),
+					snap.getAssignees());
 
 			if (snap.isOpen()) {
 				continue;
@@ -119,8 +120,8 @@ public class IssueWithHistory implements Comparable<IssueWithHistory> {
 	}
 
 	/**
-	 * Returns all the names this issue has had in its life, ordered from earliest
-	 * name to latest, thus with its original name first.
+	 * Returns all the names this issue has had in its life, ordered from earliest name to latest,
+	 * thus with its original name first.
 	 */
 	public List<String> getNames() {
 		return snaps.stream().map(IssueSnapshot::getName).collect(Collectors.toList());
@@ -135,7 +136,8 @@ public class IssueWithHistory implements Comparable<IssueWithHistory> {
 	}
 
 	public boolean hasBeenRenamed() {
-		return !snaps.stream().map(IssueSnapshot::getName).allMatch(Predicates.equalTo(getOriginalName()));
+		return !snaps.stream().map(IssueSnapshot::getName)
+				.allMatch(Predicates.equalTo(getOriginalName()));
 	}
 
 	@Override

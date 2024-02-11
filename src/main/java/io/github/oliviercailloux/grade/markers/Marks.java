@@ -26,11 +26,10 @@ import org.slf4j.LoggerFactory;
 
 /**
  *
- * NB to cope for combinatorics in possible combinations of marks, keep single
- * ones as simple as possible, and possibly when asking for (e.g.
- * POM_DEP_GUAVA), specify with a boolean if the comment "pom not found" should
- * be specified. Or, give it the grades so far, so that it will see whether the
- * comment has already been given.
+ * NB to cope for combinatorics in possible combinations of marks, keep single ones as simple as
+ * possible, and possibly when asking for (e.g. POM_DEP_GUAVA), specify with a boolean if the
+ * comment "pom not found" should be specified. Or, give it the grades so far, so that it will see
+ * whether the comment has already been given.
  *
  * @author Olivier Cailloux
  *
@@ -48,9 +47,10 @@ public class Marks {
 	}
 
 	public static IGrade noDerivedFilesGrade(Path projectRoot) {
-		final ImmutableSet<Path> forbidden = ImmutableSet.of(projectRoot.resolve(".classpath"),
-				projectRoot.resolve(".project"), projectRoot.resolve(".settings/"), projectRoot.resolve("target/"),
-				projectRoot.resolve("bin/"), projectRoot.resolve(".DS_Store"));
+		final ImmutableSet<Path> forbidden =
+				ImmutableSet.of(projectRoot.resolve(".classpath"), projectRoot.resolve(".project"),
+						projectRoot.resolve(".settings/"), projectRoot.resolve("target/"),
+						projectRoot.resolve("bin/"), projectRoot.resolve(".DS_Store"));
 
 		final boolean contains;
 		try (Stream<Path> entries = IO_UNCHECKER.getUsing(() -> Files.list(projectRoot))) {
@@ -100,7 +100,8 @@ public class Marks {
 		} else if (!deducibleLang) {
 			distAndDeducibleLanguage = Mark.zero("No deducible language");
 		} else if (hasDistTrusty) {
-			distAndDeducibleLanguage = Mark.one("Tolerating dist trusty, but dist xenial is to be preferred");
+			distAndDeducibleLanguage =
+					Mark.one("Tolerating dist trusty, but dist xenial is to be preferred");
 		} else {
 			assert hasDist && deducibleLang && !hasDistTrusty && hasDistXenial;
 			distAndDeducibleLanguage = Mark.one();
@@ -111,7 +112,8 @@ public class Marks {
 						distAndDeducibleLanguage, 1d / 3d)));
 	}
 
-	public static IGrade timeGrade(Instant submitted, Instant deadline, Function<Duration, Double> timeScorer) {
+	public static IGrade timeGrade(Instant submitted, Instant deadline,
+			Function<Duration, Double> timeScorer) {
 		final Duration tardiness = Duration.between(deadline, submitted);
 
 		LOGGER.debug("Last: {}, deadline: {}, tardiness: {}.", submitted, deadline, tardiness);
@@ -120,8 +122,10 @@ public class Marks {
 			LOGGER.warn("Last event after deadline: {}.", submitted);
 			final double penalty = timeScorer.apply(tardiness);
 			checkArgument(0d <= penalty && penalty <= 1d);
-			grade = Mark.given(penalty, "Last event after deadline: "
-					+ ZonedDateTime.ofInstant(submitted, ZoneId.of("Europe/Paris")) + ", " + tardiness + " late.");
+			grade = Mark.given(penalty,
+					"Last event after deadline: "
+							+ ZonedDateTime.ofInstant(submitted, ZoneId.of("Europe/Paris")) + ", " + tardiness
+							+ " late.");
 		} else {
 			grade = Mark.one();
 		}
@@ -132,16 +136,20 @@ public class Marks {
 		final boolean exists = Files.exists(file);
 		final String content = exists ? IO_UNCHECKER.getUsing(() -> Files.readString(file)) : "";
 		final boolean matchesExactly = exists && content.stripTrailing().equals(exactTarget);
-		final boolean matchesApproximately = exists && (matchesExactly || approximateTarget.matcher(content).matches());
-		final Mark matchesExactlyMark = exists
-				? Mark.binary(matchesExactly, "", String.format("Expected \"%s\", found \"%s\".", exactTarget, content))
-				: Mark.zero();
+		final boolean matchesApproximately =
+				exists && (matchesExactly || approximateTarget.matcher(content).matches());
+		final Mark matchesExactlyMark =
+				exists
+						? Mark.binary(matchesExactly, "",
+								String.format("Expected \"%s\", found \"%s\".", exactTarget, content))
+						: Mark.zero();
 		return WeightingGrade.from(ImmutableList.of(
-				CriterionGradeWeight.from(MarksCriterion.FILE_EXISTS.asCriterion(), Mark.binary(exists), 0.5d),
+				CriterionGradeWeight.from(MarksCriterion.FILE_EXISTS.asCriterion(), Mark.binary(exists),
+						0.5d),
 				CriterionGradeWeight.from(MarksCriterion.FILE_CONTENTS_MATCH_APPROXIMATELY.asCriterion(),
 						Mark.binary(matchesApproximately), 0.4d),
-				CriterionGradeWeight.from(MarksCriterion.FILE_CONTENTS_MATCH_EXACTLY.asCriterion(), matchesExactlyMark,
-						0.1d)));
+				CriterionGradeWeight.from(MarksCriterion.FILE_CONTENTS_MATCH_EXACTLY.asCriterion(),
+						matchesExactlyMark, 0.1d)));
 	}
 
 	public static Pattern extendWhite(String basis) {
@@ -153,5 +161,4 @@ public class Marks {
 		return Pattern.compile(".*(?<basis>" + basis + ").*",
 				Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CHARACTER_CLASS | Pattern.DOTALL);
 	}
-
 }

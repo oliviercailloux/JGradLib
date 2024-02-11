@@ -35,8 +35,8 @@ public class GradeUtils {
   private static final Logger LOGGER = LoggerFactory.getLogger(GradeUtils.class);
 
   /**
-   * Is a weighting grade iff the given root has at least one successor in the
-   * tree or the grade for the root is a weighting grade.
+   * Is a weighting grade iff the given root has at least one successor in the tree or the grade for
+   * the root is a weighting grade.
    */
   public static IGrade toGrade(Criterion root, ValueGraph<Criterion, Double> staticTree,
       Map<Criterion, IGrade> leafGrades) {
@@ -44,14 +44,15 @@ public class GradeUtils {
     if (successors.isEmpty()) {
       return leafGrades.get(root);
     }
-    final ImmutableSet<CriterionGradeWeight> cgws = successors.stream().map(c -> CriterionGradeWeight.from(c,
-        toGrade(c, staticTree, leafGrades), staticTree.edgeValue(root, c).get()))
+    final ImmutableSet<CriterionGradeWeight> cgws = successors.stream()
+        .map(c -> CriterionGradeWeight.from(c, toGrade(c, staticTree, leafGrades),
+            staticTree.edgeValue(root, c).get()))
         .collect(ImmutableSet.toImmutableSet());
     return WeightingGrade.from(cgws);
   }
 
-  static ImmutableMap<Criterion, IGrade> withUpdatedEntry(Map<Criterion, IGrade> subGrades, Criterion criterion,
-      IGrade newSubGrade) {
+  static ImmutableMap<Criterion, IGrade> withUpdatedEntry(Map<Criterion, IGrade> subGrades,
+      Criterion criterion, IGrade newSubGrade) {
     checkArgument(subGrades.keySet().contains(criterion));
 
     return subGrades.entrySet().stream().collect(ImmutableMap.toImmutableMap(Map.Entry::getKey,
@@ -65,9 +66,9 @@ public class GradeUtils {
 
     final GradeStructure tree = grade.toTree();
 
-    final ImmutableSortedSet<CriteriaPath> increasingPaths = ImmutableSortedSet.copyOf(
-        Comparator.comparing((CriteriaPath p) -> grade.getMark(p).getPoints()).thenComparing(p -> p.toString()),
-        tree.getLeaves());
+    final ImmutableSortedSet<CriteriaPath> increasingPaths = ImmutableSortedSet
+        .copyOf(Comparator.comparing((CriteriaPath p) -> grade.getMark(p).getPoints())
+            .thenComparing(p -> p.toString()), tree.getLeaves());
     LOGGER.debug("Increasing: {}.", increasingPaths);
     verify(increasingPaths.size() == increasingWeights.size(), grade.toString());
 
@@ -85,19 +86,22 @@ public class GradeUtils {
     return !commits.isEmpty() && commits.stream().allMatch(test);
   }
 
-  public static Mark allAndSomePathsMatchCommit(Set<? extends GitPathRootShaCached> commits, Predicate<Commit> test) {
-    final boolean pass = !commits.isEmpty() && commits.stream().map(p -> p.getCommit()).allMatch(test);
+  public static Mark allAndSomePathsMatchCommit(Set<? extends GitPathRootShaCached> commits,
+      Predicate<Commit> test) {
+    final boolean pass =
+        !commits.isEmpty() && commits.stream().map(p -> p.getCommit()).allMatch(test);
     return Mark.binary(pass);
   }
 
   public static Mark anyMatch(Set<GitPathRootShaCached> commits,
       TPredicate<? super GitPathRootShaCached, IOException> test) throws IOException {
-    final boolean pass = CheckedStream.<GitPathRootShaCached, IOException>from(commits).anyMatch(test);
+    final boolean pass =
+        CheckedStream.<GitPathRootShaCached, IOException>from(commits).anyMatch(test);
     return Mark.binary(pass);
   }
 
-  public static Mark anyRefMatch(Set<GitPathRootRef> refs, TPredicate<GitPathRootRef, IOException> test)
-      throws IOException {
+  public static Mark anyRefMatch(Set<GitPathRootRef> refs,
+      TPredicate<GitPathRootRef, IOException> test) throws IOException {
     final boolean pass = CheckedStream.<GitPathRootRef, IOException>from(refs).anyMatch(test);
     return Mark.binary(pass);
   }
@@ -105,20 +109,21 @@ public class GradeUtils {
   public static IGrade getBestGrade(Set<GitPathRootShaCached> paths,
       TFunction<Optional<GitPathRootShaCached>, IGrade, IOException> grader, double bestPossible)
       throws IOException {
-    final TFunction<Optional<GitPathRootShaCached>, Double, IOException> scorer = r -> grader.apply(r).getPoints();
-    final Optional<GitPathRootShaCached> best = getCommitMaximizing(paths, r -> scorer.apply(Optional.of(r)),
-        bestPossible);
+    final TFunction<Optional<GitPathRootShaCached>, Double, IOException> scorer =
+        r -> grader.apply(r).getPoints();
+    final Optional<GitPathRootShaCached> best =
+        getCommitMaximizing(paths, r -> scorer.apply(Optional.of(r)), bestPossible);
     return grader.apply(best);
   }
 
   private static <FO extends Comparable<FO>> Optional<GitPathRootShaCached> getCommitMaximizing(
-      Set<GitPathRootShaCached> paths, TFunction<GitPathRootShaCached, FO, IOException> scorer, FO bestPossible)
-      throws IOException {
+      Set<GitPathRootShaCached> paths, TFunction<GitPathRootShaCached, FO, IOException> scorer,
+      FO bestPossible) throws IOException {
     /**
-     * As grading sometimes takes a lot of time (e.g. 3 seconds to grade
-     * "eclipse-compile" because it requires a find all, currently very slow), it is
-     * important to stop early if possible. In the "Eclipse" case, the full search
-     * would require typically checking 6 commits, 3 seconds each.
+     * As grading sometimes takes a lot of time (e.g. 3 seconds to grade "eclipse-compile" because
+     * it requires a find all, currently very slow), it is important to stop early if possible. In
+     * the "Eclipse" case, the full search would require typically checking 6 commits, 3 seconds
+     * each.
      */
     GitPathRootShaCached bestInput = null;
     FO bestScore = null;
@@ -137,13 +142,12 @@ public class GradeUtils {
     return Optional.ofNullable(bestInput);
   }
 
-  public static ImmutableSet<GitPathRootRef> getRefsTo(Set<GitPathRootRef> refs, GitPathRootSha target)
-      throws IOException {
+  public static ImmutableSet<GitPathRootRef> getRefsTo(Set<GitPathRootRef> refs,
+      GitPathRootSha target) throws IOException {
     final ObjectId targetId = target.getStaticCommitId();
-    final TPredicate<GitPathRootRef, IOException> rightTarget = GitGrader.Predicates.compose(GitPathRoot::getCommit,
-        c -> c.id().equals(targetId));
+    final TPredicate<GitPathRootRef, IOException> rightTarget =
+        GitGrader.Predicates.compose(GitPathRoot::getCommit, c -> c.id().equals(targetId));
     return CheckedStream.<GitPathRootRef, IOException>from(refs).filter(rightTarget)
         .collect(ImmutableSet.toImmutableSet());
   }
-
 }

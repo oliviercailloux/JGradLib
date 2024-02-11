@@ -39,5 +39,4 @@ public class RandomDiceRoller implements DiceRoller {
 		checkState(rolled != null);
 		return rolled.get(i);
 	}
-
 }

@@ -43,6 +43,7 @@ public class SubMarksTree {
 
   @Override
   public String toString() {
-    return MoreObjects.toStringHelper(this).add("criterion", criterion).add("grade", marksTree).toString();
+    return MoreObjects.toStringHelper(this).add("criterion", criterion).add("grade", marksTree)
+        .toString();
   }
 }

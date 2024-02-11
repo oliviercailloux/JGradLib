@@ -43,5 +43,4 @@ public class SearchResult {
 	public Path getPath() {
 		return Paths.get(json.getString("path"));
 	}
-
 }

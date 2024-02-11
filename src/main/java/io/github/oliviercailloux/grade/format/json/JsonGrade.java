@@ -82,10 +82,11 @@ public class JsonGrade implements JsonbAdapter<IGrade, JsonObject> {
 	private final Jsonb jsonbWithThisAdapter;
 
 	private JsonGrade() {
-		jsonb = JsonbBuilder.create(new JsonbConfig()
-				.withAdapters(JsonCriterion.instance(), toCriterionGradeWeightAdapter()).withFormatting(true));
-		jsonbWithThisAdapter = JsonbBuilder.create(
-				new JsonbConfig().withAdapters(JsonCriterion.instance(), instanceAsAdapter()).withFormatting(true));
+		jsonb = JsonbBuilder.create(
+				new JsonbConfig().withAdapters(JsonCriterion.instance(), toCriterionGradeWeightAdapter())
+						.withFormatting(true));
+		jsonbWithThisAdapter = JsonbBuilder.create(new JsonbConfig()
+				.withAdapters(JsonCriterion.instance(), instanceAsAdapter()).withFormatting(true));
 	}
 
 	public PrintableJsonObject instanceAsJson(IGrade grade) {
@@ -145,5 +146,4 @@ public class JsonGrade implements JsonbAdapter<IGrade, JsonObject> {
 			}
 		};
 	}
-
 }

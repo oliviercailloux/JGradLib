@@ -51,7 +51,8 @@ public class WorkersTests {
     new CoffeeTests().compile(subPath, compiledDir);
 
     final IGrade codeGrade = JavaGradeUtils.gradeSecurely(compiledDir, WorkersGrader::grade);
-//    Files.writeString(Path.of("out.html"), XmlUtils.toString(HtmlGrades.asHtml(codeGrade, "Perfectnl", 19.5d)));
+    // Files.writeString(Path.of("out.html"), XmlUtils.toString(HtmlGrades.asHtml(codeGrade,
+    // "Perfectnl", 19.5d)));
     assertEquals(16.5d / 19.5d, codeGrade.getPoints(), 1e-6d);
   }
 }

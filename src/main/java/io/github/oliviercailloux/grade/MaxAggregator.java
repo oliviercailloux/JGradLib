@@ -12,8 +12,7 @@ public final class MaxAggregator implements OwaWeighter {
 
 	public static final MaxAggregator INSTANCE = new MaxAggregator();
 
-	private MaxAggregator() {
-	}
+	private MaxAggregator() {}
 
 	@Override
 	public Stream<Double> weights(int size) {

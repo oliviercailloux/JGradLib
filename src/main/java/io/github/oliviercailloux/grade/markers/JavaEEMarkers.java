@@ -15,7 +15,8 @@ public class JavaEEMarkers {
 
 	public static IGrade getNoJsp(Path source) {
 		final Optional<Path> jsp = Unchecker.IO_UNCHECKER
-				.getUsing(() -> Files.find(source, 99, (p, b) -> p.getFileName().toString().endsWith(".jsp")))
+				.getUsing(
+						() -> Files.find(source, 99, (p, b) -> p.getFileName().toString().endsWith(".jsp")))
 				.findAny();
 		LOGGER.debug("Found as potential JSPs: {}.", jsp);
 		return Mark.binary(jsp.isEmpty(), "Not using outdated JSPs", "Using outdated JSPs");
@@ -23,9 +24,9 @@ public class JavaEEMarkers {
 
 	public static IGrade getNoWebXml(Path source) {
 		final Optional<Path> found = Unchecker.IO_UNCHECKER
-				.getUsing(() -> Files.find(source, 99, (p, b) -> p.getFileName().toString().endsWith("web.xml")))
+				.getUsing(
+						() -> Files.find(source, 99, (p, b) -> p.getFileName().toString().endsWith("web.xml")))
 				.findAny();
 		return Mark.binary(found.isEmpty(), "No spurious web.xml", "Spurious web.xml");
 	}
-
 }

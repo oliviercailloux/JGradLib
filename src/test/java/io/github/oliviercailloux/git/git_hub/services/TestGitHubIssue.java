@@ -48,7 +48,8 @@ public class TestGitHubIssue {
   @Test
   public void testDupl() throws Exception {
     try (GitHubFetcherQL factory = GitHubFetcherQL.using(GitHubToken.getRealInstance())) {
-      final RepositoryCoordinates coords = RepositoryCoordinates.from("benzait27", "Dauphine-Open-Data");
+      final RepositoryCoordinates coords =
+          RepositoryCoordinates.from("benzait27", "Dauphine-Open-Data");
       final RepositoryWithIssuesWithHistory ghProject = factory.getRepository(coords).get();
       final IssueWithHistory issue = ghProject.getIssuesOriginallyNamed("Course").iterator().next();
       assertEquals(1, issue.getBare().getNumber());
@@ -69,7 +70,8 @@ public class TestGitHubIssue {
 
       final IssueSnapshot snapshot = issue.getSnapshots().get(1);
 
-      assertEquals(LocalDateTime.of(2017, 10, 19, 14, 50, 22).toInstant(ZoneOffset.UTC), snapshot.getBirthTime());
+      assertEquals(LocalDateTime.of(2017, 10, 19, 14, 50, 22).toInstant(ZoneOffset.UTC),
+          snapshot.getBirthTime());
 
       final IssueSnapshot done = issue.getFirstSnapshotDone().get();
       final Set<User> actual = done.getAssignees();
@@ -94,5 +96,4 @@ public class TestGitHubIssue {
       assertTrue(snapshots.get(2).isOpen());
     }
   }
-
 }

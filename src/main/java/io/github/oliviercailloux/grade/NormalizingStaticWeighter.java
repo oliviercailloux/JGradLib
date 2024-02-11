@@ -7,10 +7,10 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * If some criteria are missing in the given marks, weights are re-normalized
- * accordingly.
+ * If some criteria are missing in the given marks, weights are re-normalized accordingly.
  */
-public final class NormalizingStaticWeighter extends AbstractStaticWeighter implements MarkAggregator {
+public final class NormalizingStaticWeighter extends AbstractStaticWeighter
+		implements MarkAggregator {
 
 	public static NormalizingStaticWeighter given(Map<Criterion, Double> weights) {
 		return new NormalizingStaticWeighter(weights);
@@ -21,10 +21,12 @@ public final class NormalizingStaticWeighter extends AbstractStaticWeighter impl
 	}
 
 	@Override
-	public ImmutableMap<Criterion, Double> weightsFromCriteria(Set<Criterion> criteria) throws AggregatorException {
+	public ImmutableMap<Criterion, Double> weightsFromCriteria(Set<Criterion> criteria)
+			throws AggregatorException {
 		checkCanAggregate(criteria.stream().allMatch(weights::containsKey), "Unknown criterion");
 
 		final double sum = criteria.stream().mapToDouble(weights::get).sum();
-		return criteria.stream().collect(ImmutableMap.toImmutableMap(c -> c, c -> weights.get(c) / sum));
+		return criteria.stream()
+				.collect(ImmutableMap.toImmutableMap(c -> c, c -> weights.get(c) / sum));
 	}
 }

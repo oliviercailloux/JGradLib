@@ -8,5 +8,4 @@ public class EmptyModifier implements GradeModifier {
 	public MarksTree modify(MarksTree original, Instant timeCap) {
 		return original;
 	}
-
 }

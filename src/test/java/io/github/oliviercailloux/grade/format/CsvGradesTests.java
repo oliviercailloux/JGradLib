@@ -24,31 +24,32 @@ class CsvGradesTests {
 
   @Test
   void writeTest() throws Exception {
-//    final Grade grade = GradeTestsHelper.get3Plus2();
-//    final CsvGrades<String> csvGrades = CsvGrades.newInstance(CsvGrades.STUDENT_NAME_FUNCTION, 20d);
-//    final ImmutableMap<String, MarksTree> grades = ImmutableMap.of("u1", grade.toMarksTree());
+    // final Grade grade = GradeTestsHelper.get3Plus2();
+    // final CsvGrades<String> csvGrades = CsvGrades.newInstance(CsvGrades.STUDENT_NAME_FUNCTION,
+    // 20d);
+    // final ImmutableMap<String, MarksTree> grades = ImmutableMap.of("u1", grade.toMarksTree());
 
     final Exam exam = ExamTestsHelper.get3Plus2();
-    final CsvGrades<GitHubUsername> csvGrades = CsvGrades.newInstance(CsvGrades.STUDENT_USERNAME_FUNCTION, 20d);
+    final CsvGrades<GitHubUsername> csvGrades =
+        CsvGrades.newInstance(CsvGrades.STUDENT_USERNAME_FUNCTION, 20d);
     final String written = csvGrades.gradesToCsv(exam.aggregator(), exam.grades());
     Files.writeString(Path.of("out.csv"), written);
-    final String expected = Resources.toString(getClass().getResource("TwoStudentsGrades.csv"),
-        StandardCharsets.UTF_8);
+    final String expected =
+        Resources.toString(getClass().getResource("TwoStudentsGrades.csv"), StandardCharsets.UTF_8);
     assertEquals(expected, written);
   }
 
   @Test
   void writeVeryComplexGradeTest() throws Exception {
-    final String jsonGrade = Resources.toString(JsonbGradeTests.class.getResource("VeryComplexGrade.json"),
-        StandardCharsets.UTF_8);
+    final String jsonGrade = Resources.toString(
+        JsonbGradeTests.class.getResource("VeryComplexGrade.json"), StandardCharsets.UTF_8);
     final IGrade grade = JsonGrade.asGrade(jsonGrade);
-    final CsvGrades<StudentOnGitHub> csvGrades = CsvGrades.newInstance(CsvGrades.STUDENT_IDENTITY_FUNCTION,
-        CsvGrades.DEFAULT_DENOMINATOR);
+    final CsvGrades<StudentOnGitHub> csvGrades =
+        CsvGrades.newInstance(CsvGrades.STUDENT_IDENTITY_FUNCTION, CsvGrades.DEFAULT_DENOMINATOR);
     final String written = csvGrades.toCsv(ImmutableMap.of(StudentOnGitHub.with("u"), grade));
 
-    final String expected = Resources.toString(getClass().getResource("VeryComplexGrade.csv"),
-        StandardCharsets.UTF_8);
+    final String expected =
+        Resources.toString(getClass().getResource("VeryComplexGrade.csv"), StandardCharsets.UTF_8);
     assertEquals(expected, written);
   }
-
 }

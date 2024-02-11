@@ -38,14 +38,15 @@ public class JsonStudents {
 			final String firstPart = separated.get(0);
 			final ImmutableList<String> split = ImmutableList.copyOf(firstPart.split("\\."));
 			checkArgument(split.size() == 2, firstPart, split);
-			return new JsonStudentEntry(Optional.of(gitHubUsername), Optional.of(++counter), firstPart, split.get(0),
-					split.get(1), Optional.of(email));
+			return new JsonStudentEntry(Optional.of(gitHubUsername), Optional.of(++counter), firstPart,
+					split.get(0), split.get(1), Optional.of(email));
 		}
 
-		public static JsonStudentEntry given(Optional<GitHubUsername> gitHubUsername, Optional<Integer> institutionalId,
-				String institutionalUsername, String firstName, String lastName, Optional<EmailAddress> email) {
-			return new JsonStudentEntry(gitHubUsername, institutionalId, institutionalUsername, firstName, lastName,
-					email);
+		public static JsonStudentEntry given(Optional<GitHubUsername> gitHubUsername,
+				Optional<Integer> institutionalId, String institutionalUsername, String firstName,
+				String lastName, Optional<EmailAddress> email) {
+			return new JsonStudentEntry(gitHubUsername, institutionalId, institutionalUsername, firstName,
+					lastName, email);
 		}
 
 		private final Optional<GitHubUsername> gitHubUsername;
@@ -54,8 +55,9 @@ public class JsonStudents {
 		private final String firstName, lastName;
 		private final Optional<EmailAddress> email;
 
-		private JsonStudentEntry(Optional<GitHubUsername> gitHubUsername, Optional<Integer> institutionalId,
-				String institutionalUsername, String firstName, String lastName, Optional<EmailAddress> email) {
+		private JsonStudentEntry(Optional<GitHubUsername> gitHubUsername,
+				Optional<Integer> institutionalId, String institutionalUsername, String firstName,
+				String lastName, Optional<EmailAddress> email) {
 			this.gitHubUsername = checkNotNull(gitHubUsername);
 			this.institutionalId = checkNotNull(institutionalId);
 			this.institutionalUsername = checkNotNull(institutionalUsername);
@@ -97,15 +99,16 @@ public class JsonStudents {
 
 		public Optional<InstitutionalStudent> getInstitutionalStudent() {
 			if (institutionalId.isPresent() && !institutionalUsername.isEmpty() && email.isPresent()) {
-				return Optional.of(InstitutionalStudent.withU(institutionalId.get(), institutionalUsername, firstName,
-						lastName, email.get()));
+				return Optional.of(InstitutionalStudent.withU(institutionalId.get(), institutionalUsername,
+						firstName, lastName, email.get()));
 			}
 			return Optional.empty();
 		}
 
 		public Optional<StudentOnGitHubKnown> toStudentOnGitHubKnown() {
 			if (gitHubUsername.isPresent() && getInstitutionalStudent().isPresent()) {
-				return Optional.of(StudentOnGitHubKnown.with(gitHubUsername.get(), getInstitutionalStudent().get()));
+				return Optional
+						.of(StudentOnGitHubKnown.with(gitHubUsername.get(), getInstitutionalStudent().get()));
 			}
 			return Optional.empty();
 		}
@@ -117,20 +120,23 @@ public class JsonStudents {
 			}
 			final JsonStudents.JsonStudentEntry t2 = (JsonStudents.JsonStudentEntry) o2;
 			return gitHubUsername.equals(t2.gitHubUsername) && institutionalId.equals(t2.institutionalId)
-					&& institutionalUsername.equals(t2.institutionalUsername) && firstName.equals(t2.firstName)
-					&& lastName.equals(t2.lastName) && email.equals(t2.email);
+					&& institutionalUsername.equals(t2.institutionalUsername)
+					&& firstName.equals(t2.firstName) && lastName.equals(t2.lastName)
+					&& email.equals(t2.email);
 		}
 
 		@Override
 		public int hashCode() {
-			return Objects.hash(gitHubUsername, institutionalId, institutionalUsername, firstName, lastName, email);
+			return Objects.hash(gitHubUsername, institutionalId, institutionalUsername, firstName,
+					lastName, email);
 		}
 
 		@Override
 		public String toString() {
 			return MoreObjects.toStringHelper(this).add("gitHubUsername", gitHubUsername)
-					.add("institutionalId", institutionalId).add("institutionalUsername", institutionalUsername)
-					.add("firstName", firstName).add("lastName", lastName).add("email", email).toString();
+					.add("institutionalId", institutionalId)
+					.add("institutionalUsername", institutionalUsername).add("firstName", firstName)
+					.add("lastName", lastName).add("email", email).toString();
 		}
 	}
 
@@ -162,28 +168,27 @@ public class JsonStudents {
 
 		@Override
 		public JsonStudentEntry adaptFromJson(JsonObject json) throws JsonbException {
-			final Optional<GitHubUsername> gh = Optional
-					.ofNullable(Strings.emptyToNull(json.getString("gitHubUsername", ""))).map(GitHubUsername::given);
-			final Optional<Integer> id = json.containsKey("institutionalId")
-					? Optional.of(json.getInt("institutionalId"))
-					: Optional.empty();
+			final Optional<GitHubUsername> gh =
+					Optional.ofNullable(Strings.emptyToNull(json.getString("gitHubUsername", "")))
+							.map(GitHubUsername::given);
+			final Optional<Integer> id =
+					json.containsKey("institutionalId") ? Optional.of(json.getInt("institutionalId"))
+							: Optional.empty();
 			final String inst = json.getString("institutionalUsername", "");
 			final String firstName = json.getString("firstName", "");
 			final String lastName = json.getString("lastName", "");
-			final Optional<EmailAddress> email = Optional.ofNullable(Strings.emptyToNull(json.getString("email", "")))
-					.map(EmailAddress::given);
+			final Optional<EmailAddress> email = Optional
+					.ofNullable(Strings.emptyToNull(json.getString("email", ""))).map(EmailAddress::given);
 
 			return JsonStudentEntry.given(gh, id, inst, firstName, lastName, email);
 		}
-
 	}
 
 	public static JsonStudents from(String json) {
 		@SuppressWarnings("serial")
-		final Set<JsonStudentEntry> type = new LinkedHashSet<>() {
-		};
-		return new JsonStudents(
-				JsonbUtils.fromJson(json, type.getClass().getGenericSuperclass(), new JsonStudentAdapter()));
+		final Set<JsonStudentEntry> type = new LinkedHashSet<>() {};
+		return new JsonStudents(JsonbUtils.fromJson(json, type.getClass().getGenericSuperclass(),
+				new JsonStudentAdapter()));
 	}
 
 	public static String toJson(Set<JsonStudentEntry> students) {
@@ -208,48 +213,54 @@ public class JsonStudents {
 	}
 
 	public ImmutableBiMap<GitHubUsername, StudentOnGitHub> getStudentsByGitHubUsername() {
-		return entries.stream().map(JsonStudentEntry::toStudentOnGitHub).filter(Optional::isPresent).map(Optional::get)
+		return entries.stream().map(JsonStudentEntry::toStudentOnGitHub).filter(Optional::isPresent)
+				.map(Optional::get)
 				.collect(ImmutableBiMap.toImmutableBiMap(StudentOnGitHub::getGitHubUsername, s -> s));
 	}
 
 	public ImmutableBiMap<GitHubUsername, StudentOnGitHubKnown> getStudentsKnownByGitHubUsername() {
-		return entries.stream().map(JsonStudentEntry::toStudentOnGitHubKnown).filter(Optional::isPresent)
-				.map(Optional::get)
+		return entries.stream().map(JsonStudentEntry::toStudentOnGitHubKnown)
+				.filter(Optional::isPresent).map(Optional::get)
 				.collect(ImmutableBiMap.toImmutableBiMap(StudentOnGitHubKnown::getGitHubUsername, s -> s));
 	}
 
 	public ImmutableSet<Integer> getInstitutionalIds() {
-		return entries.stream().map(JsonStudentEntry::getInstitutionalId).filter(Optional::isPresent).map(Optional::get)
-				.collect(ImmutableSet.toImmutableSet());
+		return entries.stream().map(JsonStudentEntry::getInstitutionalId).filter(Optional::isPresent)
+				.map(Optional::get).collect(ImmutableSet.toImmutableSet());
 	}
 
 	public ImmutableSet<String> getInstitutionalUsernames() {
-		return entries.stream().map(JsonStudentEntry::getInstitutionalUsername).filter(s -> !s.isEmpty())
-				.collect(ImmutableSet.toImmutableSet());
+		return entries.stream().map(JsonStudentEntry::getInstitutionalUsername)
+				.filter(s -> !s.isEmpty()).collect(ImmutableSet.toImmutableSet());
 	}
 
 	public ImmutableSet<EmailAddress> getEmails() {
-		return entries.stream().map(JsonStudentEntry::getEmail).filter(Optional::isPresent).map(Optional::get)
-				.collect(ImmutableSet.toImmutableSet());
+		return entries.stream().map(JsonStudentEntry::getEmail).filter(Optional::isPresent)
+				.map(Optional::get).collect(ImmutableSet.toImmutableSet());
 	}
 
 	public ImmutableBiMap<Integer, InstitutionalStudent> getInstitutionalStudentsById() {
-		return entries.stream().map(JsonStudentEntry::getInstitutionalStudent).filter(Optional::isPresent)
-				.map(Optional::get).collect(ImmutableBiMap.toImmutableBiMap(InstitutionalStudent::getId, s -> s));
+		return entries.stream().map(JsonStudentEntry::getInstitutionalStudent)
+				.filter(Optional::isPresent).map(Optional::get)
+				.collect(ImmutableBiMap.toImmutableBiMap(InstitutionalStudent::getId, s -> s));
 	}
 
 	public ImmutableBiMap<EmailAddress, InstitutionalStudent> getInstitutionalStudentsByEmail() {
-		return entries.stream().map(JsonStudentEntry::getInstitutionalStudent).filter(Optional::isPresent)
-				.map(Optional::get).collect(ImmutableBiMap.toImmutableBiMap(s -> s.getEmail().getAddress(), s -> s));
+		return entries.stream().map(JsonStudentEntry::getInstitutionalStudent)
+				.filter(Optional::isPresent).map(Optional::get)
+				.collect(ImmutableBiMap.toImmutableBiMap(s -> s.getEmail().getAddress(), s -> s));
 	}
 
 	public ImmutableBiMap<String, InstitutionalStudent> getInstitutionalStudentsByUsername() {
-		return entries.stream().map(JsonStudentEntry::getInstitutionalStudent).filter(Optional::isPresent)
-				.map(Optional::get).collect(ImmutableBiMap.toImmutableBiMap(InstitutionalStudent::getUsername, s -> s));
+		return entries.stream().map(JsonStudentEntry::getInstitutionalStudent)
+				.filter(Optional::isPresent).map(Optional::get)
+				.collect(ImmutableBiMap.toImmutableBiMap(InstitutionalStudent::getUsername, s -> s));
 	}
 
-	public ImmutableBiMap<GitHubUsername, InstitutionalStudent> getInstitutionalStudentsByGitHubUsername() {
-		return entries.stream().filter(s -> s.getInstitutionalStudent().isPresent()).collect(ImmutableBiMap
-				.toImmutableBiMap(s -> s.gitHubUsername.orElseThrow(), s -> s.getInstitutionalStudent().orElseThrow()));
+	public ImmutableBiMap<GitHubUsername, InstitutionalStudent>
+			getInstitutionalStudentsByGitHubUsername() {
+		return entries.stream().filter(s -> s.getInstitutionalStudent().isPresent())
+				.collect(ImmutableBiMap.toImmutableBiMap(s -> s.gitHubUsername.orElseThrow(),
+						s -> s.getInstitutionalStudent().orElseThrow()));
 	}
 }

@@ -46,18 +46,18 @@ public class MavenManager {
 	}
 
 	public ImmutableList<Path> getClassPath(Path pom) throws GradingException {
-		final boolean succeeded = command(pom,
-				"org.apache.maven.plugins:maven-dependency-plugin:3.1.2:build-classpath");
+		final boolean succeeded =
+				command(pom, "org.apache.maven.plugins:maven-dependency-plugin:3.1.2:build-classpath");
 		checkArgument(succeeded);
-		final Matcher matcher = Pattern.compile("\\[INFO\\] Dependencies classpath:\\n(?<cp>[^\\n]*)\\n")
-				.matcher(output);
+		final Matcher matcher =
+				Pattern.compile("\\[INFO\\] Dependencies classpath:\\n(?<cp>[^\\n]*)\\n").matcher(output);
 		final boolean foundFirst = matcher.find();
 		checkArgument(foundFirst, output);
 		final String cp = matcher.group("cp");
 		final boolean foundSecond = matcher.find();
 		checkArgument(!foundSecond);
-		final ImmutableList<Path> paths = Splitter.on(':').splitToStream(cp).map(Path::of)
-				.collect(ImmutableList.toImmutableList());
+		final ImmutableList<Path> paths =
+				Splitter.on(':').splitToStream(cp).map(Path::of).collect(ImmutableList.toImmutableList());
 		verify(!paths.isEmpty());
 		return paths;
 	}

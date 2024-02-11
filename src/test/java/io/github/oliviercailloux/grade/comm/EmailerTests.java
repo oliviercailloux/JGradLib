@@ -62,22 +62,25 @@ public class EmailerTests {
   static void sendDummyEmails() {
     final Document doc1 = getTestDocument("First document");
     LOGGER.info("Doc1: {}.", XmlUtils.asString(doc1));
-    final EmailAddressAndPersonal to1 = EmailAddressAndPersonal.given("olivier.cailloux@gmail.com", "O.C");
+    final EmailAddressAndPersonal to1 =
+        EmailAddressAndPersonal.given("olivier.cailloux@gmail.com", "O.C");
     final Email email1 = Email.withDocumentAndFile(doc1, "data.json",
         Json.createObjectBuilder().add("jsonint", 1).build().toString(), "json", to1);
 
     final Grade grade = GradeTestsHelper.get3Plus2();
     final Document doc2 = HtmlGrades.asHtml(grade, "Ze grade", 20d);
-    final EmailAddressAndPersonal to2 = EmailAddressAndPersonal.given("oliviercailloux@gmail.com", "OC");
-    final Email email2 = Email.withDocumentAndFile(doc2, "data.json", JsonSimpleGrade.toJson(grade), "json", to2);
+    final EmailAddressAndPersonal to2 =
+        EmailAddressAndPersonal.given("oliviercailloux@gmail.com", "OC");
+    final Email email2 =
+        Email.withDocumentAndFile(doc2, "data.json", JsonSimpleGrade.toJson(grade), "json", to2);
 
     try (Emailer emailer = Emailer.instance()) {
-      emailer.connectToStore(Emailer.getOutlookImapSession(), EmailerDauphineHelper.USERNAME_DAUPHINE,
-          EmailerDauphineHelper.getDauphineToken());
+      emailer.connectToStore(Emailer.getOutlookImapSession(),
+          EmailerDauphineHelper.USERNAME_DAUPHINE, EmailerDauphineHelper.getDauphineToken());
       emailer.send(ImmutableSet.of(email1, email2), EmailerDauphineHelper.FROM);
 
-//    EMailer.saveInto(SENT_FOLDER);
-//    EMailer.saveInto(TRASH_FOLDER);
+      // EMailer.saveInto(SENT_FOLDER);
+      // EMailer.saveInto(TRASH_FOLDER);
     }
   }
 
@@ -104,8 +107,8 @@ public class EmailerTests {
     try (Emailer emailer = Emailer.instance()) {
       emailer.connectToStore(Emailer.getZohoImapSession(), EmailerDauphineHelper.USERNAME_OTHERS,
           EmailerDauphineHelper.getZohoToken());
-      emailer.connectToTransport(Emailer.getOutlookSmtpSession(), EmailerDauphineHelper.USERNAME_DAUPHINE,
-          EmailerDauphineHelper.getDauphineToken());
+      emailer.connectToTransport(Emailer.getOutlookSmtpSession(),
+          EmailerDauphineHelper.USERNAME_DAUPHINE, EmailerDauphineHelper.getDauphineToken());
     }
   }
 
@@ -113,30 +116,32 @@ public class EmailerTests {
   @Disabled
   void testOutlookBug() throws Exception {
     try (Emailer emailer = Emailer.instance()) {
-      emailer.connectToStore(Emailer.getOutlookImapSession(), EmailerDauphineHelper.USERNAME_DAUPHINE,
-          EmailerDauphineHelper.getDauphineToken());
+      emailer.connectToStore(Emailer.getOutlookImapSession(),
+          EmailerDauphineHelper.USERNAME_DAUPHINE, EmailerDauphineHelper.getDauphineToken());
       @SuppressWarnings("resource")
       final Folder folder = emailer.getFolder("Éléments envoyés");
 
       /**
-       * Shouldn’t throw. (Finds a message actually sent to
-       * olivier.cailloux@lamsade.dauphine.fr.)
+       * Shouldn’t throw. (Finds a message actually sent to olivier.cailloux@lamsade.dauphine.fr.)
        */
-      assertThrows(VerifyException.class, () -> emailer.searchIn(folder,
-          ImapSearchPredicate.recipientFullAddressContains(RecipientType.TO, "olivier.cailloux@dauphine.")));
+      assertThrows(VerifyException.class, () -> emailer.searchIn(folder, ImapSearchPredicate
+          .recipientFullAddressContains(RecipientType.TO, "olivier.cailloux@dauphine.")));
 
       /**
        * Shouldn’t throw. (Finds a message actually sent to
        * bull-ia-subscribe-olivier.cailloux=dauphine.fr@gdria.fr.)
        */
-      assertThrows(VerifyException.class, () -> emailer.searchIn(folder,
-          ImapSearchPredicate.recipientFullAddressContains(RecipientType.TO, "olivier.cailloux@dauphine.")
-              .orSatisfy(ImapSearchPredicate.recipientFullAddressContains(RecipientType.TO,
-                  "olivier.cailloux@lamsade.dauphine.")))
-          .isEmpty());
+      assertThrows(VerifyException.class,
+          () -> emailer.searchIn(folder,
+              ImapSearchPredicate
+                  .recipientFullAddressContains(RecipientType.TO, "olivier.cailloux@dauphine.")
+                  .orSatisfy(ImapSearchPredicate.recipientFullAddressContains(RecipientType.TO,
+                      "olivier.cailloux@lamsade.dauphine.")))
+              .isEmpty());
 
       final ImmutableSet<Message> toMyselfAndOthers = emailer.searchIn(folder,
-          ImapSearchPredicate.recipientFullAddressContains(RecipientType.TO, "olivier.cailloux@dauphine.")
+          ImapSearchPredicate
+              .recipientFullAddressContains(RecipientType.TO, "olivier.cailloux@dauphine.")
               .orSatisfy(ImapSearchPredicate.recipientFullAddressContains(RecipientType.TO,
                   "olivier.cailloux@lamsade.dauphine."))
               .orSatisfy(ImapSearchPredicate.recipientFullAddressContains(RecipientType.TO,
@@ -155,16 +160,15 @@ public class EmailerTests {
       assertTrue(emailer.searchIn(folder, containsMyAddress).isEmpty());
 
       /** Shouldn’t be empty. */
-      assertTrue(emailer.searchIn(folder,
-          ImapSearchPredicate.recipientAddressEquals(RecipientType.TO, "olivier.cailloux@dauphine.fr"))
-          .isEmpty());
+      assertTrue(emailer.searchIn(folder, ImapSearchPredicate
+          .recipientAddressEquals(RecipientType.TO, "olivier.cailloux@dauphine.fr")).isEmpty());
     }
   }
 
   /**
    * https://github.com/eclipse-ee4j/mail/issues/425, now
-   * https://github.com/jakartaee/mail-api/issues/425, though now JavaMail has
-   * become Angus something.
+   * https://github.com/jakartaee/mail-api/issues/425, though now JavaMail has become Angus
+   * something.
    */
   @Test
   @Disabled
@@ -177,11 +181,12 @@ public class EmailerTests {
     props.setProperty("mail.imap.connectionpooltimeout", "10");
     props.setProperty("mail.imap.ssl.enable", "true");
     props.setProperty("mail.imap.ssl.checkserveridentity", "true");
-//    props.setProperty("mail.debug", "true");
+    // props.setProperty("mail.debug", "true");
     final Session session = Session.getInstance(props);
     try (Store store = session.getStore()) {
       LOGGER.info("Connecting.");
-      store.connect(EmailerDauphineHelper.USERNAME_DAUPHINE, EmailerDauphineHelper.getDauphineToken());
+      store.connect(EmailerDauphineHelper.USERNAME_DAUPHINE,
+          EmailerDauphineHelper.getDauphineToken());
       try (Folder folder = store.getFolder("Éléments envoyés")) {
         folder.open(Folder.READ_ONLY);
         final Message[] messages6068 = folder.getMessages(6068, 6068);
@@ -193,11 +198,11 @@ public class EmailerTests {
         assertEquals(1, recipients.length);
         final InternetAddress recipient = (InternetAddress) recipients[0];
         assertEquals("olivier.cailloux@dauphine.fr", recipient.getAddress());
-        LOGGER.info(String.format("Message %s dated %s to %s.", messageToDauphine.getMessageNumber(),
-            messageToDauphine.getSentDate(), recipient));
+        LOGGER.info(String.format("Message %s dated %s to %s.",
+            messageToDauphine.getMessageNumber(), messageToDauphine.getSentDate(), recipient));
         {
-          final Message[] messagesToPartialRecipientStringTerm = folder
-              .search(new RecipientStringTerm(RecipientType.TO, "olivier.cailloux"));
+          final Message[] messagesToPartialRecipientStringTerm =
+              folder.search(new RecipientStringTerm(RecipientType.TO, "olivier.cailloux"));
           /** Succeeds */
           assertNotEquals(0, messagesToPartialRecipientStringTerm.length);
           assertEquals(1, Arrays.stream(messagesToPartialRecipientStringTerm)
@@ -218,14 +223,14 @@ public class EmailerTests {
           assertEquals(0, messagesToThatRecipientStringTerm.length);
         }
         {
-          final Message[] messagesToThatRecipient = folder
-              .search(new RecipientTerm(RecipientType.TO, recipient));
+          final Message[] messagesToThatRecipient =
+              folder.search(new RecipientTerm(RecipientType.TO, recipient));
           /** Should fail! */
           assertEquals(0, messagesToThatRecipient.length);
         }
         {
-          final Message[] messagesToThatRecipientStringTerm = folder
-              .search(new RecipientStringTerm(RecipientType.TO, "olivier cailloux"));
+          final Message[] messagesToThatRecipientStringTerm =
+              folder.search(new RecipientStringTerm(RecipientType.TO, "olivier cailloux"));
           assertTrue(messagesToThatRecipientStringTerm.length > 10);
         }
       }
@@ -247,12 +252,13 @@ public class EmailerTests {
     try (Store store = session.getStore()) {
       LOGGER.info("Connecting.");
       store.connect(EmailerDauphineHelper.USERNAME_OTHERS, EmailerDauphineHelper.getGmailToken());
-//      try (Folder folder = store.getFolder("Grades")) {
+      // try (Folder folder = store.getFolder("Grades")) {
       try (Folder folder = store.getFolder("[Gmail]/Tous les messages")) {
         final int no = 69245;
         folder.open(Folder.READ_ONLY);
-//        final Message[] messagesFound = folder.search(new SubjectTerm("Test depuis Gmail vers LAMSADE"));
-//        logMessagesRecipients(ImmutableSet.copyOf(messagesFound));
+        // final Message[] messagesFound = folder.search(new SubjectTerm("Test depuis Gmail vers
+        // LAMSADE"));
+        // logMessagesRecipients(ImmutableSet.copyOf(messagesFound));
         final Message[] messagesFound = folder.getMessages(no, no);
         assertEquals(1, messagesFound.length);
         final Message messageToCAILLOUX = messagesFound[0];
@@ -261,22 +267,21 @@ public class EmailerTests {
         assertEquals(1, recipients.length);
         final InternetAddress recipient = (InternetAddress) recipients[0];
         assertEquals("olivier.cailloux@lamsade.dauphine.fr", recipient.getAddress());
-        LOGGER.info(String.format("Message %s dated %s to %s.", messageToCAILLOUX.getMessageNumber(),
-            messageToCAILLOUX.getSentDate(), recipient));
+        LOGGER.info(String.format("Message %s dated %s to %s.",
+            messageToCAILLOUX.getMessageNumber(), messageToCAILLOUX.getSentDate(), recipient));
         {
-          final Message[] messagesToPartialRecipientStringTerm = folder
-              .search(new RecipientStringTerm(RecipientType.TO, "olivier.cailloux"));
+          final Message[] messagesToPartialRecipientStringTerm =
+              folder.search(new RecipientStringTerm(RecipientType.TO, "olivier.cailloux"));
           assertNotEquals(0, messagesToPartialRecipientStringTerm.length);
           assertEquals(1, Arrays.stream(messagesToPartialRecipientStringTerm)
               .filter(m -> m.getMessageNumber() == no).count());
         }
         {
-          final Message[] messagesToPartialRecipientStringTerm = folder
-              .search(new RecipientStringTerm(RecipientType.TO, "olivier.cailloux@lamsade.dauphine."));
+          final Message[] messagesToPartialRecipientStringTerm = folder.search(
+              new RecipientStringTerm(RecipientType.TO, "olivier.cailloux@lamsade.dauphine."));
           /**
-           * Arguably the spec is unprecise here, so both match and miss seem acceptable
-           * (“Messages that contain the specified string in the envelope structure's TO
-           * field.”)
+           * Arguably the spec is unprecise here, so both match and miss seem acceptable (“Messages
+           * that contain the specified string in the envelope structure's TO field.”)
            */
           assertEquals(0, messagesToPartialRecipientStringTerm.length);
         }
@@ -287,39 +292,40 @@ public class EmailerTests {
               .filter(m -> m.getMessageNumber() == no).count());
         }
         {
-          final Message[] messagesToThatRecipientStringTerm = folder
-              .search(new RecipientStringTerm(RecipientType.TO, "Olivier Cailloux <"));
+          final Message[] messagesToThatRecipientStringTerm =
+              folder.search(new RecipientStringTerm(RecipientType.TO, "Olivier Cailloux <"));
           assertEquals(1, Arrays.stream(messagesToThatRecipientStringTerm)
               .filter(m -> m.getMessageNumber() == no).count());
         }
         {
-          final Message[] messagesToThatRecipientStringTerm = folder
-              .search(new RecipientStringTerm(RecipientType.TO, "Olivier Cailloux <o"));
+          final Message[] messagesToThatRecipientStringTerm =
+              folder.search(new RecipientStringTerm(RecipientType.TO, "Olivier Cailloux <o"));
           assertEquals(0, messagesToThatRecipientStringTerm.length);
         }
         {
-          final Message[] messagesToThatRecipientStringTerm = folder.search(new RecipientStringTerm(
-              RecipientType.TO, "Olivier Cailloux <olivier.cailloux@lamsade.dauphine.fr>"));
+          final Message[] messagesToThatRecipientStringTerm =
+              folder.search(new RecipientStringTerm(RecipientType.TO,
+                  "Olivier Cailloux <olivier.cailloux@lamsade.dauphine.fr>"));
           /** Should fail! */
           assertEquals(0, messagesToThatRecipientStringTerm.length);
         }
         {
-          final Message[] messagesToThatRecipient = folder
-              .search(new RecipientTerm(RecipientType.TO, recipient));
+          final Message[] messagesToThatRecipient =
+              folder.search(new RecipientTerm(RecipientType.TO, recipient));
           /**
            * Should fail! (This search actually has the same effect as the previous one.)
            */
           assertEquals(0, messagesToThatRecipient.length);
         }
         {
-          final Message[] messagesToThatRecipientStringTerm = folder
-              .search(new RecipientStringTerm(RecipientType.TO, "olivier.cailloux@lamsade.dauphine.fr"));
+          final Message[] messagesToThatRecipientStringTerm = folder.search(
+              new RecipientStringTerm(RecipientType.TO, "olivier.cailloux@lamsade.dauphine.fr"));
           assertEquals(1, Arrays.stream(messagesToThatRecipientStringTerm)
               .filter(m -> m.getMessageNumber() == no).count());
         }
         {
-          final Message[] messagesToThatRecipientStringTerm = folder
-              .search(new RecipientStringTerm(RecipientType.TO, "Olivier Cailloux"));
+          final Message[] messagesToThatRecipientStringTerm =
+              folder.search(new RecipientStringTerm(RecipientType.TO, "Olivier Cailloux"));
           assertEquals(1, Arrays.stream(messagesToThatRecipientStringTerm)
               .filter(m -> m.getMessageNumber() == no).count());
         }
@@ -344,49 +350,58 @@ public class EmailerTests {
               ImapSearchPredicate.recipientFullAddressContains(RecipientType.TO, "oliviercailloux"))
               .size());
       /*
-       * I think this succeeded before. Failed at some point in March 2022 (seems it
-       * was using personal instead of address). Back to working condition on the 30
-       * March.
+       * I think this succeeded before. Failed at some point in March 2022 (seems it was using
+       * personal instead of address). Back to working condition on the 30 March.
        */
-      assertEquals(1, emailer.searchIn(folder, ImapSearchPredicate.recipientAddressEquals(RecipientType.TO,
-          "olivier.cailloux@lamsade.dauphine.fr")).size());
-      assertEquals(0, emailer.searchIn(folder,
-          ImapSearchPredicate.recipientAddressEquals(RecipientType.TO, "olivier.cailloux@lamsade.dauphine"))
-          .size());
+      assertEquals(1,
+          emailer.searchIn(folder, ImapSearchPredicate.recipientAddressEquals(RecipientType.TO,
+              "olivier.cailloux@lamsade.dauphine.fr")).size());
+      assertEquals(0, emailer.searchIn(folder, ImapSearchPredicate
+          .recipientAddressEquals(RecipientType.TO, "olivier.cailloux@lamsade.dauphine")).size());
 
-      assertEquals(2, emailer
-          .searchIn(folder, ImapSearchPredicate.recipientFullAddressContains(RecipientType.TO, "olivier"))
+      assertEquals(2,
+          emailer
+              .searchIn(folder,
+                  ImapSearchPredicate.recipientFullAddressContains(RecipientType.TO, "olivier"))
+              .size());
+      assertEquals(1,
+          emailer.searchIn(folder, ImapSearchPredicate
+              .recipientFullAddressContains(RecipientType.TO, "olivier.cailloux@lamsade.dauphine."))
+              .size());
+      assertEquals(1,
+          emailer
+              .searchIn(folder, ImapSearchPredicate.recipientFullAddressContains(RecipientType.TO,
+                  "olivier.cailloux@lamsade.dauphine.fr"))
+              .size());
+      assertEquals(1,
+          emailer
+              .searchIn(folder, ImapSearchPredicate.recipientFullAddressContains(RecipientType.TO,
+                  " <olivier.cailloux@lamsade.dauphine.fr>"))
+              .size());
+      assertEquals(1,
+          emailer
+              .searchIn(folder, ImapSearchPredicate.recipientFullAddressContains(RecipientType.TO,
+                  "olivier cailloux <olivier.cailloux@lamsade.dauphine.fr>"))
+              .size());
+      assertEquals(1, emailer.searchIn(folder,
+          ImapSearchPredicate.recipientFullAddressContains(RecipientType.TO, "olivier cailloux"))
           .size());
-      assertEquals(1, emailer.searchIn(folder, ImapSearchPredicate.recipientFullAddressContains(RecipientType.TO,
-          "olivier.cailloux@lamsade.dauphine.")).size());
-      assertEquals(1, emailer.searchIn(folder, ImapSearchPredicate.recipientFullAddressContains(RecipientType.TO,
-          "olivier.cailloux@lamsade.dauphine.fr")).size());
-      assertEquals(1, emailer.searchIn(folder, ImapSearchPredicate.recipientFullAddressContains(RecipientType.TO,
-          " <olivier.cailloux@lamsade.dauphine.fr>")).size());
-      assertEquals(1, emailer.searchIn(folder, ImapSearchPredicate.recipientFullAddressContains(RecipientType.TO,
-          "olivier cailloux <olivier.cailloux@lamsade.dauphine.fr>")).size());
-      assertEquals(1,
-          emailer.searchIn(folder,
-              ImapSearchPredicate.recipientFullAddressContains(RecipientType.TO, "olivier cailloux"))
-              .size());
-      assertEquals(1,
-          emailer.searchIn(folder,
-              ImapSearchPredicate.recipientFullAddressContains(RecipientType.TO, "olivier cailloux <"))
-              .size());
+      assertEquals(1, emailer.searchIn(folder,
+          ImapSearchPredicate.recipientFullAddressContains(RecipientType.TO, "olivier cailloux <"))
+          .size());
       /** Fails as of Jan 2022. */
-      assertEquals(1,
-          emailer.searchIn(folder,
-              ImapSearchPredicate.recipientFullAddressContains(RecipientType.TO, "olivier cailloux <o"))
-              .size());
+      assertEquals(1, emailer.searchIn(folder,
+          ImapSearchPredicate.recipientFullAddressContains(RecipientType.TO, "olivier cailloux <o"))
+          .size());
     }
   }
 
   private void logMessagesRecipients(Set<Message> messages) throws MessagingException {
     for (Message message : messages) {
       LOGGER.info("Message {} recipients: {}.", message.getMessageNumber(),
-          ImmutableSet
-              .copyOf(message.getAllRecipients()).stream().map(a -> (InternetAddress) a).map(a -> "Type: "
-                  + a.getType() + "; Personal: " + a.getPersonal() + "; Address: " + a.getAddress())
+          ImmutableSet.copyOf(message.getAllRecipients()).stream().map(a -> (InternetAddress) a)
+              .map(a -> "Type: " + a.getType() + "; Personal: " + a.getPersonal() + "; Address: "
+                  + a.getAddress())
               .collect(ImmutableSet.toImmutableSet()));
     }
   }
@@ -444,7 +459,7 @@ public class EmailerTests {
   @Test
   void testZohoAndOr() throws Exception {
     try (Emailer emailer = Emailer.instance()) {
-//      emailer.setDebug(true);
+      // emailer.setDebug(true);
       emailer.connectToStore(Emailer.getZohoImapSession(), EmailerDauphineHelper.USERNAME_OTHERS,
           EmailerDauphineHelper.getZohoToken());
       @SuppressWarnings("resource")
@@ -471,8 +486,7 @@ public class EmailerTests {
       }
       {
         /**
-         * Searches for A3 SEARCH SUBJECT "…" TO olivier.cailloux@lamsade.dauphine.fr
-         * ALL
+         * Searches for A3 SEARCH SUBJECT "…" TO olivier.cailloux@lamsade.dauphine.fr ALL
          */
         final Message[] asArray = folder.search(new AndTerm(searchSubject, searchToMe));
         final ImmutableSet<Message> found = ImmutableSet.copyOf(asArray);
@@ -487,9 +501,8 @@ public class EmailerTests {
         final ImmutableSet<Message> found = ImmutableSet.copyOf(asArray);
         /**
          * Searches for SEARCH SUBJECT "…" OR TO olivier.cailloux@lamsade.dauphine.fr TO
-         * olivier.cailloux@notexistdauphine.fr ALL. Used to fail (return zero matches)
-         * but was corrected following discussions with Zoho team somewhere around July
-         * 2020.
+         * olivier.cailloux@notexistdauphine.fr ALL. Used to fail (return zero matches) but was
+         * corrected following discussions with Zoho team somewhere around July 2020.
          */
         assertEquals(1, found.size());
       }
@@ -499,8 +512,8 @@ public class EmailerTests {
   @Test
   void testRetrieveInexistant() throws Exception {
     try (GradesInEmails sendEmails = GradesInEmails.newInstance()) {
-      sendEmails.getEmailer().connectToStore(Emailer.getZohoImapSession(), EmailerDauphineHelper.USERNAME_OTHERS,
-          EmailerDauphineHelper.getZohoToken());
+      sendEmails.getEmailer().connectToStore(Emailer.getZohoImapSession(),
+          EmailerDauphineHelper.USERNAME_OTHERS, EmailerDauphineHelper.getZohoToken());
       sendEmails.setFolder(sendEmails.getEmailer().getFolder("Grades"));
       final EmailAddress inexistant = EmailAddress.given("olivier.cailloux@inexistant.fr");
       assertEquals(Optional.empty(), sendEmails.getLastGradeTo(inexistant, "git-br"));
@@ -513,8 +526,8 @@ public class EmailerTests {
   @Disabled("Old grade format")
   void testRetrieveExistant() throws Exception {
     try (GradesInEmails sendEmails = GradesInEmails.newInstance()) {
-      sendEmails.getEmailer().connectToStore(Emailer.getZohoImapSession(), EmailerDauphineHelper.USERNAME_OTHERS,
-          EmailerDauphineHelper.getZohoToken());
+      sendEmails.getEmailer().connectToStore(Emailer.getZohoImapSession(),
+          EmailerDauphineHelper.USERNAME_OTHERS, EmailerDauphineHelper.getZohoToken());
       sendEmails.setFolder(sendEmails.getEmailer().getFolder("Grades"));
 
       final EmailAddress existant = EmailAddress.given("olivier.cailloux@invaliddauphine.fr");
@@ -531,8 +544,8 @@ public class EmailerTests {
       final ImmutableMap<EmailAddress, Grade> grades = sendEmails.getLastGrades("git-br");
       assertEquals(8.88d / 20d, grades.get(existant).mark().getPoints(), 0.001d);
 
-      sendEmails.filterSent(
-          Range.closed(Instant.parse("2001-01-01T00:00:00.00Z"), Instant.parse("2020-06-01T00:00:00.00Z")));
+      sendEmails.filterSent(Range.closed(Instant.parse("2001-01-01T00:00:00.00Z"),
+          Instant.parse("2020-06-01T00:00:00.00Z")));
       final ImmutableMap<EmailAddress, Grade> gradesInPeriod = sendEmails.getLastGrades("git-br");
       assertEquals(8.88d / 20d, gradesInPeriod.get(existant).mark().getPoints(), 0.001d);
 
@@ -546,8 +559,8 @@ public class EmailerTests {
   @Disabled("Old grade format")
   void testRetrieveMultOneMatch() throws Exception {
     try (GradesInEmails sendEmails = GradesInEmails.newInstance()) {
-      sendEmails.getEmailer().connectToStore(Emailer.getZohoImapSession(), EmailerDauphineHelper.USERNAME_OTHERS,
-          EmailerDauphineHelper.getZohoToken());
+      sendEmails.getEmailer().connectToStore(Emailer.getZohoImapSession(),
+          EmailerDauphineHelper.USERNAME_OTHERS, EmailerDauphineHelper.getZohoToken());
       sendEmails.setFolder(sendEmails.getEmailer().getFolder("Grades"));
       final EmailAddress inexistant = EmailAddress.given("olivier.cailloux@inexistant.fr");
       final EmailAddress existant = EmailAddress.given("olivier.cailloux@invaliddauphine.fr");
@@ -561,8 +574,8 @@ public class EmailerTests {
   @Disabled("Old grade format")
   void testRetrieveMultTwoMatches() throws Exception {
     try (GradesInEmails sendEmails = GradesInEmails.newInstance()) {
-      sendEmails.getEmailer().connectToStore(Emailer.getZohoImapSession(), EmailerDauphineHelper.USERNAME_OTHERS,
-          EmailerDauphineHelper.getZohoToken());
+      sendEmails.getEmailer().connectToStore(Emailer.getZohoImapSession(),
+          EmailerDauphineHelper.USERNAME_OTHERS, EmailerDauphineHelper.getZohoToken());
       sendEmails.setFolder(sendEmails.getEmailer().getFolder("Grades"));
       final EmailAddress lam = EmailAddress.given("olivier.cailloux@lamsade.dauphine.fr");
       final EmailAddress dau = EmailAddress.given("olivier.cailloux@invaliddauphine.fr");
@@ -583,9 +596,9 @@ public class EmailerTests {
       @SuppressWarnings("resource")
       final Folder folder = emailer.getFolder("Grades");
 
-      final ImmutableSet<Message> none = emailer.searchIn(folder, ImapSearchPredicate.orList(ImmutableList.of()));
+      final ImmutableSet<Message> none =
+          emailer.searchIn(folder, ImapSearchPredicate.orList(ImmutableList.of()));
       assertEquals(ImmutableSet.of(), none);
     }
   }
-
 }

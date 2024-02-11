@@ -37,5 +37,4 @@ class GradingTests {
     supp.init();
     return supp;
   }
-
 }

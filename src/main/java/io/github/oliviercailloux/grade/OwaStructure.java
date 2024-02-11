@@ -6,16 +6,16 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * Longer term, could make this a choice function: when some crits are missing
- * from the grade, we aggregate with a reduced list of weights (indicate which
- * ones get dropped using a preference ordering).
+ * Longer term, could make this a choice function: when some crits are missing from the grade, we
+ * aggregate with a reduced list of weights (indicate which ones get dropped using a preference
+ * ordering).
  */
 public class OwaStructure {
 	/**
 	 * Must have the same size.
 	 *
 	 * @param criteria
-	 * @param weights  sum to one, zeroes allowed
+	 * @param weights sum to one, zeroes allowed
 	 */
 	public static OwaStructure given(Set<Criterion> criteria, List<Double> weights) {
 		return new OwaStructure(criteria, weights);
@@ -40,5 +40,4 @@ public class OwaStructure {
 	public double getWeightForPosition(int positionByLargestMarks) {
 		return weights.get(positionByLargestMarks);
 	}
-
 }

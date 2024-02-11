@@ -26,12 +26,14 @@ public class CsvToUsernames {
 		final CsvParserSettings settings = new CsvParserSettings();
 		settings.setHeaderExtractionEnabled(true);
 		final CsvParser parser = new CsvParser(settings);
-		final IterableResult<Record, ParsingContext> iterable = parser.iterateRecords(new StringReader(csv));
-		final ImmutableSet<JsonStudentEntry> students = StreamSupport.stream(iterable.spliterator(), false)
-				.filter(r -> r.getString("github_username") != null)
-				.map(r -> JsonStudentEntry.given(GitHubUsername.given(r.getString("github_username")),
-						EmailAddress.given(r.getString("identifier"))))
-				.collect(ImmutableSet.toImmutableSet());
+		final IterableResult<Record, ParsingContext> iterable =
+				parser.iterateRecords(new StringReader(csv));
+		final ImmutableSet<JsonStudentEntry> students =
+				StreamSupport.stream(iterable.spliterator(), false)
+						.filter(r -> r.getString("github_username") != null)
+						.map(r -> JsonStudentEntry.given(GitHubUsername.given(r.getString("github_username")),
+								EmailAddress.given(r.getString("identifier"))))
+						.collect(ImmutableSet.toImmutableSet());
 		LOGGER.info("U: {}.", students);
 		Files.writeString(Path.of("usernames.json"), JsonStudents.toJson(students));
 	}

@@ -31,7 +31,8 @@ class AdminTests {
   void testBad() throws Exception {
     final Path uml = Path.of(getClass().getResource("Admin/Bad.uml").toURI());
     final IGrade grade = AdminManagesUsers.grade(uml);
-//    Files.writeString(Path.of("Grade.html"), XmlUtils.toString(HtmlGrades.asHtml(grade, "Test grade", 19d)));
+    // Files.writeString(Path.of("Grade.html"), XmlUtils.toString(HtmlGrades.asHtml(grade, "Test
+    // grade", 19d)));
     assertEquals((1d + 1.333333d + 1d + 1.5d) / 19d, grade.getPoints(), 1e-6);
   }
 
@@ -47,8 +48,8 @@ class AdminTests {
     final Path uml = Path.of(getClass().getResource("Admin/Duplicate two.uml").toURI());
     final IGrade grade = AdminManagesUsers.grade(uml);
     /*
-     * Manage UC is duplicated and one subject missing; Create is duplicated: not
-     * quite on .75, .75, and not at all on .5.
+     * Manage UC is duplicated and one subject missing; Create is duplicated: not quite on .75, .75,
+     * and not at all on .5.
      */
     assertEquals(1d - 0.666666d / 19d - 1d / 19d - 1d / 19d - 1.5d / 19d, grade.getPoints(), 1e-6d);
   }
@@ -59,5 +60,4 @@ class AdminTests {
     final IGrade grade = AdminManagesUsers.grade(uml);
     assertEquals(1d, grade.getPoints());
   }
-
 }

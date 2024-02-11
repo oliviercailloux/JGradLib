@@ -46,13 +46,15 @@ public class JsonGradeTests {
         }""";
     final MarkAggregator read = JsonSimpleGrade.asMarkAggregator(input);
 
-    final ParametricWeighter expected = ParametricWeighter.given(Criterion.given("m"), Criterion.given("w"));
+    final ParametricWeighter expected =
+        ParametricWeighter.given(Criterion.given("m"), Criterion.given("w"));
     assertEquals(expected, read);
   }
 
   @Test
   void testWriteStaticWeighter() throws Exception {
-    final NormalizingStaticWeighter w = NormalizingStaticWeighter.given(ImmutableMap.of(c1, 1d, c2, 2d));
+    final NormalizingStaticWeighter w =
+        NormalizingStaticWeighter.given(ImmutableMap.of(c1, 1d, c2, 2d));
     final String json = JsonSimpleGrade.toJson(w);
 
     final String expected = """
@@ -78,7 +80,8 @@ public class JsonGradeTests {
         }""";
     final MarkAggregator read = JsonSimpleGrade.asMarkAggregator(input);
 
-    final NormalizingStaticWeighter expected = NormalizingStaticWeighter.given(ImmutableMap.of(c1, 1d, c2, 2d));
+    final NormalizingStaticWeighter expected =
+        NormalizingStaticWeighter.given(ImmutableMap.of(c1, 1d, c2, 2d));
     assertEquals(expected, read);
   }
 
@@ -170,8 +173,8 @@ public class JsonGradeTests {
 
   @Test
   void testReadMarksTree() throws Exception {
-    final MarksTree read = JsonSimpleGrade.asMarksTree(
-        Resources.toString(this.getClass().getResource("3Plus2 marks.json"), StandardCharsets.UTF_8));
+    final MarksTree read = JsonSimpleGrade.asMarksTree(Resources
+        .toString(this.getClass().getResource("3Plus2 marks.json"), StandardCharsets.UTF_8));
 
     final MarksTree expected = MarksTreeTestsHelper.get3Plus2();
     assertEquals(expected, read);
@@ -189,8 +192,8 @@ public class JsonGradeTests {
 
   @Test
   void testReadGrade() throws Exception {
-    final Grade read = JsonSimpleGrade
-        .asGrade(Resources.toString(this.getClass().getResource("3Plus2 grade.json"), StandardCharsets.UTF_8));
+    final Grade read = JsonSimpleGrade.asGrade(Resources
+        .toString(this.getClass().getResource("3Plus2 grade.json"), StandardCharsets.UTF_8));
 
     final Grade expected = GradeTestsHelper.get3Plus2();
     assertEquals(expected.toMarksTree(), read.toMarksTree());
@@ -202,15 +205,15 @@ public class JsonGradeTests {
     final Exam exam = ExamTestsHelper.get3Plus2();
     final String json = JsonSimpleGrade.toJson(exam);
 
-    final String expected = Resources.toString(this.getClass().getResource("3Plus2 exam.json"),
-        StandardCharsets.UTF_8);
+    final String expected =
+        Resources.toString(this.getClass().getResource("3Plus2 exam.json"), StandardCharsets.UTF_8);
     assertEquals(expected, json);
   }
 
   @Test
   void testReadExam() throws Exception {
-    final Exam read = JsonSimpleGrade
-        .asExam(Resources.toString(this.getClass().getResource("3Plus2 exam.json"), StandardCharsets.UTF_8));
+    final Exam read = JsonSimpleGrade.asExam(Resources
+        .toString(this.getClass().getResource("3Plus2 exam.json"), StandardCharsets.UTF_8));
 
     final Exam expected = ExamTestsHelper.get3Plus2();
     assertEquals(expected, read);

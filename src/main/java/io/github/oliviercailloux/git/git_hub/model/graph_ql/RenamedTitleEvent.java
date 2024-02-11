@@ -26,5 +26,4 @@ public class RenamedTitleEvent extends IssueEvent {
 	public String getPreviousTitle() {
 		return getJson().getString("previousTitle");
 	}
-
 }

@@ -12,8 +12,7 @@ public final class MinAggregator implements OwaWeighter {
 
 	public static final MinAggregator INSTANCE = new MinAggregator();
 
-	private MinAggregator() {
-	}
+	private MinAggregator() {}
 
 	@Override
 	public Stream<Double> weights(int size) {

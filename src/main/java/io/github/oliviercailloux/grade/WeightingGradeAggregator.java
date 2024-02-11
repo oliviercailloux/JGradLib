@@ -13,16 +13,18 @@ public class WeightingGradeAggregator extends GradeAggregator {
 		return new WeightingGradeAggregator(VoidAggregator.INSTANCE, ImmutableMap.of(), null);
 	}
 
-	static final WeightingGradeAggregator ABSOLUTE_WEIGHTING = new WeightingGradeAggregator(AbsoluteAggregator.INSTANCE,
-			ImmutableMap.of(), TRIVIAL_WEIGHTING);
+	static final WeightingGradeAggregator ABSOLUTE_WEIGHTING = new WeightingGradeAggregator(
+			AbsoluteAggregator.INSTANCE, ImmutableMap.of(), TRIVIAL_WEIGHTING);
 
-	public static WeightingGradeAggregator weightingAbsolute(Map<Criterion, WeightingGradeAggregator> subs,
+	public static WeightingGradeAggregator weightingAbsolute(
+			Map<Criterion, WeightingGradeAggregator> subs,
 			WeightingGradeAggregator defaultSubAggregator) {
 		return new WeightingGradeAggregator(AbsoluteAggregator.INSTANCE, subs, defaultSubAggregator);
 	}
 
 	public static WeightingGradeAggregator absolute(WeightingGradeAggregator defaultSubAggregator) {
-		return new WeightingGradeAggregator(AbsoluteAggregator.INSTANCE, ImmutableMap.of(), defaultSubAggregator);
+		return new WeightingGradeAggregator(AbsoluteAggregator.INSTANCE, ImmutableMap.of(),
+				defaultSubAggregator);
 	}
 
 	public static WeightingGradeAggregator weightingStaticAggregator(Map<Criterion, Double> weights,
@@ -31,11 +33,13 @@ public class WeightingGradeAggregator extends GradeAggregator {
 	}
 
 	public static WeightingGradeAggregator given(PerCriterionWeighter markAggregator,
-			Map<Criterion, WeightingGradeAggregator> subs, WeightingGradeAggregator defaultSubAggregator) {
+			Map<Criterion, WeightingGradeAggregator> subs,
+			WeightingGradeAggregator defaultSubAggregator) {
 		return new WeightingGradeAggregator(markAggregator, subs, defaultSubAggregator);
 	}
 
-	private WeightingGradeAggregator(PerCriterionWeighter markAggregator, Map<Criterion, WeightingGradeAggregator> subs,
+	private WeightingGradeAggregator(PerCriterionWeighter markAggregator,
+			Map<Criterion, WeightingGradeAggregator> subs,
 			WeightingGradeAggregator defaultSubAggregator) {
 		super(markAggregator, subs, defaultSubAggregator);
 	}
@@ -57,7 +61,8 @@ public class WeightingGradeAggregator extends GradeAggregator {
 	}
 
 	@Override
-	public WeightingGradeAggregator getGradeAggregator(Criterion criterion) throws AggregatorException {
+	public WeightingGradeAggregator getGradeAggregator(Criterion criterion)
+			throws AggregatorException {
 		return (WeightingGradeAggregator) super.getGradeAggregator(criterion);
 	}
 
@@ -68,8 +73,8 @@ public class WeightingGradeAggregator extends GradeAggregator {
 
 	@Override
 	public ImmutableMap<Criterion, WeightingGradeAggregator> getSpecialSubAggregators() {
-		return ImmutableMap
-				.copyOf(Maps.transformValues(super.getSpecialSubAggregators(), a -> (WeightingGradeAggregator) a));
+		return ImmutableMap.copyOf(
+				Maps.transformValues(super.getSpecialSubAggregators(), a -> (WeightingGradeAggregator) a));
 	}
 
 	@Override

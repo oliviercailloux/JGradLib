@@ -17,7 +17,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
 public class MyChessBoard implements ChessBoard {
-  public static final ImmutableList<String> COLUMNS = ImmutableList.of("a", "b", "c", "d", "e", "f", "g", "h");
+  public static final ImmutableList<String> COLUMNS =
+      ImmutableList.of("a", "b", "c", "d", "e", "f", "g", "h");
 
   private Map<String, Piece> board;
 
@@ -26,8 +27,8 @@ public class MyChessBoard implements ChessBoard {
    * This method, with the given declaration, <b>must</b> be present.
    * </p>
    * <p>
-   * Initially (for simplicity), a board has just two pieces: a White King on
-   * square e1 and a Black King on square e8.
+   * Initially (for simplicity), a board has just two pieces: a White King on square e1 and a Black
+   * King on square e8.
    * </p>
    *
    */
@@ -172,5 +173,4 @@ public class MyChessBoard implements ChessBoard {
     board.remove(oldPosition);
     board.put(newPosition, piece);
   }
-
 }

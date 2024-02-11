@@ -7,8 +7,7 @@ package io.github.oliviercailloux.exercices.car;
  * <p>
  * Driving: 13 points, half of which for swap support.
  * <p>
- * Parts of the specifications of this class is determined by the corresponding
- * unit tests.
+ * Parts of the specifications of this class is determined by the corresponding unit tests.
  */
 public interface Car {
 	public void paintBlack();
@@ -22,17 +21,15 @@ public interface Car {
 	public void setPassenger(Person passenger);
 
 	/**
-	 * Swaps the driver and the passenger: the passenger becomes the driver, and
-	 * conversely.
+	 * Swaps the driver and the passenger: the passenger becomes the driver, and conversely.
 	 * <p>
-	 * If there is currently no passenger, this method should return an appropriate
-	 * exception.
+	 * If there is currently no passenger, this method should return an appropriate exception.
 	 */
 	public void swap();
 
 	/**
-	 * This lets the driver drive for the given number of hours, at the favorite
-	 * speed of the driver, as indicated by {@link Person#getFavoriteSpeed()}.
+	 * This lets the driver drive for the given number of hours, at the favorite speed of the driver,
+	 * as indicated by {@link Person#getFavoriteSpeed()}.
 	 * <p>
 	 * The car advances the corresponding number of kilometers.
 	 *

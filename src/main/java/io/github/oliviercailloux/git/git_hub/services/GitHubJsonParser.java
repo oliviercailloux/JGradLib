@@ -37,7 +37,8 @@ public class GitHubJsonParser {
 
 	static public Stream<JsonObject> getContent(JsonObject connection, boolean allowPartial) {
 		final JsonArray nodes = connection.getJsonArray("nodes");
-		checkArgument(allowPartial || isConnectionComplete(connection), PrintableJsonObjectFactory.wrapObject(connection));
+		checkArgument(allowPartial || isConnectionComplete(connection),
+				PrintableJsonObjectFactory.wrapObject(connection));
 		final Stream<JsonObject> contents = nodes.stream().map(JsonValue::asJsonObject);
 		return contents;
 	}
@@ -49,5 +50,4 @@ public class GitHubJsonParser {
 		checkArgument(pageComplete == sizeComplete);
 		return sizeComplete;
 	}
-
 }

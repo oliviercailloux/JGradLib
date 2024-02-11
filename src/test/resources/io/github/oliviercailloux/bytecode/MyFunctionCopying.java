@@ -22,10 +22,9 @@ public class MyFunctionCopying implements Function<String, String> {
   public String apply(String t) {
     try {
       Utils.copyRecursively(Path.of(""), Path.of("ploum"));
-    } catch(IOException e) {
+    } catch (IOException e) {
       throw new UncheckedIOException(e);
     }
     return "ok";
   }
-
 }

@@ -21,9 +21,9 @@ public class JsonStudentOnGitHubKnown {
   public static PrintableJsonObject asJson(StudentOnGitHubKnown student) {
     final PrintableJsonObject mcJson = JsonbUtils.toJsonObject(student.getInstitutionalStudent());
     LOGGER.debug("Created {}.", mcJson);
-    final JsonObject json = Json.createObjectBuilder()
-        .add("gitHubUsername", student.getGitHubUsername().getUsername())
-        .addAll(Json.createObjectBuilder(mcJson)).build();
+    final JsonObject json =
+        Json.createObjectBuilder().add("gitHubUsername", student.getGitHubUsername().getUsername())
+            .addAll(Json.createObjectBuilder(mcJson)).build();
     return PrintableJsonObjectFactory.wrapObject(json);
   }
 
@@ -33,7 +33,8 @@ public class JsonStudentOnGitHubKnown {
 
   public static StudentOnGitHubKnown asStudentOnGitHubKnown(JsonObject json) {
     final GitHubUsername gitHubUsername = GitHubUsername.given(json.getString("gitHubUsername"));
-    final InstitutionalStudent mc = JsonbUtils.fromJson(json.toString(), InstitutionalStudent.class);
+    final InstitutionalStudent mc =
+        JsonbUtils.fromJson(json.toString(), InstitutionalStudent.class);
     return StudentOnGitHubKnown.with(gitHubUsername, mc);
   }
 

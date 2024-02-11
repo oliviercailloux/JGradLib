@@ -19,11 +19,13 @@ public class Patch {
 	private final IGrade grade;
 
 	@JsonbCreator
-	public static Patch create(@JsonbProperty("path") List<Criterion> path, @JsonbProperty("grade") IGrade grade) {
+	public static Patch create(@JsonbProperty("path") List<Criterion> path,
+			@JsonbProperty("grade") IGrade grade) {
 		return new Patch(CriteriaPath.from(path), grade);
 	}
 
-	public static Patch create(@JsonbProperty("path") CriteriaPath path, @JsonbProperty("grade") IGrade grade) {
+	public static Patch create(@JsonbProperty("path") CriteriaPath path,
+			@JsonbProperty("grade") IGrade grade) {
 		return new Patch(path, grade);
 	}
 
@@ -58,5 +60,4 @@ public class Patch {
 	public String toString() {
 		return MoreObjects.toStringHelper(this).add("path", path).add("grade", grade).toString();
 	}
-
 }

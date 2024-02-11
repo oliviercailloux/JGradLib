@@ -45,6 +45,7 @@ public class GitWork {
 
 	@Override
 	public String toString() {
-		return MoreObjects.toStringHelper(this).add("Author", author).add("History", history).toString();
+		return MoreObjects.toStringHelper(this).add("Author", author).add("History", history)
+				.toString();
 	}
 }

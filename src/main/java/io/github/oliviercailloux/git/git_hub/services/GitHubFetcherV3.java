@@ -62,12 +62,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class GitHubFetcherV3 implements AutoCloseable {
-	public static final Set<String> FORBIDDEN_IN_SEARCH = ImmutableSet.of(".", ",", ":", ";", "/", "\\", "`", "'", "\"",
-			"=", "*", "!", "?", "#", "$", "&", "+", "^", "|", "~", "<", ">", "(", ")", "{", "}", "[", "]");
+	public static final Set<String> FORBIDDEN_IN_SEARCH =
+			ImmutableSet.of(".", ",", ":", ";", "/", "\\", "`", "'", "\"", "=", "*", "!", "?", "#", "$",
+					"&", "+", "^", "|", "~", "<", ">", "(", ")", "{", "}", "[", "]");
 
-	public static final MediaType GIT_HUB_MEDIA_TYPE = new MediaType("application", "vnd.github.v3+json");
+	public static final MediaType GIT_HUB_MEDIA_TYPE =
+			new MediaType("application", "vnd.github.v3+json");
 
-	public static final MediaType GIT_HUB_RAW_MEDIA_TYPE = new MediaType("application", "vnd.github.v3.raw");
+	public static final MediaType GIT_HUB_RAW_MEDIA_TYPE =
+			new MediaType("application", "vnd.github.v3.raw");
 
 	/**
 	 * https://developer.github.com/v3/repos/commits/
@@ -77,16 +80,19 @@ public class GitHubFetcherV3 implements AutoCloseable {
 	/**
 	 * https://developer.github.com/v3/repos/commits/
 	 */
-	private static final String COMMITS_BY_PATH_URI = "https://api.github.com/repos/{owner}/{repo}/commits?path={path}";
+	private static final String COMMITS_BY_PATH_URI =
+			"https://api.github.com/repos/{owner}/{repo}/commits?path={path}";
 
 	/**
 	 * https://developer.github.com/v3/activity/events/#list-repository-events
 	 */
 	private static final String EVENTS_URI = "https://api.github.com/repos/{owner}/{repo}/events";
 
-	private static final String FILE_IN_COMMIT_URI = "https://api.github.com/repos/{owner}/{repo}/contents/{path}?ref={sha}";
+	private static final String FILE_IN_COMMIT_URI =
+			"https://api.github.com/repos/{owner}/{repo}/contents/{path}?ref={sha}";
 
-	private static final String FILE_URI = "https://api.github.com/repos/{owner}/{repo}/contents/{path}";
+	private static final String FILE_URI =
+			"https://api.github.com/repos/{owner}/{repo}/contents/{path}";
 
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(GitHubFetcherV3.class);
@@ -101,7 +107,8 @@ public class GitHubFetcherV3 implements AutoCloseable {
 	/**
 	 * https://developer.github.com/v3/search/#search-repositories
 	 */
-	private static final String SEARCH_REPOSITORIES_URI = "https://api.github.com/search/repositories";
+	private static final String SEARCH_REPOSITORIES_URI =
+			"https://api.github.com/search/repositories";
 
 	public static GitHubFetcherV3 using(GitHubToken token) {
 		return new GitHubFetcherV3(token);
@@ -170,24 +177,26 @@ public class GitHubFetcherV3 implements AutoCloseable {
 	/**
 	 * Lists commits reachable from "master"
 	 */
-	public List<CommitGitHubDescription> getCommitsGitHubDescriptions(RepositoryCoordinates repositoryCoordinates) {
+	public List<CommitGitHubDescription>
+			getCommitsGitHubDescriptions(RepositoryCoordinates repositoryCoordinates) {
 		return getCommitsGitHubDescriptions(repositoryCoordinates, false);
 	}
 
-	public List<CommitGitHubDescription> getCommitsGitHubDescriptions(RepositoryCoordinates repositoryCoordinates,
-			boolean truncate) {
-		final WebTarget target = client.target(COMMITS_URI).resolveTemplate("owner", repositoryCoordinates.getOwner())
-				.resolveTemplate("repo", repositoryCoordinates.getRepositoryName());
+	public List<CommitGitHubDescription>
+			getCommitsGitHubDescriptions(RepositoryCoordinates repositoryCoordinates, boolean truncate) {
+		final WebTarget target =
+				client.target(COMMITS_URI).resolveTemplate("owner", repositoryCoordinates.getOwner())
+						.resolveTemplate("repo", repositoryCoordinates.getRepositoryName());
 		return getContentAsList(target, CommitGitHubDescription::from, truncate);
 	}
 
-	public List<CommitGitHubDescription> getCommitsGitHubDescriptions(RepositoryCoordinates repositoryCoordinates,
-			Path path) {
+	public List<CommitGitHubDescription>
+			getCommitsGitHubDescriptions(RepositoryCoordinates repositoryCoordinates, Path path) {
 		return getCommitsGitHubDescriptions(repositoryCoordinates, path, false);
 	}
 
-	public List<CommitGitHubDescription> getCommitsGitHubDescriptions(RepositoryCoordinates repositoryCoordinates,
-			Path path, boolean truncate) {
+	public List<CommitGitHubDescription> getCommitsGitHubDescriptions(
+			RepositoryCoordinates repositoryCoordinates, Path path, boolean truncate) {
 		final WebTarget target = client.target(COMMITS_BY_PATH_URI)
 				.resolveTemplate("owner", repositoryCoordinates.getOwner())
 				.resolveTemplate("repo", repositoryCoordinates.getRepositoryName())
@@ -196,19 +205,21 @@ public class GitHubFetcherV3 implements AutoCloseable {
 	}
 
 	public Optional<String> getContent(RepositoryCoordinates repositoryCoordinates, Path path) {
-		final WebTarget target = client.target(FILE_URI).resolveTemplate("owner", repositoryCoordinates.getOwner())
-				.resolveTemplate("repo", repositoryCoordinates.getRepositoryName())
-				.resolveTemplate("path", path.toString());
+		final WebTarget target =
+				client.target(FILE_URI).resolveTemplate("owner", repositoryCoordinates.getOwner())
+						.resolveTemplate("repo", repositoryCoordinates.getRepositoryName())
+						.resolveTemplate("path", path.toString());
 		return getContent(target, String.class, GIT_HUB_RAW_MEDIA_TYPE, Optional.of((v1, v2) -> {
 			throw new UnsupportedOperationException();
 		}));
 	}
 
-	public Optional<String> getContent(RepositoryCoordinates repositoryCoordinates, Path path, ObjectId sha) {
-		final WebTarget target = client.target(FILE_IN_COMMIT_URI)
-				.resolveTemplate("owner", repositoryCoordinates.getOwner())
-				.resolveTemplate("repo", repositoryCoordinates.getRepositoryName())
-				.resolveTemplate("path", path.toString()).resolveTemplate("sha", sha);
+	public Optional<String> getContent(RepositoryCoordinates repositoryCoordinates, Path path,
+			ObjectId sha) {
+		final WebTarget target =
+				client.target(FILE_IN_COMMIT_URI).resolveTemplate("owner", repositoryCoordinates.getOwner())
+						.resolveTemplate("repo", repositoryCoordinates.getRepositoryName())
+						.resolveTemplate("path", path.toString()).resolveTemplate("sha", sha);
 		return getContent(target, String.class, GIT_HUB_RAW_MEDIA_TYPE, Optional.of((v1, v2) -> {
 			throw new UnsupportedOperationException();
 		}));
@@ -224,25 +235,26 @@ public class GitHubFetcherV3 implements AutoCloseable {
 		return getContentAsList(target, RepositoryCoordinates::from, false);
 	}
 
-	public ImmutableList<RepositoryCoordinatesWithPrefix> getRepositoriesWithPrefix(String org, String prefix) {
+	public ImmutableList<RepositoryCoordinatesWithPrefix> getRepositoriesWithPrefix(String org,
+			String prefix) {
 		final ImmutableList<RepositoryCoordinates> repositories = searchForRepositories(org, prefix);
 		final Pattern pattern = Pattern.compile(prefix + "-(.*)");
 		final ImmutableList.Builder<RepositoryCoordinatesWithPrefix> builder = ImmutableList.builder();
 		for (RepositoryCoordinates repository : repositories) {
 			final Matcher matcher = pattern.matcher(repository.getRepositoryName());
 			if (matcher.matches()) {
-				final RepositoryCoordinatesWithPrefix prefixed = RepositoryCoordinatesWithPrefix
-						.from(repository.getOwner(), prefix, matcher.group(1));
+				final RepositoryCoordinatesWithPrefix prefixed =
+						RepositoryCoordinatesWithPrefix.from(repository.getOwner(), prefix, matcher.group(1));
 				builder.add(prefixed);
 			}
 		}
 		final ImmutableList<RepositoryCoordinatesWithPrefix> prefixed = builder.build();
 		final Collator collator = Collator.getInstance(Locale.ENGLISH);
 		collator.setStrength(Collator.SECONDARY);
-		final Comparator<RepositoryCoordinatesWithPrefix> byName = Comparator
-				.comparing(RepositoryCoordinatesWithPrefix::getRepositoryName, collator);
-		final ImmutableSortedSet<RepositoryCoordinatesWithPrefix> sortedRepositories = ImmutableSortedSet.copyOf(byName,
-				prefixed);
+		final Comparator<RepositoryCoordinatesWithPrefix> byName =
+				Comparator.comparing(RepositoryCoordinatesWithPrefix::getRepositoryName, collator);
+		final ImmutableSortedSet<RepositoryCoordinatesWithPrefix> sortedRepositories =
+				ImmutableSortedSet.copyOf(byName, prefixed);
 		return sortedRepositories.asList();
 	}
 
@@ -251,43 +263,49 @@ public class GitHubFetcherV3 implements AutoCloseable {
 		checkArgument(!inName.contains(" "));
 		final String searchKeywords = "org:" + org + " " + inName + " in:name";
 		final WebTarget target = client.target(SEARCH_REPOSITORIES_URI).queryParam("q", searchKeywords);
-//		final JsonObject json = getContent(target, JsonObject.class).orElseThrow(IllegalStateException::new);
-//		checkState(!json.getBoolean("incomplete_results"));
+		// final JsonObject json = getContent(target,
+		// JsonObject.class).orElseThrow(IllegalStateException::new);
+		// checkState(!json.getBoolean("incomplete_results"));
 		final Optional<BinaryOperator<JsonObject>> accumulator = Optional.of((v1, v2) -> {
 			final JsonObject v1NoItems = Json.createObjectBuilder(v1).remove("items").build();
 			final JsonObject v2NoItems = Json.createObjectBuilder(v2).remove("items").build();
 			verify(v1NoItems.equals(v2NoItems), v1NoItems.toString() + " VS " + v2NoItems.toString());
 			final JsonArray v1Items = v1.getJsonArray("items");
 			final JsonArray v2Items = v2.getJsonArray("items");
-			final JsonArray allItems = Json.createArrayBuilder(v1Items).addAll(Json.createArrayBuilder(v2Items))
-					.build();
+			final JsonArray allItems =
+					Json.createArrayBuilder(v1Items).addAll(Json.createArrayBuilder(v2Items)).build();
 			return Json.createObjectBuilder(v1).add("items", allItems).build();
 		});
 		final JsonObject json = getContent(target, JsonObject.class, GIT_HUB_MEDIA_TYPE, accumulator)
 				.orElseThrow(IllegalStateException::new);
 		final JsonArray jsonArray = json.getJsonArray("items");
-		final List<JsonObject> items = jsonArray.stream().map(JsonValue::asJsonObject).collect(Collectors.toList());
+		final List<JsonObject> items =
+				jsonArray.stream().map(JsonValue::asJsonObject).collect(Collectors.toList());
 		checkState(json.getInt("total_count") == items.size());
 		return items.stream().map(RepositoryCoordinates::from).collect(ImmutableList.toImmutableList());
 	}
 
-	public Optional<Instant> getLastModification(RepositoryCoordinates repositoryCoordinates, Path path) {
-		final List<CommitGitHubDescription> descriptions = getCommitsGitHubDescriptions(repositoryCoordinates, path);
-		return !descriptions.isEmpty() ? Optional.of(GitHubJsonParser.asInstant(
-				descriptions.get(0).getJson().getJsonObject("commit").getJsonObject("author").getString("date")))
+	public Optional<Instant> getLastModification(RepositoryCoordinates repositoryCoordinates,
+			Path path) {
+		final List<CommitGitHubDescription> descriptions =
+				getCommitsGitHubDescriptions(repositoryCoordinates, path);
+		return !descriptions.isEmpty()
+				? Optional.of(GitHubJsonParser.asInstant(descriptions.get(0).getJson()
+						.getJsonObject("commit").getJsonObject("author").getString("date")))
 				: Optional.empty();
 	}
 
 	/**
-	 * GitHub only sends events from the last 90 days, thus even if the sha is
-	 * indeed from this repo, it might be impossible to retrieve its received time.
+	 * GitHub only sends events from the last 90 days, thus even if the sha is indeed from this repo,
+	 * it might be impossible to retrieve its received time.
 	 *
 	 */
-	public Optional<Instant> getReceivedTime(RepositoryCoordinates repositoryCoordinates, ObjectId sha) {
+	public Optional<Instant> getReceivedTime(RepositoryCoordinates repositoryCoordinates,
+			ObjectId sha) {
 		final ImmutableList<PushEvent> pushEvents = getPushEvents(repositoryCoordinates);
 		LOGGER.info("Push events: {}.", pushEvents);
-		final Stream<PushEvent> matchingEvents = pushEvents.stream()
-				.filter((e) -> e.getPushPayload().getCommits().stream().anyMatch((c) -> {
+		final Stream<PushEvent> matchingEvents =
+				pushEvents.stream().filter((e) -> e.getPushPayload().getCommits().stream().anyMatch((c) -> {
 					LOGGER.info("Comparing {} to {}.", c.getSha(), sha);
 					return c.getSha().equals(sha);
 				}));
@@ -298,21 +316,24 @@ public class GitHubFetcherV3 implements AutoCloseable {
 	}
 
 	public ImmutableList<Event> getStartEvent(RepositoryCoordinates repositoryCoordinates) {
-		final WebTarget target = client.target(EVENTS_URI).resolveTemplate("owner", repositoryCoordinates.getOwner())
-				.resolveTemplate("repo", repositoryCoordinates.getRepositoryName());
+		final WebTarget target =
+				client.target(EVENTS_URI).resolveTemplate("owner", repositoryCoordinates.getOwner())
+						.resolveTemplate("repo", repositoryCoordinates.getRepositoryName());
 		final List<Event> events = getContentAsList(target, Event::from, false);
-		final ImmutableList<Event> startEvents = events.stream()
-				.filter((e) -> e.getType().equals(EventType.CREATE_REPOSITORY_EVENT))
-				.collect(ImmutableList.toImmutableList());
+		final ImmutableList<Event> startEvents =
+				events.stream().filter((e) -> e.getType().equals(EventType.CREATE_REPOSITORY_EVENT))
+						.collect(ImmutableList.toImmutableList());
 		LOGGER.info("All: {}.",
-				startEvents.stream().<String>map((e) -> PrintableJsonObjectFactory.wrapObject(e.getJson()).toString())
+				startEvents.stream()
+						.<String>map((e) -> PrintableJsonObjectFactory.wrapObject(e.getJson()).toString())
 						.collect(Collectors.joining(", ")));
 		return startEvents;
 	}
 
 	public void logRepositoryEvents(RepositoryCoordinates repositoryCoordinates) {
-		final WebTarget target = client.target(EVENTS_URI).resolveTemplate("owner", repositoryCoordinates.getOwner())
-				.resolveTemplate("repo", repositoryCoordinates.getRepositoryName());
+		final WebTarget target =
+				client.target(EVENTS_URI).resolveTemplate("owner", repositoryCoordinates.getOwner())
+						.resolveTemplate("repo", repositoryCoordinates.getRepositoryName());
 		final Optional<JsonArray> eventsArray = getContent(target, JsonArray.class);
 		LOGGER.info("Events: {}", PrintableJsonValueFactory.wrapValue(eventsArray.get()));
 	}
@@ -329,28 +350,26 @@ public class GitHubFetcherV3 implements AutoCloseable {
 	/**
 	 * <p>
 	 * You can't use the following wildcard characters as part of your search query:
-	 * {@link #FORBIDDEN_IN_SEARCH}. This method refuses such entries. (GitHub doc
-	 * says that search would
-	 * <a href="https://help.github.com/articles/searching-code/">ignore</a> these
-	 * symbols, but that is incorrect: searching for JSON.adoc matches JSON.adoc and
-	 * JSON-B.adoc while searching for JSONadoc matches none of those.)
+	 * {@link #FORBIDDEN_IN_SEARCH}. This method refuses such entries. (GitHub doc says that search
+	 * would <a href="https://help.github.com/articles/searching-code/">ignore</a> these symbols, but
+	 * that is incorrect: searching for JSON.adoc matches JSON.adoc and JSON-B.adoc while searching
+	 * for JSONadoc matches none of those.)
 	 * </p>
 	 * <p>
-	 * * Doesn’t work reliably. Searching for a partial filename usually fails
-	 * ("Vote" with extension java does not match "Voter.java"), though not always
-	 * ("JSON" with extension adoc matches JSON-B.adoc; "class" with extension java
-	 * matches MyClass.java).
+	 * * Doesn’t work reliably. Searching for a partial filename usually fails ("Vote" with extension
+	 * java does not match "Voter.java"), though not always ("JSON" with extension adoc matches
+	 * JSON-B.adoc; "class" with extension java matches MyClass.java).
 	 * </p>
 	 * TODO check encoding of filename
 	 *
 	 */
-	public List<SearchResult> searchForFile(RepositoryCoordinates repositoryCoordinates, String filename,
-			String extension) {
+	public List<SearchResult> searchForFile(RepositoryCoordinates repositoryCoordinates,
+			String filename, String extension) {
 		checkArgument(!filename.isEmpty());
 		checkArgument(!extension.isEmpty());
-		final String searchKeywords = "repo:" + repositoryCoordinates.getOwner() + "/"
-				+ repositoryCoordinates.getRepositoryName() + " " + "extension:" + extension + " " + "filename:"
-				+ filename;
+		final String searchKeywords =
+				"repo:" + repositoryCoordinates.getOwner() + "/" + repositoryCoordinates.getRepositoryName()
+						+ " " + "extension:" + extension + " " + "filename:" + filename;
 		final Predicate<String> includedForbidden = (forbidden) -> filename.contains(forbidden);
 		checkArgument(FORBIDDEN_IN_SEARCH.stream().noneMatch(includedForbidden),
 				FORBIDDEN_IN_SEARCH.stream().filter(includedForbidden).collect(Collectors.toList()));
@@ -437,10 +456,12 @@ public class GitHubFetcherV3 implements AutoCloseable {
 		return contents.stream().reduce(accumulator.get());
 	}
 
-	private <T> ImmutableList<T> getContentAsList(WebTarget target, Function<JsonObject, ? extends T> jsonDeser,
-			boolean truncate) throws WebApplicationException {
+	private <T> ImmutableList<T> getContentAsList(WebTarget target,
+			Function<JsonObject, ? extends T> jsonDeser, boolean truncate)
+			throws WebApplicationException {
 		final Optional<JsonArray> respOpt = getContentArray(target, truncate);
-		final Function<JsonArray, Stream<JsonObject>> arrayToObjects = (a) -> a.stream().map(JsonValue::asJsonObject);
+		final Function<JsonArray, Stream<JsonObject>> arrayToObjects =
+				(a) -> a.stream().map(JsonValue::asJsonObject);
 		final Stream<JsonObject> objects = respOpt.map(arrayToObjects).orElse(Stream.empty());
 		return objects.map(jsonDeser).collect(ImmutableList.toImmutableList());
 	}
@@ -461,7 +482,8 @@ public class GitHubFetcherV3 implements AutoCloseable {
 	private void readRates(Response response) {
 		rateLimit = Strings.nullToEmpty(response.getHeaderString("X-RateLimit-Remaining"));
 		LOGGER.debug("Rate limit: {}.", rateLimit);
-		final String rateResetString = Strings.nullToEmpty(response.getHeaderString("X-RateLimit-Reset"));
+		final String rateResetString =
+				Strings.nullToEmpty(response.getHeaderString("X-RateLimit-Reset"));
 		if (!rateResetString.isEmpty()) {
 			rateReset = Instant.ofEpochSecond(Integer.parseInt(rateResetString));
 			LOGGER.debug("Rate reset: {}.", rateReset);
@@ -472,7 +494,8 @@ public class GitHubFetcherV3 implements AutoCloseable {
 
 	private List<SearchResult> searchFor(String searchKeywords) {
 		final WebTarget target = client.target(SEARCH_CODE_URI).queryParam("q", searchKeywords);
-		final Optional<SearchResults> respOpt = getContent(target, JsonObject.class).map(SearchResults::from);
+		final Optional<SearchResults> respOpt =
+				getContent(target, JsonObject.class).map(SearchResults::from);
 		if (respOpt.isPresent()) {
 			checkState(!respOpt.get().isIncomplete());
 			return respOpt.get().getItems();
@@ -481,27 +504,30 @@ public class GitHubFetcherV3 implements AutoCloseable {
 	}
 
 	public Optional<ObjectId> getCreationSha(RepositoryCoordinates repositoryCoordinates, Path path) {
-		final List<CommitGitHubDescription> descriptions = getCommitsGitHubDescriptions(repositoryCoordinates, path);
+		final List<CommitGitHubDescription> descriptions =
+				getCommitsGitHubDescriptions(repositoryCoordinates, path);
 		return !descriptions.isEmpty() ? Optional.of(descriptions.get(descriptions.size() - 1).getSha())
 				: Optional.empty();
 	}
 
 	public ImmutableList<PushEvent> getPushEvents(RepositoryCoordinates repositoryCoordinates) {
 		final ImmutableList<Event> events = getEvents(repositoryCoordinates);
-		final ImmutableList<PushEvent> pushEvents = events.stream()
-				.filter((e) -> e.getType().equals(EventType.PUSH_EVENT)).map(Event::asPushEvent)
-				.collect(ImmutableList.toImmutableList());
+		final ImmutableList<PushEvent> pushEvents =
+				events.stream().filter((e) -> e.getType().equals(EventType.PUSH_EVENT))
+						.map(Event::asPushEvent).collect(ImmutableList.toImmutableList());
 		LOGGER.debug("All: {}.",
-				pushEvents.stream().<String>map((e) -> PrintableJsonObjectFactory.wrapObject(e.getJson()).toString())
+				pushEvents.stream()
+						.<String>map((e) -> PrintableJsonObjectFactory.wrapObject(e.getJson()).toString())
 						.collect(Collectors.joining(", ")));
 		return pushEvents;
 	}
 
-	public ImmutableList<CreateBranchEvent> getCreateBranchEvents(RepositoryCoordinates repositoryCoordinates) {
+	public ImmutableList<CreateBranchEvent>
+			getCreateBranchEvents(RepositoryCoordinates repositoryCoordinates) {
 		final ImmutableList<Event> events = getEvents(repositoryCoordinates);
-		final ImmutableList<CreateBranchEvent> selectedEvents = events.stream()
-				.filter((e) -> e.getType().equals(EventType.CREATE_BRANCH_EVENT)).map(e -> (CreateBranchEvent) e)
-				.collect(ImmutableList.toImmutableList());
+		final ImmutableList<CreateBranchEvent> selectedEvents =
+				events.stream().filter((e) -> e.getType().equals(EventType.CREATE_BRANCH_EVENT))
+						.map(e -> (CreateBranchEvent) e).collect(ImmutableList.toImmutableList());
 		LOGGER.debug("All: {}.",
 				selectedEvents.stream()
 						.<String>map((e) -> PrintableJsonObjectFactory.wrapObject(e.getJson()).toString())
@@ -509,9 +535,11 @@ public class GitHubFetcherV3 implements AutoCloseable {
 		return selectedEvents;
 	}
 
-	public ImmutableList<Event> getEvents(RepositoryCoordinates repositoryCoordinates) throws WebApplicationException {
-		final WebTarget target = client.target(EVENTS_URI).resolveTemplate("owner", repositoryCoordinates.getOwner())
-				.resolveTemplate("repo", repositoryCoordinates.getRepositoryName());
+	public ImmutableList<Event> getEvents(RepositoryCoordinates repositoryCoordinates)
+			throws WebApplicationException {
+		final WebTarget target =
+				client.target(EVENTS_URI).resolveTemplate("owner", repositoryCoordinates.getOwner())
+						.resolveTemplate("repo", repositoryCoordinates.getRepositoryName());
 		final ImmutableList<Event> events = getContentAsList(target, Event::from, false);
 		LOGGER.debug("Events: {}.", events);
 		return events;

@@ -46,16 +46,18 @@ public class GitGeneralGraderTests {
   @Disabled("To be implemented")
   void testEmpty() throws Exception {
     try (Repository repository = new InMemoryRepository(new DfsRepositoryDescription("myrepo"));
-        GitFileSystem gitFs = GitFileSystemProvider.instance().newFileSystemFromRepository(repository)) {
+        GitFileSystem gitFs =
+            GitFileSystemProvider.instance().newFileSystemFromRepository(repository)) {
       assertTrue(repository.getObjectDatabase().exists());
       assertFalse(repository.getRefDatabase().hasRefs());
 
       final GitHistorySimple empty = GitHistorySimple.create(gitFs, ImmutableMap.of());
-//      final GitGeneralGrader general = GitGeneralGrader.using("dummy", DeadlineGrader.given(new Commit(), Commit.DEADLINE));
-//      general.
-//      final IGrade grade = general;
-//      LOGGER.debug("Grade: {}.", JsonGrade.asJson(grade));
-//      assertEquals(0d, grade.getPoints());
+      // final GitGeneralGrader general = GitGeneralGrader.using("dummy", DeadlineGrader.given(new
+      // Commit(), Commit.DEADLINE));
+      // general.
+      // final IGrade grade = general;
+      // LOGGER.debug("Grade: {}.", JsonGrade.asJson(grade));
+      // assertEquals(0d, grade.getPoints());
     }
 
   }
@@ -80,7 +82,8 @@ public class GitGeneralGraderTests {
       {
         Files.writeString(c3.resolve("afile.txt"), "coucou");
         Files.writeString(c3.resolve("myid.txt"), "222");
-        Files.writeString(Files.createDirectories(c3.resolve("sub/a/")).resolve("another file.txt"), "coucou");
+        Files.writeString(Files.createDirectories(c3.resolve("sub/a/")).resolve("another file.txt"),
+            "coucou");
       }
       {
         final Path origin = Files.createDirectories(links.resolve(Constants.R_REMOTES + "origin/"));
@@ -91,21 +94,25 @@ public class GitGeneralGraderTests {
 
       final PersonIdent personIdent = new PersonIdent("Me", "email");
 
-      try (Repository repository = JGit.createRepository(personIdent, Utils.asGraph(ImmutableList.of(c1, c2, c3)),
-          links);
-          GitFileSystem gitFs = GitFileSystemProvider.instance().newFileSystemFromRepository(repository)) {
+      try (
+          Repository repository = JGit.createRepository(personIdent,
+              Utils.asGraph(ImmutableList.of(c1, c2, c3)), links);
+          GitFileSystem gitFs =
+              GitFileSystemProvider.instance().newFileSystemFromRepository(repository)) {
         final GitHistory history = GitHistoryUtils.getHistory(gitFs);
         final ImmutableGraph<ObjectId> graph = history.getGraph();
         final ObjectId o1 = Iterables.getOnlyElement(history.getRoots());
         final ObjectId o2 = Iterables.getOnlyElement(graph.successors(o1));
         final ObjectId o3 = Iterables.getOnlyElement(graph.successors(o2));
-        final Map<ObjectId, Instant> times = ImmutableMap.of(o1, Commit.DEADLINE.toInstant(), o2,
-            Commit.DEADLINE.toInstant(), o3, Commit.DEADLINE.toInstant().plus(Duration.ofMinutes(4)));
+        final Map<ObjectId, Instant> times =
+            ImmutableMap.of(o1, Commit.DEADLINE.toInstant(), o2, Commit.DEADLINE.toInstant(), o3,
+                Commit.DEADLINE.toInstant().plus(Duration.ofMinutes(4)));
         final GitHistorySimple withTimes = GitHistorySimple.create(gitFs, times);
 
-//        final IGrade grade = GitGeneralGrader.grade(withTimes, Commit.DEADLINE, "Not me", new Commit());
-//        LOGGER.debug("Grade: {}.", JsonGrade.asJson(grade));
-//        assertEquals(0.65d, grade.getPoints(), 1e-5d);
+        // final IGrade grade = GitGeneralGrader.grade(withTimes, Commit.DEADLINE, "Not me", new
+        // Commit());
+        // LOGGER.debug("Grade: {}.", JsonGrade.asJson(grade));
+        // assertEquals(0.65d, grade.getPoints(), 1e-5d);
       }
     }
 

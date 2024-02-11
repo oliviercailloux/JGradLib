@@ -44,7 +44,8 @@ public class Instanciator {
 	}
 
 	private static ImmutableList<Class<?>> toPrimitiveIfPossible(List<Class<?>> list) {
-		return list.stream().map(Instanciator::toPrimitiveIfPossible).collect(ImmutableList.toImmutableList());
+		return list.stream().map(Instanciator::toPrimitiveIfPossible)
+				.collect(ImmutableList.toImmutableList());
 	}
 
 	private static Executable getExecutable(Class<?> clz, Optional<String> methodName,
@@ -72,15 +73,14 @@ public class Instanciator {
 		return t.orThrow();
 	}
 
-	private static Object invokeExecutable(Optional<Object> instance, Executable executable, List<?> args)
-			throws InvocationTargetException, InstantiationException {
+	private static Object invokeExecutable(Optional<Object> instance, Executable executable,
+			List<?> args) throws InvocationTargetException, InstantiationException {
 		final Object[] argsArray = args.toArray();
 		try {
 			if (executable instanceof Method m) {
 				/*
-				 * TODO using this is required to avoid an IllegalAccessException when invoking
-				 * a public static factory method that uses an anonymous instance and returns
-				 * it.
+				 * TODO using this is required to avoid an IllegalAccessException when invoking a public
+				 * static factory method that uses an anonymous instance and returns it.
 				 */
 				m.trySetAccessible();
 				return m.invoke(instance.orElse(null), argsArray);
@@ -96,7 +96,8 @@ public class Instanciator {
 		} catch (NullPointerException e) {
 			throw new VerifyException("Method was verified static but null object was rejected.", e);
 		} catch (IllegalArgumentException e) {
-			throw new VerifyException("Method was found using those exact arguments but they were rejected.", e);
+			throw new VerifyException(
+					"Method was found using those exact arguments but they were rejected.", e);
 		}
 	}
 
@@ -105,32 +106,33 @@ public class Instanciator {
 		return ImmutableSet.copyOf(supers);
 	}
 
-	public static <T> TryCatchAll<Optional<T>> invoke(Object instance, Class<T> returnType, String methodName,
-			Object... args) {
+	public static <T> TryCatchAll<Optional<T>> invoke(Object instance, Class<T> returnType,
+			String methodName, Object... args) {
 		return invoke(instance.getClass(), Optional.of(instance), returnType, Optional.of(methodName),
 				ImmutableList.copyOf(args));
 	}
 
-	public static <T> TryCatchAll<Optional<T>> invoke(Object instance, Class<T> returnType, String methodName,
-			List<?> args) {
-		return invoke(instance.getClass(), Optional.of(instance), returnType, Optional.of(methodName), args);
+	public static <T> TryCatchAll<Optional<T>> invoke(Object instance, Class<T> returnType,
+			String methodName, List<?> args) {
+		return invoke(instance.getClass(), Optional.of(instance), returnType, Optional.of(methodName),
+				args);
 	}
 
-	public static <T> TryCatchAll<T> invokeProducing(Object instance, Class<T> returnType, String methodName,
-			Object... args) {
+	public static <T> TryCatchAll<T> invokeProducing(Object instance, Class<T> returnType,
+			String methodName, Object... args) {
 		return invoke(instance.getClass(), Optional.of(instance), returnType, Optional.of(methodName),
 				ImmutableList.copyOf(args)).andApply(o -> o.orElseThrow());
 	}
 
-	private static <T> TryCatchAll<Optional<T>> invoke(Class<?> clz, Optional<Object> instance, Class<T> returnType,
-			Optional<String> methodName, List<?> args) {
-		final ImmutableList<Class<?>> argTypes = args.stream().map(a -> a.getClass())
-				.collect(ImmutableList.toImmutableList());
+	private static <T> TryCatchAll<Optional<T>> invoke(Class<?> clz, Optional<Object> instance,
+			Class<T> returnType, Optional<String> methodName, List<?> args) {
+		final ImmutableList<Class<?>> argTypes =
+				args.stream().map(a -> a.getClass()).collect(ImmutableList.toImmutableList());
 		// final ImmutableList<Class<?>> argTypesPrim =
 		// argTypes.stream().map(Instanciator::toPrimitiveIfPossible)
 		// .collect(ImmutableList.toImmutableList());
-		final ImmutableList<ImmutableSet<Class<?>>> setsOfSuperClasses = argTypes.stream()
-				.map(c -> getAllSuperClasses(c)).collect(ImmutableList.toImmutableList());
+		final ImmutableList<ImmutableSet<Class<?>>> setsOfSuperClasses =
+				argTypes.stream().map(c -> getAllSuperClasses(c)).collect(ImmutableList.toImmutableList());
 		final Set<List<Class<?>>> possibleArgTypes = Sets.cartesianProduct(setsOfSuperClasses);
 		final ImmutableSet<ImmutableList<Class<?>>> possibleArgTypesPrim = possibleArgTypes.stream()
 				.map(l -> toPrimitiveIfPossible(l)).collect(ImmutableSet.toImmutableSet());
@@ -140,7 +142,8 @@ public class Instanciator {
 		} catch (NoSuchMethodException e) {
 			return TryCatchAll.failure(e);
 		}
-		if (methodName.isPresent() && (instance.isEmpty() != Modifier.isStatic(method.getModifiers()))) {
+		if (methodName.isPresent()
+				&& (instance.isEmpty() != Modifier.isStatic(method.getModifiers()))) {
 			return TryCatchAll.failure(new IllegalArgumentException("Unexpectedly static."));
 		}
 
@@ -191,7 +194,8 @@ public class Instanciator {
 
 	public <T> TryCatchAll<T> tryGetInstance(Class<T> type) {
 		final Optional<T> instance = getInstance(type, Optional.empty(), ImmutableList.of());
-		return instance.map(TryCatchAll::success).orElseGet(() -> TryCatchAll.failure(getLastException()));
+		return instance.map(TryCatchAll::success)
+				.orElseGet(() -> TryCatchAll.failure(getLastException()));
 	}
 
 	public <T> T getInstanceOrThrow(Class<T> type) throws ReflectiveOperationException {
@@ -204,8 +208,10 @@ public class Instanciator {
 	}
 
 	public <T> TryCatchAll<T> tryGetInstance(Class<T> type, String staticFactoryMethodName) {
-		final Optional<T> instance = getInstance(type, Optional.of(staticFactoryMethodName), ImmutableList.of());
-		return instance.map(TryCatchAll::success).orElseGet(() -> TryCatchAll.failure(getLastException()));
+		final Optional<T> instance =
+				getInstance(type, Optional.of(staticFactoryMethodName), ImmutableList.of());
+		return instance.map(TryCatchAll::success)
+				.orElseGet(() -> TryCatchAll.failure(getLastException()));
 	}
 
 	public <T> T getInstanceOrThrow(Class<T> type, String staticFactoryMethodName, List<Object> args)
@@ -214,33 +220,37 @@ public class Instanciator {
 		return instance.orElseThrow(() -> getLastException());
 	}
 
-	private <T> Optional<T> getInstance(Class<T> type, Optional<String> staticFactoryMethodNameOpt, List<Object> args) {
+	private <T> Optional<T> getInstance(Class<T> type, Optional<String> staticFactoryMethodNameOpt,
+			List<Object> args) {
 		checkNotNull(staticFactoryMethodNameOpt);
 		lastException = null;
 
 		final ClassGraph classGraph = new ClassGraph();
-		Stream.of(loader.getURLs()).distinct().forEach(u -> classGraph.enableURLScheme(u.getProtocol()));
-		final ClassGraph graph = classGraph.overrideClassLoaders(loader).ignoreParentClassLoaders().enableAllInfo();
+		Stream.of(loader.getURLs()).distinct()
+				.forEach(u -> classGraph.enableURLScheme(u.getProtocol()));
+		final ClassGraph graph =
+				classGraph.overrideClassLoaders(loader).ignoreParentClassLoaders().enableAllInfo();
 		LOGGER.debug("Scanning.");
 		try (ScanResult scanResult = graph.scan()) {
 			LOGGER.debug("Scan found: {}.", scanResult.getAllClasses().size());
-			final ClassInfoList implementingClasses = scanResult.getClassesImplementing(type.getTypeName());
+			final ClassInfoList implementingClasses =
+					scanResult.getClassesImplementing(type.getTypeName());
 			LOGGER.debug("Implementing: {}.", implementingClasses.size());
-			final Optional<ClassInfo> infoOpt = implementingClasses.directOnly().getStandardClasses().stream()
-					.collect(MoreCollectors.toOptional());
+			final Optional<ClassInfo> infoOpt = implementingClasses.directOnly().getStandardClasses()
+					.stream().collect(MoreCollectors.toOptional());
 			classOpt = infoOpt.map(ClassInfo::loadClass);
 			if (infoOpt.isPresent() && !infoOpt.get().isPublic()) {
 				LOGGER.debug("Class {} is not public, problem might follow.", infoOpt);
 			}
 			Optional<Object> instanceOpt;
 			if (staticFactoryMethodNameOpt.isPresent()) {
-				final Optional<MethodInfoList> methodInfoListOpt = infoOpt
-						.map(c -> c.getDeclaredMethodInfo(staticFactoryMethodNameOpt.get()));
+				final Optional<MethodInfoList> methodInfoListOpt =
+						infoOpt.map(c -> c.getDeclaredMethodInfo(staticFactoryMethodNameOpt.get()));
 				LOGGER.debug("Found {} classes in {}, implementing: {}, with method: {}.",
 						scanResult.getAllClasses().size(), loader.getURLs(), implementingClasses.size(),
 						methodInfoListOpt);
-				final Optional<MethodInfo> methodInfoOpt = methodInfoListOpt
-						.flatMap(l -> l.stream().collect(MoreCollectors.toOptional()));
+				final Optional<MethodInfo> methodInfoOpt =
+						methodInfoListOpt.flatMap(l -> l.stream().collect(MoreCollectors.toOptional()));
 				final boolean isPublic = methodInfoOpt.map(MethodInfo::isPublic).orElse(false);
 				if (isPublic) {
 					final Method method = methodInfoOpt.get().loadClassAndGetMethod();
@@ -254,7 +264,8 @@ public class Instanciator {
 						instanceOpt = Optional.empty();
 					}
 				} else {
-					lastException = new InvocationTargetException(new IllegalArgumentException("Factory not found"));
+					lastException =
+							new InvocationTargetException(new IllegalArgumentException("Factory not found"));
 					instanceOpt = Optional.empty();
 				}
 			} else {
@@ -274,8 +285,8 @@ public class Instanciator {
 						instanceOpt = Optional.empty();
 					}
 				} else {
-					lastException = new InvocationTargetException(
-							new IllegalArgumentException("Constructor not found"));
+					lastException =
+							new InvocationTargetException(new IllegalArgumentException("Constructor not found"));
 					instanceOpt = Optional.empty();
 				}
 			}
@@ -284,8 +295,8 @@ public class Instanciator {
 		}
 	}
 
-	public <T> TryCatchAll<Optional<T>> invokeStatic(String className, Class<T> returnType, String methodName,
-			List<Object> args) {
+	public <T> TryCatchAll<Optional<T>> invokeStatic(String className, Class<T> returnType,
+			String methodName, List<Object> args) {
 		return obtainFrom(className, returnType, Optional.of(methodName), args);
 	}
 
@@ -294,8 +305,8 @@ public class Instanciator {
 		return opt.andApply(o -> o.orElseThrow(VerifyException::new));
 	}
 
-	private <T> TryCatchAll<Optional<T>> obtainFrom(String className, Class<T> returnType, Optional<String> methodName,
-			List<?> args) {
+	private <T> TryCatchAll<Optional<T>> obtainFrom(String className, Class<T> returnType,
+			Optional<String> methodName, List<?> args) {
 		checkNotNull(className);
 		checkNotNull(methodName);
 		checkNotNull(args);

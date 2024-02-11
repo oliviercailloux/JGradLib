@@ -36,7 +36,8 @@ public class PomPathsSupplier {
 	}
 
 	private PomPathsSupplier(Set<Path> possiblePoms) {
-		possibleMavenRoots = possiblePoms.stream().map(this::getParentPath).collect(ImmutableSet.toImmutableSet());
+		possibleMavenRoots =
+				possiblePoms.stream().map(this::getParentPath).collect(ImmutableSet.toImmutableSet());
 	}
 
 	@SuppressWarnings("unused")
@@ -48,9 +49,8 @@ public class PomPathsSupplier {
 	}
 
 	/**
-	 * Useful if absolutely need to be in the folder of the pom (for example, for
-	 * invoking Maven for compilation). Otherwise, consider
-	 * {@link #getForcedMavenRelativeRoot()}.
+	 * Useful if absolutely need to be in the folder of the pom (for example, for invoking Maven for
+	 * compilation). Otherwise, consider {@link #getForcedMavenRelativeRoot()}.
 	 */
 	public Optional<Path> getMavenRoot() {
 		if (possibleMavenRoots.size() != 1) {
@@ -72,8 +72,8 @@ public class PomPathsSupplier {
 	}
 
 	/**
-	 * Returns a best-guess at the path to be used as Maven root, even if multiple
-	 * or no POMs have been found.
+	 * Returns a best-guess at the path to be used as Maven root, even if multiple or no POMs have
+	 * been found.
 	 *
 	 * @return a path relative to the project’s folder.
 	 */
@@ -104,21 +104,20 @@ public class PomPathsSupplier {
 	}
 
 	/**
-	 * @return {@code true} iff only one pom has been found and it is at the
-	 *         project root, equivalently, {@code true} iff
-	 *         {@link #getMavenRoot()} is the empty path.
+	 * @return {@code true} iff only one pom has been found and it is at the project root,
+	 *         equivalently, {@code true} iff {@link #getMavenRoot()} is the empty path.
 	 */
 	public boolean isMavenProjectAtRoot() {
 		return possibleMavenRoots.equals(ImmutableSet.of(Paths.get("")));
 	}
 
 	public boolean hasJunit5() {
-		final Predicate<CharSequence> containsOnce = MarkingPredicates
-				.containsOnce(Pattern.compile("<dependencies>" + Utils.ANY_REG_EXP + "<dependency>" + Utils.ANY_REG_EXP
-						+ "<groupId>org\\.junit\\.jupiter</groupId>" + Utils.ANY_REG_EXP
-						+ "<artifactId>junit-jupiter-engine</artifactId>" + Utils.ANY_REG_EXP + "<version>5\\.[234]\\."
-						+ Utils.ANY_REG_EXP + "</version>" + Utils.ANY_REG_EXP + "<scope>test</scope>"));
+		final Predicate<CharSequence> containsOnce =
+				MarkingPredicates.containsOnce(Pattern.compile("<dependencies>" + Utils.ANY_REG_EXP
+						+ "<dependency>" + Utils.ANY_REG_EXP + "<groupId>org\\.junit\\.jupiter</groupId>"
+						+ Utils.ANY_REG_EXP + "<artifactId>junit-jupiter-engine</artifactId>"
+						+ Utils.ANY_REG_EXP + "<version>5\\.[234]\\." + Utils.ANY_REG_EXP + "</version>"
+						+ Utils.ANY_REG_EXP + "<scope>test</scope>"));
 		return containsOnce.test(JavaMarkHelper.getContentOrEmpty(getForcedPom()));
 	}
-
 }

@@ -23,26 +23,27 @@ import javax.xml.bind.JAXBElement;
 import schemas.ebx.dataservices_1.StudentType.Root.Student;
 
 public class IdsToUsernames {
-	public static final Unchecker<StandardException, IllegalStateException> SUPANN_UNCHECKER = Unchecker
-			.wrappingWith(IllegalStateException::new);
+	public static final Unchecker<StandardException, IllegalStateException> SUPANN_UNCHECKER =
+			Unchecker.wrappingWith(IllegalStateException::new);
 
 	/** Broken (I think) since API change in Supann. */
 	public static void main(String[] args) throws Exception {
 		QueriesHelper.setDefaultAuthenticator();
 		final SupannQuerier supannQuerier = new SupannQuerier();
 		@SuppressWarnings("all")
-		final Type superclass = new HashMap<String, Integer>() {
-		}.getClass().getGenericSuperclass();
+		final Type superclass = new HashMap<String, Integer>() {}.getClass().getGenericSuperclass();
 
-		final Map<String, Integer> idsByGitHubUsername = JsonbUtils.fromJson(Files.readString(Path.of("gh-id.json")),
-				superclass);
+		final Map<String, Integer> idsByGitHubUsername =
+				JsonbUtils.fromJson(Files.readString(Path.of("gh-id.json")), superclass);
 
 		final ImmutableSet<StudentOnGitHubKnown> known = idsByGitHubUsername.entrySet().stream()
-				.map(SUPANN_UNCHECKER.wrapFunction(e -> StudentOnGitHubKnown.with(GitHubUsername.given(e.getKey()),
-						toInstitutional(supannQuerier.getStudent(e.getValue().toString())))))
+				.map(SUPANN_UNCHECKER
+						.wrapFunction(e -> StudentOnGitHubKnown.with(GitHubUsername.given(e.getKey()),
+								toInstitutional(supannQuerier.getStudent(e.getValue().toString())))))
 				.collect(ImmutableSet.toImmutableSet());
 
-		final PrintableJsonObject asJson = JsonbUtils.toJsonObject(known, JsonStudentOnGitHubKnown.asAdapter());
+		final PrintableJsonObject asJson =
+				JsonbUtils.toJsonObject(known, JsonStudentOnGitHubKnown.asAdapter());
 		Files.writeString(Path.of("usernames.json"), asJson.toString());
 	}
 

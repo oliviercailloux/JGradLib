@@ -14,5 +14,4 @@ public class AggregatorException extends RuntimeException {
 	public AggregatorException(Throwable cause) {
 		super(cause);
 	}
-
 }

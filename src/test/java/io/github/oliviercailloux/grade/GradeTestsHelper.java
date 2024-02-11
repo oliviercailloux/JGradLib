@@ -23,8 +23,8 @@ public class GradeTestsHelper {
   }
 
   public static ImmutableMap<Criterion, Mark> asMarks(ImmutableMap<String, Double> marks) {
-    return marks.entrySet().stream().collect(
-        ImmutableMap.toImmutableMap((e) -> Criterion.given(e.getKey()), (e) -> Mark.given(e.getValue(), "")));
+    return marks.entrySet().stream().collect(ImmutableMap
+        .toImmutableMap((e) -> Criterion.given(e.getKey()), (e) -> Mark.given(e.getValue(), "")));
   }
 
   public static ImmutableMap<Criterion, IGrade> asGrades(ImmutableMap<String, IGrade> grades) {
@@ -46,7 +46,8 @@ public class GradeTestsHelper {
     final Criterion criterion1 = Criterion.given("C1");
     final Criterion criterion2 = Criterion.given("C2");
     final ImmutableMap<Criterion, Double> weights = ImmutableMap.of(criterion1, 2d, criterion2, 3d);
-    final ImmutableMap<Criterion, IGrade> subGrades = ImmutableMap.of(criterion1, subGrade1, criterion2, subGrade2);
+    final ImmutableMap<Criterion, IGrade> subGrades =
+        ImmutableMap.of(criterion1, subGrade1, criterion2, subGrade2);
     final WeightingGrade composite = WeightingGrade.from(subGrades, weights, "Complex grade");
     return composite;
   }
@@ -61,10 +62,10 @@ public class GradeTestsHelper {
     final Criterion trap1 = Criterion.given("Trap 1");
     final Criterion trap2 = Criterion.given("Trap 2");
     /** On trap1, lost 70 % × 75 % = 0.525 points */
-    final ImmutableMap<Criterion, Double> weights = ImmutableMap.of(criterion1, 2d, criterion2, 3d, trap1, -0.75d,
-        trap2, -1d);
-    final ImmutableMap<Criterion, IGrade> subGrades = ImmutableMap.of(criterion1, subGrade1, criterion2, subGrade2,
-        trap1, subGradeTrap1, trap2, subGradeTrap2);
+    final ImmutableMap<Criterion, Double> weights =
+        ImmutableMap.of(criterion1, 2d, criterion2, 3d, trap1, -0.75d, trap2, -1d);
+    final ImmutableMap<Criterion, IGrade> subGrades = ImmutableMap.of(criterion1, subGrade1,
+        criterion2, subGrade2, trap1, subGradeTrap1, trap2, subGradeTrap2);
     final WeightingGrade composite = WeightingGrade.from(subGrades, weights);
     return composite;
   }
@@ -82,7 +83,8 @@ public class GradeTestsHelper {
     final WeightingGrade subGrade1 = getSingletonWeightingGrade();
 
     final ImmutableMap<Criterion, Double> weights = ImmutableMap.of(c1, 0.9d, c2, 0.1d);
-    final ImmutableMap<Criterion, IGrade> subGrades = ImmutableMap.of(c1, subGrade1, c2, getMinGrade());
+    final ImmutableMap<Criterion, IGrade> subGrades =
+        ImmutableMap.of(c1, subGrade1, c2, getMinGrade());
     final WeightingGrade composite = WeightingGrade.from(subGrades, weights);
     return composite;
   }
@@ -105,11 +107,12 @@ public class GradeTestsHelper {
    *
    */
   public static WeightingGrade getGrade3Plus2() {
-    final WeightingGrade g1 = WeightingGrade.from(
-        asMarks(ImmutableMap.of("C1.1", 0.3d, "C1.2", 0.2d, "C1.3", 1.0d)),
-        asWeights(ImmutableMap.of("C1.1", 0.2d, "C1.2", 0.4d, "C1.3", 0.4d)));
-    final WeightingGrade g2 = WeightingGrade.from(asMarks(ImmutableMap.of("C2.1", 0d, "C2.2", 0.8d)),
-        asWeights(ImmutableMap.of("C2.1", 0.5d, "C2.2", 0.5d)));
+    final WeightingGrade g1 =
+        WeightingGrade.from(asMarks(ImmutableMap.of("C1.1", 0.3d, "C1.2", 0.2d, "C1.3", 1.0d)),
+            asWeights(ImmutableMap.of("C1.1", 0.2d, "C1.2", 0.4d, "C1.3", 0.4d)));
+    final WeightingGrade g2 =
+        WeightingGrade.from(asMarks(ImmutableMap.of("C2.1", 0d, "C2.2", 0.8d)),
+            asWeights(ImmutableMap.of("C2.1", 0.5d, "C2.2", 0.5d)));
     final WeightingGrade main = WeightingGrade.from(asGrades(ImmutableMap.of("C1", g1, "C2", g2)),
         asWeights(ImmutableMap.of("C1", 0.1d, "C2", 0.9d)));
     Verify.verify(DoubleMath.fuzzyEquals(main.getPoints(), 0.414d, 1e-5d));
@@ -138,22 +141,23 @@ public class GradeTestsHelper {
         .weightingStaticAggregator(ImmutableMap.of(c11, 1d, c12, 2d, c13, 2d), ImmutableMap.of());
     final WeightingGradeAggregator a2 = WeightingGradeAggregator
         .weightingStaticAggregator(ImmutableMap.of(c21, 1d, c22, 1d), ImmutableMap.of());
-    final WeightingGradeAggregator a = WeightingGradeAggregator
-        .weightingStaticAggregator(ImmutableMap.of(c1, 1d, c2, 9d), ImmutableMap.of(c1, a1, c2, a2));
+    final WeightingGradeAggregator a = WeightingGradeAggregator.weightingStaticAggregator(
+        ImmutableMap.of(c1, 1d, c2, 9d), ImmutableMap.of(c1, a1, c2, a2));
     final Grade grade = Grade.given(a, MarksTreeTestsHelper.get3Plus2());
-    verify(DoubleMath.fuzzyEquals(grade.mark().getPoints(), 0.414d, 1e-6d), "" + grade.mark().getPoints());
+    verify(DoubleMath.fuzzyEquals(grade.mark().getPoints(), 0.414d, 1e-6d),
+        "" + grade.mark().getPoints());
     return grade;
   }
 
   public static WeightingGrade getGrade3Plus2Alt() {
-    final WeightingGrade g1 = WeightingGrade.from(
-        asMarks(ImmutableMap.of("C1.1", 0.8d, "C1.2", 0.9d, "C1.3", 1.0d)),
-        asWeights(ImmutableMap.of("C1.1", 0.2d, "C1.2", 0.4d, "C1.3", 0.4d)));
-    final WeightingGrade g2 = WeightingGrade.from(asMarks(ImmutableMap.of("C2.1", 0.7d, "C2.2", 0.8d)),
-        asWeights(ImmutableMap.of("C2.1", 0.5d, "C2.2", 0.5d)));
+    final WeightingGrade g1 =
+        WeightingGrade.from(asMarks(ImmutableMap.of("C1.1", 0.8d, "C1.2", 0.9d, "C1.3", 1.0d)),
+            asWeights(ImmutableMap.of("C1.1", 0.2d, "C1.2", 0.4d, "C1.3", 0.4d)));
+    final WeightingGrade g2 =
+        WeightingGrade.from(asMarks(ImmutableMap.of("C2.1", 0.7d, "C2.2", 0.8d)),
+            asWeights(ImmutableMap.of("C2.1", 0.5d, "C2.2", 0.5d)));
     final WeightingGrade main = WeightingGrade.from(asGrades(ImmutableMap.of("C1", g1, "C2", g2)),
         asWeights(ImmutableMap.of("C1", 0.1d, "C2", 0.9d)));
     return main;
   }
-
 }

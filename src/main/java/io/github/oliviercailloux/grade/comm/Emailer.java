@@ -43,8 +43,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * The time from connectToStore to close is supposed to be short. Meanwhile,
- * this object might keep open folders or other resources.
+ * The time from connectToStore to close is supposed to be short. Meanwhile, this object might keep
+ * open folders or other resources.
  *
  * @author Olivier Cailloux
  *
@@ -54,10 +54,11 @@ public class Emailer implements AutoCloseable {
 	private static final Logger LOGGER = LoggerFactory.getLogger(Emailer.class);
 
 	@SuppressWarnings("unused")
-	private static final Logger LOGGER_JAVAMAIL = LoggerFactory
-			.getLogger(Emailer.class.getCanonicalName() + ".Javamail");
+	private static final Logger LOGGER_JAVAMAIL =
+			LoggerFactory.getLogger(Emailer.class.getCanonicalName() + ".Javamail");
 
-	private static final PrintStream JAVAMAIL_LOGGING_OUTPUT_STREAM = LoggingOutputStream.newInstance(LOGGER_JAVAMAIL);
+	private static final PrintStream JAVAMAIL_LOGGING_OUTPUT_STREAM =
+			LoggingOutputStream.newInstance(LOGGER_JAVAMAIL);
 
 	public static Emailer instance() {
 		return new Emailer();
@@ -114,14 +115,15 @@ public class Emailer implements AutoCloseable {
 	}
 
 	public static ImmutableMap<Integer, Message> byMessageNumber(Iterable<Message> messages) {
-		return StreamSupport.stream(messages.spliterator(), false).collect(
-				ImmutableMap.toImmutableMap(MESSAGING_UNCHECKER.wrapFunction(Message::getMessageNumber), m -> m));
+		return StreamSupport.stream(messages.spliterator(), false).collect(ImmutableMap
+				.toImmutableMap(MESSAGING_UNCHECKER.wrapFunction(Message::getMessageNumber), m -> m));
 	}
 
 	public static String getDescription(Message message) {
-		return String.format("Message number %s sent %s to %s with subject '%s'.", message.getMessageNumber(),
-				MESSAGING_UNCHECKER.getUsing(message::getSentDate),
-				ImmutableList.copyOf(MESSAGING_UNCHECKER.getUsing(() -> message.getRecipients(RecipientType.TO))),
+		return String.format("Message number %s sent %s to %s with subject '%s'.",
+				message.getMessageNumber(), MESSAGING_UNCHECKER.getUsing(message::getSentDate),
+				ImmutableList
+						.copyOf(MESSAGING_UNCHECKER.getUsing(() -> message.getRecipients(RecipientType.TO))),
 				MESSAGING_UNCHECKER.getUsing(message::getSubject));
 	}
 
@@ -180,10 +182,11 @@ public class Emailer implements AutoCloseable {
 			/* We should NOT close this folder as it has (rightly) not been opened. */
 			final Folder root = store.getDefaultFolder();
 			/*
-			 * Let’s return strings instead of Folders to avoid tempting the user in opening
-			 * the folder themselves (we want to control this).
+			 * Let’s return strings instead of Folders to avoid tempting the user in opening the folder
+			 * themselves (we want to control this).
 			 */
-			return Arrays.stream(root.list()).map(Folder::getName).collect(ImmutableList.toImmutableList());
+			return Arrays.stream(root.list()).map(Folder::getName)
+					.collect(ImmutableList.toImmutableList());
 		} catch (MessagingException e) {
 			throw new UncheckedMessagingException(e);
 		}
@@ -191,9 +194,9 @@ public class Emailer implements AutoCloseable {
 
 	/**
 	 * <p>
-	 * Returns the given folder, if it exists, after having opened it in READ mode
-	 * if this object had not opened it already. (If this object had already opened
-	 * the folder in READ_WRITE mode, then it is returned open in that state.)
+	 * Returns the given folder, if it exists, after having opened it in READ mode if this object had
+	 * not opened it already. (If this object had already opened the folder in READ_WRITE mode, then
+	 * it is returned open in that state.)
 	 * </p>
 	 * <p>
 	 * This object will take care of closing the folder.
@@ -207,15 +210,14 @@ public class Emailer implements AutoCloseable {
 
 	/**
 	 * <p>
-	 * Returns the given folder, if it exists, after having opened it in READ_WRITE
-	 * mode if this object had not opened it already in READ_WRITE mode.
+	 * Returns the given folder, if it exists, after having opened it in READ_WRITE mode if this
+	 * object had not opened it already in READ_WRITE mode.
 	 * </p>
 	 * <p>
 	 * This object will take care of closing the folder.
 	 * </p>
 	 *
-	 * @throws IllegalStateException if the given folder is already opened in READ
-	 *                               mode.
+	 * @throws IllegalStateException if the given folder is already opened in READ mode.
 	 */
 	public Folder getFolderReadWrite(String name) throws IllegalStateException {
 		return lazyGetFolder(name, true);
@@ -239,8 +241,8 @@ public class Emailer implements AutoCloseable {
 		final Folder folderRead = openReadFolders.get(folderName);
 		if (folderRead != null) {
 			/**
-			 * NB this means that opening a folder read-only for searching prevents from
-			 * storing in that folder: planning is required.
+			 * NB this means that opening a folder read-only for searching prevents from storing in that
+			 * folder: planning is required.
 			 */
 			checkState(!andWrite, "A given folder can be opened only once.");
 			return folderRead;
@@ -265,8 +267,8 @@ public class Emailer implements AutoCloseable {
 			return found.stream().filter(term.getPredicate()).collect(ImmutableSet.toImmutableSet());
 		}
 
-		final Optional<Message> notMatching = found.stream().filter(term.getPredicate().negate()).limit(1)
-				.collect(MoreCollectors.toOptional());
+		final Optional<Message> notMatching = found.stream().filter(term.getPredicate().negate())
+				.limit(1).collect(MoreCollectors.toOptional());
 		if (notMatching.isPresent()) {
 			throw new VerifyException(getDescription(notMatching.get()));
 		}
@@ -333,11 +335,11 @@ public class Emailer implements AutoCloseable {
 			message.setContent(multipartContent);
 
 			final EmailAddressAndPersonal to = email.getTo();
-			final InternetAddress[] toSingleton = new InternetAddress[] { to.asInternetAddress() };
+			final InternetAddress[] toSingleton = new InternetAddress[] {to.asInternetAddress()};
 			/**
-			 * When the address is incorrect (e.g. WRONG@gmail.com), a message delivered
-			 * event is still sent to registered TransportListeners. A new message in the
-			 * INBOX indicates the error, but it seems hard to detect it on the spot.
+			 * When the address is incorrect (e.g. WRONG@gmail.com), a message delivered event is still
+			 * sent to registered TransportListeners. A new message in the INBOX indicates the error, but
+			 * it seems hard to detect it on the spot.
 			 */
 			message.setRecipients(Message.RecipientType.TO, toSingleton);
 			message.saveChanges();
@@ -362,7 +364,7 @@ public class Emailer implements AutoCloseable {
 			final MimeMessage message = getMessage(email, fromAddress.asInternetAddress());
 			MESSAGING_UNCHECKER.call(() -> transport.sendMessage(message, message.getAllRecipients()));
 
-			MESSAGING_UNCHECKER.call(() -> saveInto.appendMessages(new Message[] { message }));
+			MESSAGING_UNCHECKER.call(() -> saveInto.appendMessages(new Message[] {message}));
 		}
 		LOGGER.info("Messages sent: {}.", emails.size());
 	}
@@ -387,5 +389,4 @@ public class Emailer implements AutoCloseable {
 			MESSAGING_UNCHECKER.call(() -> store.close());
 		}
 	}
-
 }

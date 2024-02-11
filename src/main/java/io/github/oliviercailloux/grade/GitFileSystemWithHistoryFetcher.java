@@ -11,8 +11,7 @@ public interface GitFileSystemWithHistoryFetcher extends AutoCloseable {
 	public ImmutableSet<GitHubUsername> getAuthors();
 
 	/**
-	 * Retrieves the instance corresponding to the given author, closes any
-	 * previously retrieved one.
+	 * Retrieves the instance corresponding to the given author, closes any previously retrieved one.
 	 *
 	 * @param author the author whose git file system history must be retrieved
 	 * @return the instance corresponding to the given author

@@ -15,23 +15,25 @@ import java.util.Objects;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@JsonbPropertyOrder({ "id", "username", "firstName", "lastName", "email" })
+@JsonbPropertyOrder({"id", "username", "firstName", "lastName", "email"})
 public class InstitutionalStudent {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(InstitutionalStudent.class);
 
 	@JsonbCreator
-	public static InstitutionalStudent withU(@JsonbProperty("id") int id, @JsonbProperty("username") String username,
-			@JsonbProperty("firstName") String firstName, @JsonbProperty("lastName") String lastName,
-			@JsonbProperty("email") String email) {
-		final String personal = Joiner.on(" ").skipNulls().join(Strings.emptyToNull(firstName), lastName);
+	public static InstitutionalStudent withU(@JsonbProperty("id") int id,
+			@JsonbProperty("username") String username, @JsonbProperty("firstName") String firstName,
+			@JsonbProperty("lastName") String lastName, @JsonbProperty("email") String email) {
+		final String personal =
+				Joiner.on(" ").skipNulls().join(Strings.emptyToNull(firstName), lastName);
 		return new InstitutionalStudent(id, username, firstName, lastName,
 				EmailAddressAndPersonal.given(email, personal));
 	}
 
-	public static InstitutionalStudent withU(int id, String username, String firstName, String lastName,
-			EmailAddress email) {
-		final String personal = Joiner.on(" ").skipNulls().join(Strings.emptyToNull(firstName), lastName);
+	public static InstitutionalStudent withU(int id, String username, String firstName,
+			String lastName, EmailAddress email) {
+		final String personal =
+				Joiner.on(" ").skipNulls().join(Strings.emptyToNull(firstName), lastName);
 		return new InstitutionalStudent(id, username, firstName, lastName,
 				EmailAddressAndPersonal.given(email.getAddress(), personal));
 	}
@@ -79,8 +81,9 @@ public class InstitutionalStudent {
 			return false;
 		}
 		final InstitutionalStudent s2 = (InstitutionalStudent) o2;
-		return id == s2.id && Objects.equals(username, s2.username) && Objects.equals(firstName, s2.firstName)
-				&& Objects.equals(lastName, s2.lastName) && Objects.equals(email, s2.email);
+		return id == s2.id && Objects.equals(username, s2.username)
+				&& Objects.equals(firstName, s2.firstName) && Objects.equals(lastName, s2.lastName)
+				&& Objects.equals(email, s2.email);
 	}
 
 	@Override
@@ -90,7 +93,7 @@ public class InstitutionalStudent {
 
 	@Override
 	public String toString() {
-		return MoreObjects.toStringHelper(this).add("id", id).add("username", username).add("first name", firstName)
-				.add("last name", lastName).add("email", email).toString();
+		return MoreObjects.toStringHelper(this).add("id", id).add("username", username)
+				.add("first name", firstName).add("last name", lastName).add("email", email).toString();
 	}
 }

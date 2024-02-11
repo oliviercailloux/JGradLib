@@ -29,19 +29,18 @@ import java.util.Set;
  * <li>end c3
  * <li>Add (c4, w4), …
  * <p>
- * One important advantage to lambdas here is that the intermediate objects need
- * not exist for this to make sense: if no pathroot, the corresponding structure
- * may be empty; if the function does not work, it may avoid applying the
- * remaining predicates, … Some of these functions may return Optional<NewType>
- * to indicate conditional continuation (or even Optional<SameType>).
+ * One important advantage to lambdas here is that the intermediate objects need not exist for this
+ * to make sense: if no pathroot, the corresponding structure may be empty; if the function does not
+ * work, it may avoid applying the remaining predicates, … Some of these functions may return
+ * Optional<NewType> to indicate conditional continuation (or even Optional<SameType>).
  *
  * @param <E> the input type to the grader
  */
 public class WeightingGrader<E> {
 
 	public static class CriterionGraderWeight<E> {
-		public static <E> CriterionGraderWeight<E> given(Criterion criterion, TPredicate<E, IOException> predicate,
-				double weight) {
+		public static <E> CriterionGraderWeight<E> given(Criterion criterion,
+				TPredicate<E, IOException> predicate, double weight) {
 			return new CriterionGraderWeight<>(criterion,
 					(Optional<E> o) -> Mark.binary(o.isPresent() && predicate.test(o.get())), weight);
 		}
@@ -55,8 +54,8 @@ public class WeightingGrader<E> {
 		private final TFunction<Optional<E>, IGrade, IOException> grader;
 		private final double weight;
 
-		private CriterionGraderWeight(Criterion criterion, TFunction<Optional<E>, IGrade, IOException> grader,
-				double weight) {
+		private CriterionGraderWeight(Criterion criterion,
+				TFunction<Optional<E>, IGrade, IOException> grader, double weight) {
 			this.criterion = checkNotNull(criterion);
 			this.grader = checkNotNull(grader);
 			this.weight = weight;
@@ -68,15 +67,16 @@ public class WeightingGrader<E> {
 	}
 
 	public static <E> WeightingGrader<E> getGrader(List<CriterionGraderWeight<E>> cs) {
-		final ImmutableSet<TFunction<Optional<E>, CriterionGradeWeight, IOException>> graders = cs.stream()
-				.map(c -> ((TFunction<Optional<E>, CriterionGradeWeight, IOException>) c::grade))
-				.collect(ImmutableSet.toImmutableSet());
+		final ImmutableSet<TFunction<Optional<E>, CriterionGradeWeight, IOException>> graders =
+				cs.stream().map(c -> ((TFunction<Optional<E>, CriterionGradeWeight, IOException>) c::grade))
+						.collect(ImmutableSet.toImmutableSet());
 		return new WeightingGrader<>(graders);
 	}
 
 	private final ImmutableSet<TFunction<Optional<E>, CriterionGradeWeight, IOException>> subGraders;
 
-	private WeightingGrader(Set<TFunction<Optional<E>, CriterionGradeWeight, IOException>> subGraders) {
+	private WeightingGrader(
+			Set<TFunction<Optional<E>, CriterionGradeWeight, IOException>> subGraders) {
 		checkArgument(!subGraders.isEmpty());
 		this.subGraders = ImmutableSet.copyOf(subGraders);
 	}

@@ -25,15 +25,15 @@ public class GradeTests {
   @Test
   void testAggregateMaxAndStatic() throws Exception {
     final GradeAggregator c1A = GradeAggregator.MAX;
-    final GradeAggregator c2A = GradeAggregator.staticAggregator(ImmutableMap.of(c21, 1d, c22, 2d),
-        ImmutableMap.of());
+    final GradeAggregator c2A =
+        GradeAggregator.staticAggregator(ImmutableMap.of(c21, 1d, c22, 2d), ImmutableMap.of());
     final GradeAggregator aggregator = GradeAggregator.max(ImmutableMap.of(c1, c1A, c2, c2A));
     final MarksTree marks = MarksTreeTestsHelper.get1_11And1_12And2_21And2_22();
     final Grade grade = Grade.given(aggregator, marks);
 
     final ImmutableMap<SubMark, Double> weightedSubMarks = grade.getWeightedSubMarks();
-    final ImmutableMap<SubMark, Double> expectedWeightedSubMarks = ImmutableMap
-        .of(SubMark.given(c1, Mark.given(1d, "")), 1d, SubMark.given(c2, Mark.given(1d / 3d, "")), 0d);
+    final ImmutableMap<SubMark, Double> expectedWeightedSubMarks = ImmutableMap.of(
+        SubMark.given(c1, Mark.given(1d, "")), 1d, SubMark.given(c2, Mark.given(1d / 3d, "")), 0d);
     assertEquals(expectedWeightedSubMarks, weightedSubMarks);
 
     assertEquals(1d, grade.getGrade(p11).mark().getPoints());
@@ -50,8 +50,8 @@ public class GradeTests {
   @Test
   void testAggregateOwaAndStatic() throws Exception {
     final GradeAggregator c1A = GradeAggregator.owa(ImmutableList.of(1d, 3d));
-    final GradeAggregator c2A = GradeAggregator.staticAggregator(ImmutableMap.of(c21, 1d, c22, 2d),
-        ImmutableMap.of());
+    final GradeAggregator c2A =
+        GradeAggregator.staticAggregator(ImmutableMap.of(c21, 1d, c22, 2d), ImmutableMap.of());
     final GradeAggregator aggregator = GradeAggregator.max(ImmutableMap.of(c1, c1A, c2, c2A));
     final MarksTree marks = MarksTreeTestsHelper.get1_11And1_12And2_21And2_22();
     final Grade grade = Grade.given(aggregator, marks);
@@ -77,8 +77,9 @@ public class GradeTests {
     assertEquals(0d, ws1);
     assertEquals(1d / 3d, s2.getPoints());
     assertEquals(1d, ws2);
-    final ImmutableMap<SubMark, Double> expectedWeightedSubMarks = ImmutableMap
-        .of(SubMark.given(c1, Mark.given(1d / 4d, "")), 0d, SubMark.given(c2, Mark.given(1d / 3d, "")), 1d);
+    final ImmutableMap<SubMark, Double> expectedWeightedSubMarks =
+        ImmutableMap.of(SubMark.given(c1, Mark.given(1d / 4d, "")), 0d,
+            SubMark.given(c2, Mark.given(1d / 3d, "")), 1d);
     assertEquals(expectedWeightedSubMarks, weightedSubMarks);
   }
 
@@ -86,7 +87,8 @@ public class GradeTests {
   void testParametricAndAbsolute() throws Exception {
     final GradeAggregator c1A = GradeAggregator.parametric(c11, c12, GradeAggregator.TRIVIAL);
     final GradeAggregator c2A = GradeAggregator.ABSOLUTE;
-    final GradeAggregator aggregator = GradeAggregator.parametric(c1, c2, ImmutableMap.of(c1, c1A, c2, c2A));
+    final GradeAggregator aggregator =
+        GradeAggregator.parametric(c1, c2, ImmutableMap.of(c1, c1A, c2, c2A));
     final MarksTree marks = MarksTreeTestsHelper.get1_11And1_12And2_21And2_22();
     final Grade grade = Grade.given(aggregator, marks);
     assertEquals(1d, grade.getGrade(p11).mark().getPoints());
@@ -125,7 +127,8 @@ public class GradeTests {
   void testParametricAndAbsoluteHalf() throws Exception {
     final GradeAggregator c1A = GradeAggregator.parametric(c11, c12, GradeAggregator.TRIVIAL);
     final GradeAggregator c2A = GradeAggregator.ABSOLUTE;
-    final GradeAggregator aggregator = GradeAggregator.parametric(c1, c2, ImmutableMap.of(c1, c1A, c2, c2A));
+    final GradeAggregator aggregator =
+        GradeAggregator.parametric(c1, c2, ImmutableMap.of(c1, c1A, c2, c2A));
     final MarksTree marks = MarksTreeTestsHelper.get1_11And1_12And2_21And2_22Half();
     final Grade grade = Grade.given(aggregator, marks);
     assertEquals(1d, grade.getGrade(p11).mark().getPoints());
@@ -142,14 +145,15 @@ public class GradeTests {
   @Test
   void testTransformMaxAndStaticToCriteriaWeighter() throws Exception {
     final GradeAggregator c1A = GradeAggregator.MAX;
-    final GradeAggregator c2A = GradeAggregator.staticAggregator(ImmutableMap.of(c21, 1d, c22, 2d),
-        ImmutableMap.of());
+    final GradeAggregator c2A =
+        GradeAggregator.staticAggregator(ImmutableMap.of(c21, 1d, c22, 2d), ImmutableMap.of());
     final GradeAggregator aggregator = GradeAggregator.max(ImmutableMap.of(c1, c1A, c2, c2A));
     final MarksTree marks = MarksTreeTestsHelper.get1_11And1_12And2_21And2_22();
     final Grade grade = Grade.given(aggregator, marks);
 
     final GradeAggregator expectedAggregator = GradeAggregator.ABSOLUTE;
-    final MarksTree expectedMarks = MarksTree.composite(ImmutableMap.of(c1, Mark.one(), c2, Mark.zero()));
+    final MarksTree expectedMarks =
+        MarksTree.composite(ImmutableMap.of(c1, Mark.one(), c2, Mark.zero()));
     final Grade expected = Grade.given(expectedAggregator, expectedMarks);
 
     final Grade transformed = Grade.transformToPerCriterionWeighting(grade);
@@ -159,21 +163,24 @@ public class GradeTests {
   @Test
   void testTransformStaticAndMaxToCriteriaWeighter() throws Exception {
     final GradeAggregator c1A = GradeAggregator.max(ImmutableMap.of(c3, GradeAggregator.MAX));
-    final GradeAggregator c2A = GradeAggregator.staticAggregator(ImmutableMap.of(c21, 1d, c22, 2d),
-        ImmutableMap.of());
-    final GradeAggregator aggregator = GradeAggregator.staticAggregator(ImmutableMap.of(c1, 5d, c2, 2d),
-        ImmutableMap.of(c1, c1A, c2, c2A));
+    final GradeAggregator c2A =
+        GradeAggregator.staticAggregator(ImmutableMap.of(c21, 1d, c22, 2d), ImmutableMap.of());
+    final GradeAggregator aggregator = GradeAggregator
+        .staticAggregator(ImmutableMap.of(c1, 5d, c2, 2d), ImmutableMap.of(c1, c1A, c2, c2A));
     final MarksTree marks = MarksTreeTestsHelper.get1_11And1_12And2_21And2_22();
     final Grade grade = Grade.given(aggregator, marks);
 
     /* The MAX at c3 gets reduced to its default sub, which is TRIVIAL. */
-    final GradeAggregator expectedc1A = GradeAggregator.absolute(ImmutableMap.of(c3, GradeAggregator.TRIVIAL),
-        GradeAggregator.TRIVIAL);
-    final GradeAggregator expectedAggregator = GradeAggregator.staticAggregator(ImmutableMap.of(c1, 5d, c2, 2d),
-        ImmutableMap.of(c1, expectedc1A, c2, c2A));
-    final MarksTree expectedMarksC1 = MarksTree.composite(ImmutableMap.of(c11, Mark.one(), c12, Mark.zero()));
-    final MarksTree expectedMarksC2 = MarksTree.composite(ImmutableMap.of(c21, Mark.one(), c22, Mark.zero()));
-    final MarksTree expectedMarks = MarksTree.composite(ImmutableMap.of(c1, expectedMarksC1, c2, expectedMarksC2));
+    final GradeAggregator expectedc1A = GradeAggregator
+        .absolute(ImmutableMap.of(c3, GradeAggregator.TRIVIAL), GradeAggregator.TRIVIAL);
+    final GradeAggregator expectedAggregator = GradeAggregator.staticAggregator(
+        ImmutableMap.of(c1, 5d, c2, 2d), ImmutableMap.of(c1, expectedc1A, c2, c2A));
+    final MarksTree expectedMarksC1 =
+        MarksTree.composite(ImmutableMap.of(c11, Mark.one(), c12, Mark.zero()));
+    final MarksTree expectedMarksC2 =
+        MarksTree.composite(ImmutableMap.of(c21, Mark.one(), c22, Mark.zero()));
+    final MarksTree expectedMarks =
+        MarksTree.composite(ImmutableMap.of(c1, expectedMarksC1, c2, expectedMarksC2));
     final Grade expected = Grade.given(expectedAggregator, expectedMarks);
 
     final Grade transformed = Grade.transformToPerCriterionWeighting(grade);
@@ -185,21 +192,24 @@ public class GradeTests {
   void testTransformParametricAndAbsoluteHalf() throws Exception {
     final GradeAggregator c1A = GradeAggregator.parametric(c11, c12, GradeAggregator.TRIVIAL);
     final GradeAggregator c2A = GradeAggregator.ABSOLUTE;
-    final GradeAggregator aggregator = GradeAggregator.parametric(c1, c2, ImmutableMap.of(c1, c1A, c2, c2A));
-    final MarksTree m1 = MarksTree.composite(ImmutableMap.of(c11, Mark.one(), c12, Mark.given(0.5d, "")));
-    final MarksTree m2 = MarksTree
-        .composite(ImmutableMap.of(c21, Mark.given(0.5d, ""), c22, Mark.given(0.25d, "")));
+    final GradeAggregator aggregator =
+        GradeAggregator.parametric(c1, c2, ImmutableMap.of(c1, c1A, c2, c2A));
+    final MarksTree m1 =
+        MarksTree.composite(ImmutableMap.of(c11, Mark.one(), c12, Mark.given(0.5d, "")));
+    final MarksTree m2 =
+        MarksTree.composite(ImmutableMap.of(c21, Mark.given(0.5d, ""), c22, Mark.given(0.25d, "")));
     final MarksTree marks = MarksTree.composite(ImmutableMap.of(c1, m1, c2, m2));
     final Grade grade = Grade.given(aggregator, marks);
 
     final WeightingGradeAggregator expectedc1A = GradeAggregator.ABSOLUTE;
     final WeightingGradeAggregator expectedAggregator = WeightingGradeAggregator.weightingAbsolute(
         ImmutableMap.of(c1, expectedc1A, c2, GradeAggregator.ABSOLUTE), GradeAggregator.TRIVIAL);
-    final MarksTree expectedMarksC1 = MarksTree.composite(
-        ImmutableMap.of(c11, Mark.one(), ParametricWeighter.toPenalized(c11), Mark.given(-0.5d, "")));
-    final MarksTree expectedMarksPenalizedC1 = Mark.given(-(1 - (1d / 2d + 1d / 2d * 1d / 2d)) * 1d / 2d, "");
-    final MarksTree expectedMarks = MarksTree.composite(
-        ImmutableMap.of(c1, expectedMarksC1, ParametricWeighter.toPenalized(c1), expectedMarksPenalizedC1));
+    final MarksTree expectedMarksC1 = MarksTree.composite(ImmutableMap.of(c11, Mark.one(),
+        ParametricWeighter.toPenalized(c11), Mark.given(-0.5d, "")));
+    final MarksTree expectedMarksPenalizedC1 =
+        Mark.given(-(1 - (1d / 2d + 1d / 2d * 1d / 2d)) * 1d / 2d, "");
+    final MarksTree expectedMarks = MarksTree.composite(ImmutableMap.of(c1, expectedMarksC1,
+        ParametricWeighter.toPenalized(c1), expectedMarksPenalizedC1));
     final Grade expected = Grade.given(expectedAggregator, expectedMarks);
 
     final Grade transformed = Grade.transformToPerCriterionWeighting(grade);

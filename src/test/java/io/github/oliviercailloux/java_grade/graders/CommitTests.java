@@ -47,7 +47,8 @@ class CommitTests {
   @Test
   void testEmpty() throws Exception {
     try (Repository repository = new InMemoryRepository(new DfsRepositoryDescription("myrepo"));
-        GitFileSystem gitFs = GitFileSystemProvider.instance().newFileSystemFromRepository(repository)) {
+        GitFileSystem gitFs =
+            GitFileSystemProvider.instance().newFileSystemFromRepository(repository)) {
       assertTrue(repository.getObjectDatabase().exists());
       assertFalse(repository.getRefDatabase().hasRefs());
 
@@ -78,7 +79,8 @@ class CommitTests {
       {
         Files.writeString(c3.resolve("afile.txt"), "coucou");
         Files.writeString(c3.resolve("myid.txt"), "222");
-        Files.writeString(Files.createDirectories(c3.resolve("sub/a/")).resolve("another file.txt"), "coucou");
+        Files.writeString(Files.createDirectories(c3.resolve("sub/a/")).resolve("another file.txt"),
+            "coucou");
       }
       {
         final Path origin = Files.createDirectories(links.resolve(Constants.R_REMOTES + "origin/"));
@@ -89,20 +91,24 @@ class CommitTests {
 
       final PersonIdent personIdent = new PersonIdent("Me", "email");
 
-      try (Repository repository = JGit.createRepository(personIdent, Utils.asGraph(ImmutableList.of(c1, c2, c3)),
-          links);
-          GitFileSystem gitFs = GitFileSystemProvider.instance().newFileSystemFromRepository(repository)) {
+      try (
+          Repository repository = JGit.createRepository(personIdent,
+              Utils.asGraph(ImmutableList.of(c1, c2, c3)), links);
+          GitFileSystem gitFs =
+              GitFileSystemProvider.instance().newFileSystemFromRepository(repository)) {
         final Graph<ObjectId> graph = GraphUtils.transform(gitFs.graph(), p -> p.getCommit().id());
-        final ImmutableSet<ObjectId> roots = graph.nodes().stream().filter(n -> graph.predecessors(n).isEmpty())
-            .collect(ImmutableSet.toImmutableSet());
+        final ImmutableSet<ObjectId> roots = graph.nodes().stream()
+            .filter(n -> graph.predecessors(n).isEmpty()).collect(ImmutableSet.toImmutableSet());
         final ObjectId o1 = Iterables.getOnlyElement(roots);
         final ObjectId o2 = Iterables.getOnlyElement(graph.successors(o1));
         final ObjectId o3 = Iterables.getOnlyElement(graph.successors(o2));
-        final Map<ObjectId, Instant> times = ImmutableMap.of(o1, Commit.DEADLINE.toInstant(), o2,
-            Commit.DEADLINE.toInstant(), o3, Commit.DEADLINE.toInstant().plus(Duration.ofMinutes(4)));
+        final Map<ObjectId, Instant> times =
+            ImmutableMap.of(o1, Commit.DEADLINE.toInstant(), o2, Commit.DEADLINE.toInstant(), o3,
+                Commit.DEADLINE.toInstant().plus(Duration.ofMinutes(4)));
         final GitHistorySimple withTimes = GitHistorySimple.create(gitFs, times);
 
-        final IGrade direct = Commit.grade(GitWork.given(GitHubUsername.given("Not me"), withTimes));
+        final IGrade direct =
+            Commit.grade(GitWork.given(GitHubUsername.given("Not me"), withTimes));
         LOGGER.debug("Grade direct: {}.", JsonGrade.asJson(direct));
         assertEquals(0.85d, direct.getPoints(), 1e-5);
       }
@@ -128,7 +134,8 @@ class CommitTests {
       {
         Files.writeString(c3.resolve("afile.txt"), "coucou");
         Files.writeString(c3.resolve("myid.txt"), "222");
-        Files.writeString(Files.createDirectories(c3.resolve("sub/a/")).resolve("another file.txt"), "coucou");
+        Files.writeString(Files.createDirectories(c3.resolve("sub/a/")).resolve("another file.txt"),
+            "coucou");
       }
       {
         final Path origin = Files.createDirectories(links.resolve(Constants.R_REMOTES + "origin/"));
@@ -139,17 +146,21 @@ class CommitTests {
 
       final PersonIdent personIdent = new PersonIdent("Me", "email");
 
-      try (Repository repository = JGit.createRepository(personIdent, Utils.asGraph(ImmutableList.of(c1, c2, c3)),
-          links)) {
-        try (GitFileSystem gitFs = GitFileSystemProvider.instance().newFileSystemFromRepository(repository)) {
-          final Graph<GitPathRootShaCached> graph = GraphUtils.transform(gitFs.graph(),
-              GitPathRootSha::toShaCached);
-          final ImmutableSet<ObjectId> ids = graph.nodes().stream().map(GitPathRootShaCached::getCommit)
-              .map(io.github.oliviercailloux.gitjfs.Commit::id).collect(ImmutableSet.toImmutableSet());
-          final Map<ObjectId, Instant> constantTimes = Maps.asMap(ids, o -> Commit.DEADLINE.toInstant());
+      try (Repository repository =
+          JGit.createRepository(personIdent, Utils.asGraph(ImmutableList.of(c1, c2, c3)), links)) {
+        try (GitFileSystem gitFs =
+            GitFileSystemProvider.instance().newFileSystemFromRepository(repository)) {
+          final Graph<GitPathRootShaCached> graph =
+              GraphUtils.transform(gitFs.graph(), GitPathRootSha::toShaCached);
+          final ImmutableSet<ObjectId> ids = graph.nodes().stream()
+              .map(GitPathRootShaCached::getCommit).map(io.github.oliviercailloux.gitjfs.Commit::id)
+              .collect(ImmutableSet.toImmutableSet());
+          final Map<ObjectId, Instant> constantTimes =
+              Maps.asMap(ids, o -> Commit.DEADLINE.toInstant());
           final GitHistorySimple withConstantTimes = GitHistorySimple.create(gitFs, constantTimes);
 
-          final IGrade direct = Commit.grade(GitWork.given(GitHubUsername.given("Me"), withConstantTimes));
+          final IGrade direct =
+              Commit.grade(GitWork.given(GitHubUsername.given("Me"), withConstantTimes));
           LOGGER.debug("Grade direct: {}.", JsonGrade.asJson(direct));
           assertEquals(1.0d, direct.getPoints());
         }
@@ -157,5 +168,4 @@ class CommitTests {
     }
 
   }
-
 }

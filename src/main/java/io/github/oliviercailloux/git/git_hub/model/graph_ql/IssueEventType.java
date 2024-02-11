@@ -4,6 +4,7 @@ import com.google.common.base.CaseFormat;
 
 public enum IssueEventType {
 	ASSIGNED, CLOSED, RENAMED_TITLE, REOPENED, UNASSIGNED;
+
 	public Class<? extends IssueEvent> toClass() {
 		try {
 			final Class<?> c = Class.forName(toString());

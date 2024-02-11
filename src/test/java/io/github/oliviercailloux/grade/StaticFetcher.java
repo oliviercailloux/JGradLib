@@ -11,11 +11,13 @@ import java.io.IOException;
 import java.util.Map;
 
 public class StaticFetcher implements GitFileSystemWithHistoryFetcher {
-  public static GitFileSystemWithHistoryFetcher single(GitHubUsername username, GitHistorySimple gitFs) {
+  public static GitFileSystemWithHistoryFetcher single(GitHubUsername username,
+      GitHistorySimple gitFs) {
     return new StaticFetcher(ImmutableMap.of(username, gitFs));
   }
 
-  public static GitFileSystemWithHistoryFetcher multiple(Map<GitHubUsername, GitHistorySimple> gitFsesByauthor) {
+  public static GitFileSystemWithHistoryFetcher
+      multiple(Map<GitHubUsername, GitHistorySimple> gitFsesByauthor) {
     return new StaticFetcher(gitFsesByauthor);
   }
 

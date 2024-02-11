@@ -58,45 +58,50 @@ public class CompCust implements CodeGrader<RuntimeException> {
 
 	private static final Instant INSTANT_2 = Instant.parse("2020-03-03T10:15:30.00Z");
 
-	private static record OrderNoTime(int customerNbOrders, ImmutableList<String> simples) {
+	private static record OrderNoTime (int customerNbOrders, ImmutableList<String> simples) {
 	}
 
-	private static record OrderTime(int customerNbOrders, Instant time, ImmutableList<String> simples) {
+	private static record OrderTime (int customerNbOrders, Instant time,
+			ImmutableList<String> simples) {
 	}
 
 	public static final String PREFIX = "computer-customer";
 
-	public static final ZonedDateTime DEADLINE_ORIGINAL = LocalDateTime.parse("2023-06-19T15:50:00")
-			.atZone(ZoneId.of("Europe/Paris"));
-	public static final ZonedDateTime DEADLINE_SECOND_CHANCE = LocalDateTime.parse("2023-06-09T23:59:59")
-			.atZone(ZoneId.of("Europe/Paris"));
+	public static final ZonedDateTime DEADLINE_ORIGINAL =
+			LocalDateTime.parse("2023-06-19T15:50:00").atZone(ZoneId.of("Europe/Paris"));
+	public static final ZonedDateTime DEADLINE_SECOND_CHANCE =
+			LocalDateTime.parse("2023-06-09T23:59:59").atZone(ZoneId.of("Europe/Paris"));
 
 	public static final double USER_WEIGHT = 0d;
 
 	public static Mark causeToMark(Throwable e) {
-		final String messagePart = e.getMessage() == null ? "" : " with message ‘%s’".formatted(e.getMessage());
+		final String messagePart =
+				e.getMessage() == null ? "" : " with message ‘%s’".formatted(e.getMessage());
 		return Mark.zero("Code failed with %s".formatted(e.getClass().getName()) + messagePart);
 	}
 
 	public static void main(String[] args) throws Exception {
 		original();
-//		second();
+		// second();
 	}
 
 	public static void original() throws IOException {
 		final GitFileSystemWithHistoryFetcher fetcher = GitFileSystemWithHistoryFetcherByPrefix
 				.getRetrievingByPrefixAndFilteringAndUsingCommitDates(PREFIX, "Student");
-//				.getRetrievingByPrefix(PREFIX);
-		final BatchGitHistoryGrader<RuntimeException> batchGrader = BatchGitHistoryGrader.given(() -> fetcher);
+		// .getRetrievingByPrefix(PREFIX);
+		final BatchGitHistoryGrader<RuntimeException> batchGrader =
+				BatchGitHistoryGrader.given(() -> fetcher);
 
 		final CompCust grader = new CompCust();
-		final MavenCodeGrader<RuntimeException> m = MavenCodeGrader.penal(grader, UncheckedIOException::new,
-				WarningsBehavior.DO_NOT_PENALIZE);
+		final MavenCodeGrader<RuntimeException> m =
+				MavenCodeGrader.penal(grader, UncheckedIOException::new, WarningsBehavior.DO_NOT_PENALIZE);
 
-		batchGrader.getAndWriteGradesExp(DEADLINE_ORIGINAL, Duration.ofMinutes(30), GitFsGraderUsingLast.using(m),
-//				USER_WEIGHT, Path.of("grades " + PREFIX + " original"),
-//				PREFIX + " original " + Instant.now().atZone(DEADLINE_ORIGINAL.getZone()));
-				USER_WEIGHT, Path.of("grades " + PREFIX), PREFIX + Instant.now().atZone(DEADLINE_ORIGINAL.getZone()));
+		batchGrader.getAndWriteGradesExp(DEADLINE_ORIGINAL, Duration.ofMinutes(30),
+				GitFsGraderUsingLast.using(m),
+				// USER_WEIGHT, Path.of("grades " + PREFIX + " original"),
+				// PREFIX + " original " + Instant.now().atZone(DEADLINE_ORIGINAL.getZone()));
+				USER_WEIGHT, Path.of("grades " + PREFIX),
+				PREFIX + Instant.now().atZone(DEADLINE_ORIGINAL.getZone()));
 		grader.close();
 		LOGGER.info("Done original, closed.");
 	}
@@ -104,15 +109,17 @@ public class CompCust implements CodeGrader<RuntimeException> {
 	public static void second() throws IOException {
 		final GitFileSystemWithHistoryFetcher fetcher = GitFileSystemWithHistoryFetcherByPrefix
 				.getRetrievingByPrefixAndFiltering(PREFIX, "Student");
-//				.getRetrievingByPrefix(PREFIX);
+		// .getRetrievingByPrefix(PREFIX);
 
-		final BatchGitHistoryGrader<RuntimeException> batchGrader = BatchGitHistoryGrader.given(() -> fetcher);
+		final BatchGitHistoryGrader<RuntimeException> batchGrader =
+				BatchGitHistoryGrader.given(() -> fetcher);
 
 		final CompCust grader = new CompCust();
-		final MavenCodeGrader<RuntimeException> m = MavenCodeGrader.penal(grader, UncheckedIOException::new,
-				WarningsBehavior.DO_NOT_PENALIZE);
+		final MavenCodeGrader<RuntimeException> m =
+				MavenCodeGrader.penal(grader, UncheckedIOException::new, WarningsBehavior.DO_NOT_PENALIZE);
 
-		batchGrader.getAndWriteGrades(DEADLINE_SECOND_CHANCE, Duration.ofMinutes(120), GitFsGraderUsingLast.using(m),
+		batchGrader.getAndWriteGrades(DEADLINE_SECOND_CHANCE, Duration.ofMinutes(120),
+				GitFsGraderUsingLast.using(m),
 				// USER_WEIGHT, Path.of("grades " + PREFIX + " original"),
 				// PREFIX + " original " + Instant.now().atZone(DEADLINE_ORIGINAL.getZone()));
 				USER_WEIGHT, Path.of("grades " + PREFIX + " second"),
@@ -167,12 +174,14 @@ public class CompCust implements CodeGrader<RuntimeException> {
 	public MarksTree gradeComp(Instanciator instanciator) {
 		final ImmutableMap.Builder<Criterion, MarksTree> builder = ImmutableMap.builder();
 		{
-			final TryCatchAll<Object> comp = instanciator
-					.invokeStatic(CL_COMP, Object.class, "instance", ImmutableList.of()).andApply(o -> o.orElseThrow());
+			final TryCatchAll<Object> comp =
+					instanciator.invokeStatic(CL_COMP, Object.class, "instance", ImmutableList.of())
+							.andApply(o -> o.orElseThrow());
 			LOGGER.debug("Comp: {}.", comp);
 			comp.andApply(c -> Instanciator.invoke(c, Void.class, "addOperand", 1d));
-			final TryCatchAll<Object> comp2 = instanciator
-					.invokeStatic(CL_COMP, Object.class, "instance", ImmutableList.of()).andApply(o -> o.orElseThrow());
+			final TryCatchAll<Object> comp2 =
+					instanciator.invokeStatic(CL_COMP, Object.class, "instance", ImmutableList.of())
+							.andApply(o -> o.orElseThrow());
 			comp2.andApply(c -> Instanciator.invoke(c, Void.class, "addOperand", 3d));
 			comp.andApply(c -> Instanciator.invoke(c, Void.class, "addOperand", 2d));
 			comp2.andApply(c -> Instanciator.invoke(c, Void.class, "addOperand", 17d));
@@ -183,25 +192,29 @@ public class CompCust implements CodeGrader<RuntimeException> {
 		}
 
 		{
-			final TryCatchAll<Object> comp = instanciator
-					.invokeStatic(CL_COMP, Object.class, "oneOp", ImmutableList.of(30d)).andApply(o -> o.orElseThrow());
+			final TryCatchAll<Object> comp =
+					instanciator.invokeStatic(CL_COMP, Object.class, "oneOp", ImmutableList.of(30d))
+							.andApply(o -> o.orElseThrow());
 			comp.andApply(c -> Instanciator.invoke(c, Void.class, "addOperand", 1d));
-			final TryCatchAll<Object> comp2 = instanciator
-					.invokeStatic(CL_COMP, Object.class, "oneOp", ImmutableList.of(3d)).andApply(o -> o.orElseThrow());
+			final TryCatchAll<Object> comp2 =
+					instanciator.invokeStatic(CL_COMP, Object.class, "oneOp", ImmutableList.of(3d))
+							.andApply(o -> o.orElseThrow());
 			comp2.andApply(c -> Instanciator.invoke(c, Void.class, "addOperand", 3d));
-			final TryCatchAll<Optional<Void>> secondAdd = comp2
-					.andApply(c -> Instanciator.invoke(c, Void.class, "addOperand", 17d).orThrow());
+			final TryCatchAll<Optional<Void>> secondAdd =
+					comp2.andApply(c -> Instanciator.invoke(c, Void.class, "addOperand", 17d).orThrow());
 			final MarksTree mapped = secondAdd.map(r -> Mark.zero("Unexpected answer to spurious add."),
 					c -> Mark.binary(c instanceof IllegalStateException));
 			builder.put(ONE_THEN_SPURIOUS, mapped);
 		}
 
 		{
-			final TryCatchAll<Object> comp = instanciator
-					.invokeStatic(CL_COMP, Object.class, "oneOp", ImmutableList.of(30d)).andApply(o -> o.orElseThrow());
+			final TryCatchAll<Object> comp =
+					instanciator.invokeStatic(CL_COMP, Object.class, "oneOp", ImmutableList.of(30d))
+							.andApply(o -> o.orElseThrow());
 			Instanciator.invoke(comp, Void.class, "addOperand", 1d);
-			final TryCatchAll<Object> comp2 = instanciator
-					.invokeStatic(CL_COMP, Object.class, "oneOp", ImmutableList.of(3d)).andApply(o -> o.orElseThrow());
+			final TryCatchAll<Object> comp2 =
+					instanciator.invokeStatic(CL_COMP, Object.class, "oneOp", ImmutableList.of(3d))
+							.andApply(o -> o.orElseThrow());
 			comp2.andApply(c -> Instanciator.invoke(c, Void.class, "addOperand", 2d));
 			comp.andApply(c -> Instanciator.invoke(c, Void.class, "addOperand", 5d));
 			final TryCatchAll<Double> obs = comp2
@@ -211,53 +224,58 @@ public class CompCust implements CodeGrader<RuntimeException> {
 		}
 
 		{
-			final TryCatchAll<Object> comp = instanciator
-					.invokeStatic(CL_COMP, Object.class, "duplOp", ImmutableList.of(3d)).andApply(o -> o.orElseThrow());
+			final TryCatchAll<Object> comp =
+					instanciator.invokeStatic(CL_COMP, Object.class, "duplOp", ImmutableList.of(3d))
+							.andApply(o -> o.orElseThrow());
 			instanciator.invokeStatic(CL_COMP, Object.class, "duplOp", ImmutableList.of(30d))
 					.andApply(o -> o.orElseThrow());
-			final TryCatchAll<Double> obs = comp
-					.andApply(c -> Instanciator.invokeProducing(c, Double.class, "apply", "*").orThrow());
+			final TryCatchAll<Double> obs =
+					comp.andApply(c -> Instanciator.invokeProducing(c, Double.class, "apply", "*").orThrow());
 			final MarksTree mapped = markG(obs, o -> DoubleMath.fuzzyEquals(9d, o, 1e-6d));
 			builder.put(DUPL_THEN_MULT, mapped);
 		}
 
 		{
-			final ch.qos.logback.classic.Logger rootLogger = (ch.qos.logback.classic.Logger) LoggerFactory
-					.getLogger(Logger.ROOT_LOGGER_NAME);
+			final ch.qos.logback.classic.Logger rootLogger =
+					(ch.qos.logback.classic.Logger) LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME);
 			final ListAppender<ILoggingEvent> listAppender = new ListAppender<>();
 			listAppender.start();
 			rootLogger.addAppender(listAppender);
-			final TryCatchAll<Object> comp = instanciator
-					.invokeStatic(CL_COMP, Object.class, "instance", ImmutableList.of()).andApply(o -> o.orElseThrow());
+			final TryCatchAll<Object> comp =
+					instanciator.invokeStatic(CL_COMP, Object.class, "instance", ImmutableList.of())
+							.andApply(o -> o.orElseThrow());
 			comp.andApply(c -> Instanciator.invoke(c, Void.class, "addOperand", 1d));
 			comp.andApply(c -> Instanciator.invoke(c, Void.class, "addOperand", 2d));
-			final TryCatchAll<Double> obs = comp
-					.andApply(c -> Instanciator.invokeProducing(c, Double.class, "apply", "+").orThrow());
+			final TryCatchAll<Double> obs =
+					comp.andApply(c -> Instanciator.invokeProducing(c, Double.class, "apply", "+").orThrow());
 			final List<ILoggingEvent> logsList = listAppender.list;
 			final MarksTree mapped = markG(obs, o -> !logsList.isEmpty());
 			builder.put(LOGS, mapped);
 		}
 
 		{
-			final TryCatchAll<Object> comp = instanciator
-					.invokeStatic(CL_COMP, Object.class, "instance", ImmutableList.of()).andApply(o -> o.orElseThrow());
+			final TryCatchAll<Object> comp =
+					instanciator.invokeStatic(CL_COMP, Object.class, "instance", ImmutableList.of())
+							.andApply(o -> o.orElseThrow());
 			comp.andApply(c -> Instanciator.invoke(c, Void.class, "addOperand", 1d));
 			comp.andApply(c -> Instanciator.invoke(c, Void.class, "addOperand", 2d));
-			final TryCatchAll<Double> secondAdd = comp
-					.andApply(c -> Instanciator.invokeProducing(c, Double.class, "apply", "non-op").orThrow());
+			final TryCatchAll<Double> secondAdd = comp.andApply(
+					c -> Instanciator.invokeProducing(c, Double.class, "apply", "non-op").orThrow());
 			final MarksTree mapped = secondAdd.map(r -> Mark.zero("Unexpected answer to invalid op."),
 					c -> Mark.binary(c instanceof IllegalArgumentException));
 			builder.put(INVALID_OP, mapped);
 		}
 
 		{
-			final TryCatchAll<Object> comp = instanciator
-					.invokeStatic(CL_COMP, Object.class, "instance", ImmutableList.of()).andApply(o -> o.orElseThrow());
+			final TryCatchAll<Object> comp =
+					instanciator.invokeStatic(CL_COMP, Object.class, "instance", ImmutableList.of())
+							.andApply(o -> o.orElseThrow());
 			comp.andApply(c -> Instanciator.invoke(c, Void.class, "addOperand", 1d));
-			final TryCatchAll<Double> secondAdd = comp
-					.andApply(c -> Instanciator.invokeProducing(c, Double.class, "apply", "+").orThrow());
-			final MarksTree mapped = secondAdd.map(r -> Mark.zero("Unexpected answer to invalid state op."),
-					c -> Mark.binary(c instanceof IllegalStateException));
+			final TryCatchAll<Double> secondAdd =
+					comp.andApply(c -> Instanciator.invokeProducing(c, Double.class, "apply", "+").orThrow());
+			final MarksTree mapped =
+					secondAdd.map(r -> Mark.zero("Unexpected answer to invalid state op."),
+							c -> Mark.binary(c instanceof IllegalStateException));
 			builder.put(INVALID_STATE_OP, mapped);
 		}
 		return MarksTree.composite(builder.build());
@@ -271,9 +289,9 @@ public class CompCust implements CodeGrader<RuntimeException> {
 				try (FileSystem fs = Jimfs.newFileSystem()) {
 					final Path path = Files.createDirectories(fs.getPath("somedir")).resolve("somefile");
 					Files.writeString(path, "productxxy" + System.lineSeparator());
-					final List<?> read = instanciator
-							.invokeStatic(CL_CUST, List.class, "readOrders", ImmutableList.of(path)).orThrow()
-							.orElseThrow();
+					final List<?> read =
+							instanciator.invokeStatic(CL_CUST, List.class, "readOrders", ImmutableList.of(path))
+									.orThrow().orElseThrow();
 					return ImmutableList.of("productxxy").equals(read);
 				}
 			});
@@ -284,11 +302,12 @@ public class CompCust implements CodeGrader<RuntimeException> {
 			final TryCatchAll<Boolean> attempt = TryCatchAll.get(() -> {
 				try (FileSystem fs = Jimfs.newFileSystem()) {
 					final Path path = Files.createDirectories(fs.getPath("somedir")).resolve("somefile");
-					Files.writeString(path, "productxxy" + System.lineSeparator() + "" + System.lineSeparator()
-							+ "another" + System.lineSeparator() + "" + System.lineSeparator());
-					final List<?> read = instanciator
-							.invokeStatic(CL_CUST, List.class, "readOrders", ImmutableList.of(path)).orThrow()
-							.orElseThrow();
+					Files.writeString(path,
+							"productxxy" + System.lineSeparator() + "" + System.lineSeparator() + "another"
+									+ System.lineSeparator() + "" + System.lineSeparator());
+					final List<?> read =
+							instanciator.invokeStatic(CL_CUST, List.class, "readOrders", ImmutableList.of(path))
+									.orThrow().orElseThrow();
 					return ImmutableList.of("productxxy", "another").equals(read);
 				}
 			});
@@ -297,8 +316,9 @@ public class CompCust implements CodeGrader<RuntimeException> {
 
 		{
 			final TryCatchAll<Boolean> attempt = TryCatchAll.get(() -> {
-				final Object cust = instanciator.invokeStatic(CL_CUST, Object.class, "empty", ImmutableList.of())
-						.orThrow().orElseThrow();
+				final Object cust =
+						instanciator.invokeStatic(CL_CUST, Object.class, "empty", ImmutableList.of()).orThrow()
+								.orElseThrow();
 				final Set<?> orders = Instanciator.invokeProducing(cust, Set.class, "allOrders").orThrow();
 				return orders.isEmpty();
 			});
@@ -323,11 +343,13 @@ public class CompCust implements CodeGrader<RuntimeException> {
 
 		{
 			final TryCatchAll<Boolean> attempt = TryCatchAll.get(() -> {
-				final Object cust = instanciator.invokeStatic(CL_CUST, Object.class, "empty", ImmutableList.of())
-						.orThrow().orElseThrow();
-				Instanciator.invoke(cust, Void.class, "placeOrder", ImmutableList.of(INSTANT_1, "productxxy"));
-				final ImmutableMap<Instant, ImmutableList<String>> expected = ImmutableMap.of(INSTANT_1,
-						ImmutableList.of("productxxy"));
+				final Object cust =
+						instanciator.invokeStatic(CL_CUST, Object.class, "empty", ImmutableList.of()).orThrow()
+								.orElseThrow();
+				Instanciator.invoke(cust, Void.class, "placeOrder",
+						ImmutableList.of(INSTANT_1, "productxxy"));
+				final ImmutableMap<Instant, ImmutableList<String>> expected =
+						ImmutableMap.of(INSTANT_1, ImmutableList.of("productxxy"));
 				return equalCust(expected, cust);
 			});
 			builder.put(PLACING_ONE, mark(attempt));
@@ -335,10 +357,13 @@ public class CompCust implements CodeGrader<RuntimeException> {
 
 		{
 			final TryCatchAll<Boolean> attempt = TryCatchAll.get(() -> {
-				final Object cust = instanciator.invokeStatic(CL_CUST, Object.class, "empty", ImmutableList.of())
-						.orThrow().orElseThrow();
-				Instanciator.invoke(cust, Void.class, "placeOrder", ImmutableList.of(INSTANT_1, "productxxy"));
-				Instanciator.invoke(cust, Void.class, "placeOrder", ImmutableList.of(INSTANT_2, "productxxyz"));
+				final Object cust =
+						instanciator.invokeStatic(CL_CUST, Object.class, "empty", ImmutableList.of()).orThrow()
+								.orElseThrow();
+				Instanciator.invoke(cust, Void.class, "placeOrder",
+						ImmutableList.of(INSTANT_1, "productxxy"));
+				Instanciator.invoke(cust, Void.class, "placeOrder",
+						ImmutableList.of(INSTANT_2, "productxxyz"));
 				final ImmutableMap<Instant, ImmutableList<String>> expected = ImmutableMap.of(INSTANT_1,
 						ImmutableList.of("productxxy"), INSTANT_2, ImmutableList.of("productxxyz"));
 				return equalCust(expected, cust);
@@ -348,15 +373,20 @@ public class CompCust implements CodeGrader<RuntimeException> {
 
 		{
 			final TryCatchAll<Boolean> attempt = TryCatchAll.get(() -> {
-				final Object cust = instanciator.invokeStatic(CL_CUST, Object.class, "empty", ImmutableList.of())
-						.orThrow().orElseThrow();
-				Instanciator.invoke(cust, Void.class, "placeOrder", ImmutableList.of(INSTANT_1, "productxxy"));
-				Instanciator.invoke(cust, Void.class, "placeOrder", ImmutableList.of(INSTANT_2, "productxxyz"));
-				Instanciator.invoke(cust, Void.class, "placeOrder", ImmutableList.of(INSTANT_1, "productxxy2"));
-				Instanciator.invoke(cust, Void.class, "placeOrder", ImmutableList.of(INSTANT_2, "productxxyz2"));
-				final ImmutableMap<Instant, ImmutableList<String>> expected = ImmutableMap.of(INSTANT_1,
-						ImmutableList.of("productxxy", "productxxy2"), INSTANT_2,
-						ImmutableList.of("productxxyz", "productxxyz2"));
+				final Object cust =
+						instanciator.invokeStatic(CL_CUST, Object.class, "empty", ImmutableList.of()).orThrow()
+								.orElseThrow();
+				Instanciator.invoke(cust, Void.class, "placeOrder",
+						ImmutableList.of(INSTANT_1, "productxxy"));
+				Instanciator.invoke(cust, Void.class, "placeOrder",
+						ImmutableList.of(INSTANT_2, "productxxyz"));
+				Instanciator.invoke(cust, Void.class, "placeOrder",
+						ImmutableList.of(INSTANT_1, "productxxy2"));
+				Instanciator.invoke(cust, Void.class, "placeOrder",
+						ImmutableList.of(INSTANT_2, "productxxyz2"));
+				final ImmutableMap<Instant, ImmutableList<String>> expected =
+						ImmutableMap.of(INSTANT_1, ImmutableList.of("productxxy", "productxxy2"), INSTANT_2,
+								ImmutableList.of("productxxyz", "productxxyz2"));
 				return equalCust(expected, cust);
 			});
 			builder.put(PLACING_MANY, mark(attempt));
@@ -364,9 +394,11 @@ public class CompCust implements CodeGrader<RuntimeException> {
 
 		{
 			final TryCatchAll<Object> attempt = TryCatchAll.get(() -> {
-				final Object cust = instanciator.invokeStatic(CL_CUST, Object.class, "empty", ImmutableList.of())
-						.orThrow().orElseThrow();
-				Instanciator.invoke(cust, Void.class, "placeOrder", ImmutableList.of(INSTANT_EARLY, "productxxy"))
+				final Object cust =
+						instanciator.invokeStatic(CL_CUST, Object.class, "empty", ImmutableList.of()).orThrow()
+								.orElseThrow();
+				Instanciator
+						.invoke(cust, Void.class, "placeOrder", ImmutableList.of(INSTANT_EARLY, "productxxy"))
 						.orThrow().orElseThrow();
 				return cust;
 			});
@@ -376,31 +408,35 @@ public class CompCust implements CodeGrader<RuntimeException> {
 
 		{
 			final TryCatchAllVoid attempt = TryCatchAllVoid.run(() -> {
-				final Object cust = instanciator.invokeStatic(CL_CUST, Object.class, "empty", ImmutableList.of())
-						.orThrow().orElseThrow();
-				final Set<String> all = Instanciator.invokeProducing(cust, Set.class, "allOrders").orThrow();
+				final Object cust =
+						instanciator.invokeStatic(CL_CUST, Object.class, "empty", ImmutableList.of()).orThrow()
+								.orElseThrow();
+				final Set<String> all =
+						Instanciator.invokeProducing(cust, Set.class, "allOrders").orThrow();
 				all.add("ploum");
 			});
-			builder.put(ALL_WRITE_THROWS,
-					attempt.map(() -> Mark.zero(), e -> Mark.binary(e instanceof UnsupportedOperationException)));
+			builder.put(ALL_WRITE_THROWS, attempt.map(() -> Mark.zero(),
+					e -> Mark.binary(e instanceof UnsupportedOperationException)));
 		}
 
 		{
 			final TryCatchAll<Boolean> attempt = TryCatchAll.get(() -> {
-				final Object cust = instanciator.invokeStatic(CL_CUST, Object.class, "empty", ImmutableList.of())
-						.orThrow().orElseThrow();
-				final Stream<Instant> latterOnes = Stream.iterate(INSTANT_2, i -> i.plus(Duration.ofMinutes(5l)))
-						.limit(50);
-				final Stream<Instant> formerOnes = Stream.iterate(INSTANT_1, i -> i.plus(Duration.ofMinutes(5l)))
-						.limit(50);
-				final ImmutableList<Instant> instants = Stream.concat(latterOnes, formerOnes)
-						.collect(ImmutableList.toImmutableList());
+				final Object cust =
+						instanciator.invokeStatic(CL_CUST, Object.class, "empty", ImmutableList.of()).orThrow()
+								.orElseThrow();
+				final Stream<Instant> latterOnes =
+						Stream.iterate(INSTANT_2, i -> i.plus(Duration.ofMinutes(5l))).limit(50);
+				final Stream<Instant> formerOnes =
+						Stream.iterate(INSTANT_1, i -> i.plus(Duration.ofMinutes(5l))).limit(50);
+				final ImmutableList<Instant> instants =
+						Stream.concat(latterOnes, formerOnes).collect(ImmutableList.toImmutableList());
 				for (Instant instant : instants) {
-					Instanciator.invoke(cust, Void.class, "placeOrder", ImmutableList.of(instant, instant.toString()));
+					Instanciator.invoke(cust, Void.class, "placeOrder",
+							ImmutableList.of(instant, instant.toString()));
 				}
 				final ImmutableSet<OrderTime> allOrders = allOrders(cust);
-				final ImmutableList<Instant> times = allOrders.stream().map(OrderTime::time)
-						.collect(ImmutableList.toImmutableList());
+				final ImmutableList<Instant> times =
+						allOrders.stream().map(OrderTime::time).collect(ImmutableList.toImmutableList());
 				return times.equals(ImmutableList.sortedCopyOf(Comparator.naturalOrder(), instants));
 			});
 			builder.put(ALL_ITERATES, mark(attempt));
@@ -408,8 +444,9 @@ public class CompCust implements CodeGrader<RuntimeException> {
 
 		{
 			final TryCatchAll<Boolean> attempt = TryCatchAll.get(() -> {
-				final Object cust = instanciator.invokeStatic(CL_CUST, Object.class, "empty", ImmutableList.of())
-						.orThrow().orElseThrow();
+				final Object cust =
+						instanciator.invokeStatic(CL_CUST, Object.class, "empty", ImmutableList.of()).orThrow()
+								.orElseThrow();
 				Instanciator.invoke(cust, Void.class, "placeOrder", ImmutableList.of(INSTANT_1, "one"));
 				Instanciator.invoke(cust, Void.class, "placeOrder", ImmutableList.of(INSTANT_2, "two"));
 				final List<String> ordered = ordered(cust, INSTANT_1);
@@ -425,12 +462,15 @@ public class CompCust implements CodeGrader<RuntimeException> {
 	}
 
 	private List<String> ordered(final Object cust, final Instant instant) throws Throwable {
-		final Object orders = Instanciator.invokeProducing(cust, Object.class, "ordered", instant).orThrow();
-		final List<String> ordered = Instanciator.invokeProducing(orders, List.class, "simpleOrders").orThrow();
+		final Object orders =
+				Instanciator.invokeProducing(cust, Object.class, "ordered", instant).orThrow();
+		final List<String> ordered =
+				Instanciator.invokeProducing(orders, List.class, "simpleOrders").orThrow();
 		return ordered;
 	}
 
-	private boolean equalCust(Map<Instant, ImmutableList<String>> expected, Object observed) throws Throwable {
+	private boolean equalCust(Map<Instant, ImmutableList<String>> expected, Object observed)
+			throws Throwable {
 		final ImmutableSet<OrderTime> allOrders = allOrders(observed);
 		final ImmutableSet.Builder<OrderTime> indivOrderBuilder = ImmutableSet.builder();
 		for (Instant instant : expected.keySet()) {
@@ -442,7 +482,8 @@ public class CompCust implements CodeGrader<RuntimeException> {
 		final ImmutableSet<OrderTime> expectedIndivs = expected.entrySet().stream()
 				.map(e -> new OrderTime(expected.size(), e.getKey(), e.getValue()))
 				.collect(ImmutableSet.toImmutableSet());
-		return allEqualWithTime(expectedIndivs, indivOrders) && allEqualWithTime(expectedIndivs, allOrders);
+		return allEqualWithTime(expectedIndivs, indivOrders)
+				&& allEqualWithTime(expectedIndivs, allOrders);
 	}
 
 	private ImmutableSet<OrderTime> allOrders(Object cust) throws Throwable {
@@ -477,7 +518,8 @@ public class CompCust implements CodeGrader<RuntimeException> {
 		return true;
 	}
 
-	private boolean allEqualWithTime(ImmutableSet<OrderTime> expected, ImmutableSet<OrderTime> observed) {
+	private boolean allEqualWithTime(ImmutableSet<OrderTime> expected,
+			ImmutableSet<OrderTime> observed) {
 		if (expected.size() != observed.size()) {
 			return false;
 		}
@@ -495,26 +537,29 @@ public class CompCust implements CodeGrader<RuntimeException> {
 	}
 
 	private boolean equals(OrderNoTime expected, OrderTime observed) {
-		return expected.customerNbOrders == observed.customerNbOrders && expected.simples.equals(observed.simples);
+		return expected.customerNbOrders == observed.customerNbOrders
+				&& expected.simples.equals(observed.simples);
 	}
 
 	private boolean equals(OrderTime expected, OrderTime observed) {
-		return expected.customerNbOrders == observed.customerNbOrders && expected.time.equals(observed.time)
-				&& expected.simples.equals(observed.simples);
+		return expected.customerNbOrders == observed.customerNbOrders
+				&& expected.time.equals(observed.time) && expected.simples.equals(observed.simples);
 	}
 
 	private OrderTime toOrder(Object order) throws Throwable {
 		final Object cust = Instanciator.invokeProducing(order, Object.class, "customer").orThrow();
 		final Set<?> allOrders = Instanciator.invokeProducing(cust, Set.class, "allOrders").orThrow();
 		final Instant time = Instanciator.invokeProducing(order, Instant.class, "time").orThrow();
-		final List<?> theseOrders = Instanciator.invokeProducing(order, List.class, "simpleOrders").orThrow();
-		final ImmutableList<String> theseOrdersAsStrings = theseOrders.stream().map(o -> (String) o)
-				.collect(ImmutableList.toImmutableList());
+		final List<?> theseOrders =
+				Instanciator.invokeProducing(order, List.class, "simpleOrders").orThrow();
+		final ImmutableList<String> theseOrdersAsStrings =
+				theseOrders.stream().map(o -> (String) o).collect(ImmutableList.toImmutableList());
 		return new OrderTime(allOrders.size(), time, theseOrdersAsStrings);
 	}
 
 	private <T> T callWithTimeout(TSupplier<? extends T, ?> callable) throws Throwable {
-		return limiter.callWithTimeout(() -> TryCatchAll.get(callable), Duration.ofSeconds(5)).orThrow();
+		return limiter.callWithTimeout(() -> TryCatchAll.get(callable), Duration.ofSeconds(5))
+				.orThrow();
 	}
 
 	@SuppressWarnings("unused")

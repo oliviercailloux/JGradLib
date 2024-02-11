@@ -91,5 +91,4 @@ public class MyCyclic implements CyclicDiceRoller {
       throw new IllegalArgumentException();
     }
   }
-
 }

@@ -62,8 +62,8 @@ class CompilerTests {
   void testEclipseMissingDep() throws Exception {
     final Path source = Path.of(getClass().getResource("UsingGuava.java").toURI());
     {
-      final CompilationResult result = Compiler.eclipseCompile(ImmutableList.of(Path.of(".")),
-          ImmutableSet.of(source));
+      final CompilationResult result =
+          Compiler.eclipseCompile(ImmutableList.of(Path.of(".")), ImmutableSet.of(source));
       assertFalse(result.compiled);
       assertEquals(0, result.countWarnings());
       assertTrue(result.err.contains("The import com.google cannot be resolved"));
@@ -76,11 +76,13 @@ class CompilerTests {
   void testEclipseWithDep() throws Exception {
     final Path source = Path.of(getClass().getResource("UsingGuava.java").toURI());
     final List<URI> classpath = new ClassGraph().getClasspathURIs();
-    final ImmutableSet<URI> guavas = classpath.stream().filter(u -> u.toString().contains("/guava-"))
-        .collect(ImmutableSet.toImmutableSet());
-    final ImmutableSet<Path> guavaPaths = guavas.stream().map(Path::of).collect(ImmutableSet.toImmutableSet());
+    final ImmutableSet<URI> guavas = classpath.stream()
+        .filter(u -> u.toString().contains("/guava-")).collect(ImmutableSet.toImmutableSet());
+    final ImmutableSet<Path> guavaPaths =
+        guavas.stream().map(Path::of).collect(ImmutableSet.toImmutableSet());
     {
-      final CompilationResult result = Compiler.eclipseCompile(guavaPaths.asList(), ImmutableSet.of(source));
+      final CompilationResult result =
+          Compiler.eclipseCompile(guavaPaths.asList(), ImmutableSet.of(source));
       assertEquals(0, result.countWarnings());
       assertEquals(0, result.countErrors());
       assertTrue(result.compiled);
@@ -92,8 +94,8 @@ class CompilerTests {
     final Path source = Path.of(getClass().getResource("SourceWithWarnings.java").toURI());
     assertTrue(Files.exists(source), source.toString());
     {
-      final CompilationResult resultDefault = Compiler.eclipseCompile(ImmutableList.of(Path.of(".")),
-          ImmutableSet.of(source), false);
+      final CompilationResult resultDefault =
+          Compiler.eclipseCompile(ImmutableList.of(Path.of(".")), ImmutableSet.of(source), false);
       assertTrue(resultDefault.compiled);
       /**
        * Does not count the unnecessary type cast, the declared and unused throwing, …
@@ -101,8 +103,8 @@ class CompilerTests {
       assertEquals(2, resultDefault.countWarnings());
     }
     {
-      final CompilationResult result = Compiler.eclipseCompile(ImmutableList.of(Path.of(".")),
-          ImmutableSet.of(source));
+      final CompilationResult result =
+          Compiler.eclipseCompile(ImmutableList.of(Path.of(".")), ImmutableSet.of(source));
       assertTrue(result.compiled);
       assertEquals(5, result.countWarnings());
     }
@@ -111,8 +113,8 @@ class CompilerTests {
   @Test
   void testEclipseNoWarn() throws Exception {
     final Path source = Path.of(getClass().getResource("SourceWithNoWarnings.java").toURI());
-    final CompilationResult result = Compiler.eclipseCompile(ImmutableList.of(Path.of(".")),
-        ImmutableSet.of(source));
+    final CompilationResult result =
+        Compiler.eclipseCompile(ImmutableList.of(Path.of(".")), ImmutableSet.of(source));
     assertTrue(result.compiled);
     assertEquals(0, result.countWarnings());
   }
@@ -121,16 +123,16 @@ class CompilerTests {
   @Disabled("To be investigated.")
   void testNewCompilerWarn() throws Exception {
     final Path source = Path.of(getClass().getResource("SourceWithWarnings.java").toURI());
-    final ImmutableList<Diagnostic<? extends JavaFileObject>> result = NewCompiler.create()
-        .setSourcePaths(ImmutableSet.of(source)).compile();
+    final ImmutableList<Diagnostic<? extends JavaFileObject>> result =
+        NewCompiler.create().setSourcePaths(ImmutableSet.of(source)).compile();
     assertEquals(0, result.size());
   }
 
   @Test
   void testNewCompilerNoWarn() throws Exception {
     final Path source = Path.of(getClass().getResource("SourceWithNoWarnings.java").toURI());
-    final ImmutableList<Diagnostic<? extends JavaFileObject>> result = NewCompiler.create()
-        .setSourcePaths(ImmutableSet.of(source)).compile();
+    final ImmutableList<Diagnostic<? extends JavaFileObject>> result =
+        NewCompiler.create().setSourcePaths(ImmutableSet.of(source)).compile();
     assertEquals(0, result.size());
   }
 
@@ -153,8 +155,10 @@ class CompilerTests {
 
   @Test
   void testJdkWithCp() throws Exception {
-    final Path sourceRequired = Path.of(getClass().getResource("SourceWithNoWarnings.java").toURI());
-    final Path sourceRequiring = Path.of(getClass().getResource("MyFunctionRequiring.java").toURI());
+    final Path sourceRequired =
+        Path.of(getClass().getResource("SourceWithNoWarnings.java").toURI());
+    final Path sourceRequiring =
+        Path.of(getClass().getResource("MyFunctionRequiring.java").toURI());
     try (FileSystem jimFs = Jimfs.newFileSystem(Configuration.unix())) {
       final Path cp = jimFs.getPath("cp");
       Files.createDirectories(cp);
@@ -162,8 +166,8 @@ class CompilerTests {
       Files.createDirectories(main);
 
       Compiler.intolerant(ImmutableList.of(), cp).compile(ImmutableList.of(sourceRequired));
-      assertThrows(VerifyException.class,
-          () -> Compiler.intolerant(ImmutableList.of(), main).compile(ImmutableList.of(sourceRequiring)));
+      assertThrows(VerifyException.class, () -> Compiler.intolerant(ImmutableList.of(), main)
+          .compile(ImmutableList.of(sourceRequiring)));
       Compiler.intolerant(ImmutableList.of(cp), main).compile(ImmutableList.of(sourceRequiring));
 
       final ImmutableSet<Path> files;
@@ -181,13 +185,14 @@ class CompilerTests {
     final Path sourceDir = work.resolve(getClass().getPackage().getName().replace('.', '/'));
     final Path sourcePath = sourceDir.resolve("AnotherName.java");
     {
-      final String idFct = Files.readString(Path.of(getClass().getResource("SourceWithWarnings.java").toURI()));
+      final String idFct =
+          Files.readString(Path.of(getClass().getResource("SourceWithWarnings.java").toURI()));
       Files.createDirectories(sourceDir);
       Files.writeString(sourcePath, idFct);
     }
 
-    final List<Diagnostic<? extends JavaFileObject>> diagnostics = Compiler.compile(ImmutableList.of(),
-        Path.of("."), ImmutableSet.of(sourcePath));
+    final List<Diagnostic<? extends JavaFileObject>> diagnostics =
+        Compiler.compile(ImmutableList.of(), Path.of("."), ImmutableSet.of(sourcePath));
     assertEquals(1, diagnostics.size());
     assertEquals(
         "io/github/oliviercailloux/bytecode/AnotherName.java:5: error: class SourceWithWarnings is public, should be declared in a file named SourceWithWarnings.java\n"
@@ -206,13 +211,13 @@ class CompilerTests {
 
       final JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
       final DiagnosticCollector<JavaFileObject> diagnosticCollector = new DiagnosticCollector<>();
-      try (StandardJavaFileManager fileManager = compiler.getStandardFileManager(diagnosticCollector, null,
-          null)) {
+      try (StandardJavaFileManager fileManager =
+          compiler.getStandardFileManager(diagnosticCollector, null, null)) {
         fileManager.setLocationFromPaths(StandardLocation.CLASS_PATH, ImmutableList.of(work));
-        final Iterable<? extends JavaFileObject> srcToCompileObjs = fileManager
-            .getJavaFileObjectsFromPaths(ImmutableList.of(sourcePath));
-        final CompilationTask task = compiler.getTask(new StringWriter(), fileManager, diagnosticCollector,
-            ImmutableList.of(), null, srcToCompileObjs);
+        final Iterable<? extends JavaFileObject> srcToCompileObjs =
+            fileManager.getJavaFileObjectsFromPaths(ImmutableList.of(sourcePath));
+        final CompilationTask task = compiler.getTask(new StringWriter(), fileManager,
+            diagnosticCollector, ImmutableList.of(), null, srcToCompileObjs);
         assertThrows(IllegalStateException.class, () -> task.call());
       }
     }

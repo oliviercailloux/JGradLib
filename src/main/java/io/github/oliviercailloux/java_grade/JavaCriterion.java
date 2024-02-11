@@ -6,8 +6,7 @@ public enum JavaCriterion {
 
 	POM,
 	/**
-	 * A commit has been done, not through GitHub, but not necessarily with the
-	 * right identity.
+	 * A commit has been done, not through GitHub, but not necessarily with the right identity.
 	 */
 	COMMIT,
 	/**
@@ -18,5 +17,4 @@ public enum JavaCriterion {
 	public Criterion asCriterion() {
 		return Criterion.given(toString());
 	}
-
 }

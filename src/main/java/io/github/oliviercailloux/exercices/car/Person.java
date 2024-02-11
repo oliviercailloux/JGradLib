@@ -1,8 +1,8 @@
 package io.github.oliviercailloux.exercices.car;
 
 /**
- * A person with a name and a speed that we assume is the speed at which that
- * person <em>always</em> drives.
+ * A person with a name and a speed that we assume is the speed at which that person <em>always</em>
+ * drives.
  */
 public interface Person {
 	public String getName();

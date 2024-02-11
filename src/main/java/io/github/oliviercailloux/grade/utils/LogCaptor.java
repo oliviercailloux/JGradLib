@@ -51,11 +51,11 @@ public class LogCaptor implements AutoCloseable {
 
 	@SuppressWarnings("unused")
 	private Appender<ILoggingEvent> getRootConsoleAppender() {
-		final ImmutableSet<Appender<ILoggingEvent>> appenders = ImmutableSet
-				.copyOf(getRootLogger().iteratorForAppenders());
+		final ImmutableSet<Appender<ILoggingEvent>> appenders =
+				ImmutableSet.copyOf(getRootLogger().iteratorForAppenders());
 		checkState(appenders.size() == 2);
-		final Appender<ILoggingEvent> consoleAppender = appenders.stream().filter(a -> a instanceof ConsoleAppender)
-				.collect(MoreCollectors.onlyElement());
+		final Appender<ILoggingEvent> consoleAppender = appenders.stream()
+				.filter(a -> a instanceof ConsoleAppender).collect(MoreCollectors.onlyElement());
 		return consoleAppender;
 	}
 
@@ -75,5 +75,4 @@ public class LogCaptor implements AutoCloseable {
 		appender.stop();
 		logger.detachAppender(appender);
 	}
-
 }

@@ -18,11 +18,11 @@ public class AssignedEvent extends IssueEvent {
 		final User user = getUser();
 		checkArgument(!snap.getAssignees().contains(user));
 		return IssueSnapshot.of(getCreatedAt(), snap.getName(), snap.isOpen(),
-				Streams.concat(snap.getAssignees().stream(), Stream.of(user)).collect(ImmutableSet.toImmutableSet()));
+				Streams.concat(snap.getAssignees().stream(), Stream.of(user))
+						.collect(ImmutableSet.toImmutableSet()));
 	}
 
 	public User getUser() {
 		return User.from(getJson().getJsonObject("user"));
 	}
-
 }

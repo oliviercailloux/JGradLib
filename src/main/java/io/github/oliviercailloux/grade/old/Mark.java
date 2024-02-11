@@ -15,7 +15,7 @@ import jakarta.json.bind.annotation.JsonbPropertyOrder;
 import jakarta.json.bind.annotation.JsonbTransient;
 import java.util.Objects;
 
-@JsonbPropertyOrder({ "points", "comments" })
+@JsonbPropertyOrder({"points", "comments"})
 public class Mark implements IGrade {
 	public static Mark fromNew(io.github.oliviercailloux.grade.Mark newer) {
 		return new Mark(newer.getPoints(), newer.getComment());
@@ -46,7 +46,8 @@ public class Mark implements IGrade {
 	}
 
 	@JsonbCreator
-	public static Mark given(@JsonbProperty("points") double points, @JsonbProperty("comment") String comment) {
+	public static Mark given(@JsonbProperty("points") double points,
+			@JsonbProperty("comment") String comment) {
 		return new Mark(points, comment);
 	}
 
@@ -127,7 +128,7 @@ public class Mark implements IGrade {
 
 	@Override
 	public String toString() {
-		return MoreObjects.toStringHelper(this).add("points", points).add("comment", comment).toString();
+		return MoreObjects.toStringHelper(this).add("points", points).add("comment", comment)
+				.toString();
 	}
-
 }

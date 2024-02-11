@@ -14,14 +14,16 @@ import java.time.Instant;
 import org.eclipse.jgit.lib.ObjectId;
 
 public class GitFileSystemWithHistoryFetcherFilterer implements GitFileSystemWithHistoryFetcher {
-  public static GitFileSystemWithHistoryFetcher filterer(GitFileSystemWithHistoryFetcher delegate, Instant cap) {
+  public static GitFileSystemWithHistoryFetcher filterer(GitFileSystemWithHistoryFetcher delegate,
+      Instant cap) {
     return new GitFileSystemWithHistoryFetcherFilterer(delegate, cap);
   }
 
   private final GitFileSystemWithHistoryFetcher delegate;
   private final Instant cap;
 
-  private GitFileSystemWithHistoryFetcherFilterer(GitFileSystemWithHistoryFetcher delegate, Instant cap) {
+  private GitFileSystemWithHistoryFetcherFilterer(GitFileSystemWithHistoryFetcher delegate,
+      Instant cap) {
     this.delegate = checkNotNull(delegate);
     this.cap = checkNotNull(cap);
   }
@@ -35,7 +37,8 @@ public class GitFileSystemWithHistoryFetcherFilterer implements GitFileSystemWit
   public GitHistorySimple goToFs(GitHubUsername author) throws IOException {
     final GitHistorySimple hs = delegate.goToFs(author);
     final ImmutableMap<ObjectId, Instant> timestamps = hs.getTimestamps();
-    final GitFilteringFs capped = GitFilteringFs.filter(hs.fs(), c -> !timestamps.get(c.id()).isAfter(cap));
+    final GitFilteringFs capped =
+        GitFilteringFs.filter(hs.fs(), c -> !timestamps.get(c.id()).isAfter(cap));
     return GitHistorySimple.create(capped, timestamps);
   }
 
@@ -43,5 +46,4 @@ public class GitFileSystemWithHistoryFetcherFilterer implements GitFileSystemWit
   public void close() throws IOException {
     delegate.close();
   }
-
 }

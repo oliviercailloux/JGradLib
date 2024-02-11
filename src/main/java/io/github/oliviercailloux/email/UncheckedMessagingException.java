@@ -5,8 +5,8 @@ import jakarta.mail.MessagingException;
 
 @SuppressWarnings("serial")
 public class UncheckedMessagingException extends RuntimeException {
-	public static Unchecker<MessagingException, UncheckedMessagingException> MESSAGING_UNCHECKER = Unchecker
-			.wrappingWith(UncheckedMessagingException::new);
+	public static Unchecker<MessagingException, UncheckedMessagingException> MESSAGING_UNCHECKER =
+			Unchecker.wrappingWith(UncheckedMessagingException::new);
 
 	public UncheckedMessagingException(MessagingException cause) {
 		super(cause);

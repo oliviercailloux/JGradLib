@@ -20,8 +20,7 @@ class StdOutErrLoggerImpl implements StdOutErrLogger {
 	/**
 	 * Slightly improved from
 	 * https://svn.apache.org/viewvc/logging/log4j/trunk/contribs/JimMoore/LoggingOutputStream.java?view=co,
-	 * found thanks to https://stackoverflow.com/a/11187462 (I didn’t check the
-	 * writing algorithm).
+	 * found thanks to https://stackoverflow.com/a/11187462 (I didn’t check the writing algorithm).
 	 */
 	private static class LoggingOutputStream extends OutputStream {
 
@@ -32,9 +31,9 @@ class StdOutErrLoggerImpl implements StdOutErrLogger {
 		private byte[] buffer;
 
 		/**
-		 * The number of valid bytes in the buffer. This value is always in the range
-		 * <tt>0</tt> through <tt>buf.length</tt>; elements <tt>buf[0]</tt> through
-		 * <tt>buf[count-1]</tt> contain valid byte data.
+		 * The number of valid bytes in the buffer. This value is always in the range <tt>0</tt> through
+		 * <tt>buf.length</tt>; elements <tt>buf[0]</tt> through <tt>buf[count-1]</tt> contain valid
+		 * byte data.
 		 */
 		private int count;
 
@@ -89,8 +88,9 @@ class StdOutErrLoggerImpl implements StdOutErrLogger {
 
 			/* don't print out blank lines; flushing from PrintStream puts out these */
 			if (count == LINE_SEPARATOR.length()) {
-				if (((char) buffer[0]) == LINE_SEPARATOR.charAt(0) && ((count == 1) || /* <- Unix & Mac, -> Windows */
-						((count == 2) && ((char) buffer[1]) == LINE_SEPARATOR.charAt(1)))) {
+				if (((char) buffer[0]) == LINE_SEPARATOR.charAt(0)
+						&& ((count == 1) || /* <- Unix & Mac, -> Windows */
+								((count == 2) && ((char) buffer[1]) == LINE_SEPARATOR.charAt(1)))) {
 					reset();
 					return;
 				}
@@ -102,23 +102,23 @@ class StdOutErrLoggerImpl implements StdOutErrLogger {
 
 			final String content = new String(theBytes);
 			switch (level) {
-			case ERROR:
-				delegate.error(content);
-				break;
-			case WARN:
-				delegate.warn(content);
-				break;
-			case INFO:
-				delegate.info(content);
-				break;
-			case DEBUG:
-				delegate.debug(content);
-				break;
-			case TRACE:
-				delegate.trace(content);
-				break;
-			default:
-				throw new VerifyException("Unknown level");
+				case ERROR:
+					delegate.error(content);
+					break;
+				case WARN:
+					delegate.warn(content);
+					break;
+				case INFO:
+					delegate.info(content);
+					break;
+				case DEBUG:
+					delegate.debug(content);
+					break;
+				case TRACE:
+					delegate.trace(content);
+					break;
+				default:
+					throw new VerifyException("Unknown level");
 			}
 
 			reset();
@@ -158,8 +158,10 @@ class StdOutErrLoggerImpl implements StdOutErrLogger {
 	void start() {
 		checkState(loggingOutputStreamsToClose == null);
 
-		final StdOutErrLoggerImpl.LoggingOutputStream out = new LoggingOutputStream(LOGGER, Level.DEBUG);
-		final StdOutErrLoggerImpl.LoggingOutputStream err = new LoggingOutputStream(LOGGER, Level.DEBUG);
+		final StdOutErrLoggerImpl.LoggingOutputStream out =
+				new LoggingOutputStream(LOGGER, Level.DEBUG);
+		final StdOutErrLoggerImpl.LoggingOutputStream err =
+				new LoggingOutputStream(LOGGER, Level.DEBUG);
 		loggingOutputStreamsToClose = ImmutableList.of(out, err);
 		final PrintStream outPs = new PrintStream(out);
 		final PrintStream errPs = new PrintStream(err);

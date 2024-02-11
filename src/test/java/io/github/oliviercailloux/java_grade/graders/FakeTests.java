@@ -43,11 +43,12 @@ class FakeTests {
   @Test
   void testEmpty() throws Exception {
     try (Repository repository = new InMemoryRepository(new DfsRepositoryDescription("myrepo"));
-        GitFileSystem gitFs = GitFileSystemProvider.instance().newFileSystemFromRepository(repository)) {
+        GitFileSystem gitFs =
+            GitFileSystemProvider.instance().newFileSystemFromRepository(repository)) {
 
       final GitHistorySimple gitH = GitHistorySimple.usingCommitterDates(gitFs);
-      final BatchGitHistoryGrader<RuntimeException> batchGrader = BatchGitHistoryGrader
-          .given(() -> StaticFetcher.single(USERNAME, gitH));
+      final BatchGitHistoryGrader<RuntimeException> batchGrader =
+          BatchGitHistoryGrader.given(() -> StaticFetcher.single(USERNAME, gitH));
 
       final ZonedDateTime nowTime = ZonedDateTime.parse("2022-01-01T10:00:00+01:00[Europe/Paris]");
       final Exam exam = batchGrader.getGrades(nowTime.plus(30, ChronoUnit.MINUTES),
@@ -68,12 +69,14 @@ class FakeTests {
 
       {
         Files.writeString(c1.resolve("Some file.txt"), "A file!\n");
-        Files.writeString(Files.createDirectories(c1.resolve("Some folder/")).resolve("Another file.txt"),
+        Files.writeString(
+            Files.createDirectories(c1.resolve("Some folder/")).resolve("Another file.txt"),
             "More content!\n");
       }
       {
         Files.writeString(c2.resolve("Some file.txt"), "A file!\nMore content!\n");
-        Files.writeString(Files.createDirectories(c2.resolve("Some folder/")).resolve("Another file.txt"),
+        Files.writeString(
+            Files.createDirectories(c2.resolve("Some folder/")).resolve("Another file.txt"),
             "More content!\n");
       }
       {
@@ -88,12 +91,13 @@ class FakeTests {
 
       final ImmutableGraph<Path> graph = Utils.asGraph(ImmutableList.of(c1, c2, c3));
       try (Repository repository = JGit.createRepository(personIdent, graph, links)) {
-        try (GitFileSystem gitFs = GitFileSystemProvider.instance().newFileSystemFromRepository(repository)) {
+        try (GitFileSystem gitFs =
+            GitFileSystemProvider.instance().newFileSystemFromRepository(repository)) {
           final GitHistorySimple gitH = GitHistorySimple.usingCommitterDates(gitFs);
-          final BatchGitHistoryGrader<RuntimeException> batchGrader = BatchGitHistoryGrader
-              .given(() -> StaticFetcher.single(USERNAME, gitH));
-          final Exam exam = batchGrader.getGrades(BatchGitHistoryGrader.MAX_DEADLINE, Duration.ofMinutes(0),
-              new Fake(), 0.1d);
+          final BatchGitHistoryGrader<RuntimeException> batchGrader =
+              BatchGitHistoryGrader.given(() -> StaticFetcher.single(USERNAME, gitH));
+          final Exam exam = batchGrader.getGrades(BatchGitHistoryGrader.MAX_DEADLINE,
+              Duration.ofMinutes(0), new Fake(), 0.1d);
 
           Files.writeString(Path.of("test grades.json"), JsonSimpleGrade.toJson(exam));
           Files.writeString(Path.of("test grades.html"), XmlUtils
@@ -105,5 +109,4 @@ class FakeTests {
     }
 
   }
-
 }

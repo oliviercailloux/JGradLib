@@ -28,9 +28,9 @@ public class PomContexter {
 	}
 
 	public void init() throws GradingException {
-		final Matcher matcher = Pattern.compile(
-				"<project[^>]*>" + "[^<]*" + "(?:<[^>]*>[^<]*</[^>]*>[^<]*)*" + "<groupId>(([^\\.<]\\.?)+)</groupId>")
-				.matcher(pomContent);
+		final Matcher matcher =
+				Pattern.compile("<project[^>]*>" + "[^<]*" + "(?:<[^>]*>[^<]*</[^>]*>[^<]*)*"
+						+ "<groupId>(([^\\.<]\\.?)+)</groupId>").matcher(pomContent);
 		LOGGER.debug("Matching for group id against {}.", pomContent);
 		final boolean found = matcher.find();
 		final MatchResult result = matcher.toMatchResult();
@@ -63,5 +63,4 @@ public class PomContexter {
 		assert groupIdElements != null;
 		return groupIdElements;
 	}
-
 }

@@ -24,7 +24,8 @@ public class XmlUtils {
 		final DOMImplementationRegistry registry;
 		try {
 			registry = DOMImplementationRegistry.newInstance();
-		} catch (ClassNotFoundException | InstantiationException | IllegalAccessException | ClassCastException e) {
+		} catch (ClassNotFoundException | InstantiationException | IllegalAccessException
+				| ClassCastException e) {
 			throw new AssertionError(e);
 		}
 		final DOMImplementationLS impl = (DOMImplementationLS) registry.getDOMImplementation("LS");
@@ -64,5 +65,4 @@ public class XmlUtils {
 			throw new AssertionError(e);
 		}
 	}
-
 }

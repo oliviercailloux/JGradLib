@@ -35,15 +35,15 @@ public class Owa {
 		final String prefix = WorkersGrader.PREFIX;
 
 		@SuppressWarnings("serial")
-		final Type type = new LinkedHashMap<String, IGrade>() {
-		}.getClass().getGenericSuperclass();
+		final Type type = new LinkedHashMap<String, IGrade>() {}.getClass().getGenericSuperclass();
 
-		final Map<String, IGrade> grades = JsonbUtils.fromJson(Files.readString(Path.of("grades " + prefix + ".json")),
-				type, JsonGrade.instance());
-		final ImmutableMap<String, IGrade> gradesOwa = Maps.toMap(grades.keySet(), s -> toOwa(grades.get(s)));
+		final Map<String, IGrade> grades = JsonbUtils.fromJson(
+				Files.readString(Path.of("grades " + prefix + ".json")), type, JsonGrade.instance());
+		final ImmutableMap<String, IGrade> gradesOwa =
+				Maps.toMap(grades.keySet(), s -> toOwa(grades.get(s)));
 
-		Files.writeString(Path.of("grades " + prefix + " owa.json"),
-				JsonbUtils.toJsonObject(gradesOwa, JsonCriterion.instance(), JsonGrade.instance()).toString());
+		Files.writeString(Path.of("grades " + prefix + " owa.json"), JsonbUtils
+				.toJsonObject(gradesOwa, JsonCriterion.instance(), JsonGrade.instance()).toString());
 	}
 
 	private static IGrade toOwa(IGrade grade) {
@@ -58,29 +58,32 @@ public class Owa {
 		final ArrayList<Criterion> paths = new ArrayList<>();
 		if (!grade.getSubGrades().keySet().contains(gradeCriterion)
 				&& ImmutableSet.copyOf(grade.getWeights().values()).equals(ImmutableSet.of(0d, 1d))) {
-			final Criterion right = grade.getWeights().keySet().stream().filter(c -> grade.getWeights().get(c) == 1d)
-					.collect(MoreCollectors.onlyElement());
+			final Criterion right = grade.getWeights().keySet().stream()
+					.filter(c -> grade.getWeights().get(c) == 1d).collect(MoreCollectors.onlyElement());
 			checkArgument(right.getName().startsWith("Cap at "), right);
 			paths.add(right);
 		}
 
-		if (grade.getGrade(CriteriaPath.from(paths)).orElseThrow(() -> new VerifyException(grade.toString()))
-				.getSubGrades().keySet().contains(gradeCriterion)) {
+		if (grade.getGrade(CriteriaPath.from(paths))
+				.orElseThrow(() -> new VerifyException(grade.toString())).getSubGrades().keySet()
+				.contains(gradeCriterion)) {
 			paths.add(gradeCriterion);
 		}
 		paths.add(mainCriterion);
-		if (grade.getGrade(CriteriaPath.from(paths)).orElseThrow(() -> new VerifyException(grade.toString()))
-				.getSubGrades().keySet().contains(codeCriterion)) {
+		if (grade.getGrade(CriteriaPath.from(paths))
+				.orElseThrow(() -> new VerifyException(grade.toString())).getSubGrades().keySet()
+				.contains(codeCriterion)) {
 			paths.add(codeCriterion);
 		}
 
 		final CriteriaPath codePath = CriteriaPath.from(paths);
-		final IGrade code = grade.getGrade(codePath).orElseThrow(() -> new IllegalArgumentException(grade.toString()));
+		final IGrade code =
+				grade.getGrade(codePath).orElseThrow(() -> new IllegalArgumentException(grade.toString()));
 
 		final DoubleStream streamOfOnes = DoubleStream.generate(() -> 1d).limit(6);
 		final DoubleStream streamIncr = IntStream.range(2, 9).asDoubleStream();
-		final ImmutableList<Double> increasingWeights = DoubleStream.concat(streamOfOnes, streamIncr).boxed()
-				.collect(ImmutableList.toImmutableList());
+		final ImmutableList<Double> increasingWeights = DoubleStream.concat(streamOfOnes, streamIncr)
+				.boxed().collect(ImmutableList.toImmutableList());
 
 		final IGrade newCode = GradeUtils.toOwa(code, increasingWeights);
 		return grade.withSubGrade(codePath, newCode);

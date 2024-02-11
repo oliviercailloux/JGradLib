@@ -32,11 +32,12 @@ public interface GitGrader {
 			return p -> Files.exists(p) && pattern.matcher(Files.readString(p)).matches();
 		}
 
-		public static TPredicate<GitPathRoot, IOException> containsFileMatching(
-				TPredicate<? super GitPath, IOException> predicate) {
+		public static TPredicate<GitPathRoot, IOException>
+				containsFileMatching(TPredicate<? super GitPath, IOException> predicate) {
 			final Predicate<? super GitPath> wrappedPredicate = IO_UNCHECKER.wrapPredicate(predicate);
 			return r -> {
-				try (Stream<Path> found = Files.find(r, 100, (p, a) -> wrappedPredicate.test((GitPath) p))) {
+				try (
+						Stream<Path> found = Files.find(r, 100, (p, a) -> wrappedPredicate.test((GitPath) p))) {
 					return found.anyMatch(p -> true);
 				} catch (UncheckedIOException e) {
 					throw e.getCause();
@@ -68,12 +69,13 @@ public interface GitGrader {
 			return patternBranch.matcher(gitRef).matches();
 		}
 
-		public static <PI, QI, FO extends QI> TPredicate<PI, IOException> compose(TFunction<PI, FO, IOException> f,
-				TPredicate<QI, IOException> p) {
+		public static <PI, QI, FO extends QI> TPredicate<PI, IOException>
+				compose(TFunction<PI, FO, IOException> f, TPredicate<QI, IOException> p) {
 			return r -> p.test(f.apply(r));
 		}
 
-		public static <PI> TPredicate<ImmutableSet<PI>, IOException> anyMatch(TPredicate<? super PI, IOException> p) {
+		public static <PI> TPredicate<ImmutableSet<PI>, IOException>
+				anyMatch(TPredicate<? super PI, IOException> p) {
 			return r -> {
 				try {
 					return r.stream().anyMatch(IO_UNCHECKER.wrapPredicate(p));
@@ -83,8 +85,8 @@ public interface GitGrader {
 			};
 		}
 
-		public static <PI> TPredicate<ImmutableSet<PI>, IOException> allAndSomeMatch(
-				TPredicate<? super PI, IOException> p) {
+		public static <PI> TPredicate<ImmutableSet<PI>, IOException>
+				allAndSomeMatch(TPredicate<? super PI, IOException> p) {
 			return r -> {
 				try {
 					return !r.isEmpty() && r.stream().allMatch(IO_UNCHECKER.wrapPredicate(p));
@@ -94,8 +96,8 @@ public interface GitGrader {
 			};
 		}
 
-		public static <PI> TPredicate<ImmutableSet<PI>, IOException> singletonAndMatch(
-				TPredicate<? super PI, IOException> p) {
+		public static <PI> TPredicate<ImmutableSet<PI>, IOException>
+				singletonAndMatch(TPredicate<? super PI, IOException> p) {
 			return r -> r.size() == 1 && p.test(Iterables.getOnlyElement(r));
 		}
 	}
@@ -108,23 +110,24 @@ public interface GitGrader {
 			return r -> r.resolve(file);
 		}
 
-		public static TFunction<GitPathRoot, Integer, IOException> countTrue(
-				Set<TPredicate<GitPathRoot, IOException>> predicates) throws IOException {
+		public static TFunction<GitPathRoot, Integer, IOException>
+				countTrue(Set<TPredicate<GitPathRoot, IOException>> predicates) throws IOException {
 			try {
-				return r -> Ints.checkedCast(
-						predicates.stream().map(p -> IO_UNCHECKER.wrapPredicate(p).test(r)).filter(b -> b).count());
+				return r -> Ints.checkedCast(predicates.stream()
+						.map(p -> IO_UNCHECKER.wrapPredicate(p).test(r)).filter(b -> b).count());
 			} catch (UncheckedIOException e) {
 				throw e.getCause();
 			}
 		}
 
-		public static TFunction<GitPathRoot, ImmutableSet<GitPath>, IOException> filesMatching(
-				TPredicate<? super GitPath, IOException> predicate) {
+		public static TFunction<GitPathRoot, ImmutableSet<GitPath>, IOException>
+				filesMatching(TPredicate<? super GitPath, IOException> predicate) {
 			final Predicate<? super GitPath> wrappedPredicate = IO_UNCHECKER.wrapPredicate(predicate);
 			return r -> {
-				try (Stream<Path> found = Files.find(r, 100, (p, a) -> wrappedPredicate.test((GitPath) p))) {
-					final ImmutableSet<GitPath> foundSet = found.map(p -> (GitPath) p)
-							.collect(ImmutableSet.toImmutableSet());
+				try (
+						Stream<Path> found = Files.find(r, 100, (p, a) -> wrappedPredicate.test((GitPath) p))) {
+					final ImmutableSet<GitPath> foundSet =
+							found.map(p -> (GitPath) p).collect(ImmutableSet.toImmutableSet());
 					LOGGER.debug("Found: {}.", foundSet);
 					return foundSet;
 				} catch (UncheckedIOException e) {

@@ -9,12 +9,11 @@ import java.util.regex.Pattern;
 
 /**
  *
- * When assignments get created using GitHub Classroom, they have the
- * organization as owner and a repository name formed by the name of the
- * assignment (called here prefix) followed by a hyphen followed by the GitHub
- * username of the student accepting the assignment. For example:
- * oliviercailloux-org:dep-git-astudentname. Note that the prefix can’t be
- * detected in general because both a prefix and a username can contain hyphens.
+ * When assignments get created using GitHub Classroom, they have the organization as owner and a
+ * repository name formed by the name of the assignment (called here prefix) followed by a hyphen
+ * followed by the GitHub username of the student accepting the assignment. For example:
+ * oliviercailloux-org:dep-git-astudentname. Note that the prefix can’t be detected in general
+ * because both a prefix and a username can contain hyphens.
  *
  */
 public class RepositoryCoordinatesWithPrefix extends RepositoryCoordinates {
@@ -31,7 +30,8 @@ public class RepositoryCoordinatesWithPrefix extends RepositoryCoordinates {
 		return new RepositoryCoordinatesWithPrefix(owner, prefix, username);
 	}
 
-	public static RepositoryCoordinatesWithPrefix from(RepositoryCoordinates coordinates, String prefix) {
+	public static RepositoryCoordinatesWithPrefix from(RepositoryCoordinates coordinates,
+			String prefix) {
 		final String username = getUsername(prefix, coordinates.getRepositoryName())
 				.orElseThrow(IllegalArgumentException::new);
 		return new RepositoryCoordinatesWithPrefix(coordinates.getOwner(), prefix, username);
@@ -57,5 +57,4 @@ public class RepositoryCoordinatesWithPrefix extends RepositoryCoordinates {
 	public String getUsername() {
 		return username;
 	}
-
 }

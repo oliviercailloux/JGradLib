@@ -24,20 +24,20 @@ public class Event {
 
 	public static Event from(JsonObject json) {
 		switch (getType(json)) {
-		case PUSH_EVENT:
-			return new PushEvent(json);
-		case CREATE_REPOSITORY_EVENT:
-			return new CreateRepositoryEvent(json);
-		case CREATE_BRANCH_EVENT:
-			return new CreateBranchEvent(json);
-		case CREATE_TAG_EVENT:
-			return new CreateTagEvent(json);
-		case ISSUES_EVENT:
-		case ISSUE_COMMENT_EVENT:
-		case MEMBER_EVENT:
-		case OTHER:
-		default:
-			return new Event(json);
+			case PUSH_EVENT:
+				return new PushEvent(json);
+			case CREATE_REPOSITORY_EVENT:
+				return new CreateRepositoryEvent(json);
+			case CREATE_BRANCH_EVENT:
+				return new CreateBranchEvent(json);
+			case CREATE_TAG_EVENT:
+				return new CreateTagEvent(json);
+			case ISSUES_EVENT:
+			case ISSUE_COMMENT_EVENT:
+			case MEMBER_EVENT:
+			case OTHER:
+			default:
+				return new Event(json);
 		}
 	}
 
@@ -73,39 +73,39 @@ public class Event {
 
 	static EventType getType(@SuppressWarnings("hiding") JsonObject json) {
 		switch (json.getString("type")) {
-		case "IssuesEvent":
-			return EventType.ISSUES_EVENT;
-		case "IssueCommentEvent":
-			return EventType.ISSUE_COMMENT_EVENT;
-		case "CreateEvent":
-			final String type = json.getJsonObject("payload").getString("ref_type");
-			switch (type) {
-			case "repository":
-				return EventType.CREATE_REPOSITORY_EVENT;
-			case "branch":
-				return EventType.CREATE_BRANCH_EVENT;
-			case "tag":
-				return EventType.CREATE_TAG_EVENT;
+			case "IssuesEvent":
+				return EventType.ISSUES_EVENT;
+			case "IssueCommentEvent":
+				return EventType.ISSUE_COMMENT_EVENT;
+			case "CreateEvent":
+				final String type = json.getJsonObject("payload").getString("ref_type");
+				switch (type) {
+					case "repository":
+						return EventType.CREATE_REPOSITORY_EVENT;
+					case "branch":
+						return EventType.CREATE_BRANCH_EVENT;
+					case "tag":
+						return EventType.CREATE_TAG_EVENT;
+					default:
+						throw new IllegalArgumentException();
+				}
+			case "MemberEvent":
+				return EventType.MEMBER_EVENT;
+			case "PushEvent":
+				return EventType.PUSH_EVENT;
 			default:
-				throw new IllegalArgumentException();
-			}
-		case "MemberEvent":
-			return EventType.MEMBER_EVENT;
-		case "PushEvent":
-			return EventType.PUSH_EVENT;
-		default:
-		case "Other":
-			return EventType.OTHER;
+			case "Other":
+				return EventType.OTHER;
 		}
 	}
 
 	@Override
 	public String toString() {
-		return MoreObjects.toStringHelper(this).addValue(PrintableJsonObjectFactory.wrapObject(json)).toString();
+		return MoreObjects.toStringHelper(this).addValue(PrintableJsonObjectFactory.wrapObject(json))
+				.toString();
 	}
 
 	JsonObject getPayload() {
 		return payload;
 	}
-
 }

@@ -12,5 +12,4 @@ public class CreateBranchEvent extends Event {
 	public String getCreatedBranchName() {
 		return getPayload().getString("ref");
 	}
-
 }

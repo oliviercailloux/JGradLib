@@ -69,6 +69,7 @@ public class EmailAddressAndPersonal {
 
 	@Override
 	public String toString() {
-		return MoreObjects.toStringHelper(this).add("address", address).add("personal", personal).toString();
+		return MoreObjects.toStringHelper(this).add("address", address).add("personal", personal)
+				.toString();
 	}
 }

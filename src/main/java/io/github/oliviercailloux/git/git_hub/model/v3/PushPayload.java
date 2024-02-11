@@ -35,8 +35,8 @@ public class PushPayload {
 	 * @return at least one entry
 	 */
 	public List<PayloadCommitDescription> getCommits() {
-		return json.getJsonArray("commits").stream().map(JsonValue::asJsonObject).map(PayloadCommitDescription::from)
-				.collect(Collectors.toList());
+		return json.getJsonArray("commits").stream().map(JsonValue::asJsonObject)
+				.map(PayloadCommitDescription::from).collect(Collectors.toList());
 	}
 
 	public int getId() {
@@ -49,6 +49,7 @@ public class PushPayload {
 	}
 
 	public Optional<ObjectId> getHead() {
-		return json.containsKey("head") ? Optional.of(ObjectId.fromString(json.getString("head"))) : Optional.empty();
+		return json.containsKey("head") ? Optional.of(ObjectId.fromString(json.getString("head")))
+				: Optional.empty();
 	}
 }

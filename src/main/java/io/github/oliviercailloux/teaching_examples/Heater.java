@@ -42,7 +42,7 @@ public class Heater implements CostlyThingWithUnit {
     this.power = power;
     this.price = price;
     this.identifier = identifier;
-//    price = power / 10d;
+    // price = power / 10d;
   }
 
   public String getIdentifier() {

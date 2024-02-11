@@ -9,5 +9,4 @@ public class CreateRepositoryEvent extends Event {
 		assert getPayload().getString("ref_type").equals("repository");
 		assert getPayload().isNull("ref");
 	}
-
 }

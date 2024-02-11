@@ -26,8 +26,8 @@ class HtmlGradeTests {
     XmlUtils.validate(document);
     final String written = XmlUtils.asString(document);
 
-    final String expected = Resources.toString(getClass().getResource("3Plus2.html"), StandardCharsets.UTF_8);
+    final String expected =
+        Resources.toString(getClass().getResource("3Plus2.html"), StandardCharsets.UTF_8);
     assertEquals(expected, written);
   }
-
 }

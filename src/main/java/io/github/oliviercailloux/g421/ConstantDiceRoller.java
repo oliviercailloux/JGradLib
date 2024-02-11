@@ -41,5 +41,4 @@ public class ConstantDiceRoller implements DiceRoller {
 		checkState(hasBeenRolled);
 		return rolled.get(i);
 	}
-
 }

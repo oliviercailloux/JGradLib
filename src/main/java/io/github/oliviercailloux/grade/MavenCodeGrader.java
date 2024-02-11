@@ -28,40 +28,45 @@ public class MavenCodeGrader<X extends Exception> implements PathGrader<X> {
 		DO_NOT_PENALIZE, PENALIZE_WARNINGS_AND_NOT_SUPPRESSED, PENALIZE_WARNINGS_AND_SUPPRESS;
 
 		public boolean penalizeWarnings() {
-			return ImmutableSet.of(PENALIZE_WARNINGS_AND_NOT_SUPPRESSED, PENALIZE_WARNINGS_AND_SUPPRESS).contains(this);
+			return ImmutableSet.of(PENALIZE_WARNINGS_AND_NOT_SUPPRESSED, PENALIZE_WARNINGS_AND_SUPPRESS)
+					.contains(this);
 		}
 	}
 
-	public static <X extends Exception> MavenCodeGrader<X> penal(CodeGrader<X> g, Function<IOException, X> wrapper,
-			WarningsBehavior w) {
+	public static <X extends Exception> MavenCodeGrader<X> penal(CodeGrader<X> g,
+			Function<IOException, X> wrapper, WarningsBehavior w) {
 		return new MavenCodeGrader<>(g, wrapper, w, new BasicCompiler());
 	}
 
-	public static <X extends Exception> MavenCodeGrader<X> basic(CodeGrader<X> g, Function<IOException, X> wrapper) {
-		return new MavenCodeGrader<>(g, wrapper, WarningsBehavior.PENALIZE_WARNINGS_AND_SUPPRESS, new BasicCompiler());
+	public static <X extends Exception> MavenCodeGrader<X> basic(CodeGrader<X> g,
+			Function<IOException, X> wrapper) {
+		return new MavenCodeGrader<>(g, wrapper, WarningsBehavior.PENALIZE_WARNINGS_AND_SUPPRESS,
+				new BasicCompiler());
 	}
 
 	public static <X extends Exception> MavenCodeGrader<X> complex(CodeGrader<X> g,
 			Function<IOException, ? extends X> wrapper, boolean considerSuppressed, MyCompiler compiler) {
-		return new MavenCodeGrader<>(g, wrapper, considerSuppressed ? WarningsBehavior.PENALIZE_WARNINGS_AND_SUPPRESS
-				: WarningsBehavior.PENALIZE_WARNINGS_AND_NOT_SUPPRESSED, compiler);
+		return new MavenCodeGrader<>(g, wrapper,
+				considerSuppressed ? WarningsBehavior.PENALIZE_WARNINGS_AND_SUPPRESS
+						: WarningsBehavior.PENALIZE_WARNINGS_AND_NOT_SUPPRESSED,
+				compiler);
 	}
 
 	public static class BasicCompiler implements MyCompiler {
 
 		@Override
 		public CompilationResultExt compile(Path compiledDir, Set<Path> javaPaths) throws IOException {
-			final CompilationResult eclipseResult = Compiler.eclipseCompileUsingOurClasspath(javaPaths, compiledDir);
+			final CompilationResult eclipseResult =
+					Compiler.eclipseCompileUsingOurClasspath(javaPaths, compiledDir);
 			final Pattern pathPattern = Pattern.compile("/tmp/sources[0-9]*/");
 			final String eclipseStr = pathPattern.matcher(eclipseResult.err).replaceAll("/…/");
 			final int nbSuppressed = (int) CheckedStream.<Path, IOException>wrapping(javaPaths.stream())
 					.map(p -> Files.readString(p))
 					.flatMap(s -> Pattern.compile("@SuppressWarnings").matcher(s).results()).count();
-			final CompilationResultExt transformedResult = Compiler.CompilationResultExt.given(eclipseResult.compiled,
-					eclipseResult.out, eclipseStr, nbSuppressed);
+			final CompilationResultExt transformedResult = Compiler.CompilationResultExt
+					.given(eclipseResult.compiled, eclipseResult.out, eclipseStr, nbSuppressed);
 			return transformedResult;
 		}
-
 	}
 
 	private final CodeGrader<X> g;
@@ -73,8 +78,8 @@ public class MavenCodeGrader<X extends Exception> implements PathGrader<X> {
 	private final MyCompiler basicCompiler;
 	private WarningsBehavior w;
 
-	private MavenCodeGrader(CodeGrader<X> g, Function<IOException, ? extends X> wrapper, WarningsBehavior w,
-			MyCompiler basicCompiler) {
+	private MavenCodeGrader(CodeGrader<X> g, Function<IOException, ? extends X> wrapper,
+			WarningsBehavior w, MyCompiler basicCompiler) {
 		this.g = g;
 		gradedProjects = null;
 		this.wrapper = wrapper;
@@ -114,9 +119,11 @@ public class MavenCodeGrader<X extends Exception> implements PathGrader<X> {
 			// srcDir = projectDirectory.resolve("src/main/java/");
 			srcDir = pomDirectory;
 		}
-		final ImmutableSet<Path> javaPaths = Files.exists(srcDir)
-				? PathUtils.getMatchingChildren(srcDir, p -> String.valueOf(p.getFileName()).endsWith(".java"))
-				: ImmutableSet.of();
+		final ImmutableSet<Path> javaPaths =
+				Files.exists(srcDir)
+						? PathUtils.getMatchingChildren(srcDir,
+								p -> String.valueOf(p.getFileName()).endsWith(".java"))
+						: ImmutableSet.of();
 		final CompilationResultExt result = basicCompiler.compile(compiledDir, javaPaths);
 
 		final MarksTree projectGrade;
@@ -130,9 +137,9 @@ public class MavenCodeGrader<X extends Exception> implements PathGrader<X> {
 			if (w.penalizeWarnings()) {
 				final Mark weightingMark;
 				{
-					final int nbCountedSW = (w == WarningsBehavior.PENALIZE_WARNINGS_AND_SUPPRESS)
-							? result.nbSuppressWarnings
-							: 0;
+					final int nbCountedSW =
+							(w == WarningsBehavior.PENALIZE_WARNINGS_AND_SUPPRESS) ? result.nbSuppressWarnings
+									: 0;
 					final String comment;
 					{
 						final ImmutableSet.Builder<String> commentsBuilder = ImmutableSet.builder();
@@ -148,8 +155,8 @@ public class MavenCodeGrader<X extends Exception> implements PathGrader<X> {
 					final double weightingScore = 1d - penalty;
 					weightingMark = Mark.given(weightingScore, comment);
 				}
-				projectGrade = MarksTree
-						.composite(ImmutableMap.of(WARNING_CRITERION, weightingMark, CODE_CRITERION, codeGrade));
+				projectGrade = MarksTree.composite(
+						ImmutableMap.of(WARNING_CRITERION, weightingMark, CODE_CRITERION, codeGrade));
 			} else {
 				projectGrade = codeGrade;
 			}
@@ -160,26 +167,29 @@ public class MavenCodeGrader<X extends Exception> implements PathGrader<X> {
 	@Override
 	public GradeAggregator getAggregator() {
 		if (w.penalizeWarnings()) {
-			return GradeAggregator
-					.min(GradeAggregator.parametric(CODE_CRITERION, WARNING_CRITERION, g.getCodeAggregator()));
+			return GradeAggregator.min(
+					GradeAggregator.parametric(CODE_CRITERION, WARNING_CRITERION, g.getCodeAggregator()));
 		}
 		return GradeAggregator.min(g.getCodeAggregator());
 	}
 
 	public static ImmutableSet<Path> possibleDirs(Path projectPath) throws IOException {
-		final ImmutableSet<Path> poms = PathUtils.getMatchingChildren(projectPath, p -> p.endsWith("pom.xml"));
+		final ImmutableSet<Path> poms =
+				PathUtils.getMatchingChildren(projectPath, p -> p.endsWith("pom.xml"));
 		LOGGER.debug("Poms: {}.", poms);
 		final ImmutableSet<Path> pomsWithJava;
-		pomsWithJava = CheckedStream
-				.<Path, IOException>wrapping(poms.stream()).filter(p -> !PathUtils
-						.getMatchingChildren(p, s -> String.valueOf(s.getFileName()).endsWith(".java")).isEmpty())
+		pomsWithJava = CheckedStream.<Path, IOException>wrapping(poms.stream())
+				.filter(p -> !PathUtils
+						.getMatchingChildren(p, s -> String.valueOf(s.getFileName()).endsWith(".java"))
+						.isEmpty())
 				.collect(ImmutableSet.toImmutableSet());
 		LOGGER.debug("Poms with java: {}.", pomsWithJava);
 		final ImmutableSet<Path> possibleDirs;
 		if (pomsWithJava.isEmpty()) {
 			possibleDirs = ImmutableSet.of(projectPath);
 		} else {
-			possibleDirs = pomsWithJava.stream().map(Path::getParent).collect(ImmutableSet.toImmutableSet());
+			possibleDirs =
+					pomsWithJava.stream().map(Path::getParent).collect(ImmutableSet.toImmutableSet());
 		}
 		return possibleDirs;
 	}
@@ -187,5 +197,4 @@ public class MavenCodeGrader<X extends Exception> implements PathGrader<X> {
 	public ImmutableMap<Path, MarksTree> getGradedProjects() {
 		return gradedProjects;
 	}
-
 }

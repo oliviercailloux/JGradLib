@@ -25,10 +25,9 @@ public class GradeStructure {
 	}
 
 	/**
-	 * @param paths need not contain every intermediate paths; anything is accepted
-	 *              (the whole structure is deduced anyway)
-	 * @return an empty grade structure iff the given paths set is empty or has only
-	 *         one root
+	 * @param paths need not contain every intermediate paths; anything is accepted (the whole
+	 *        structure is deduced anyway)
+	 * @return an empty grade structure iff the given paths set is empty or has only one root
 	 */
 	public static GradeStructure given(Set<CriteriaPath> paths) {
 		final Queue<CriteriaPath> toVisit = new ArrayDeque<>();
@@ -77,11 +76,13 @@ public class GradeStructure {
 	}
 
 	public static GradeStructure merge(Set<GradeStructure> grades) {
-		return given(grades.stream().flatMap(g -> g.getLeaves().stream()).collect(ImmutableSet.toImmutableSet()));
+		return given(grades.stream().flatMap(g -> g.getLeaves().stream())
+				.collect(ImmutableSet.toImmutableSet()));
 	}
 
 	public static GradeStructure from(Set<String> paths) {
-		return GradeStructure.given(paths.stream().map(CriteriaPath::from).collect(ImmutableSet.toImmutableSet()));
+		return GradeStructure
+				.given(paths.stream().map(CriteriaPath::from).collect(ImmutableSet.toImmutableSet()));
 	}
 
 	private final ImmutableGraph<CriteriaPath> graph;
@@ -91,8 +92,8 @@ public class GradeStructure {
 		checkArgument(graph.nodes().contains(CriteriaPath.ROOT));
 		checkArgument(graph.nodes().stream()
 				.allMatch(p -> graph.successors(p).stream().allMatch(s -> s.withoutTail().equals(p))));
-		checkArgument(graph.nodes().stream().allMatch(
-				p -> p.equals(CriteriaPath.ROOT) || graph.predecessors(p).equals(ImmutableSet.of(p.withoutTail()))));
+		checkArgument(graph.nodes().stream().allMatch(p -> p.equals(CriteriaPath.ROOT)
+				|| graph.predecessors(p).equals(ImmutableSet.of(p.withoutTail()))));
 	}
 
 	public ImmutableSet<CriteriaPath> getPaths() {
@@ -100,7 +101,8 @@ public class GradeStructure {
 	}
 
 	public ImmutableSet<CriteriaPath> getLeaves() {
-		return graph.nodes().stream().filter(p -> graph.successors(p).isEmpty()).collect(ImmutableSet.toImmutableSet());
+		return graph.nodes().stream().filter(p -> graph.successors(p).isEmpty())
+				.collect(ImmutableSet.toImmutableSet());
 	}
 
 	/**
@@ -124,7 +126,8 @@ public class GradeStructure {
 	 * @return all criteria such that path + c in sucessorpath(path)
 	 */
 	public ImmutableSet<Criterion> getSuccessorCriteria(CriteriaPath path) {
-		return graph.successors(path).stream().map(p -> p.getTail()).collect(ImmutableSet.toImmutableSet());
+		return graph.successors(path).stream().map(p -> p.getTail())
+				.collect(ImmutableSet.toImmutableSet());
 	}
 
 	public GradeStructure getStructure(Criterion child) {
@@ -133,7 +136,8 @@ public class GradeStructure {
 
 	public GradeStructure getStructure(CriteriaPath path) {
 		return given(graph.nodes().stream().filter(p -> p.startsWith(path))
-				.map(p -> CriteriaPath.from(p.subList(path.size(), p.size()))).collect(ImmutableSet.toImmutableSet()));
+				.map(p -> CriteriaPath.from(p.subList(path.size(), p.size())))
+				.collect(ImmutableSet.toImmutableSet()));
 	}
 
 	public ImmutableGraph<CriteriaPath> asGraph() {
@@ -158,5 +162,4 @@ public class GradeStructure {
 	public String toString() {
 		return MoreObjects.toStringHelper(this).add("Leaves", getLeaves()).toString();
 	}
-
 }

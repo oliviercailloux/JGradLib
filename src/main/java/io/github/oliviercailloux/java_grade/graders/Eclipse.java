@@ -39,14 +39,16 @@ import org.eclipse.jgit.diff.DiffEntry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-// /minimax-ex/src/main/java/io/github/oliviercailloux/minimax/utils/ForwardingMutableGraph.java for unused import statement
+// /minimax-ex/src/main/java/io/github/oliviercailloux/minimax/utils/ForwardingMutableGraph.java for
+// unused import statement
 public class Eclipse implements GitGrader {
   @SuppressWarnings("unused")
   private static final Logger LOGGER = LoggerFactory.getLogger(Eclipse.class);
 
   public static final String PREFIX = "eclipse";
 
-  public static final ZonedDateTime DEADLINE = ZonedDateTime.parse("2021-01-14T23:00:00+01:00[Europe/Paris]");
+  public static final ZonedDateTime DEADLINE =
+      ZonedDateTime.parse("2021-01-14T23:00:00+01:00[Europe/Paris]");
 
   private GitHistorySimple history;
 
@@ -126,26 +128,28 @@ public class Eclipse implements GitGrader {
 
   boolean compiles(GitPathRoot p) throws IOException {
     LOGGER.debug("Files matching.");
-    final TFunction<GitPathRoot, ImmutableSet<GitPath>, IOException> filesMatching = Functions
-        .filesMatching(isFileNamed("QuestioningConstraint.java"));
+    final TFunction<GitPathRoot, ImmutableSet<GitPath>, IOException> filesMatching =
+        Functions.filesMatching(isFileNamed("QuestioningConstraint.java"));
     final ImmutableSet<GitPath> matching = filesMatching.apply(p);
     LOGGER.debug("Files matching found: {}.", matching);
-    final Pattern patternCompiles = Pattern.compile(".*^(?<indent>\\h+)return[\\v\\h]+kind[\\v\\h]*;.*",
-        Pattern.DOTALL | Pattern.MULTILINE);
-    final TPredicate<ImmutableSet<GitPath>, IOException> singletonAndMatch = Predicates
-        .singletonAndMatch(contentMatches(patternCompiles));
+    final Pattern patternCompiles = Pattern.compile(
+        ".*^(?<indent>\\h+)return[\\v\\h]+kind[\\v\\h]*;.*", Pattern.DOTALL | Pattern.MULTILINE);
+    final TPredicate<ImmutableSet<GitPath>, IOException> singletonAndMatch =
+        Predicates.singletonAndMatch(contentMatches(patternCompiles));
     final boolean tested = singletonAndMatch.test(matching);
     LOGGER.debug("Predicate known: {}.", tested);
     return tested;
-//    return compose(filesMatching, singletonAndMatch).test(p);
+    // return compose(filesMatching, singletonAndMatch).test(p);
   }
 
   boolean singleChangeAbout(GitPathRootShaCached p, String file) throws IOException {
     final Set<GitPathRootShaCached> predecessors = history.graph().predecessors(p);
-    return (predecessors.size() == 1) && singleDiffAbout(Iterables.getOnlyElement(predecessors), p, file);
+    return (predecessors.size() == 1)
+        && singleDiffAbout(Iterables.getOnlyElement(predecessors), p, file);
   }
 
-  private boolean singleDiffAbout(GitPathRoot predecessor, GitPathRoot p, String file) throws IOException {
+  private boolean singleDiffAbout(GitPathRoot predecessor, GitPathRoot p, String file)
+      throws IOException {
     final ImmutableSet<DiffEntry> diff = history.fs().diff(predecessor, p);
     return diff.size() == 1 && diffIsAboutFile(Iterables.getOnlyElement(diff), file);
   }
@@ -164,8 +168,9 @@ public class Eclipse implements GitGrader {
   }
 
   boolean warning(GitPathRoot p) throws IOException {
-    final Pattern pattern = Pattern.compile(".*^(?<indent>\\h+)builder[\\v\\h]*=[\\v\\h]*mp[\\v\\h]*;.*",
-        Pattern.DOTALL | Pattern.MULTILINE);
+    final Pattern pattern =
+        Pattern.compile(".*^(?<indent>\\h+)builder[\\v\\h]*=[\\v\\h]*mp[\\v\\h]*;.*",
+            Pattern.DOTALL | Pattern.MULTILINE);
     return compose(Functions.filesMatching(isFileNamed("ConstraintsOnWeights.java")),
         Predicates.singletonAndMatch(contentMatches(pattern))).test(p);
   }
@@ -177,7 +182,9 @@ public class Eclipse implements GitGrader {
 
   private boolean helper(GitPathRoot p) throws IOException {
     return compose(Functions.filesMatching(isFileNamed("StrategyHelperTests.java")),
-        Predicates.singletonAndMatch(contentMatches(Marks.extendAll("StrategyHelper[^T]")).negate())).test(p);
+        Predicates
+            .singletonAndMatch(contentMatches(Marks.extendAll("StrategyHelper[^T]")).negate()))
+                .test(p);
   }
 
   private IGrade coursesGrade(Optional<GitPathRootShaCached> p) throws IOException {
@@ -191,21 +198,25 @@ public class Eclipse implements GitGrader {
 
   private boolean coursesChange(GitPathRoot p) throws IOException {
     return compose(Functions.filesMatching(isFileNamed("courses.soc")),
-        Predicates.singletonAndMatch(contentMatches(Pattern.compile("^8[\\r\\n]1.+", Pattern.DOTALL)))).test(p);
+        Predicates
+            .singletonAndMatch(contentMatches(Pattern.compile("^8[\\r\\n]1.+", Pattern.DOTALL))))
+                .test(p);
   }
 
   private IGrade numberGrade(Optional<GitPathRootShaCached> p) throws IOException {
     final CriterionGradeWeight c1 = CriterionGradeWeight.from(Criterion.given("Number"),
         Mark.binary(p.isPresent() && numberChange(p.get())), 7d);
     final CriterionGradeWeight c2 = CriterionGradeWeight.from(Criterion.given("Single change"),
-        Mark.binary(p.isPresent() && singleChangeAbout(p.get(), "Oracles m = 10, n = 6, 100.json")), 3d);
+        Mark.binary(p.isPresent() && singleChangeAbout(p.get(), "Oracles m = 10, n = 6, 100.json")),
+        3d);
     return WeightingGrade.from(ImmutableList.of(c1, c2));
 
   }
 
   private boolean numberChange(GitPathRoot p) throws IOException {
     return compose(Functions.filesMatching(isFileNamed("Oracles m = 10, n = 6, 100.json")),
-        Predicates.singletonAndMatch(contentMatches(Marks.extendAll("0.8388174124160426")))).test(p);
+        Predicates.singletonAndMatch(contentMatches(Marks.extendAll("0.8388174124160426"))))
+            .test(p);
   }
 
   private IGrade formattingGrade(Optional<GitPathRootShaCached> p) throws IOException {
@@ -223,10 +234,12 @@ public class Eclipse implements GitGrader {
       return false;
     }
     final String content = Files.readString(p);
-    final Pattern patternOne = Pattern.compile("(?<start>.*)^(?<indent>\\h+)checkState\\h*\\(c\\h*==\\h*null\\);.*",
-        Pattern.DOTALL | Pattern.MULTILINE);
-    final Pattern patternTwo = Pattern.compile("(?<start>.*)^(?<indent>\\h+)verify\\h*\\(v\\h*!=\\h*null\\);.*",
-        Pattern.DOTALL | Pattern.MULTILINE);
+    final Pattern patternOne =
+        Pattern.compile("(?<start>.*)^(?<indent>\\h+)checkState\\h*\\(c\\h*==\\h*null\\);.*",
+            Pattern.DOTALL | Pattern.MULTILINE);
+    final Pattern patternTwo =
+        Pattern.compile("(?<start>.*)^(?<indent>\\h+)verify\\h*\\(v\\h*!=\\h*null\\);.*",
+            Pattern.DOTALL | Pattern.MULTILINE);
     final Matcher matcherOne = patternOne.matcher(content);
     final Matcher matcherTwo = patternTwo.matcher(content);
     if (!matcherOne.matches() || !matcherTwo.matches()) {

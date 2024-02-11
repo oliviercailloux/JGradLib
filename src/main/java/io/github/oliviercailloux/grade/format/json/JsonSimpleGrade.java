@@ -47,16 +47,16 @@ public class JsonSimpleGrade {
 	private static final Logger LOGGER = LoggerFactory.getLogger(JsonSimpleGrade.class);
 
 	public static enum MarkAggregatorType {
-		ParametricWeighter, VoidAggregator, NormalizingStaticWeighter, StaticWeighter, AbsoluteAggregator,
-		MinAggregator, MaxAggregator, OwaAggregator;
+		ParametricWeighter, VoidAggregator, NormalizingStaticWeighter, StaticWeighter, AbsoluteAggregator, MinAggregator, MaxAggregator, OwaAggregator;
 	}
 
-	@JsonbPropertyOrder({ "type", "multiplied", "weighting", "weights" })
-	public static record GenericMarkAggregator(MarkAggregatorType type, Optional<Criterion> multiplied,
-			Optional<Criterion> weighting, Optional<Map<Criterion, Double>> weights,
+	@JsonbPropertyOrder({"type", "multiplied", "weighting", "weights"})
+	public static record GenericMarkAggregator (MarkAggregatorType type,
+			Optional<Criterion> multiplied, Optional<Criterion> weighting,
+			Optional<Map<Criterion, Double>> weights,
 			/**
-			 * Should think about coherence with map (which is optional instead of empty to
-			 * mark absence); Eclipse does not like an Optional here.
+			 * Should think about coherence with map (which is optional instead of empty to mark absence);
+			 * Eclipse does not like an Optional here.
 			 */
 			Optional<List<Double>> simpleWeights) {
 
@@ -103,19 +103,20 @@ public class JsonSimpleGrade {
 
 	private static MarksTree asMarksTree(JsonObject gradeObject) {
 		checkArgument(!gradeObject.isEmpty());
-		final ValueType valueType = gradeObject.get(gradeObject.keySet().iterator().next()).getValueType();
+		final ValueType valueType =
+				gradeObject.get(gradeObject.keySet().iterator().next()).getValueType();
 		final boolean isFinal = switch (valueType) {
-		case STRING:
-		case NUMBER:
-		case TRUE:
-		case FALSE:
-		case NULL:
-			yield true;
-		case OBJECT:
-		case ARRAY:
-			yield false;
-		default:
-			throw new VerifyException("Unexpected value: " + valueType);
+			case STRING:
+			case NUMBER:
+			case TRUE:
+			case FALSE:
+			case NULL:
+				yield true;
+			case OBJECT:
+			case ARRAY:
+				yield false;
+			default:
+				throw new VerifyException("Unexpected value: " + valueType);
 		};
 
 		if (isFinal) {
@@ -132,8 +133,9 @@ public class JsonSimpleGrade {
 
 		checkArgument(gradeObject.values().stream().map(JsonValue::getValueType)
 				.allMatch(Predicates.equalTo(ValueType.OBJECT)));
-		final ImmutableMap<Criterion, MarksTree> subs = gradeObject.keySet().stream()
-				.collect(ImmutableMap.toImmutableMap(Criterion::given, s -> asMarksTree(gradeObject.getJsonObject(s))));
+		final ImmutableMap<Criterion, MarksTree> subs =
+				gradeObject.keySet().stream().collect(ImmutableMap.toImmutableMap(Criterion::given,
+						s -> asMarksTree(gradeObject.getJsonObject(s))));
 		return MarksTree.composite(subs);
 	}
 
@@ -141,26 +143,28 @@ public class JsonSimpleGrade {
 			implements JsonbAdapter<GradeAggregator, GenericGradeAggregator> {
 		@Override
 		public GenericGradeAggregator adaptToJson(GradeAggregator aggregator) {
-			final ImmutableMap<Criterion, ? extends GradeAggregator> subs = aggregator.getSpecialSubAggregators();
-			final Map<Criterion, ? extends GradeAggregator> nonTrivialSubs = Maps.filterEntries(subs,
-					e -> !e.getValue().equals(GradeAggregator.TRIVIAL));
-			final Map<Criterion, GenericGradeAggregator> transformedNonTrivialSubs = Maps
-					.transformValues(nonTrivialSubs, this::adaptToJson);
+			final ImmutableMap<Criterion, ? extends GradeAggregator> subs =
+					aggregator.getSpecialSubAggregators();
+			final Map<Criterion, ? extends GradeAggregator> nonTrivialSubs =
+					Maps.filterEntries(subs, e -> !e.getValue().equals(GradeAggregator.TRIVIAL));
+			final Map<Criterion, GenericGradeAggregator> transformedNonTrivialSubs =
+					Maps.transformValues(nonTrivialSubs, this::adaptToJson);
 			final GradeAggregator defaultSub = aggregator.getDefaultSubAggregator();
 			verifyNotNull(defaultSub);
-			final Optional<GradeAggregator> nonTrivialDefaultSub = defaultSub.equals(GradeAggregator.TRIVIAL)
-					? Optional.empty()
-					: Optional.of(defaultSub);
-			final Optional<GenericGradeAggregator> transformedNonTrivialDefaultSub = nonTrivialDefaultSub
-					.map(this::adaptToJson);
-			return new GenericGradeAggregator(aggregator.getMarkAggregator(), transformedNonTrivialDefaultSub,
-					JsonMapAdapter.toStringKeys(transformedNonTrivialSubs));
+			final Optional<GradeAggregator> nonTrivialDefaultSub =
+					defaultSub.equals(GradeAggregator.TRIVIAL) ? Optional.empty() : Optional.of(defaultSub);
+			final Optional<GenericGradeAggregator> transformedNonTrivialDefaultSub =
+					nonTrivialDefaultSub.map(this::adaptToJson);
+			return new GenericGradeAggregator(aggregator.getMarkAggregator(),
+					transformedNonTrivialDefaultSub, JsonMapAdapter.toStringKeys(transformedNonTrivialSubs));
 		}
 
 		@Override
 		public GradeAggregator adaptFromJson(GenericGradeAggregator aggregator) {
-			final Map<Criterion, GenericGradeAggregator> subs = JsonMapAdapter.toCriterionKeys(aggregator.subs);
-			final Map<Criterion, GradeAggregator> transformedSubs = Maps.transformValues(subs, this::adaptFromJson);
+			final Map<Criterion, GenericGradeAggregator> subs =
+					JsonMapAdapter.toCriterionKeys(aggregator.subs);
+			final Map<Criterion, GradeAggregator> transformedSubs =
+					Maps.transformValues(subs, this::adaptFromJson);
 			final MarkAggregator markAggregator = aggregator.markAggregator;
 			if (markAggregator.equals(VoidAggregator.INSTANCE)) {
 				checkArgument(subs.isEmpty());
@@ -182,7 +186,6 @@ public class JsonSimpleGrade {
 		public Grade adaptFromJson(GenericGrade grade) throws Exception {
 			return Grade.given(grade.aggregator, grade.marks);
 		}
-
 	}
 
 	private static final class JsonAdapterMarksTree
@@ -196,12 +199,13 @@ public class JsonSimpleGrade {
 
 		@Override
 		public CompositeMarksTree adaptFromJson(Map<String, MarksTree> structure) {
-			return (CompositeMarksTree) MarksTree.composite(
-					structure.keySet().stream().collect(ImmutableMap.toImmutableMap(Criterion::given, structure::get)));
+			return (CompositeMarksTree) MarksTree.composite(structure.keySet().stream()
+					.collect(ImmutableMap.toImmutableMap(Criterion::given, structure::get)));
 		}
 	}
 
-	private static final class JsonAdapterJsonToMarksTree implements JsonbAdapter<MarksTree, JsonObject> {
+	private static final class JsonAdapterJsonToMarksTree
+			implements JsonbAdapter<MarksTree, JsonObject> {
 		@Override
 		public JsonObject adaptToJson(MarksTree tree) {
 			return null;
@@ -247,15 +251,16 @@ public class JsonSimpleGrade {
 		@Override
 		public MarkAggregator adaptFromJson(GenericMarkAggregator from) {
 			return switch (from.type) {
-			case ParametricWeighter ->
-				ParametricWeighter.given(from.multiplied.orElseThrow(), from.weighting.orElseThrow());
-			case VoidAggregator -> VoidAggregator.INSTANCE;
-			case NormalizingStaticWeighter -> NormalizingStaticWeighter.given(from.weights.orElseThrow());
-			case StaticWeighter -> StaticWeighter.given(from.weights.orElseThrow());
-			case AbsoluteAggregator -> AbsoluteAggregator.INSTANCE;
-			case MinAggregator -> MinAggregator.INSTANCE;
-			case MaxAggregator -> MaxAggregator.INSTANCE;
-			case OwaAggregator -> OwaAggregator.given(from.simpleWeights.orElse(ImmutableList.of()));
+				case ParametricWeighter -> ParametricWeighter.given(from.multiplied.orElseThrow(),
+						from.weighting.orElseThrow());
+				case VoidAggregator -> VoidAggregator.INSTANCE;
+				case NormalizingStaticWeighter -> NormalizingStaticWeighter
+						.given(from.weights.orElseThrow());
+				case StaticWeighter -> StaticWeighter.given(from.weights.orElseThrow());
+				case AbsoluteAggregator -> AbsoluteAggregator.INSTANCE;
+				case MinAggregator -> MinAggregator.INSTANCE;
+				case MaxAggregator -> MaxAggregator.INSTANCE;
+				case OwaAggregator -> OwaAggregator.given(from.simpleWeights.orElse(ImmutableList.of()));
 			};
 		}
 	}
@@ -270,53 +275,56 @@ public class JsonSimpleGrade {
 
 		@Override
 		public ImmutableMap<GitHubUsername, MarksTree> adaptFromJson(Map<String, MarksTree> grades) {
-			return grades.keySet().stream().collect(ImmutableMap.toImmutableMap(GitHubUsername::given, grades::get));
+			return grades.keySet().stream()
+					.collect(ImmutableMap.toImmutableMap(GitHubUsername::given, grades::get));
 		}
 	}
 
-	@JsonbPropertyOrder({ "markAggregator", "defaultSub", "subs" })
-	public static record GenericGradeAggregator(MarkAggregator markAggregator,
+	@JsonbPropertyOrder({"markAggregator", "defaultSub", "subs"})
+	public static record GenericGradeAggregator (MarkAggregator markAggregator,
 			Optional<GenericGradeAggregator> defaultSub, Map<String, GenericGradeAggregator> subs) {
 	}
 
-	@JsonbPropertyOrder({ "marks", "aggregator" })
-	public static record GenericGrade(MarksTree marks, GradeAggregator aggregator) {
+	@JsonbPropertyOrder({"marks", "aggregator"})
+	public static record GenericGrade (MarksTree marks, GradeAggregator aggregator) {
 
 	}
 
 	public static String toJson(MarkAggregator aggregator) {
-		final Jsonb jsonb = JsonHelper.getJsonb(new JsonCriterionToString(), new JsonMapAdapter<Double>() {
-		}, new JsonAdapterMarkAggregator());
+		final Jsonb jsonb = JsonHelper.getJsonb(new JsonCriterionToString(),
+				new JsonMapAdapter<Double>() {}, new JsonAdapterMarkAggregator());
 		return jsonb.toJson(aggregator);
 	}
 
 	public static MarkAggregator asMarkAggregator(String jsonAggregator) {
-		final Jsonb jsonb = JsonHelper.getJsonb(new JsonCriterionToString(), new JsonMapAdapter<Double>() {
-		}, new JsonAdapterMarkAggregator());
+		final Jsonb jsonb = JsonHelper.getJsonb(new JsonCriterionToString(),
+				new JsonMapAdapter<Double>() {}, new JsonAdapterMarkAggregator());
 		return jsonb.fromJson(jsonAggregator, MarkAggregator.class);
 	}
 
 	public static String toJson(GradeAggregator aggregator) {
-		final Jsonb jsonb = JsonHelper.getJsonb(new JsonCriterionToString(), new JsonMapAdapter<Double>() {
-		}, new JsonAdapterMarkAggregator(), new JsonAdapterGradeAggregator());
+		final Jsonb jsonb =
+				JsonHelper.getJsonb(new JsonCriterionToString(), new JsonMapAdapter<Double>() {},
+						new JsonAdapterMarkAggregator(), new JsonAdapterGradeAggregator());
 		return jsonb.toJson(aggregator);
 	}
 
 	public static String toJson(Set<GradeAggregator> aggregators) {
-		final Jsonb jsonb = JsonHelper.getJsonb(new JsonCriterionToString(), new JsonMapAdapter<Double>() {
-		}, new JsonAdapterMarkAggregator(), new JsonAdapterGradeAggregator());
+		final Jsonb jsonb =
+				JsonHelper.getJsonb(new JsonCriterionToString(), new JsonMapAdapter<Double>() {},
+						new JsonAdapterMarkAggregator(), new JsonAdapterGradeAggregator());
 		return jsonb.toJson(aggregators);
 	}
 
 	public static GradeAggregator asAggregator(String aggregatorString) {
-		final Jsonb jsonb = JsonHelper.getJsonb(new JsonCriterion(), new JsonMapAdapter<Double>() {
-		}, new JsonAdapterMarkAggregator(), new JsonAdapterGradeAggregator());
+		final Jsonb jsonb = JsonHelper.getJsonb(new JsonCriterion(), new JsonMapAdapter<Double>() {},
+				new JsonAdapterMarkAggregator(), new JsonAdapterGradeAggregator());
 		return jsonb.fromJson(aggregatorString, GradeAggregator.class);
 	}
 
 	public static String toJson(MarksTree marksTree) {
-		final Jsonb jsonb = JsonHelper.getJsonb(new JsonCriterionToString(), new JsonMapAdapter<MarksTree>() {
-		}, new JsonAdapterMarksTree());
+		final Jsonb jsonb = JsonHelper.getJsonb(new JsonCriterionToString(),
+				new JsonMapAdapter<MarksTree>() {}, new JsonAdapterMarksTree());
 		return jsonb.toJson(marksTree);
 	}
 
@@ -326,32 +334,32 @@ public class JsonSimpleGrade {
 	}
 
 	public static String toJson(Grade grade) {
-		final Jsonb jsonb = JsonHelper.getJsonb(new JsonCriterionToString(), new JsonMapAdapter<MarksTree>() {
-		}, new JsonAdapterMarksTree(), new JsonMapAdapter<Double>() {
-		}, new JsonAdapterMarkAggregator(), new JsonAdapterGradeAggregator(), new JsonAdapterGrade());
+		final Jsonb jsonb = JsonHelper.getJsonb(new JsonCriterionToString(),
+				new JsonMapAdapter<MarksTree>() {}, new JsonAdapterMarksTree(),
+				new JsonMapAdapter<Double>() {}, new JsonAdapterMarkAggregator(),
+				new JsonAdapterGradeAggregator(), new JsonAdapterGrade());
 		return jsonb.toJson(grade);
 	}
 
 	public static Grade asGrade(String gradeString) {
 		final Jsonb jsonb = JsonHelper.getJsonb(new JsonAdapterJsonToMarksTree(), new JsonCriterion(),
-				new JsonMapAdapter<Double>() {
-				}, new JsonAdapterMarkAggregator(), new JsonAdapterGradeAggregator(), new JsonAdapterGrade());
+				new JsonMapAdapter<Double>() {}, new JsonAdapterMarkAggregator(),
+				new JsonAdapterGradeAggregator(), new JsonAdapterGrade());
 		return jsonb.fromJson(gradeString, Grade.class);
 	}
 
 	public static String toJson(Exam exam) {
-		final Jsonb jsonb = JsonHelper.getJsonb(new JsonCriterionToString(), new JsonMapAdapter<MarksTree>() {
-		}, new JsonAdapterMarksTree(), new JsonMapAdapter<Double>() {
-		}, new JsonAdapterMarkAggregator(), new JsonAdapterGradeAggregator(), new JsonAdapterGrade(),
-				new JsonAdapterExam());
+		final Jsonb jsonb = JsonHelper.getJsonb(new JsonCriterionToString(),
+				new JsonMapAdapter<MarksTree>() {}, new JsonAdapterMarksTree(),
+				new JsonMapAdapter<Double>() {}, new JsonAdapterMarkAggregator(),
+				new JsonAdapterGradeAggregator(), new JsonAdapterGrade(), new JsonAdapterExam());
 		return jsonb.toJson(exam);
 	}
 
 	public static Exam asExam(String examString) {
 		final Jsonb jsonb = JsonHelper.getJsonb(new JsonAdapterJsonToMarksTree(), new JsonCriterion(),
-				new JsonMapAdapter<Double>() {
-				}, new JsonAdapterMarkAggregator(), new JsonAdapterGradeAggregator(), new JsonAdapterGrade(),
-				new JsonAdapterExam());
+				new JsonMapAdapter<Double>() {}, new JsonAdapterMarkAggregator(),
+				new JsonAdapterGradeAggregator(), new JsonAdapterGrade(), new JsonAdapterExam());
 		return jsonb.fromJson(examString, Exam.class);
 	}
 }

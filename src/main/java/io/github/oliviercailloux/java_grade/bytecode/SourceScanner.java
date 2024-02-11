@@ -14,23 +14,26 @@ import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 public class SourceScanner {
-	private static final Pattern PACKAGE_PATTERN = Pattern.compile("^\\h*package\\h+(?<packageName>[^\\h]*)\\h*;");
+	private static final Pattern PACKAGE_PATTERN =
+			Pattern.compile("^\\h*package\\h+(?<packageName>[^\\h]*)\\h*;");
 
 	public static ImmutableSet<SourceClass> scan(Path start) {
 		checkNotNull(start);
 		final ImmutableSet<Path> javaPaths;
-		try (Stream<Path> found = IO_UNCHECKER.getUsing(() -> Files.find(start, Integer.MAX_VALUE,
-				(p, a) -> p.getFileName() == null ? false : p.getFileName().toString().endsWith(".java")))) {
+		try (Stream<Path> found = IO_UNCHECKER.getUsing(() -> Files.find(start, Integer.MAX_VALUE, (p,
+				a) -> p.getFileName() == null ? false : p.getFileName().toString().endsWith(".java")))) {
 			verify(found != null);
 			assert found != null;
 			javaPaths = found.collect(ImmutableSet.toImmutableSet());
 		}
-		return javaPaths.stream().map(SourceScanner::asSourceClass).collect(ImmutableSet.toImmutableSet());
+		return javaPaths.stream().map(SourceScanner::asSourceClass)
+				.collect(ImmutableSet.toImmutableSet());
 	}
 
 	public static SourceClass asSourceClass(Path sourcePath) {
-		final String shortClassNameFromFileName = sourcePath.getFileName().toString().replace(".java", "");
-//		String content = JavaGradeUtils.read(sourcePath);
+		final String shortClassNameFromFileName =
+				sourcePath.getFileName().toString().replace(".java", "");
+		// String content = JavaGradeUtils.read(sourcePath);
 		String content;
 		try {
 			content = Files.readString(sourcePath);

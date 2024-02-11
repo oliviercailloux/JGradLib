@@ -12,5 +12,4 @@ public class CreateTagEvent extends Event {
 	public String getCreatedTagName() {
 		return getPayload().getString("ref");
 	}
-
 }

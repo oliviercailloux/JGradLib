@@ -16,12 +16,11 @@ public class UnassignedEvent extends IssueEvent {
 	public IssueSnapshot applyTo(IssueSnapshot snap) {
 		final User user = getUser();
 		checkArgument(snap.getAssignees().contains(user));
-		return IssueSnapshot.of(getCreatedAt(), snap.getName(), snap.isOpen(), snap.getAssignees().stream()
-				.filter(Predicate.isEqual(user).negate()).collect(ImmutableSet.toImmutableSet()));
+		return IssueSnapshot.of(getCreatedAt(), snap.getName(), snap.isOpen(), snap.getAssignees()
+				.stream().filter(Predicate.isEqual(user).negate()).collect(ImmutableSet.toImmutableSet()));
 	}
 
 	public User getUser() {
 		return User.from(getJson().getJsonObject("user"));
 	}
-
 }

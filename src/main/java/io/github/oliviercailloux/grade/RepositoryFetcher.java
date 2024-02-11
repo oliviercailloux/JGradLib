@@ -27,7 +27,8 @@ public class RepositoryFetcher {
 		return prefix;
 	}
 
-	public RepositoryFetcher setRepositoriesFilter(Predicate<RepositoryCoordinatesWithPrefix> accepted) {
+	public RepositoryFetcher
+			setRepositoriesFilter(Predicate<RepositoryCoordinatesWithPrefix> accepted) {
 		repositoriesFilter = accepted;
 		return this;
 	}
@@ -35,10 +36,9 @@ public class RepositoryFetcher {
 	public ImmutableSet<RepositoryCoordinatesWithPrefix> fetch() {
 		final ImmutableSet<RepositoryCoordinatesWithPrefix> repositories;
 		try (GitHubFetcherV3 fetcher = GitHubFetcherV3.using(GitHubToken.getRealInstance())) {
-			repositories = fetcher.getRepositoriesWithPrefix(DEFAULT_ORG, prefix).stream().filter(repositoriesFilter)
-					.collect(ImmutableSet.toImmutableSet());
+			repositories = fetcher.getRepositoriesWithPrefix(DEFAULT_ORG, prefix).stream()
+					.filter(repositoriesFilter).collect(ImmutableSet.toImmutableSet());
 		}
 		return repositories;
 	}
-
 }

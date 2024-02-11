@@ -21,12 +21,13 @@ public class Email {
 		return new Email(document, null, null, null, to);
 	}
 
-	public static Email withDocumentAndFile(Document document, String fileName, String fileContent, String fileSubtype,
-			EmailAddressAndPersonal to) {
+	public static Email withDocumentAndFile(Document document, String fileName, String fileContent,
+			String fileSubtype, EmailAddressAndPersonal to) {
 		return new Email(document, fileName, fileContent, fileSubtype, to);
 	}
 
-	private Email(Document document, String fileName, String fileContent, String fileSubtype, EmailAddressAndPersonal to) {
+	private Email(Document document, String fileName, String fileContent, String fileSubtype,
+			EmailAddressAndPersonal to) {
 		this.document = document;
 		this.fileName = Strings.emptyToNull(fileName);
 		this.fileContent = Strings.emptyToNull(fileContent);

@@ -6,8 +6,7 @@ import com.google.common.base.MoreObjects;
 import java.util.Objects;
 
 /**
- * A person, with a name. Two persons are identical, or “equal”, iff they have
- * the same names.
+ * A person, with a name. Two persons are identical, or “equal”, iff they have the same names.
  */
 public class Person {
 	public static Person named(String name) {

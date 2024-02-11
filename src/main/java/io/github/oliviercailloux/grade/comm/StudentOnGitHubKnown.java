@@ -13,14 +13,16 @@ public class StudentOnGitHubKnown {
   @SuppressWarnings("unused")
   private static final Logger LOGGER = LoggerFactory.getLogger(StudentOnGitHubKnown.class);
 
-  public static StudentOnGitHubKnown with(GitHubUsername gitHubUsername, InstitutionalStudent institutionalStudent) {
+  public static StudentOnGitHubKnown with(GitHubUsername gitHubUsername,
+      InstitutionalStudent institutionalStudent) {
     return new StudentOnGitHubKnown(gitHubUsername, institutionalStudent);
   }
 
   private GitHubUsername gitHubUsername;
   private InstitutionalStudent institutionalStudent;
 
-  private StudentOnGitHubKnown(GitHubUsername gitHubUsername, InstitutionalStudent studentOnMyCourse) {
+  private StudentOnGitHubKnown(GitHubUsername gitHubUsername,
+      InstitutionalStudent studentOnMyCourse) {
     this.institutionalStudent = checkNotNull(studentOnMyCourse);
     this.gitHubUsername = checkNotNull(gitHubUsername);
   }
@@ -63,7 +65,8 @@ public class StudentOnGitHubKnown {
       return false;
     }
     final StudentOnGitHubKnown s2 = (StudentOnGitHubKnown) o2;
-    return gitHubUsername.equals(s2.gitHubUsername) && institutionalStudent.equals(s2.institutionalStudent);
+    return gitHubUsername.equals(s2.gitHubUsername)
+        && institutionalStudent.equals(s2.institutionalStudent);
   }
 
   @Override

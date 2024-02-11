@@ -21,7 +21,8 @@ public class PersonsManagerTests {
     new CoffeeTests().compile(subPath, compiledDir);
 
     final IGrade codeGrade = JavaGradeUtils.gradeSecurely(compiledDir, PersonsManagerGrader::grade);
-//    Files.writeString(Path.of("out.html"), XmlUtils.toString(HtmlGrades.asHtml(codeGrade, "Bad", 19.5d)));
+    // Files.writeString(Path.of("out.html"), XmlUtils.toString(HtmlGrades.asHtml(codeGrade, "Bad",
+    // 19.5d)));
     /* Counter starts at zero. */
     assertEquals(0.5d / 19.5d, codeGrade.getPoints(), 1e-6d);
   }

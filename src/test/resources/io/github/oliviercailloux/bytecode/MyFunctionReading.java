@@ -17,5 +17,4 @@ public class MyFunctionReading implements Function<String, String> {
   public String apply(String t) {
     return Policy.getPolicy().toString();
   }
-
 }

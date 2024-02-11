@@ -19,7 +19,8 @@ public class SummarizeTests {
         .from(ImmutableMap.of(CriteriaPath.from("c1"), WeightedGrade.given(Mark.one(), 1d),
             CriteriaPath.from("c2/Spurious/sub"), WeightedGrade.given(Mark.one(), 1d)));
     final IGrade filtered = Summarizer.create().filter(grade);
-    final ImmutableList<Criterion> filteredKeys = ImmutableList.copyOf(filtered.getSubGrades().keySet());
+    final ImmutableList<Criterion> filteredKeys =
+        ImmutableList.copyOf(filtered.getSubGrades().keySet());
     assertEquals(ImmutableList.of(Criterion.given("c1"), Criterion.given("c2")), filteredKeys);
   }
 }

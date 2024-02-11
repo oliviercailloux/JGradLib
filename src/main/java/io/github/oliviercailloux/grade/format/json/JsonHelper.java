@@ -29,5 +29,4 @@ public class JsonHelper {
 				.withPropertyVisibilityStrategy(propertyVisibilityStrategy).withAdapters(adapters));
 		return jsonb;
 	}
-
 }

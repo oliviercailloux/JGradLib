@@ -24,8 +24,8 @@ public class JavaMarkHelper {
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(JavaMarkHelper.class);
 
-	final static Pattern HAS_JUNIT_TEST_CONTENT = Pattern
-			.compile("(\\h*@Test)|(org\\.junit\\.jupiter\\.api\\.Assertions)");
+	final static Pattern HAS_JUNIT_TEST_CONTENT =
+			Pattern.compile("(\\h*@Test)|(org\\.junit\\.jupiter\\.api\\.Assertions)");
 
 	public static final String GIT_HUB_CLASSROOM_COMMITTER = "github-classroom[bot]";
 
@@ -49,8 +49,8 @@ public class JavaMarkHelper {
 	}
 
 	/**
-	 * When the GitHub GUI is used, the committer is set to GitHub
-	 * <noreply@github.com> while the author seems to be the logged user.
+	 * When the GitHub GUI is used, the committer is set to GitHub <noreply@github.com> while the
+	 * author seems to be the logged user.
 	 */
 	public static boolean committerIsGitHub(Commit commit) {
 		return commit.committerName().equals(GIT_HUB_COMMITTER)
@@ -58,17 +58,18 @@ public class JavaMarkHelper {
 	}
 
 	/**
-	 * When the GitHub GUI is used, the committer is set to GitHub
-	 * <noreply@github.com> while the author seems to be the logged user.
+	 * When the GitHub GUI is used, the committer is set to GitHub <noreply@github.com> while the
+	 * author seems to be the logged user.
 	 *
 	 */
-	public static boolean committerIsGitHub(GitPathRoot commit) throws NoSuchFileException, IOException {
+	public static boolean committerIsGitHub(GitPathRoot commit)
+			throws NoSuchFileException, IOException {
 		return committerIsGitHub(commit.getCommit());
 	}
 
 	/**
-	 * When the GitHub GUI is used, the committer is set to GitHub
-	 * <noreply@github.com> while the author seems to be the logged user.
+	 * When the GitHub GUI is used, the committer is set to GitHub <noreply@github.com> while the
+	 * author seems to be the logged user.
 	 *
 	 */
 	public static boolean committerIsGitHub(GitPathRootShaCached commit) {
@@ -76,8 +77,8 @@ public class JavaMarkHelper {
 	}
 
 	/**
-	 * When the GitHub GUI is used, the committer is set to GitHub
-	 * <noreply@github.com> while the author seems to be the logged user.
+	 * When the GitHub GUI is used, the committer is set to GitHub <noreply@github.com> while the
+	 * author seems to be the logged user.
 	 */
 	public static boolean committerIsGitHub(RevCommit commit) {
 		return commit.getCommitterIdent().getName().equals("GitHub");
@@ -113,9 +114,9 @@ public class JavaMarkHelper {
 		} catch (IOException e) {
 			throw new UncheckedIOException(e);
 		}
-//		if (!Files.exists(path)) {
-//			return "";
-//		}
-//		return Utils.getOrThrow(() -> Files.readString(path));
+		// if (!Files.exists(path)) {
+		// return "";
+		// }
+		// return Utils.getOrThrow(() -> Files.readString(path));
 	}
 }

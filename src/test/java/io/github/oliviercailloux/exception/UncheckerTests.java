@@ -17,12 +17,11 @@ class UncheckerTests {
     final TRunnable<GitAPIException> throwingGitAPIRunnable = () -> {
       throw new InvalidRemoteException("hey");
     };
-    final Unchecker<GitAPIException, IllegalStateException> unchecker = Unchecker
-        .wrappingWith(IllegalStateException::new);
-    final IllegalStateException thrown = assertThrows(IllegalStateException.class,
-        () -> unchecker.call(throwingGitAPIRunnable));
+    final Unchecker<GitAPIException, IllegalStateException> unchecker =
+        Unchecker.wrappingWith(IllegalStateException::new);
+    final IllegalStateException thrown =
+        assertThrows(IllegalStateException.class, () -> unchecker.call(throwingGitAPIRunnable));
     assertTrue(thrown.getCause() instanceof InvalidRemoteException);
     assertEquals("hey", thrown.getCause().getMessage());
   }
-
 }

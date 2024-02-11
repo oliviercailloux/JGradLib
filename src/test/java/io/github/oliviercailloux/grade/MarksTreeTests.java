@@ -35,7 +35,8 @@ public class MarksTreeTests {
     assertEquals(ImmutableSet.of(p111), tree.getPathsToMarks());
     assertEquals(MarksTreeTestsHelper.get11_111(), tree.getTree(c1));
     assertEquals(MarksTreeTestsHelper.get11_111(), tree.getTree(p1));
-    assertEquals(MarksTree.composite(ImmutableMap.of(c111, Mark.one())), tree.getTree(c1).getTree(c11));
+    assertEquals(MarksTree.composite(ImmutableMap.of(c111, Mark.one())),
+        tree.getTree(c1).getTree(c11));
     assertEquals(MarksTree.composite(ImmutableMap.of(c111, Mark.one())), tree.getTree(p11));
     assertTrue(tree.hasPath(p1));
     assertTrue(tree.hasPath(p11));
@@ -59,7 +60,8 @@ public class MarksTreeTests {
     assertEquals(ImmutableSet.of(p1Triple), tree.getPathsToMarks());
     assertEquals(MarksTreeTestsHelper.get1_1(), tree.getTree(c1));
     assertEquals(MarksTreeTestsHelper.get1_1(), tree.getTree(p1));
-    assertEquals(MarksTree.composite(ImmutableMap.of(c1, Mark.one())), tree.getTree(c1).getTree(c1));
+    assertEquals(MarksTree.composite(ImmutableMap.of(c1, Mark.one())),
+        tree.getTree(c1).getTree(c1));
     assertEquals(MarksTree.composite(ImmutableMap.of(c1, Mark.one())), tree.getTree(p1Double));
     assertTrue(tree.hasPath(p1));
     assertTrue(tree.hasPath(p1Double));

@@ -42,11 +42,13 @@ public class GitBranchingTests {
   @Test
   void testEmpty() throws Exception {
     try (Repository repository = new InMemoryRepository(new DfsRepositoryDescription("myrepo"));
-        GitFileSystem gitFs = GitFileSystemProvider.instance().newFileSystemFromRepository(repository)) {
+        GitFileSystem gitFs =
+            GitFileSystemProvider.instance().newFileSystemFromRepository(repository)) {
 
       final GitHistorySimple empty = GitHistorySimple.create(gitFs, ImmutableMap.of());
 
-      final IGrade grade = new GitBranching().grade(GitWork.given(GitHubUsername.given("ploum"), empty));
+      final IGrade grade =
+          new GitBranching().grade(GitWork.given(GitHubUsername.given("ploum"), empty));
       LOGGER.debug("Grade: {}.", JsonGrade.asJson(grade));
       assertEquals(0d, grade.getPoints());
     }
@@ -79,11 +81,13 @@ public class GitBranchingTests {
       }
       {
         Files.writeString(c.resolve("first.txt"), "wrong again");
-        Files.writeString(Files.createDirectories(c.resolve("a/b/c/x/z/")).resolve("some file.txt"), "2021");
+        Files.writeString(Files.createDirectories(c.resolve("a/b/c/x/z/")).resolve("some file.txt"),
+            "2021");
       }
       {
         Files.writeString(d.resolve("first.txt"), "wrong, wrong and wrong");
-        Files.writeString(Files.createDirectories(d.resolve("a/b/c/x/z/")).resolve("some file.txt"), "2021");
+        Files.writeString(Files.createDirectories(d.resolve("a/b/c/x/z/")).resolve("some file.txt"),
+            "2021");
       }
       {
         final Path origin = Files.createDirectories(links.resolve(Constants.R_REMOTES + "origin/"));
@@ -95,11 +99,14 @@ public class GitBranchingTests {
       final PersonIdent personIdent = new PersonIdent("Me", "email");
 
       try (Repository repository = JGit.createRepository(personIdent, baseDirs, links)) {
-        try (GitFileSystem gitFs = GitFileSystemProvider.instance().newFileSystemFromRepository(repository)) {
+        try (GitFileSystem gitFs =
+            GitFileSystemProvider.instance().newFileSystemFromRepository(repository)) {
           final Graph<GitPathRootShaCached> graph = gitFs.graph();
-          final ImmutableSet<ObjectId> ids = graph.nodes().stream().map(GitPathRootShaCached::getCommit)
-              .map(io.github.oliviercailloux.gitjfs.Commit::id).collect(ImmutableSet.toImmutableSet());
-          final Map<ObjectId, Instant> constantTimes = Maps.asMap(ids, o -> Commit.DEADLINE.toInstant());
+          final ImmutableSet<ObjectId> ids = graph.nodes().stream()
+              .map(GitPathRootShaCached::getCommit).map(io.github.oliviercailloux.gitjfs.Commit::id)
+              .collect(ImmutableSet.toImmutableSet());
+          final Map<ObjectId, Instant> constantTimes =
+              Maps.asMap(ids, o -> Commit.DEADLINE.toInstant());
           final GitHistorySimple withConstantTimes = GitHistorySimple.create(gitFs, constantTimes);
 
           final IGrade grade = new GitBranching()
@@ -136,11 +143,13 @@ public class GitBranchingTests {
       }
       {
         Files.writeString(c.resolve("first.txt"), "coucou monde");
-        Files.writeString(Files.createDirectories(c.resolve("a/b/c/x/z/")).resolve("some file.txt"), "2021");
+        Files.writeString(Files.createDirectories(c.resolve("a/b/c/x/z/")).resolve("some file.txt"),
+            "2021");
       }
       {
         Files.writeString(d.resolve("first.txt"), "hello world\ncoucou monde");
-        Files.writeString(Files.createDirectories(d.resolve("a/b/c/x/z/")).resolve("some file.txt"), "2021");
+        Files.writeString(Files.createDirectories(d.resolve("a/b/c/x/z/")).resolve("some file.txt"),
+            "2021");
       }
       {
         final Path origin = Files.createDirectories(links.resolve(Constants.R_REMOTES + "origin/"));
@@ -152,11 +161,14 @@ public class GitBranchingTests {
       final PersonIdent personIdent = new PersonIdent("Me", "email");
 
       try (Repository repository = JGit.createRepository(personIdent, baseDirs, links)) {
-        try (GitFileSystem gitFs = GitFileSystemProvider.instance().newFileSystemFromRepository(repository)) {
+        try (GitFileSystem gitFs =
+            GitFileSystemProvider.instance().newFileSystemFromRepository(repository)) {
           final Graph<GitPathRootShaCached> graph = gitFs.graph();
-          final ImmutableSet<ObjectId> ids = graph.nodes().stream().map(GitPathRootShaCached::getCommit)
-              .map(io.github.oliviercailloux.gitjfs.Commit::id).collect(ImmutableSet.toImmutableSet());
-          final Map<ObjectId, Instant> constantTimes = Maps.asMap(ids, o -> Commit.DEADLINE.toInstant());
+          final ImmutableSet<ObjectId> ids = graph.nodes().stream()
+              .map(GitPathRootShaCached::getCommit).map(io.github.oliviercailloux.gitjfs.Commit::id)
+              .collect(ImmutableSet.toImmutableSet());
+          final Map<ObjectId, Instant> constantTimes =
+              Maps.asMap(ids, o -> Commit.DEADLINE.toInstant());
           final GitHistorySimple withConstantTimes = GitHistorySimple.create(gitFs, constantTimes);
 
           final IGrade grade = new GitBranching()
@@ -168,5 +180,4 @@ public class GitBranchingTests {
     }
 
   }
-
 }

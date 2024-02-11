@@ -16,5 +16,4 @@ public class MyIdentityFunctionThrowing implements Function<String, String> {
   public String apply(String t) {
     return t;
   }
-
 }

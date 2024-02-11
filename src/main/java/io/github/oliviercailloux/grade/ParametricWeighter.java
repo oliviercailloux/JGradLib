@@ -13,12 +13,11 @@ import java.util.Optional;
 import java.util.Set;
 
 /**
- * Accepts only sets of two or three criteria that include the weighting and the
- * multiplied one. Aggregates by multiplying the mark of the multiplied
- * criterion by the mark of the weighting one, and, if a third criterion is
- * present, summing with the mark of the third criterion multiplied by the
- * complement of the mark of the weighting criterion (so <i>cW × c1 + (1 − cW) ×
- * c2</i>, where cW is the mark of the weighting criterion).
+ * Accepts only sets of two or three criteria that include the weighting and the multiplied one.
+ * Aggregates by multiplying the mark of the multiplied criterion by the mark of the weighting one,
+ * and, if a third criterion is present, summing with the mark of the third criterion multiplied by
+ * the complement of the mark of the weighting criterion (so <i>cW × c1 + (1 − cW) × c2</i>, where
+ * cW is the mark of the weighting criterion).
  */
 public final class ParametricWeighter implements MarkAggregator {
 
@@ -48,8 +47,8 @@ public final class ParametricWeighter implements MarkAggregator {
 
   @Override
   public ImmutableMap<SubMark, Double> weights(Set<SubMark> marks) throws AggregatorException {
-    final ImmutableSet<Criterion> criteria = marks.stream().map(SubMark::getCriterion)
-        .collect(ImmutableSet.toImmutableSet());
+    final ImmutableSet<Criterion> criteria =
+        marks.stream().map(SubMark::getCriterion).collect(ImmutableSet.toImmutableSet());
     checkArgument(marks.size() == criteria.size());
     checkCanAggregate(criteria.size() <= 3, "Too many criteria");
 
@@ -57,15 +56,17 @@ public final class ParametricWeighter implements MarkAggregator {
       return ImmutableMap.of();
     }
 
-    checkCanAggregate(criteria.contains(multiplied), "Multiplied criterion not found among %s", marks);
+    checkCanAggregate(criteria.contains(multiplied), "Multiplied criterion not found among %s",
+        marks);
     checkCanAggregate(criteria.contains(weighting), "Weighting criterion not found");
 
     final SubMark multipliedMark = marks.stream().filter(s -> s.getCriterion().equals(multiplied))
         .collect(MoreCollectors.onlyElement());
     final SubMark weightingMark = marks.stream().filter(s -> s.getCriterion().equals(weighting))
         .collect(MoreCollectors.onlyElement());
-    final Optional<SubMark> remainingMark = marks.stream().filter(m -> !m.getCriterion().equals(multiplied))
-        .filter(m -> !m.getCriterion().equals(weighting)).collect(MoreCollectors.toOptional());
+    final Optional<SubMark> remainingMark =
+        marks.stream().filter(m -> !m.getCriterion().equals(multiplied))
+            .filter(m -> !m.getCriterion().equals(weighting)).collect(MoreCollectors.toOptional());
 
     final ImmutableMap.Builder<SubMark, Double> builder = ImmutableMap.builder();
     final double weightingValue = weightingMark.getPoints();
@@ -77,16 +78,16 @@ public final class ParametricWeighter implements MarkAggregator {
   }
 
   /**
-   * Returns [the multiplied criterion × 100%, − the multiplied criterion × (1 −
-   * weighting)]. The second one has a different criterion name and uses the
-   * comment of the weighting sub mark. This breaks the {@link #weights} contract
-   * as the returned criteria set generally differs from the input criteria set
-   * (although the size is the same). Only authorized if there are two criteria,
+   * Returns [the multiplied criterion × 100%, − the multiplied criterion × (1 − weighting)]. The
+   * second one has a different criterion name and uses the comment of the weighting sub mark. This
+   * breaks the {@link #weights} contract as the returned criteria set generally differs from the
+   * input criteria set (although the size is the same). Only authorized if there are two criteria,
    * not three.
    */
-  public ImmutableMap<SubMark, Double> weightsWithPenalty(Set<SubMark> marks) throws AggregatorException {
-    final ImmutableSet<Criterion> criteria = marks.stream().map(SubMark::getCriterion)
-        .collect(ImmutableSet.toImmutableSet());
+  public ImmutableMap<SubMark, Double> weightsWithPenalty(Set<SubMark> marks)
+      throws AggregatorException {
+    final ImmutableSet<Criterion> criteria =
+        marks.stream().map(SubMark::getCriterion).collect(ImmutableSet.toImmutableSet());
     checkArgument(marks.size() == criteria.size());
     checkCanAggregate(criteria.contains(multiplied), "Multiplied criterion not found");
     checkCanAggregate(criteria.contains(weighting), "Weighting criterion not found");
@@ -98,7 +99,8 @@ public final class ParametricWeighter implements MarkAggregator {
         .collect(MoreCollectors.onlyElement());
 
     final Criterion multipliedPenalty = toPenalized(multiplied);
-    final Mark negativeMultipledMark = Mark.given(-multipliedMark.getPoints(), weightingMark.comment());
+    final Mark negativeMultipledMark =
+        Mark.given(-multipliedMark.getPoints(), weightingMark.comment());
     final SubMark penaltySubMark = SubMark.given(multipliedPenalty, negativeMultipledMark);
 
     final ImmutableMap.Builder<SubMark, Double> builder = ImmutableMap.builder();
@@ -125,7 +127,7 @@ public final class ParametricWeighter implements MarkAggregator {
 
   @Override
   public String toString() {
-    return MoreObjects.toStringHelper(this).add("Multiplied", multiplied).add("Weighting", weighting).toString();
+    return MoreObjects.toStringHelper(this).add("Multiplied", multiplied)
+        .add("Weighting", weighting).toString();
   }
-
 }

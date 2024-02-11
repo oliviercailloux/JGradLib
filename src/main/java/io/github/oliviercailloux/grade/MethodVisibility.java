@@ -15,5 +15,4 @@ public class MethodVisibility implements PropertyVisibilityStrategy {
   public boolean isVisible(Method method) {
     return true;
   }
-
 }

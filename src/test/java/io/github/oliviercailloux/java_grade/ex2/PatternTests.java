@@ -9,9 +9,8 @@ class PatternTests {
 
   @Test
   void test() {
-//    final String any = "(.|\\v)*";
+    // final String any = "(.|\\v)*";
     assertTrue(Pattern.compile("@WebServlet")
         .matcher("@WebServlet(name = \"AdditionerServlet\", urlPatterns = { \"/add\" })").find());
   }
-
 }

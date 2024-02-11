@@ -4,5 +4,4 @@ public interface CostlyThing {
   public double pricePerHour();
 
   public double price();
-
 }

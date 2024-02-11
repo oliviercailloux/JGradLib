@@ -8,8 +8,8 @@ import java.nio.file.Path;
 
 public class EmailerDauphineHelper {
 
-	public static final EmailAddressAndPersonal FROM = EmailAddressAndPersonal.given("olivier.cailloux@dauphine.fr",
-			"Olivier Cailloux");
+	public static final EmailAddressAndPersonal FROM =
+			EmailAddressAndPersonal.given("olivier.cailloux@dauphine.fr", "Olivier Cailloux");
 
 	public static final String USERNAME_DAUPHINE = "ocailloux@dauphine.fr";
 	public static final String USERNAME_OTHERS = "olivier.cailloux";
@@ -78,9 +78,9 @@ public class EmailerDauphineHelper {
 	}
 
 	public static void connect(Emailer emailer) {
-		emailer.connectToStore(Emailer.getZohoImapSession(), USERNAME_OTHERS, EmailerDauphineHelper.getZohoToken());
+		emailer.connectToStore(Emailer.getZohoImapSession(), USERNAME_OTHERS,
+				EmailerDauphineHelper.getZohoToken());
 		emailer.connectToTransport(Emailer.getOutlookSmtpSession(), USERNAME_DAUPHINE,
 				EmailerDauphineHelper.getDauphineToken());
 	}
-
 }

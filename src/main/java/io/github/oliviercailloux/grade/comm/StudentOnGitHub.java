@@ -17,7 +17,8 @@ public class StudentOnGitHub {
 		return new StudentOnGitHub(gitHubUsername, Optional.empty());
 	}
 
-	public static StudentOnGitHub with(GitHubUsername gitHubUsername, InstitutionalStudent institutionalStudent) {
+	public static StudentOnGitHub with(GitHubUsername gitHubUsername,
+			InstitutionalStudent institutionalStudent) {
 		return new StudentOnGitHub(gitHubUsername, Optional.of(institutionalStudent));
 	}
 
@@ -29,7 +30,8 @@ public class StudentOnGitHub {
 	private final GitHubUsername gitHubUsername;
 	private final Optional<InstitutionalStudent> institutionalStudentOpt;
 
-	private StudentOnGitHub(GitHubUsername gitHubUsername, Optional<InstitutionalStudent> institutionalStudentOpt) {
+	private StudentOnGitHub(GitHubUsername gitHubUsername,
+			Optional<InstitutionalStudent> institutionalStudentOpt) {
 		this.gitHubUsername = checkNotNull(gitHubUsername);
 		this.institutionalStudentOpt = checkNotNull(institutionalStudentOpt);
 	}
@@ -69,7 +71,8 @@ public class StudentOnGitHub {
 			return false;
 		}
 		final StudentOnGitHub s2 = (StudentOnGitHub) o2;
-		return gitHubUsername.equals(s2.gitHubUsername) && institutionalStudentOpt.equals(s2.institutionalStudentOpt);
+		return gitHubUsername.equals(s2.gitHubUsername)
+				&& institutionalStudentOpt.equals(s2.institutionalStudentOpt);
 	}
 
 	@Override

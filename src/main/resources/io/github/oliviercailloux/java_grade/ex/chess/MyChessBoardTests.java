@@ -17,20 +17,23 @@ class MyChessBoardTests {
     assertEquals(ImmutableMap.of("e1", "WK", "e8", "BK"), board.getStringPiecesByPosition());
 
     board.setBoardByString(getBoardRNK());
-    final ImmutableMap<String, String> expected = ImmutableMap.<String, String>builder().put("a1", "WR")
-        .put("e1", "WK").put("h1", "WR").put("a8", "BR").put("b8", "BN").put("e8", "BK").build();
+    final ImmutableMap<String, String> expected =
+        ImmutableMap.<String, String>builder().put("a1", "WR").put("e1", "WK").put("h1", "WR")
+            .put("a8", "BR").put("b8", "BN").put("e8", "BK").build();
     assertEquals(expected, board.getStringPiecesByPosition());
   }
 
   @Test
   void testGetPiecesByPosition() throws Exception {
     final MyChessBoard board = MyChessBoard.newInstance();
-    assertEquals(ImmutableMap.of("e1", Piece.king("W"), "e8", Piece.king("B")), board.getPiecesByPosition());
+    assertEquals(ImmutableMap.of("e1", Piece.king("W"), "e8", Piece.king("B")),
+        board.getPiecesByPosition());
 
     board.setBoardByString(getBoardRNK());
-    final ImmutableMap<String, Piece> expected = ImmutableMap.<String, Piece>builder().put("a1", Piece.rook("W"))
-        .put("e1", Piece.king("W")).put("h1", Piece.rook("W")).put("a8", Piece.rook("B"))
-        .put("b8", Piece.knight("B")).put("e8", Piece.king("B")).build();
+    final ImmutableMap<String,
+        Piece> expected = ImmutableMap.<String, Piece>builder().put("a1", Piece.rook("W"))
+            .put("e1", Piece.king("W")).put("h1", Piece.rook("W")).put("a8", Piece.rook("B"))
+            .put("b8", Piece.knight("B")).put("e8", Piece.king("B")).build();
     assertEquals(expected, board.getPiecesByPosition());
   }
 
@@ -59,7 +62,8 @@ class MyChessBoardTests {
 
     board.setBoardByString(getBoardRNK());
     assertEquals(ImmutableSet.of(Piece.king("W"), Piece.rook("W")), board.getPieces("W"));
-    assertEquals(ImmutableSet.of(Piece.rook("B"), Piece.king("B"), Piece.knight("B")), board.getPieces("B"));
+    assertEquals(ImmutableSet.of(Piece.rook("B"), Piece.king("B"), Piece.knight("B")),
+        board.getPieces("B"));
   }
 
   @Test
@@ -69,7 +73,8 @@ class MyChessBoardTests {
     assertEquals(ImmutableList.of(Piece.king("B")), board.getOrderedPieces("B"));
 
     board.setBoardByString(getBoardRNK());
-    assertEquals(ImmutableList.of(Piece.king("W"), Piece.rook("W"), Piece.rook("W")), board.getOrderedPieces("W"));
+    assertEquals(ImmutableList.of(Piece.king("W"), Piece.rook("W"), Piece.rook("W")),
+        board.getOrderedPieces("W"));
     assertEquals(ImmutableList.of(Piece.king("B"), Piece.knight("B"), Piece.rook("B")),
         board.getOrderedPieces("B"));
   }
@@ -79,7 +84,7 @@ class MyChessBoardTests {
    */
   @Test
   void testMovePieces() throws Exception {
-//    final MyChessBoard board = MyChessBoard.newInstance();
+    // final MyChessBoard board = MyChessBoard.newInstance();
 
   }
 
@@ -93,7 +98,7 @@ class MyChessBoardTests {
     final ImmutableList<String> row2 = ImmutableList.of("", "", "", "", "", "", "", "");
     final ImmutableList<String> row1 = ImmutableList.of("WR", "", "", "", "WK", "", "", "WR");
     /** Joins the eight rows into one big list of 64 entries. */
-    return ImmutableList.of(row1, row2, row3, row4, row5, row6, row7, row8).stream().flatMap(ImmutableList::stream)
-        .collect(ImmutableList.toImmutableList());
+    return ImmutableList.of(row1, row2, row3, row4, row5, row6, row7, row8).stream()
+        .flatMap(ImmutableList::stream).collect(ImmutableList.toImmutableList());
   }
 }

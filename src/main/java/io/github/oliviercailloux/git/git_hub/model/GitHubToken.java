@@ -53,8 +53,8 @@ public class GitHubToken {
 
 	private static String getTokenValue() throws IOException, IllegalStateException {
 		final Optional<String> tokenOpt = getTokenOpt();
-		return tokenOpt
-				.orElseThrow(() -> new IllegalStateException("No token found in environment, in property or in file."));
+		return tokenOpt.orElseThrow(
+				() -> new IllegalStateException("No token found in environment, in property or in file."));
 	}
 
 	private static Optional<String> getTokenOpt() throws IOException {

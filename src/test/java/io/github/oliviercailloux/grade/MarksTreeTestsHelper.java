@@ -56,8 +56,10 @@ public class MarksTreeTestsHelper {
    * </ul>
    */
   public static MarksTree get1_11And1_12And2_21And2_22Half() {
-    final MarksTree m1 = MarksTree.composite(ImmutableMap.of(c11, Mark.one(), c12, Mark.given(0.5d, "")));
-    final MarksTree m2 = MarksTree.composite(ImmutableMap.of(c21, Mark.one(), c22, Mark.given(0.5d, "")));
+    final MarksTree m1 =
+        MarksTree.composite(ImmutableMap.of(c11, Mark.one(), c12, Mark.given(0.5d, "")));
+    final MarksTree m2 =
+        MarksTree.composite(ImmutableMap.of(c21, Mark.one(), c22, Mark.given(0.5d, "")));
     return MarksTree.composite(ImmutableMap.of(c1, m1, c2, m2));
   }
 
@@ -84,10 +86,10 @@ public class MarksTreeTestsHelper {
    *
    */
   public static MarksTree get3Plus2() {
-    final MarksTree t1 = MarksTree.composite(
-        ImmutableMap.of(c11, Mark.given(0.3d, "c11"), c12, Mark.given(0.2d, ""), c13, Mark.given(1.0d, "")));
-    final MarksTree t2 = MarksTree
-        .composite(ImmutableMap.of(c21, Mark.given(0d, "c21"), c22, Mark.given(0.8d, "")));
+    final MarksTree t1 = MarksTree.composite(ImmutableMap.of(c11, Mark.given(0.3d, "c11"), c12,
+        Mark.given(0.2d, ""), c13, Mark.given(1.0d, "")));
+    final MarksTree t2 =
+        MarksTree.composite(ImmutableMap.of(c21, Mark.given(0d, "c21"), c22, Mark.given(0.8d, "")));
     return MarksTree.composite(ImmutableMap.of(c1, t1, c2, t2));
   }
 
@@ -108,10 +110,10 @@ public class MarksTreeTestsHelper {
    *
    */
   public static MarksTree get3Plus2Variant() {
-    final MarksTree t1 = MarksTree.composite(
-        ImmutableMap.of(c11, Mark.given(0.3d, ""), c12, Mark.given(0.2d, ""), c13, Mark.given(1.0d, "")));
-    final MarksTree t2 = MarksTree.composite(ImmutableMap.of(c21, Mark.given(0d, ""), c22, Mark.given(0.1d, "")));
+    final MarksTree t1 = MarksTree.composite(ImmutableMap.of(c11, Mark.given(0.3d, ""), c12,
+        Mark.given(0.2d, ""), c13, Mark.given(1.0d, "")));
+    final MarksTree t2 =
+        MarksTree.composite(ImmutableMap.of(c21, Mark.given(0d, ""), c22, Mark.given(0.1d, "")));
     return MarksTree.composite(ImmutableMap.of(c1, t1, c2, t2));
   }
-
 }

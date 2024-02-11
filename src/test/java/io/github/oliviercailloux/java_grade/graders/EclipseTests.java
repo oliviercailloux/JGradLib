@@ -42,7 +42,8 @@ public class EclipseTests {
   @Test
   void testEmpty() throws Exception {
     try (Repository repository = new InMemoryRepository(new DfsRepositoryDescription("myrepo"));
-        GitFileSystem gitFs = GitFileSystemProvider.instance().newFileSystemFromRepository(repository)) {
+        GitFileSystem gitFs =
+            GitFileSystemProvider.instance().newFileSystemFromRepository(repository)) {
 
       final GitHistorySimple empty = GitHistorySimple.create(gitFs, ImmutableMap.of());
 
@@ -54,20 +55,24 @@ public class EclipseTests {
 
   @Test
   void testNothing() throws Exception {
-    try (FileRepository repository = GitCloner.create().download(
-        RepositoryCoordinates.from("oliviercailloux-org", "minimax-ex").asGitUri(),
-        Utils.getTempDirectory().resolve("minimax-ex"));
-        GitFileSystem gitFs = GitFileSystemProvider.instance().newFileSystemFromRepository(repository)) {
+    try (
+        FileRepository repository = GitCloner.create().download(
+            RepositoryCoordinates.from("oliviercailloux-org", "minimax-ex").asGitUri(),
+            Utils.getTempDirectory().resolve("minimax-ex"));
+        GitFileSystem gitFs =
+            GitFileSystemProvider.instance().newFileSystemFromRepository(repository)) {
       final Graph<GitPathRootShaCached> graph = gitFs.graph();
       final ImmutableSet<ObjectId> ids = graph.nodes().stream().map(GitPathRootShaCached::getCommit)
           .map(io.github.oliviercailloux.gitjfs.Commit::id).collect(ImmutableSet.toImmutableSet());
-      final Map<ObjectId, Instant> constantTimes = Maps.asMap(ids, o -> Commit.DEADLINE.toInstant());
+      final Map<ObjectId, Instant> constantTimes =
+          Maps.asMap(ids, o -> Commit.DEADLINE.toInstant());
       final GitHistorySimple withConstantTimes = GitHistorySimple.create(gitFs, constantTimes);
       LOGGER.debug("Cst: {}.", withConstantTimes.graph().nodes().size());
 
       final GitPathRoot master = gitFs.getPathRoot("/refs/remotes/origin/master/");
       final io.github.oliviercailloux.gitjfs.Commit masterCommit = master.getCommit();
-      final GitHistorySimple justMaster = withConstantTimes.filteredCommits(r -> r.equals(masterCommit));
+      final GitHistorySimple justMaster =
+          withConstantTimes.filteredCommits(r -> r.equals(masterCommit));
       LOGGER.debug("Just master: {}.", justMaster);
 
       final IGrade grade = new Eclipse().setIncludeMine()
@@ -79,16 +84,19 @@ public class EclipseTests {
 
   @Test
   void testPerfect() throws Exception {
-    try (FileRepository repository = GitCloner.create().download(
-        RepositoryCoordinates.from("oliviercailloux-org", "minimax-ex").asGitUri(),
-        Utils.getTempDirectory().resolve("minimax-ex"));
-        GitFileSystem gitFs = GitFileSystemProvider.instance().newFileSystemFromRepository(repository)) {
+    try (
+        FileRepository repository = GitCloner.create().download(
+            RepositoryCoordinates.from("oliviercailloux-org", "minimax-ex").asGitUri(),
+            Utils.getTempDirectory().resolve("minimax-ex"));
+        GitFileSystem gitFs =
+            GitFileSystemProvider.instance().newFileSystemFromRepository(repository)) {
       final Graph<GitPathRootShaCached> graph = gitFs.graph();
-      final Graph<io.github.oliviercailloux.gitjfs.Commit> commitGraph = GraphUtils.transform(graph,
-          GitPathRootSha::getCommit);
+      final Graph<io.github.oliviercailloux.gitjfs.Commit> commitGraph =
+          GraphUtils.transform(graph, GitPathRootSha::getCommit);
       final ImmutableSet<ObjectId> ids = graph.nodes().stream().map(GitPathRootShaCached::getCommit)
           .map(io.github.oliviercailloux.gitjfs.Commit::id).collect(ImmutableSet.toImmutableSet());
-      final Map<ObjectId, Instant> constantTimes = Maps.asMap(ids, o -> Commit.DEADLINE.toInstant());
+      final Map<ObjectId, Instant> constantTimes =
+          Maps.asMap(ids, o -> Commit.DEADLINE.toInstant());
       final GitHistorySimple withConstantTimes = GitHistorySimple.create(gitFs, constantTimes);
       LOGGER.debug("Cst: {}.", withConstantTimes.graph().nodes().size());
 
@@ -96,13 +104,14 @@ public class EclipseTests {
       final io.github.oliviercailloux.gitjfs.Commit masterCommit = master.getCommit();
       final ObjectId masterId = masterCommit.id();
       final GitPathRootShaCached masterIdPath = gitFs.getPathRoot(masterId).toShaCached();
-      final Set<io.github.oliviercailloux.gitjfs.Commit> afterMasterCommits = Graphs.reachableNodes(commitGraph,
-          masterCommit);
-//      final Graph<ObjectId> idGraph = GraphUtils.transform(commitGraph,
-//          io.github.oliviercailloux.gitjfs.Commit::id);
-//      final Set<ObjectId> afterMasterIds = Graphs.reachableNodes(idGraph, masterId);
-//      final Set<GitPathRootShaCached> afterMaster = Graphs.reachableNodes(withConstantTimes.graph(),
-//          masterIdPath);
+      final Set<io.github.oliviercailloux.gitjfs.Commit> afterMasterCommits =
+          Graphs.reachableNodes(commitGraph, masterCommit);
+      // final Graph<ObjectId> idGraph = GraphUtils.transform(commitGraph,
+      // io.github.oliviercailloux.gitjfs.Commit::id);
+      // final Set<ObjectId> afterMasterIds = Graphs.reachableNodes(idGraph, masterId);
+      // final Set<GitPathRootShaCached> afterMaster =
+      // Graphs.reachableNodes(withConstantTimes.graph(),
+      // masterIdPath);
       final GitHistorySimple fromMaster = withConstantTimes
           .filteredCommits(r -> afterMasterCommits.contains(r) || r.equals(masterCommit));
       LOGGER.debug("From master: {}.", fromMaster);
@@ -112,8 +121,7 @@ public class EclipseTests {
           .grade(GitWork.given(GitHubUsername.given("Olivier Cailloux"), fromMaster));
       LOGGER.debug("Grade: {}.", JsonGrade.asJson(grade));
       /* FIXME fails. */
-//      assertEquals(1.0d, grade.getPoints());
+      // assertEquals(1.0d, grade.getPoints());
     }
   }
-
 }

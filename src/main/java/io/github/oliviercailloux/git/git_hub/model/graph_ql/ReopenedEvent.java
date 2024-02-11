@@ -15,5 +15,4 @@ public class ReopenedEvent extends IssueEvent {
 		checkArgument(!snap.isOpen());
 		return IssueSnapshot.of(getCreatedAt(), snap.getName(), true, snap.getAssignees());
 	}
-
 }

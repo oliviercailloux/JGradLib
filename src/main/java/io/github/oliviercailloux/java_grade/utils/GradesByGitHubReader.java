@@ -34,7 +34,8 @@ public class GradesByGitHubReader {
 
 	public GradesByGitHubReader setPatched() {
 		final String ext = com.google.common.io.Files.getFileExtension(gradesInputPath.toString());
-		final String name = com.google.common.io.Files.getNameWithoutExtension(gradesInputPath.toString());
+		final String name =
+				com.google.common.io.Files.getNameWithoutExtension(gradesInputPath.toString());
 		final Path givenParent = gradesInputPath.getParent();
 		final Path parent = givenParent == null ? Path.of("") : givenParent;
 		gradesInputPath = parent.resolve(name + " patched" + "." + ext);
@@ -57,12 +58,13 @@ public class GradesByGitHubReader {
 
 	public ImmutableMap<GitHubUsername, IGrade> readGrades() throws IOException {
 		@SuppressWarnings("all")
-		final Type type = new LinkedHashMap<RepositoryCoordinates, IGrade>() {
-		}.getClass().getGenericSuperclass();
+		final Type type =
+				new LinkedHashMap<RepositoryCoordinates, IGrade>() {}.getClass().getGenericSuperclass();
 
 		LOGGER.debug("Reading grades.");
 		final String sourceGrades = Files.readString(gradesInputPath);
-		final Map<String, IGrade> grades = JsonbUtils.fromJson(sourceGrades, type, JsonGrade.asAdapter());
+		final Map<String, IGrade> grades =
+				JsonbUtils.fromJson(sourceGrades, type, JsonGrade.asAdapter());
 		LOGGER.debug("Read keys: {}.", grades.keySet());
 		final ImmutableMap<GitHubUsername, IGrade> gradesByUsername = Maps.toMap(
 				grades.keySet().stream().map(GitHubUsername::given).collect(ImmutableSet.toImmutableSet()),
@@ -76,5 +78,4 @@ public class GradesByGitHubReader {
 		}
 		return restricted;
 	}
-
 }

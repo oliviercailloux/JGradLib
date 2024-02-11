@@ -35,30 +35,34 @@ public class GraderDiceRoller implements CodeGrader<RuntimeException> {
 
 	public static final String PREFIX = "dice-roller";
 
-	public static final ZonedDateTime DEADLINE = ZonedDateTime.parse("2022-05-13T14:25:00+02:00[Europe/Paris]");
+	public static final ZonedDateTime DEADLINE =
+			ZonedDateTime.parse("2022-05-13T14:25:00+02:00[Europe/Paris]");
 
 	public static final double USER_WEIGHT = 0.025d;
 
-	static record Pair(int first, int second) {
+	static record Pair (int first, int second) {
 
 	}
 
-	static record Triple(int first, int second, int third) {
+	static record Triple (int first, int second, int third) {
 		public Triple cycle() {
 			return new Triple(third, first, second);
 		}
 	}
 
 	public static void main(String[] args) throws Exception {
-		final GitFileSystemWithHistoryFetcher fetcher = GitFileSystemWithHistoryFetcherByPrefix
-				.getRetrievingByPrefix(PREFIX);
-		final BatchGitHistoryGrader<RuntimeException> batchGrader = BatchGitHistoryGrader.given(() -> fetcher);
+		final GitFileSystemWithHistoryFetcher fetcher =
+				GitFileSystemWithHistoryFetcherByPrefix.getRetrievingByPrefix(PREFIX);
+		final BatchGitHistoryGrader<RuntimeException> batchGrader =
+				BatchGitHistoryGrader.given(() -> fetcher);
 
 		final GraderDiceRoller grader421 = new GraderDiceRoller();
-		final MavenCodeGrader<RuntimeException> m = MavenCodeGrader.basic(grader421, UncheckedIOException::new);
+		final MavenCodeGrader<RuntimeException> m =
+				MavenCodeGrader.basic(grader421, UncheckedIOException::new);
 
-		batchGrader.getAndWriteGrades(DEADLINE, Duration.ofMinutes(5), GitFsGraderUsingLast.using(m), USER_WEIGHT,
-				Path.of("grades " + PREFIX), PREFIX + Instant.now().atZone(DEADLINE.getZone()));
+		batchGrader.getAndWriteGrades(DEADLINE, Duration.ofMinutes(5), GitFsGraderUsingLast.using(m),
+				USER_WEIGHT, Path.of("grades " + PREFIX),
+				PREFIX + Instant.now().atZone(DEADLINE.getZone()));
 		grader421.close();
 		LOGGER.info("Done, closed.");
 	}
@@ -81,10 +85,10 @@ public class GraderDiceRoller implements CodeGrader<RuntimeException> {
 	}
 
 	private TryCatchAll<CyclicDiceRoller> newInstance(Instanciator instanciator) {
-		final TryCatchAll<CyclicDiceRoller> tryTarget = TryCatchAll
-				.get(() -> instanciator.getInstanceOrThrow(CyclicDiceRoller.class));
-		final TryCatchAll<CyclicDiceRoller> instance = tryTarget.andApply(target -> SimpleTimeLimiter.create(executors)
-				.newProxy(target, CyclicDiceRoller.class, Duration.ofSeconds(5)));
+		final TryCatchAll<CyclicDiceRoller> tryTarget =
+				TryCatchAll.get(() -> instanciator.getInstanceOrThrow(CyclicDiceRoller.class));
+		final TryCatchAll<CyclicDiceRoller> instance = tryTarget.andApply(target -> SimpleTimeLimiter
+				.create(executors).newProxy(target, CyclicDiceRoller.class, Duration.ofSeconds(5)));
 		return instance;
 	}
 
@@ -93,7 +97,8 @@ public class GraderDiceRoller implements CodeGrader<RuntimeException> {
 		final ImmutableMap.Builder<Criterion, MarksTree> builder = ImmutableMap.builder();
 
 		final TryCatchAll<CyclicDiceRoller> roller0 = newInstance(instanciator);
-		final boolean invocationFailed = roller0.map(r -> false, c -> c instanceof InvocationTargetException);
+		final boolean invocationFailed =
+				roller0.map(r -> false, c -> c instanceof InvocationTargetException);
 		if (invocationFailed) {
 			return Mark.zero("Invocation failed: " + roller0.toString());
 		}
@@ -125,9 +130,9 @@ public class GraderDiceRoller implements CodeGrader<RuntimeException> {
 
 		{
 			final TryCatchAll<CyclicDiceRoller> roller = newInstance(instanciator);
-			final ImmutableList<TryCatchAll<Triple>> triples = IntStream.range(0, 4).boxed()
-					.map(i -> current(roller.andConsume(CyclicDiceRoller::roll)))
-					.collect(ImmutableList.toImmutableList());
+			final ImmutableList<TryCatchAll<Triple>> triples =
+					IntStream.range(0, 4).boxed().map(i -> current(roller.andConsume(CyclicDiceRoller::roll)))
+							.collect(ImmutableList.toImmutableList());
 			final ImmutableList<TryCatchAll<Triple>> expected = Stream.generate(() -> new Triple(1, 1, 1))
 					.map(TryCatchAll::success).limit(4).collect(ImmutableList.toImmutableList());
 			final boolean pass = triples.equals(expected);
@@ -169,10 +174,11 @@ public class GraderDiceRoller implements CodeGrader<RuntimeException> {
 		final TryCatchAll<Pair> dbl = first.and(second, Pair::new);
 		final TryCatchAll<Integer> third = rolled.andApply(CyclicDiceRoller::third);
 		final TryCatchAll<Triple> triple = dbl.and(third, (d, t) -> new Triple(d.first, d.second, t));
-//			final Optional<Throwable> failure = first.getCause().or(second::getCause).or(third::getCause);
-//			final TryCatchAll<Triple> triple = failure.map(f -> TryCatchAll.<Triple>failure(f))
-//					.orElse(TryCatchAll.get(() -> new Triple(first.orThrow(VerifyException::new),
-//							second.orThrow(VerifyException::new), third.orThrow(VerifyException::new))));
+		// final Optional<Throwable> failure =
+		// first.getCause().or(second::getCause).or(third::getCause);
+		// final TryCatchAll<Triple> triple = failure.map(f -> TryCatchAll.<Triple>failure(f))
+		// .orElse(TryCatchAll.get(() -> new Triple(first.orThrow(VerifyException::new),
+		// second.orThrow(VerifyException::new), third.orThrow(VerifyException::new))));
 		return triple;
 	}
 

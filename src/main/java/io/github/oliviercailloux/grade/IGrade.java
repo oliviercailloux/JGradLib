@@ -24,34 +24,32 @@ import java.util.stream.Collectors;
 /**
  *
  * Grade (interface): {points generally in [0, 1], comment, subGrades:
- * ImmutableMap<CriterionAndPoints, Grade> which may be empty}. A mark is a
- * grade that has no sub-grades. A composite grade is a grade that has at least
- * one sub-grade. Interfaces to distinguish marks from composite grades do not
- * exist: it would raise complexity and not bring much benefit.
+ * ImmutableMap<CriterionAndPoints, Grade> which may be empty}. A mark is a grade that has no
+ * sub-grades. A composite grade is a grade that has at least one sub-grade. Interfaces to
+ * distinguish marks from composite grades do not exist: it would raise complexity and not bring
+ * much benefit.
  *
  *
- * A grade knows the criteria and sub-grades that it is composed of. But it does
- * not know which fraction it should preferably use for its own display: this is
- * known by the user of the grade at display time. It relates to display and not
- * to grade information per se.
+ * A grade knows the criteria and sub-grades that it is composed of. But it does not know which
+ * fraction it should preferably use for its own display: this is known by the user of the grade at
+ * display time. It relates to display and not to grade information per se.
  *
  * TODO get rid of default methods.
  *
- * This should be: either a mark, or a weighting grade. A min, an And, a Time
- * penalty, all of this can be transformed (with loss of information) to a
- * weighting grade. The various subclasses would serve to remember more
- * information. Still unclear whether a weighting grade with weight on the min
- * points should equal a MinGrade, however. I’d say no: a weighting grade should
- * equal a weighting grade (thus equality after transforming the Mingrade to a
- * Wgrade).
+ * This should be: either a mark, or a weighting grade. A min, an And, a Time penalty, all of this
+ * can be transformed (with loss of information) to a weighting grade. The various subclasses would
+ * serve to remember more information. Still unclear whether a weighting grade with weight on the
+ * min points should equal a MinGrade, however. I’d say no: a weighting grade should equal a
+ * weighting grade (thus equality after transforming the Mingrade to a Wgrade).
  *
- * BUT this is not necessarily a tree of criteria with weights: the weights
- * might be known only at grade time (in case of MIN, e.g.).
+ * BUT this is not necessarily a tree of criteria with weights: the weights might be known only at
+ * grade time (in case of MIN, e.g.).
  *
  */
 public interface IGrade {
 
-	public static class CriteriaPath extends ForwardingList<Criterion> implements List<Criterion>, RandomAccess {
+	public static class CriteriaPath extends ForwardingList<Criterion>
+			implements List<Criterion>, RandomAccess {
 		public static final CriteriaPath ROOT = new CriteriaPath(ImmutableList.of());
 
 		public static CriteriaPath from(List<Criterion> list) {
@@ -63,8 +61,8 @@ public interface IGrade {
 		}
 
 		public static CriteriaPath from(String pathString) {
-			return CriteriaPath.from(ImmutableList.copyOf(pathString.split("/")).stream().map(Criterion::given)
-					.collect(ImmutableList.toImmutableList()));
+			return CriteriaPath.from(ImmutableList.copyOf(pathString.split("/")).stream()
+					.map(Criterion::given).collect(ImmutableList.toImmutableList()));
 		}
 
 		private final ImmutableList<Criterion> list;
@@ -91,18 +89,19 @@ public interface IGrade {
 		}
 
 		public CriteriaPath withPrefix(CriteriaPath prefix) {
-			return new CriteriaPath(ImmutableList.<Criterion>builderWithExpectedSize(size() + prefix.size()).addAll(prefix)
-					.addAll(list).build());
+			return new CriteriaPath(
+					ImmutableList.<Criterion>builderWithExpectedSize(size() + prefix.size()).addAll(prefix)
+							.addAll(list).build());
 		}
 
 		public CriteriaPath withPrefix(Criterion root) {
-			return new CriteriaPath(
-					ImmutableList.<Criterion>builderWithExpectedSize(size() + 1).add(root).addAll(list).build());
+			return new CriteriaPath(ImmutableList.<Criterion>builderWithExpectedSize(size() + 1).add(root)
+					.addAll(list).build());
 		}
 
 		public CriteriaPath withSuffix(Criterion terminal) {
-			return new CriteriaPath(
-					ImmutableList.<Criterion>builderWithExpectedSize(size() + 1).addAll(list).add(terminal).build());
+			return new CriteriaPath(ImmutableList.<Criterion>builderWithExpectedSize(size() + 1)
+					.addAll(list).add(terminal).build());
 		}
 
 		/**
@@ -158,28 +157,26 @@ public interface IGrade {
 	}
 
 	/**
-	 * Returns the points. It is not mandatory that the points on a composite grade
-	 * be a deterministic function of the points on the sub-grades: manual
-	 * correction may intervene in between.
+	 * Returns the points. It is not mandatory that the points on a composite grade be a deterministic
+	 * function of the points on the sub-grades: manual correction may intervene in between.
 	 *
 	 * @return the points.
 	 */
 	public double getPoints();
 
 	/**
-	 * Returns the comment about the points. Comment on a composite grade serves to
-	 * explain how a grade has been obtained from its sub-grades (may be empty if
-	 * obvious), and is not supposed to be a concatenation of sub-comments: this
-	 * comment is not supposed to be redundant with sub-comments.
+	 * Returns the comment about the points. Comment on a composite grade serves to explain how a
+	 * grade has been obtained from its sub-grades (may be empty if obvious), and is not supposed to
+	 * be a concatenation of sub-comments: this comment is not supposed to be redundant with
+	 * sub-comments.
 	 *
 	 * @return the comment.
 	 */
 	public String getComment();
 
 	/**
-	 * Returns the sub-grades (with the key set iterating in order of the
-	 * sub-grades), empty iff this grade is a mark, non-empty iff this grade is a
-	 * composite grade.
+	 * Returns the sub-grades (with the key set iterating in order of the sub-grades), empty iff this
+	 * grade is a mark, non-empty iff this grade is a composite grade.
 	 *
 	 * @return the sub grades.
 	 */
@@ -191,8 +188,8 @@ public interface IGrade {
 	ImmutableSet<CriterionGradeWeight> getSubGradesAsSet();
 
 	/**
-	 * @return the weights, such that the positive weights sum to one, and not
-	 *         empty. Iterates in the order of the sub-grades.
+	 * @return the weights, such that the positive weights sum to one, and not empty. Iterates in the
+	 *         order of the sub-grades.
 	 */
 	ImmutableMap<Criterion, Double> getWeights();
 
@@ -208,14 +205,15 @@ public interface IGrade {
 	 * @return from any node p, the sum of weights to direct children is one.
 	 */
 	public default ImmutableValueGraph<CriteriaPath, Double> toValueTree() {
-		final ImmutableValueGraph.Builder<CriteriaPath, Double> builder = ValueGraphBuilder.directed()
-				.allowsSelfLoops(false).immutable();
+		final ImmutableValueGraph.Builder<CriteriaPath, Double> builder =
+				ValueGraphBuilder.directed().allowsSelfLoops(false).immutable();
 		builder.addNode(CriteriaPath.ROOT);
 		putValuedChildren(builder, CriteriaPath.ROOT);
 		return builder.build();
 	}
 
-	private void putValuedChildren(ImmutableValueGraph.Builder<CriteriaPath, Double> builder, CriteriaPath root) {
+	private void putValuedChildren(ImmutableValueGraph.Builder<CriteriaPath, Double> builder,
+			CriteriaPath root) {
 		for (Criterion newChild : getSubGrades().keySet()) {
 			final CriteriaPath childPath = root.withSuffix(newChild);
 			builder.putEdgeValue(root, childPath, getWeights().get(newChild));
@@ -232,11 +230,10 @@ public interface IGrade {
 	public IGrade withComment(String newComment);
 
 	/**
-	 * If the given criterion exists among the sub grades contained in this grade,
-	 * returns a new grade identical to this one except that the corresponding sub
-	 * grade is replaced. If the criterion does not exist, then either returns a
-	 * grade identical to this one with a new sub grade, or throws an
-	 * {@link IllegalArgumentException}.
+	 * If the given criterion exists among the sub grades contained in this grade, returns a new grade
+	 * identical to this one except that the corresponding sub grade is replaced. If the criterion
+	 * does not exist, then either returns a grade identical to this one with a new sub grade, or
+	 * throws an {@link IllegalArgumentException}.
 	 *
 	 */
 	public IGrade withSubGrade(Criterion criterion, IGrade newSubGrade);
@@ -257,17 +254,17 @@ public interface IGrade {
 
 	public default IGrade withDissolved(Criterion criterion) {
 		/**
-		 * Considers each other branches b and each leaf in branch b. The leaf is
-		 * replaced by a weighting grade of wofbranch b * originalleaf + wofdissolved *
-		 * dissolved.
+		 * Considers each other branches b and each leaf in branch b. The leaf is replaced by a
+		 * weighting grade of wofbranch b * originalleaf + wofdissolved * dissolved.
 		 */
 		final ImmutableSet<Criterion> criteria = getSubGrades().keySet();
 		checkArgument(criteria.contains(criterion));
 		checkArgument(criteria.size() >= 2);
 		final PathGradeWeight toDissolve = getPathGradeWeight(CriteriaPath.ROOT.withSuffix(criterion));
-		final ImmutableMap<CriteriaPath, WeightedGrade> newGrades = toTree().getLeaves().stream()
-				.filter(l -> !l.getHead().equals(criterion)).map(this::getPathGradeWeight)
-				.collect(ImmutableMap.toImmutableMap(g -> g.getPath(), g -> integrate(g, toDissolve)));
+		final ImmutableMap<CriteriaPath,
+				WeightedGrade> newGrades = toTree().getLeaves().stream()
+						.filter(l -> !l.getHead().equals(criterion)).map(this::getPathGradeWeight)
+						.collect(ImmutableMap.toImmutableMap(g -> g.getPath(), g -> integrate(g, toDissolve)));
 		final IGrade dissolved = WeightingGrade.withZeroesRectified(newGrades);
 		verify(DoubleMath.fuzzyEquals(dissolved.getPoints(), getPoints(), 1e-6d));
 		return dissolved;
@@ -281,8 +278,8 @@ public interface IGrade {
 
 		final Criterion toDissolveCriterion = toDissolve.getPath().getHead();
 		final Double toDissolveWeight = getWeights().get(toDissolveCriterion);
-		final CriterionGradeWeight gDissolved = CriterionGradeWeight.from(toDissolveCriterion, toDissolve.getGrade(),
-				toDissolveWeight);
+		final CriterionGradeWeight gDissolved =
+				CriterionGradeWeight.from(toDissolveCriterion, toDissolve.getGrade(), toDissolveWeight);
 
 		final WeightingGrade integrated = WeightingGrade.from(ImmutableSet.of(gRemaining, gDissolved));
 		return WeightedGrade.given(integrated, getWeight(remaining.getPath()));
@@ -329,7 +326,8 @@ public interface IGrade {
 		}
 		final ImmutableMap<Criterion, IGrade> subGrades = getSubGrades();
 		final Criterion head = path.getHead();
-		final IGrade first = Optional.ofNullable(subGrades.get(head)).orElseThrow(IllegalArgumentException::new);
+		final IGrade first =
+				Optional.ofNullable(subGrades.get(head)).orElseThrow(IllegalArgumentException::new);
 		final double local = getWeights().get(head);
 		return local == 0d ? local : local * first.getWeight(path.withoutHead());
 	}
@@ -352,19 +350,20 @@ public interface IGrade {
 
 	public default IGrade withoutTopLayer() {
 		final ImmutableSet<CriterionGradeWeight> subGradesAsSet = getSubGradesAsSet();
-		final ImmutableSet<CriterionGradeWeight> grandChildren = subGradesAsSet.stream()
-				.flatMap(c -> getSubGrades().get(c.getCriterion()).getSubGradesAsSet().stream().map(
-						s -> CriterionGradeWeight.from(s.getCriterion(), s.getGrade(), c.getWeight() * s.getWeight())))
-				.collect(ImmutableSet.toImmutableSet());
+		final ImmutableSet<CriterionGradeWeight> grandChildren =
+				subGradesAsSet.stream().flatMap(c -> getSubGrades().get(c.getCriterion())
+						.getSubGradesAsSet().stream().map(s -> CriterionGradeWeight.from(s.getCriterion(),
+								s.getGrade(), c.getWeight() * s.getWeight())))
+						.collect(ImmutableSet.toImmutableSet());
 		return WeightingGrade.from(grandChildren);
 	}
 
 	/**
-	 * Two {@link IGrade} objects are equal iff they have the same points, comment,
-	 * and sub grades (irrespective of the order of the sub grades).
+	 * Two {@link IGrade} objects are equal iff they have the same points, comment, and sub grades
+	 * (irrespective of the order of the sub grades).
 	 *
-	 * TODO this is wrong: two weighting grades with the same criteria and different
-	 * weights may be equal, according to this definition, but should not be.
+	 * TODO this is wrong: two weighting grades with the same criteria and different weights may be
+	 * equal, according to this definition, but should not be.
 	 */
 	@Override
 	public boolean equals(Object o2);

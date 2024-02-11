@@ -15,5 +15,4 @@ public class ClosedEvent extends IssueEvent {
 		checkArgument(snap.isOpen());
 		return IssueSnapshot.of(getCreatedAt(), snap.getName(), false, snap.getAssignees());
 	}
-
 }

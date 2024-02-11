@@ -15,7 +15,8 @@ public class RepositoryCoordinates {
 	}
 
 	public static RepositoryCoordinates from(JsonObject json) {
-		return new RepositoryCoordinates(json.getJsonObject("owner").getString("login"), json.getString("name"));
+		return new RepositoryCoordinates(json.getJsonObject("owner").getString("login"),
+				json.getString("name"));
 	}
 
 	private final String owner;
@@ -37,9 +38,8 @@ public class RepositoryCoordinates {
 
 	public String getSshURLString() {
 		/**
-		 * This is what GitHub suggests to use. Note that (I think that) this is not a
-		 * valid part of a URI, because the host contains : but no port number, and the
-		 * path does not start with /
+		 * This is what GitHub suggests to use. Note that (I think that) this is not a valid part of a
+		 * URI, because the host contains : but no port number, and the path does not start with /
 		 */
 		return "git@github.com:" + getOwner() + "/" + getRepositoryName() + ".git";
 	}

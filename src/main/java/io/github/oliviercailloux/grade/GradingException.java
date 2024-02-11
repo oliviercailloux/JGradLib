@@ -18,5 +18,4 @@ public class GradingException extends RuntimeException {
 	public GradingException(Throwable cause) {
 		super(cause);
 	}
-
 }

@@ -12,7 +12,7 @@ import jakarta.json.bind.annotation.JsonbTransient;
 import java.net.URI;
 import java.time.Instant;
 
-@JsonbPropertyOrder({ "name", "ownerLogin", "htmlURL", "sshURL", "createdAt" })
+@JsonbPropertyOrder({"name", "ownerLogin", "htmlURL", "sshURL", "createdAt"})
 public class Repository {
 
 	public static Repository from(JsonObject json) {
@@ -75,5 +75,4 @@ public class Repository {
 	private String getOwnerLogin() {
 		return getOwner().getLogin();
 	}
-
 }

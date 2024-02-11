@@ -19,5 +19,4 @@ public class MyFunctionCheckingFilePermission implements Function<String, String
     AccessController.checkPermission(new FilePermission("/-", "read"));
     return "ok";
   }
-
 }

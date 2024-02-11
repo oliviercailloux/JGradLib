@@ -17,19 +17,19 @@ public abstract class IssueEvent {
 	public static Optional<IssueEvent> from(JsonObject json) {
 		final String type = json.getString("__typename");
 		switch (type) {
-		case "AssignedEvent":
-			return Optional.of(new AssignedEvent(json));
-		case "ClosedEvent":
-			return Optional.of(new ClosedEvent(json));
-		case "ReopenedEvent":
-			return Optional.of(new ReopenedEvent(json));
-		case "RenamedTitleEvent":
-			return Optional.of(new RenamedTitleEvent(json));
-		case "UnassignedEvent":
-			return Optional.of(new UnassignedEvent(json));
-		default:
-			LOGGER.debug("Unknown issue event type {}.", type);
-			return Optional.empty();
+			case "AssignedEvent":
+				return Optional.of(new AssignedEvent(json));
+			case "ClosedEvent":
+				return Optional.of(new ClosedEvent(json));
+			case "ReopenedEvent":
+				return Optional.of(new ReopenedEvent(json));
+			case "RenamedTitleEvent":
+				return Optional.of(new RenamedTitleEvent(json));
+			case "UnassignedEvent":
+				return Optional.of(new UnassignedEvent(json));
+			default:
+				LOGGER.debug("Unknown issue event type {}.", type);
+				return Optional.empty();
 		}
 	}
 
@@ -48,5 +48,4 @@ public abstract class IssueEvent {
 	protected JsonObject getJson() {
 		return json;
 	}
-
 }
