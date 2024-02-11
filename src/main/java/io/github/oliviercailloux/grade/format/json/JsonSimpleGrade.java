@@ -47,7 +47,8 @@ public class JsonSimpleGrade {
   private static final Logger LOGGER = LoggerFactory.getLogger(JsonSimpleGrade.class);
 
   public static enum MarkAggregatorType {
-    ParametricWeighter, VoidAggregator, NormalizingStaticWeighter, StaticWeighter, AbsoluteAggregator, MinAggregator, MaxAggregator, OwaAggregator;
+    ParametricWeighter, VoidAggregator, NormalizingStaticWeighter, StaticWeighter,
+    AbsoluteAggregator, MinAggregator, MaxAggregator, OwaAggregator;
   }
 
   @JsonbPropertyOrder({"type", "multiplied", "weighting", "weights"})
@@ -251,11 +252,11 @@ public class JsonSimpleGrade {
     @Override
     public MarkAggregator adaptFromJson(GenericMarkAggregator from) {
       return switch (from.type) {
-        case ParametricWeighter -> ParametricWeighter.given(from.multiplied.orElseThrow(),
-            from.weighting.orElseThrow());
+        case ParametricWeighter ->
+            ParametricWeighter.given(from.multiplied.orElseThrow(), from.weighting.orElseThrow());
         case VoidAggregator -> VoidAggregator.INSTANCE;
-        case NormalizingStaticWeighter -> NormalizingStaticWeighter
-            .given(from.weights.orElseThrow());
+        case NormalizingStaticWeighter ->
+            NormalizingStaticWeighter.given(from.weights.orElseThrow());
         case StaticWeighter -> StaticWeighter.given(from.weights.orElseThrow());
         case AbsoluteAggregator -> AbsoluteAggregator.INSTANCE;
         case MinAggregator -> MinAggregator.INSTANCE;

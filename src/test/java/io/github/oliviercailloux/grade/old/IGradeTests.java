@@ -62,7 +62,8 @@ public class IGradeTests {
         JsonGrade.asGrade(PrintableJsonObjectFactory.wrapPrettyPrintedString(Resources.toString(
             JsonbGradeTests.class.getResource("ComplexGrade.json"), StandardCharsets.UTF_8)));
     // final IGrade grade = JsonGrade
-    // .asGrade(PrintableJsonObjectFactory.wrapPrettyPrintedString(Files.readString(Path.of("grade.json"))));
+    // .asGrade(PrintableJsonObjectFactory.
+    // wrapPrettyPrintedString(Files.readString(Path.of("grade.json"))));
     final GradeStructure actual = grade.toTree();
     LOGGER.info("Structure: {}.", actual);
     assertEquals(GradeStructure.from(ImmutableSet.of("C1/criterion", "C2")), actual);

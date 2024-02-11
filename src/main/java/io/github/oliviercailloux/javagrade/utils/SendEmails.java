@@ -50,7 +50,8 @@ public class SendEmails {
     final JsonStudents students =
         JsonStudents.from(Files.readString(WORK_DIR.resolve("usernames.json")));
     // final JsonObject jsonS =
-    // PrintableJsonObjectFactory.wrapRawString(Files.readString(WORK_DIR.resolve("usernames.json"))).asJsonObject();
+    // PrintableJsonObjectFactory.
+    // wrapRawString(Files.readString(WORK_DIR.resolve("usernames.json"))).asJsonObject();
     // final StudentOnGitHubKnown studentsK =
     // JsonStudentOnGitHubKnown.asStudentOnGitHubKnown(jsonS);
     final Exam exam = JsonSimpleGrade.asExam(Files.readString(

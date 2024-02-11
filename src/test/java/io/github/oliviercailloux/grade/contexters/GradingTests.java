@@ -25,8 +25,8 @@ class GradingTests {
       assertEquals(ImmutableList.of("one", "two"), c.getGroupIdElements());
     }
     {
-      final PomContexter c = getPomContexter(
-          "HEY<project>\n\t <groupId>one.two</groupId>\n<dependencies><groupId>ploum.again</groupId>");
+      final PomContexter c = getPomContexter("HEY<project>\n\t <groupId>one.two</groupId>\n"
+          + "<dependencies><groupId>ploum.again</groupId>");
       assertEquals("one.two", c.getGroupId());
       assertEquals(ImmutableList.of("one", "two"), c.getGroupIdElements());
     }

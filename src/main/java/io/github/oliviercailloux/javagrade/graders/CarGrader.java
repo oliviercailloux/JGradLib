@@ -218,7 +218,8 @@ public class CarGrader implements CodeGrader<RuntimeException> {
             final TryCatchAll<Integer> dist =
                     carMoved3A.andApply(c -> c.getTotalTraveledDistance());
             builder.put(C_PASSENGER_DRIVE, dist.map(d -> Mark.binary(d == 538, "",
-                    "Expected driven for 5 hours at speed 71 km / h then 3 hours at (previously passenger) speed 61 km / h = 538 km but got %s"
+                    "Expected driven for 5 hours at speed 71 km / h then 3 hours at "
+                    +"(previously passenger) speed 61 km / h = 538 km but got %s"
                             .formatted(d)),
                     c -> Mark.zero("Obtained %s".formatted(c))));
         }

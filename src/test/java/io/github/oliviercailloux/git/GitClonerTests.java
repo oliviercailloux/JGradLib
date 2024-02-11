@@ -209,7 +209,8 @@ class GitClonerTests {
        * TODO why do these fail?
        */
       // new
-      // GitCloner().clone(GitUri.fromGitUri(URI.create("ssh:git@github.com:oliviercailloux/testrel.git")),
+      // GitCloner().clone(GitUri.
+      // fromGitUri(URI.create("ssh:git@github.com:oliviercailloux/testrel.git")),
       // repo);
       // new
       // GitCloner().clone(GitUri.fromGitUri(URI.create("https://github.com/github/testrepo.git")),

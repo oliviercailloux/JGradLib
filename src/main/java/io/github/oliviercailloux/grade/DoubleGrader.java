@@ -135,9 +135,8 @@ public class DoubleGrader implements Grader<IOException> {
               "Diff between '%s' and '%s' (%s ≠ lines / 20)".formatted(javaOld, javaSecond, diff);
           diffMark = Mark.given(propOld, commentDiff);
         } else {
-          diffMark = Mark.one(
-              "Found multiple (or no) files to compare, could not compute diff: original %s and second %s"
-                  .formatted(javasOld, javasSecond));
+          diffMark = Mark.one("Found multiple (or no) files to compare, could not compute diff: "
+              + "original %s and second %s".formatted(javasOld, javasSecond));
         }
 
         final MarksTree merged =

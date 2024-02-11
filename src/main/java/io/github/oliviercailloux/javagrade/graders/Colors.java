@@ -325,9 +325,9 @@ public class Colors implements CodeGrader<RuntimeException> {
             } else if (expectedEquals) {
               final boolean equalH = cycling1.hashCode() == cycling2.hashCode();
               if (!equalH) {
-                mark = Mark.zero(
-                    "Using equivalent inputs %s and %s, observed equal resulting instances but different hash codes"
-                        .formatted(input1, input2));
+                mark = Mark
+                    .zero("Using equivalent inputs %s and %s, observed equal resulting instances "
+                        + "but different hash codes".formatted(input1, input2));
               }
             }
             if (mark.getPoints() == 0d) {

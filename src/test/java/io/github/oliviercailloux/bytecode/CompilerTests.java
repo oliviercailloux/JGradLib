@@ -195,7 +195,9 @@ class CompilerTests {
         Compiler.compile(ImmutableList.of(), Path.of("."), ImmutableSet.of(sourcePath));
     assertEquals(1, diagnostics.size());
     assertEquals(
-        "io/github/oliviercailloux/bytecode/AnotherName.java:5: error: class SourceWithWarnings is public, should be declared in a file named SourceWithWarnings.java\n"
+        "io/github/oliviercailloux/bytecode/AnotherName.java:5: "
+            + "error: class SourceWithWarnings is public, "
+            + "should be declared in a file named SourceWithWarnings.java\n"
             + "public class SourceWithWarnings {\n" + "       ^",
         Iterables.getOnlyElement(diagnostics).toString());
   }
