@@ -3,7 +3,7 @@ package io.github.oliviercailloux.bytecode;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.google.common.jimfs.Jimfs;
-import io.github.oliviercailloux.java_grade.bytecode.SourceScanner;
+import io.github.oliviercailloux.javagrade.bytecode.SourceScanner;
 import java.nio.file.FileSystem;
 import java.nio.file.Files;
 import java.nio.file.Path;

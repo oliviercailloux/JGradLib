@@ -6,7 +6,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
 import io.github.oliviercailloux.git.filter.GitHistorySimple;
-import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
+import io.github.oliviercailloux.git.github.model.GitHubUsername;
 import java.io.IOException;
 import java.util.Map;
 

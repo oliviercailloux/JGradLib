@@ -4,7 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.Resources;
-import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
+import io.github.oliviercailloux.git.github.model.GitHubUsername;
 import io.github.oliviercailloux.grade.Exam;
 import io.github.oliviercailloux.grade.ExamTestsHelper;
 import io.github.oliviercailloux.grade.IGrade;

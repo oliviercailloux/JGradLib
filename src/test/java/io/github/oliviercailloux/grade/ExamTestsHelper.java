@@ -1,7 +1,7 @@
 package io.github.oliviercailloux.grade;
 
 import com.google.common.collect.ImmutableMap;
-import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
+import io.github.oliviercailloux.git.github.model.GitHubUsername;
 
 public class ExamTestsHelper {
   public static Exam get3Plus2() {

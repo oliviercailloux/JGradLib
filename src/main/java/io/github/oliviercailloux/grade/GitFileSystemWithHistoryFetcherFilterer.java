@@ -8,7 +8,7 @@ import com.google.common.collect.ImmutableSet;
 
 import io.github.oliviercailloux.git.filter.GitFilteringFs;
 import io.github.oliviercailloux.git.filter.GitHistorySimple;
-import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
+import io.github.oliviercailloux.git.github.model.GitHubUsername;
 import java.io.IOException;
 import java.time.Instant;
 import org.eclipse.jgit.lib.ObjectId;

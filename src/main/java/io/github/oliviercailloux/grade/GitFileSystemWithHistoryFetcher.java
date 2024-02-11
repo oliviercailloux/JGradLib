@@ -3,7 +3,7 @@ package io.github.oliviercailloux.grade;
 import com.google.common.collect.ImmutableSet;
 
 import io.github.oliviercailloux.git.filter.GitHistorySimple;
-import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
+import io.github.oliviercailloux.git.github.model.GitHubUsername;
 import java.io.IOException;
 
 public interface GitFileSystemWithHistoryFetcher extends AutoCloseable {

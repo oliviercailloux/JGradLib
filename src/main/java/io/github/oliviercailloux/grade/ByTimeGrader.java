@@ -12,14 +12,14 @@ import com.google.common.graph.Graph;
 
 import io.github.oliviercailloux.git.filter.GitFilteringFs;
 import io.github.oliviercailloux.git.filter.GitHistorySimple;
-import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
+import io.github.oliviercailloux.git.github.model.GitHubUsername;
 import io.github.oliviercailloux.gitjfs.Commit;
 import io.github.oliviercailloux.gitjfs.GitPathRootRef;
 import io.github.oliviercailloux.gitjfs.GitPathRootSha;
 import io.github.oliviercailloux.gitjfs.GitPathRootShaCached;
 import io.github.oliviercailloux.jaris.collections.CollectionUtils;
 import io.github.oliviercailloux.jaris.throwing.TOptional;
-import io.github.oliviercailloux.java_grade.testers.JavaMarkHelper;
+import io.github.oliviercailloux.javagrade.testers.JavaMarkHelper;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.time.Instant;

@@ -34,7 +34,7 @@ import io.github.oliviercailloux.git.filter.GitHistory;
 import io.github.oliviercailloux.git.filter.GitHistorySimple;
 import io.github.oliviercailloux.gitjfs.GitFileSystem;
 import io.github.oliviercailloux.gitjfs.GitFileSystemProvider;
-import io.github.oliviercailloux.java_grade.graders.Commit;
+import io.github.oliviercailloux.javagrade.graders.Commit;
 import io.github.oliviercailloux.utils.Utils;
 
 public class GitGeneralGraderTests {

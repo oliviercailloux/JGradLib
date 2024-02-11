@@ -3,9 +3,9 @@ package io.github.oliviercailloux.grade;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.google.common.collect.ImmutableSet;
-import io.github.oliviercailloux.git.git_hub.model.GitHubToken;
-import io.github.oliviercailloux.git.git_hub.model.RepositoryCoordinatesWithPrefix;
-import io.github.oliviercailloux.git.git_hub.services.GitHubFetcherV3;
+import io.github.oliviercailloux.git.github.model.GitHubToken;
+import io.github.oliviercailloux.git.github.model.RepositoryCoordinatesWithPrefix;
+import io.github.oliviercailloux.git.github.services.GitHubFetcherV3;
 import java.util.function.Predicate;
 
 public class RepositoryFetcher {

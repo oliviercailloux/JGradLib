@@ -2,7 +2,7 @@ package io.github.oliviercailloux.grade.contexters;
 
 import com.google.common.collect.ImmutableSet;
 import io.github.oliviercailloux.grade.markers.MarkingPredicates;
-import io.github.oliviercailloux.java_grade.testers.JavaMarkHelper;
+import io.github.oliviercailloux.javagrade.testers.JavaMarkHelper;
 import io.github.oliviercailloux.utils.Utils;
 import java.io.IOException;
 import java.nio.file.Files;

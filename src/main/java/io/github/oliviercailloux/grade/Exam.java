@@ -2,7 +2,7 @@ package io.github.oliviercailloux.grade;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import io.github.oliviercailloux.git.git_hub.model.GitHubUsername;
+import io.github.oliviercailloux.git.github.model.GitHubUsername;
 import jakarta.json.bind.annotation.JsonbPropertyOrder;
 
 /**

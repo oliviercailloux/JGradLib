@@ -13,7 +13,7 @@ import io.github.oliviercailloux.grade.IGrade;
 import io.github.oliviercailloux.grade.Patch;
 import io.github.oliviercailloux.grade.WeightingGrade;
 import io.github.oliviercailloux.grade.old.Mark;
-import io.github.oliviercailloux.java_grade.JavaCriterion;
+import io.github.oliviercailloux.javagrade.JavaCriterion;
 import io.github.oliviercailloux.json.JsonbUtils;
 import io.github.oliviercailloux.json.PrintableJsonObject;
 import io.github.oliviercailloux.json.PrintableJsonObjectFactory;

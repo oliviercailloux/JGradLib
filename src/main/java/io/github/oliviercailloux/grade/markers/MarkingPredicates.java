@@ -1,6 +1,6 @@
 package io.github.oliviercailloux.grade.markers;
 
-import io.github.oliviercailloux.java_grade.testers.JavaMarkHelper;
+import io.github.oliviercailloux.javagrade.testers.JavaMarkHelper;
 import java.nio.file.Path;
 import java.util.Optional;
 import java.util.function.Predicate;
