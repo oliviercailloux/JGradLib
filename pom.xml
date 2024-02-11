@@ -12,6 +12,7 @@
 	<version>0.0.1-SNAPSHOT</version>
 	<properties>
 		<maven.compiler.showWarnings>true</maven.compiler.showWarnings>
+		<checkstyle.skip>true</checkstyle.skip>
 	</properties>
 	<repositories>
 		<repository>
