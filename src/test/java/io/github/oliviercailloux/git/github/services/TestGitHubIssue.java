@@ -11,7 +11,6 @@ import io.github.oliviercailloux.git.github.model.graphql.IssueSnapshot;
 import io.github.oliviercailloux.git.github.model.graphql.IssueWithHistory;
 import io.github.oliviercailloux.git.github.model.graphql.RepositoryWithIssuesWithHistory;
 import io.github.oliviercailloux.git.github.model.graphql.User;
-import io.github.oliviercailloux.git.github.services.GitHubFetcherQL;
 import java.net.URI;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;

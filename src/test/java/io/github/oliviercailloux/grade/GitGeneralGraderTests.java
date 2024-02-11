@@ -3,13 +3,26 @@ package io.github.oliviercailloux.grade;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterables;
+import com.google.common.graph.ImmutableGraph;
+import com.google.common.jimfs.Configuration;
+import com.google.common.jimfs.Jimfs;
+import io.github.oliviercailloux.factogit.JGit;
+import io.github.oliviercailloux.git.filter.GitHistory;
+import io.github.oliviercailloux.git.filter.GitHistorySimple;
+import io.github.oliviercailloux.git.filter.GitHistoryUtils;
+import io.github.oliviercailloux.gitjfs.GitFileSystem;
+import io.github.oliviercailloux.gitjfs.GitFileSystemProvider;
+import io.github.oliviercailloux.javagrade.graders.Commit;
+import io.github.oliviercailloux.utils.Utils;
 import java.nio.file.FileSystem;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
-
 import org.eclipse.jgit.internal.storage.dfs.DfsRepositoryDescription;
 import org.eclipse.jgit.internal.storage.dfs.InMemoryRepository;
 import org.eclipse.jgit.lib.Constants;
@@ -20,22 +33,6 @@ import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Iterables;
-import com.google.common.graph.ImmutableGraph;
-import com.google.common.jimfs.Configuration;
-import com.google.common.jimfs.Jimfs;
-
-import io.github.oliviercailloux.factogit.JGit;
-import io.github.oliviercailloux.git.filter.GitHistoryUtils;
-import io.github.oliviercailloux.git.filter.GitHistory;
-import io.github.oliviercailloux.git.filter.GitHistorySimple;
-import io.github.oliviercailloux.gitjfs.GitFileSystem;
-import io.github.oliviercailloux.gitjfs.GitFileSystemProvider;
-import io.github.oliviercailloux.javagrade.graders.Commit;
-import io.github.oliviercailloux.utils.Utils;
 
 public class GitGeneralGraderTests {
   @SuppressWarnings("unused")

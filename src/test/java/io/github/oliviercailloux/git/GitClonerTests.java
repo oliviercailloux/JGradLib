@@ -7,12 +7,29 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.google.common.base.Verify;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.MoreCollectors;
+import com.google.common.graph.GraphBuilder;
+import com.google.common.graph.Traverser;
+import io.github.oliviercailloux.git.common.GitUri;
+import io.github.oliviercailloux.git.factory.GitCloner;
+import io.github.oliviercailloux.git.filter.GitHistory;
+import io.github.oliviercailloux.git.filter.GitHistoryUtils;
+import io.github.oliviercailloux.git.github.model.GitHubToken;
+import io.github.oliviercailloux.git.github.model.RepositoryCoordinates;
+import io.github.oliviercailloux.git.github.model.v3.CommitGitHubDescription;
+import io.github.oliviercailloux.git.github.services.GitHubFetcherV3;
+import io.github.oliviercailloux.gitjfs.GitFileSystem;
+import io.github.oliviercailloux.gitjfs.GitFileSystemProvider;
+import io.github.oliviercailloux.utils.Utils;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.List;
-
 import org.eclipse.jgit.api.CommitCommand;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.errors.RepositoryNotFoundException;
@@ -32,26 +49,6 @@ import org.eclipse.jgit.treewalk.FileTreeIterator;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.base.Verify;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.MoreCollectors;
-import com.google.common.graph.GraphBuilder;
-import com.google.common.graph.Traverser;
-
-import io.github.oliviercailloux.git.common.GitUri;
-import io.github.oliviercailloux.git.factory.GitCloner;
-import io.github.oliviercailloux.git.filter.GitHistory;
-import io.github.oliviercailloux.git.filter.GitHistoryUtils;
-import io.github.oliviercailloux.git.github.model.GitHubToken;
-import io.github.oliviercailloux.git.github.model.RepositoryCoordinates;
-import io.github.oliviercailloux.git.github.model.v3.CommitGitHubDescription;
-import io.github.oliviercailloux.git.github.services.GitHubFetcherV3;
-import io.github.oliviercailloux.gitjfs.GitFileSystem;
-import io.github.oliviercailloux.gitjfs.GitFileSystemProvider;
-import io.github.oliviercailloux.utils.Utils;
 
 class GitClonerTests {
   @SuppressWarnings("unused")

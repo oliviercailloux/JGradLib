@@ -4,22 +4,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.time.Instant;
-import java.util.List;
-import java.util.Optional;
-
-import org.eclipse.jgit.lib.ObjectId;
-import org.junit.jupiter.api.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-
 import io.github.oliviercailloux.git.GitHubHistory;
 import io.github.oliviercailloux.git.filter.GitHistory;
 import io.github.oliviercailloux.git.github.model.GitHubToken;
@@ -28,13 +16,20 @@ import io.github.oliviercailloux.git.github.model.RepositoryCoordinatesWithPrefi
 import io.github.oliviercailloux.git.github.model.graphql.RepositoryWithFiles;
 import io.github.oliviercailloux.git.github.model.graphql.RepositoryWithIssuesWithHistory;
 import io.github.oliviercailloux.git.github.model.v3.SearchResult;
-import io.github.oliviercailloux.git.github.services.GitHubFetcherQL;
-import io.github.oliviercailloux.git.github.services.GitHubFetcherV3;
 import jakarta.json.JsonObject;
 import jakarta.ws.rs.client.ClientBuilder;
 import jakarta.ws.rs.client.Entity;
 import jakarta.ws.rs.client.Invocation.Builder;
 import jakarta.ws.rs.core.Response;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.time.Instant;
+import java.util.List;
+import java.util.Optional;
+import org.eclipse.jgit.lib.ObjectId;
+import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TestFetch {
 

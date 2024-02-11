@@ -3,7 +3,6 @@ package io.github.oliviercailloux.teachingexamples;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.github.oliviercailloux.g421.CyclicDiceRoller;
-import io.github.oliviercailloux.teachingexamples.MyCyclic;
 import org.junit.jupiter.api.Test;
 
 public class MyCyclicTests {
