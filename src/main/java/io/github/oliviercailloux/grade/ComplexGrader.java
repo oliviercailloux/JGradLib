@@ -7,7 +7,6 @@ import static io.github.oliviercailloux.jaris.exceptions.Unchecker.IO_UNCHECKER;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
-
 import io.github.oliviercailloux.git.filter.GitHistorySimple;
 import io.github.oliviercailloux.git.github.model.GitHubUsername;
 import io.github.oliviercailloux.gitjfs.GitPathRoot;

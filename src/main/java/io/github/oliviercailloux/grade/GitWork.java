@@ -3,7 +3,6 @@ package io.github.oliviercailloux.grade;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.google.common.base.MoreObjects;
-
 import io.github.oliviercailloux.git.filter.GitHistorySimple;
 import io.github.oliviercailloux.git.github.model.GitHubUsername;
 import java.util.Objects;

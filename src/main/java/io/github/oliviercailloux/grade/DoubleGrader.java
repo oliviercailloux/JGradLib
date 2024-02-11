@@ -8,7 +8,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
-
 import io.github.oliviercailloux.git.filter.GitHistorySimple;
 import io.github.oliviercailloux.git.github.model.GitHubUsername;
 import io.github.oliviercailloux.gitjfs.GitPathRootSha;

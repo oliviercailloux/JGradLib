@@ -9,7 +9,6 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Maps;
 import com.google.common.graph.Graph;
-
 import io.github.oliviercailloux.git.filter.GitFilteringFs;
 import io.github.oliviercailloux.git.filter.GitHistorySimple;
 import io.github.oliviercailloux.git.github.model.GitHubUsername;

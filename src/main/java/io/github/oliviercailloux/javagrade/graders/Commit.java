@@ -8,7 +8,6 @@ import static io.github.oliviercailloux.grade.GitGrader.Predicates.isFileNamed;
 import static io.github.oliviercailloux.grade.GitGrader.Predicates.isRefBranch;
 
 import com.google.common.collect.ImmutableSet;
-
 import io.github.oliviercailloux.git.filter.GitHistorySimple;
 import io.github.oliviercailloux.git.github.model.GitHubUsername;
 import io.github.oliviercailloux.gitjfs.GitPath;

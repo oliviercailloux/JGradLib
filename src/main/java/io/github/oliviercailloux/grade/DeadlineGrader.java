@@ -10,7 +10,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Iterables;
-
 import io.github.oliviercailloux.git.filter.GitHistorySimple;
 import io.github.oliviercailloux.git.github.model.GitHubUsername;
 import io.github.oliviercailloux.gitjfs.Commit;
@@ -23,8 +22,8 @@ import io.github.oliviercailloux.jaris.throwing.TComparator;
 import io.github.oliviercailloux.jaris.throwing.TFunction;
 import io.github.oliviercailloux.javagrade.JavaGradeUtils;
 import io.github.oliviercailloux.javagrade.bytecode.Compiler;
-import io.github.oliviercailloux.javagrade.bytecode.Instanciator;
 import io.github.oliviercailloux.javagrade.bytecode.Compiler.CompilationResult;
+import io.github.oliviercailloux.javagrade.bytecode.Instanciator;
 import io.github.oliviercailloux.javagrade.testers.JavaMarkHelper;
 import io.github.oliviercailloux.utils.Utils;
 import java.io.IOException;
