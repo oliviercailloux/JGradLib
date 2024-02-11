@@ -43,7 +43,7 @@ public class Coffee {
             DeadlineGrader.usingInstantiatorGrader(Coffee::grade, DEADLINE).setPenalizer(
                 DeadlineGrader.LinearPenalizer.proportionalToLateness(Duration.ofSeconds(300))))
         .setExcludeCommitsByAuthors(ImmutableSet.of("Olivier Cailloux"));
-        // .setExcludeCommitsByGitHub(true);
+    // .setExcludeCommitsByGitHub(true);
     grader.grade();
     /** TODO see why still open. */
     // final Path src = Path.of("/tmp/coffee-…/.git/");
