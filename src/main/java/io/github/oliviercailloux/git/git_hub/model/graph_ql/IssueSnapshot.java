@@ -13,39 +13,39 @@ import java.util.Set;
  *
  */
 public class IssueSnapshot {
-	public static IssueSnapshot of(Instant birthTime, String name, boolean isOpen,
-			Set<User> assignees) {
-		return new IssueSnapshot(birthTime, name, isOpen, assignees);
-	}
+  public static IssueSnapshot of(Instant birthTime, String name, boolean isOpen,
+      Set<User> assignees) {
+    return new IssueSnapshot(birthTime, name, isOpen, assignees);
+  }
 
-	private final ImmutableSet<User> assignees;
+  private final ImmutableSet<User> assignees;
 
-	private final Instant birthTime;
+  private final Instant birthTime;
 
-	private final boolean isOpen;
+  private final boolean isOpen;
 
-	private final String name;
+  private final String name;
 
-	private IssueSnapshot(Instant birthTime, String name, boolean isOpen, Set<User> assignees) {
-		this.birthTime = requireNonNull(birthTime);
-		this.name = requireNonNull(name);
-		this.isOpen = isOpen;
-		this.assignees = ImmutableSet.copyOf(requireNonNull(assignees));
-	}
+  private IssueSnapshot(Instant birthTime, String name, boolean isOpen, Set<User> assignees) {
+    this.birthTime = requireNonNull(birthTime);
+    this.name = requireNonNull(name);
+    this.isOpen = isOpen;
+    this.assignees = ImmutableSet.copyOf(requireNonNull(assignees));
+  }
 
-	public ImmutableSet<User> getAssignees() {
-		return assignees;
-	}
+  public ImmutableSet<User> getAssignees() {
+    return assignees;
+  }
 
-	public Instant getBirthTime() {
-		return birthTime;
-	}
+  public Instant getBirthTime() {
+    return birthTime;
+  }
 
-	public String getName() {
-		return name;
-	}
+  public String getName() {
+    return name;
+  }
 
-	public boolean isOpen() {
-		return isOpen;
-	}
+  public boolean isOpen() {
+    return isOpen;
+  }
 }

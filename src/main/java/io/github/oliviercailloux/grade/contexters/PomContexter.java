@@ -12,55 +12,55 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class PomContexter {
-	@SuppressWarnings("unused")
-	private static final Logger LOGGER = LoggerFactory.getLogger(PomContexter.class);
-	private final String pomContent;
-	private String groupId;
-	/**
-	 * empty iff groupId is empty.
-	 */
-	private ImmutableList<String> groupIdElements;
+  @SuppressWarnings("unused")
+  private static final Logger LOGGER = LoggerFactory.getLogger(PomContexter.class);
+  private final String pomContent;
+  private String groupId;
+  /**
+   * empty iff groupId is empty.
+   */
+  private ImmutableList<String> groupIdElements;
 
-	public PomContexter(String pomContent) {
-		this.pomContent = requireNonNull(pomContent);
-		groupId = null;
-		groupIdElements = null;
-	}
+  public PomContexter(String pomContent) {
+    this.pomContent = requireNonNull(pomContent);
+    groupId = null;
+    groupIdElements = null;
+  }
 
-	public void init() throws GradingException {
-		final Matcher matcher =
-				Pattern.compile("<project[^>]*>" + "[^<]*" + "(?:<[^>]*>[^<]*</[^>]*>[^<]*)*"
-						+ "<groupId>(([^\\.<]\\.?)+)</groupId>").matcher(pomContent);
-		LOGGER.debug("Matching for group id against {}.", pomContent);
-		final boolean found = matcher.find();
-		final MatchResult result = matcher.toMatchResult();
-		final boolean foundTwice = matcher.find();
-		if (found && !foundTwice) {
-			groupId = result.group(1);
-			assert groupId.length() >= 1;
-			groupIdElements = ImmutableList.copyOf(groupId.split("\\."));
-			LOGGER.debug("Found group id {}; elements are {}.", groupId, groupIdElements);
-			assert groupIdElements.size() >= 1 : groupId;
-			assert !groupIdElements.contains("");
-		} else {
-			LOGGER.debug("Found once: {}, result: {}, twice: {}.", found, result, foundTwice);
-			groupId = "";
-			groupIdElements = ImmutableList.of();
-		}
-	}
+  public void init() throws GradingException {
+    final Matcher matcher =
+        Pattern.compile("<project[^>]*>" + "[^<]*" + "(?:<[^>]*>[^<]*</[^>]*>[^<]*)*"
+            + "<groupId>(([^\\.<]\\.?)+)</groupId>").matcher(pomContent);
+    LOGGER.debug("Matching for group id against {}.", pomContent);
+    final boolean found = matcher.find();
+    final MatchResult result = matcher.toMatchResult();
+    final boolean foundTwice = matcher.find();
+    if (found && !foundTwice) {
+      groupId = result.group(1);
+      assert groupId.length() >= 1;
+      groupIdElements = ImmutableList.copyOf(groupId.split("\\."));
+      LOGGER.debug("Found group id {}; elements are {}.", groupId, groupIdElements);
+      assert groupIdElements.size() >= 1 : groupId;
+      assert !groupIdElements.contains("");
+    } else {
+      LOGGER.debug("Found once: {}, result: {}, twice: {}.", found, result, foundTwice);
+      groupId = "";
+      groupIdElements = ImmutableList.of();
+    }
+  }
 
-	public boolean isGroupIdValid() {
-		final ImmutableList<String> validStart = ImmutableList.of("io", "github");
-		return groupIdElements != null && groupIdElements.size() >= 3
-				&& groupIdElements.subList(0, 2).equals(validStart);
-	}
+  public boolean isGroupIdValid() {
+    final ImmutableList<String> validStart = ImmutableList.of("io", "github");
+    return groupIdElements != null && groupIdElements.size() >= 3
+        && groupIdElements.subList(0, 2).equals(validStart);
+  }
 
-	public String getGroupId() {
-		return groupId;
-	}
+  public String getGroupId() {
+    return groupId;
+  }
 
-	public List<String> getGroupIdElements() {
-		assert groupIdElements != null;
-		return groupIdElements;
-	}
+  public List<String> getGroupIdElements() {
+    assert groupIdElements != null;
+    return groupIdElements;
+  }
 }

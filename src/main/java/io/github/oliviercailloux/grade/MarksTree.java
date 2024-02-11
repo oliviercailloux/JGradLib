@@ -26,79 +26,79 @@ import java.util.Set;
  */
 public interface MarksTree {
 
-	public static MarksTree composite(Set<? extends SubMarksTree> subGrades) {
-		if (subGrades.isEmpty()) {
-			return Mark.zero();
-		}
-		return CompositeMarksTree.givenSubGrades(subGrades);
-	}
+  public static MarksTree composite(Set<? extends SubMarksTree> subGrades) {
+    if (subGrades.isEmpty()) {
+      return Mark.zero();
+    }
+    return CompositeMarksTree.givenSubGrades(subGrades);
+  }
 
-	public static MarksTree composite(Map<Criterion, ? extends MarksTree> subGrades) {
-		if (subGrades.isEmpty()) {
-			return Mark.zero();
-		}
-		return CompositeMarksTree.givenGrades(subGrades);
-	}
+  public static MarksTree composite(Map<Criterion, ? extends MarksTree> subGrades) {
+    if (subGrades.isEmpty()) {
+      return Mark.zero();
+    }
+    return CompositeMarksTree.givenGrades(subGrades);
+  }
 
-	/**
-	 * If {@code true}, calling {@link #getMark(CriteriaPath)} with argument {@link CriteriaPath#ROOT}
-	 * will return this object as a {@link Mark}.
-	 *
-	 * @returns {@code true} iff has a root (empty) grade path, equivalently, iff has only a root
-	 *          grade path
-	 */
-	public boolean isMark();
+  /**
+   * If {@code true}, calling {@link #getMark(CriteriaPath)} with argument {@link CriteriaPath#ROOT}
+   * will return this object as a {@link Mark}.
+   *
+   * @returns {@code true} iff has a root (empty) grade path, equivalently, iff has only a root
+   *          grade path
+   */
+  public boolean isMark();
 
-	/**
-	 * @return {@code true} iff is not a mark, equivalently, has at least one criterion
-	 */
-	public boolean isComposite();
+  /**
+   * @return {@code true} iff is not a mark, equivalently, has at least one criterion
+   */
+  public boolean isComposite();
 
-	/**
-	 * @return empty iff this is a mark.
-	 */
-	public ImmutableSet<Criterion> getCriteria();
+  /**
+   * @return empty iff this is a mark.
+   */
+  public ImmutableSet<Criterion> getCriteria();
 
-	/**
-	 * getGrade(criterion as singleton grade path) = getGrade(criterion).
-	 *
-	 * @throws NoSuchElementException iff the given criterion is not contained in this object.
-	 *
-	 */
-	public MarksTree getTree(Criterion criterion);
+  /**
+   * getGrade(criterion as singleton grade path) = getGrade(criterion).
+   *
+   * @throws NoSuchElementException iff the given criterion is not contained in this object.
+   *
+   */
+  public MarksTree getTree(Criterion criterion);
 
-	/**
-	 * @return not empty; the singleton containing {@link CriteriaPath#ROOT} iff this object is a
-	 *         mark; otherwise, does not contain {@link CriteriaPath#ROOT}.
-	 */
-	public ImmutableSet<CriteriaPath> getPathsToMarks();
+  /**
+   * @return not empty; the singleton containing {@link CriteriaPath#ROOT} iff this object is a
+   *         mark; otherwise, does not contain {@link CriteriaPath#ROOT}.
+   */
+  public ImmutableSet<CriteriaPath> getPathsToMarks();
 
-	/**
-	 * @return {@code true} iff this tree contains a node (terminal or not) at the given path.
-	 */
-	public boolean hasPath(CriteriaPath path);
+  /**
+   * @return {@code true} iff this tree contains a node (terminal or not) at the given path.
+   */
+  public boolean hasPath(CriteriaPath path);
 
-	/**
-	 * Returns the grade at the given path, if it exists in this instance.
-	 * <p>
-	 * If the given path is the root grade path, returns this instance.
-	 * </p>
-	 *
-	 * @throws NoSuchElementException iff the given path is not contained in this object.
-	 * @see #hasPath(CriteriaPath)
-	 */
-	public MarksTree getTree(CriteriaPath path);
+  /**
+   * Returns the grade at the given path, if it exists in this instance.
+   * <p>
+   * If the given path is the root grade path, returns this instance.
+   * </p>
+   *
+   * @throws NoSuchElementException iff the given path is not contained in this object.
+   * @see #hasPath(CriteriaPath)
+   */
+  public MarksTree getTree(CriteriaPath path);
 
-	/**
-	 * @throws NoSuchElementException iff the given path is not contained in this object.
-	 * @throws IllegalArgumentException iff the given path is contained in this object but is not one
-	 *         of {@link #getPathsToMarks()}
-	 */
-	public Mark getMark(CriteriaPath path);
+  /**
+   * @throws NoSuchElementException iff the given path is not contained in this object.
+   * @throws IllegalArgumentException iff the given path is contained in this object but is not one
+   *         of {@link #getPathsToMarks()}
+   */
+  public Mark getMark(CriteriaPath path);
 
-	/**
-	 * Two grades are equal iff they have the same paths to marks and the same marks.
-	 */
-	@Override
-	boolean equals(Object obj);
+  /**
+   * Two grades are equal iff they have the same paths to marks and the same marks.
+   */
+  @Override
+  boolean equals(Object obj);
 }

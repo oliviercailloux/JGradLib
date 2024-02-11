@@ -8,18 +8,18 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 class PackageGroupIdMarker {
-	public static boolean hasPrefix(Path relativizedPath, List<String> groupIdElements) {
-		final ImmutableList<String> pathAsStrings = Streams.stream(relativizedPath).map(Path::toString)
-				.collect(ImmutableList.toImmutableList());
-		LOGGER.debug("Obtained from {}, path as strings: {}; comparing to group: {}.", relativizedPath,
-				pathAsStrings, groupIdElements);
+  public static boolean hasPrefix(Path relativizedPath, List<String> groupIdElements) {
+    final ImmutableList<String> pathAsStrings = Streams.stream(relativizedPath).map(Path::toString)
+        .collect(ImmutableList.toImmutableList());
+    LOGGER.debug("Obtained from {}, path as strings: {}; comparing to group: {}.", relativizedPath,
+        pathAsStrings, groupIdElements);
 
-		if (pathAsStrings.size() < groupIdElements.size()) {
-			return false;
-		}
-		return pathAsStrings.subList(0, groupIdElements.size()).equals(groupIdElements);
-	}
+    if (pathAsStrings.size() < groupIdElements.size()) {
+      return false;
+    }
+    return pathAsStrings.subList(0, groupIdElements.size()).equals(groupIdElements);
+  }
 
-	@SuppressWarnings("unused")
-	private static final Logger LOGGER = LoggerFactory.getLogger(PackageGroupIdMarker.class);
+  @SuppressWarnings("unused")
+  private static final Logger LOGGER = LoggerFactory.getLogger(PackageGroupIdMarker.class);
 }

@@ -4,11 +4,11 @@ import jakarta.json.JsonObject;
 
 public class PushEvent extends Event {
 
-	PushEvent(JsonObject json) {
-		super(json);
-	}
+  PushEvent(JsonObject json) {
+    super(json);
+  }
 
-	public PushPayload getPushPayload() {
-		return PushPayload.from(getPayload());
-	}
+  public PushPayload getPushPayload() {
+    return PushPayload.from(getPayload());
+  }
 }

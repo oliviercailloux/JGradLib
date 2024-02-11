@@ -14,22 +14,22 @@ import java.util.Set;
  * equal trees of sets of criteria.
  */
 public interface CriteriaWeighter extends MarkAggregator {
-	/**
-	 * @return the same thing as {@link #weights(Set)} when called with the same set of criteria.
-	 * @throws AggregatorException iff the given set of criteria is rejected.
-	 */
-	ImmutableMap<Criterion, Double> weightsFromCriteria(Set<Criterion> criteria)
-			throws AggregatorException;
+  /**
+   * @return the same thing as {@link #weights(Set)} when called with the same set of criteria.
+   * @throws AggregatorException iff the given set of criteria is rejected.
+   */
+  ImmutableMap<Criterion, Double> weightsFromCriteria(Set<Criterion> criteria)
+      throws AggregatorException;
 
-	@Override
-	default ImmutableMap<SubMark, Double> weights(Set<SubMark> marks) throws AggregatorException {
-		final ImmutableSet<Criterion> criteria =
-				marks.stream().map(SubMark::getCriterion).collect(ImmutableSet.toImmutableSet());
-		checkArgument(marks.size() == criteria.size());
+  @Override
+  default ImmutableMap<SubMark, Double> weights(Set<SubMark> marks) throws AggregatorException {
+    final ImmutableSet<Criterion> criteria =
+        marks.stream().map(SubMark::getCriterion).collect(ImmutableSet.toImmutableSet());
+    checkArgument(marks.size() == criteria.size());
 
-		final ImmutableMap<Criterion, Double> weights = weightsFromCriteria(criteria);
+    final ImmutableMap<Criterion, Double> weights = weightsFromCriteria(criteria);
 
-		return marks.stream()
-				.collect(ImmutableMap.toImmutableMap(s -> s, s -> weights.get(s.getCriterion())));
-	}
+    return marks.stream()
+        .collect(ImmutableMap.toImmutableMap(s -> s, s -> weights.get(s.getCriterion())));
+  }
 }

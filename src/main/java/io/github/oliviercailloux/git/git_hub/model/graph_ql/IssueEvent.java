@@ -11,41 +11,41 @@ import org.slf4j.LoggerFactory;
 
 public abstract class IssueEvent {
 
-	@SuppressWarnings("unused")
-	private static final Logger LOGGER = LoggerFactory.getLogger(IssueEvent.class);
+  @SuppressWarnings("unused")
+  private static final Logger LOGGER = LoggerFactory.getLogger(IssueEvent.class);
 
-	public static Optional<IssueEvent> from(JsonObject json) {
-		final String type = json.getString("__typename");
-		switch (type) {
-			case "AssignedEvent":
-				return Optional.of(new AssignedEvent(json));
-			case "ClosedEvent":
-				return Optional.of(new ClosedEvent(json));
-			case "ReopenedEvent":
-				return Optional.of(new ReopenedEvent(json));
-			case "RenamedTitleEvent":
-				return Optional.of(new RenamedTitleEvent(json));
-			case "UnassignedEvent":
-				return Optional.of(new UnassignedEvent(json));
-			default:
-				LOGGER.debug("Unknown issue event type {}.", type);
-				return Optional.empty();
-		}
-	}
+  public static Optional<IssueEvent> from(JsonObject json) {
+    final String type = json.getString("__typename");
+    switch (type) {
+      case "AssignedEvent":
+        return Optional.of(new AssignedEvent(json));
+      case "ClosedEvent":
+        return Optional.of(new ClosedEvent(json));
+      case "ReopenedEvent":
+        return Optional.of(new ReopenedEvent(json));
+      case "RenamedTitleEvent":
+        return Optional.of(new RenamedTitleEvent(json));
+      case "UnassignedEvent":
+        return Optional.of(new UnassignedEvent(json));
+      default:
+        LOGGER.debug("Unknown issue event type {}.", type);
+        return Optional.empty();
+    }
+  }
 
-	private final JsonObject json;
+  private final JsonObject json;
 
-	protected IssueEvent(JsonObject json) {
-		this.json = requireNonNull(json);
-	}
+  protected IssueEvent(JsonObject json) {
+    this.json = requireNonNull(json);
+  }
 
-	public abstract IssueSnapshot applyTo(IssueSnapshot snap);
+  public abstract IssueSnapshot applyTo(IssueSnapshot snap);
 
-	public Instant getCreatedAt() {
-		return GitHubJsonParser.getCreatedAtQL(json);
-	}
+  public Instant getCreatedAt() {
+    return GitHubJsonParser.getCreatedAtQL(json);
+  }
 
-	protected JsonObject getJson() {
-		return json;
-	}
+  protected JsonObject getJson() {
+    return json;
+  }
 }

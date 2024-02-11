@@ -48,323 +48,323 @@ import java.util.stream.Collectors;
  */
 public interface IGrade {
 
-	public static class CriteriaPath extends ForwardingList<Criterion>
-			implements List<Criterion>, RandomAccess {
-		public static final CriteriaPath ROOT = new CriteriaPath(ImmutableList.of());
+  public static class CriteriaPath extends ForwardingList<Criterion>
+      implements List<Criterion>, RandomAccess {
+    public static final CriteriaPath ROOT = new CriteriaPath(ImmutableList.of());
 
-		public static CriteriaPath from(List<Criterion> list) {
-			if (list instanceof CriteriaPath) {
-				final CriteriaPath path = (CriteriaPath) list;
-				return path;
-			}
-			return new CriteriaPath(list);
-		}
+    public static CriteriaPath from(List<Criterion> list) {
+      if (list instanceof CriteriaPath) {
+        final CriteriaPath path = (CriteriaPath) list;
+        return path;
+      }
+      return new CriteriaPath(list);
+    }
 
-		public static CriteriaPath from(String pathString) {
-			return CriteriaPath.from(ImmutableList.copyOf(pathString.split("/")).stream()
-					.map(Criterion::given).collect(ImmutableList.toImmutableList()));
-		}
+    public static CriteriaPath from(String pathString) {
+      return CriteriaPath.from(ImmutableList.copyOf(pathString.split("/")).stream()
+          .map(Criterion::given).collect(ImmutableList.toImmutableList()));
+    }
 
-		private final ImmutableList<Criterion> list;
+    private final ImmutableList<Criterion> list;
 
-		private CriteriaPath(List<Criterion> list) {
-			this.list = ImmutableList.copyOf(list);
-		}
+    private CriteriaPath(List<Criterion> list) {
+      this.list = ImmutableList.copyOf(list);
+    }
 
-		@Override
-		protected ImmutableList<Criterion> delegate() {
-			return list;
-		}
+    @Override
+    protected ImmutableList<Criterion> delegate() {
+      return list;
+    }
 
-		public boolean isRoot() {
-			return isEmpty();
-		}
+    public boolean isRoot() {
+      return isEmpty();
+    }
 
-		public Criterion getHead() {
-			return list.get(0);
-		}
+    public Criterion getHead() {
+      return list.get(0);
+    }
 
-		public Criterion getTail() {
-			return list.get(list.size() - 1);
-		}
+    public Criterion getTail() {
+      return list.get(list.size() - 1);
+    }
 
-		public CriteriaPath withPrefix(CriteriaPath prefix) {
-			return new CriteriaPath(
-					ImmutableList.<Criterion>builderWithExpectedSize(size() + prefix.size()).addAll(prefix)
-							.addAll(list).build());
-		}
+    public CriteriaPath withPrefix(CriteriaPath prefix) {
+      return new CriteriaPath(
+          ImmutableList.<Criterion>builderWithExpectedSize(size() + prefix.size()).addAll(prefix)
+              .addAll(list).build());
+    }
 
-		public CriteriaPath withPrefix(Criterion root) {
-			return new CriteriaPath(ImmutableList.<Criterion>builderWithExpectedSize(size() + 1).add(root)
-					.addAll(list).build());
-		}
+    public CriteriaPath withPrefix(Criterion root) {
+      return new CriteriaPath(ImmutableList.<Criterion>builderWithExpectedSize(size() + 1).add(root)
+          .addAll(list).build());
+    }
 
-		public CriteriaPath withSuffix(Criterion terminal) {
-			return new CriteriaPath(ImmutableList.<Criterion>builderWithExpectedSize(size() + 1)
-					.addAll(list).add(terminal).build());
-		}
+    public CriteriaPath withSuffix(Criterion terminal) {
+      return new CriteriaPath(ImmutableList.<Criterion>builderWithExpectedSize(size() + 1)
+          .addAll(list).add(terminal).build());
+    }
 
-		/**
-		 * @throws IndexOutOfBoundsException
-		 */
-		public CriteriaPath withoutHead() {
-			return new CriteriaPath(ImmutableList.<Criterion>builderWithExpectedSize(size() - 1)
-					.addAll(list.subList(1, list.size())).build());
-		}
+    /**
+     * @throws IndexOutOfBoundsException
+     */
+    public CriteriaPath withoutHead() {
+      return new CriteriaPath(ImmutableList.<Criterion>builderWithExpectedSize(size() - 1)
+          .addAll(list.subList(1, list.size())).build());
+    }
 
-		/**
-		 * @throws IndexOutOfBoundsException
-		 */
-		public CriteriaPath withoutTail() {
-			return new CriteriaPath(ImmutableList.<Criterion>builderWithExpectedSize(size() - 1)
-					.addAll(list.subList(0, list.size() - 1)).build());
-		}
+    /**
+     * @throws IndexOutOfBoundsException
+     */
+    public CriteriaPath withoutTail() {
+      return new CriteriaPath(ImmutableList.<Criterion>builderWithExpectedSize(size() - 1)
+          .addAll(list.subList(0, list.size() - 1)).build());
+    }
 
-		public boolean startsWith(Criterion criterion) {
-			return !isRoot() && getHead().equals(criterion);
-		}
+    public boolean startsWith(Criterion criterion) {
+      return !isRoot() && getHead().equals(criterion);
+    }
 
-		public boolean startsWith(CriteriaPath subPath) {
-			if (list.size() < subPath.size()) {
-				return false;
-			}
-			final List<Criterion> startingList = subPath;
-			return list.subList(0, subPath.size()).equals(startingList);
-		}
+    public boolean startsWith(CriteriaPath subPath) {
+      if (list.size() < subPath.size()) {
+        return false;
+      }
+      final List<Criterion> startingList = subPath;
+      return list.subList(0, subPath.size()).equals(startingList);
+    }
 
-		public boolean endsWith(CriteriaPath subPath) {
-			if (list.size() < subPath.size()) {
-				return false;
-			}
-			final List<Criterion> subList = subPath;
-			return list.subList(list.size() - subPath.size(), list.size()).equals(subList);
-		}
+    public boolean endsWith(CriteriaPath subPath) {
+      if (list.size() < subPath.size()) {
+        return false;
+      }
+      final List<Criterion> subList = subPath;
+      return list.subList(list.size() - subPath.size(), list.size()).equals(subList);
+    }
 
-		public boolean endsWith(Criterion criterion) {
-			return !isRoot() && getTail().equals(criterion);
-		}
+    public boolean endsWith(Criterion criterion) {
+      return !isRoot() && getTail().equals(criterion);
+    }
 
-		public ImmutableList<Criterion> asImmutableList() {
-			return list;
-		}
+    public ImmutableList<Criterion> asImmutableList() {
+      return list;
+    }
 
-		/**
-		 * @return a possibly ambiguous but simple string
-		 */
-		public String toSimpleString() {
-			return list.stream().map(Criterion::getName).collect(Collectors.joining("/"));
-		}
-	}
+    /**
+     * @return a possibly ambiguous but simple string
+     */
+    public String toSimpleString() {
+      return list.stream().map(Criterion::getName).collect(Collectors.joining("/"));
+    }
+  }
 
-	/**
-	 * Returns the points. It is not mandatory that the points on a composite grade be a deterministic
-	 * function of the points on the sub-grades: manual correction may intervene in between.
-	 *
-	 * @return the points.
-	 */
-	public double getPoints();
+  /**
+   * Returns the points. It is not mandatory that the points on a composite grade be a deterministic
+   * function of the points on the sub-grades: manual correction may intervene in between.
+   *
+   * @return the points.
+   */
+  public double getPoints();
 
-	/**
-	 * Returns the comment about the points. Comment on a composite grade serves to explain how a
-	 * grade has been obtained from its sub-grades (may be empty if obvious), and is not supposed to
-	 * be a concatenation of sub-comments: this comment is not supposed to be redundant with
-	 * sub-comments.
-	 *
-	 * @return the comment.
-	 */
-	public String getComment();
+  /**
+   * Returns the comment about the points. Comment on a composite grade serves to explain how a
+   * grade has been obtained from its sub-grades (may be empty if obvious), and is not supposed to
+   * be a concatenation of sub-comments: this comment is not supposed to be redundant with
+   * sub-comments.
+   *
+   * @return the comment.
+   */
+  public String getComment();
 
-	/**
-	 * Returns the sub-grades (with the key set iterating in order of the sub-grades), empty iff this
-	 * grade is a mark, non-empty iff this grade is a composite grade.
-	 *
-	 * @return the sub grades.
-	 */
-	public ImmutableMap<Criterion, IGrade> getSubGrades();
+  /**
+   * Returns the sub-grades (with the key set iterating in order of the sub-grades), empty iff this
+   * grade is a mark, non-empty iff this grade is a composite grade.
+   *
+   * @return the sub grades.
+   */
+  public ImmutableMap<Criterion, IGrade> getSubGrades();
 
-	/**
-	 * @return iterates in the order of the sub-grades.
-	 */
-	ImmutableSet<CriterionGradeWeight> getSubGradesAsSet();
+  /**
+   * @return iterates in the order of the sub-grades.
+   */
+  ImmutableSet<CriterionGradeWeight> getSubGradesAsSet();
 
-	/**
-	 * @return the weights, such that the positive weights sum to one, and not empty. Iterates in the
-	 *         order of the sub-grades.
-	 */
-	ImmutableMap<Criterion, Double> getWeights();
+  /**
+   * @return the weights, such that the positive weights sum to one, and not empty. Iterates in the
+   *         order of the sub-grades.
+   */
+  ImmutableMap<Criterion, Double> getWeights();
 
-	public default double getAbsolutePoints(CriteriaPath path) {
-		return getWeight(path) * getGrade(path).get().getPoints();
-	}
+  public default double getAbsolutePoints(CriteriaPath path) {
+    return getWeight(path) * getGrade(path).get().getPoints();
+  }
 
-	public default GradeStructure toTree() {
-		return GradeStructure.given(toValueTree().asGraph());
-	}
+  public default GradeStructure toTree() {
+    return GradeStructure.given(toValueTree().asGraph());
+  }
 
-	/**
-	 * @return from any node p, the sum of weights to direct children is one.
-	 */
-	public default ImmutableValueGraph<CriteriaPath, Double> toValueTree() {
-		final ImmutableValueGraph.Builder<CriteriaPath, Double> builder =
-				ValueGraphBuilder.directed().allowsSelfLoops(false).immutable();
-		builder.addNode(CriteriaPath.ROOT);
-		putValuedChildren(builder, CriteriaPath.ROOT);
-		return builder.build();
-	}
+  /**
+   * @return from any node p, the sum of weights to direct children is one.
+   */
+  public default ImmutableValueGraph<CriteriaPath, Double> toValueTree() {
+    final ImmutableValueGraph.Builder<CriteriaPath, Double> builder =
+        ValueGraphBuilder.directed().allowsSelfLoops(false).immutable();
+    builder.addNode(CriteriaPath.ROOT);
+    putValuedChildren(builder, CriteriaPath.ROOT);
+    return builder.build();
+  }
 
-	private void putValuedChildren(ImmutableValueGraph.Builder<CriteriaPath, Double> builder,
-			CriteriaPath root) {
-		for (Criterion newChild : getSubGrades().keySet()) {
-			final CriteriaPath childPath = root.withSuffix(newChild);
-			builder.putEdgeValue(root, childPath, getWeights().get(newChild));
-			final IGrade subGrade = getSubGrades().get(newChild);
-			subGrade.putValuedChildren(builder, childPath);
-		}
-	}
+  private void putValuedChildren(ImmutableValueGraph.Builder<CriteriaPath, Double> builder,
+      CriteriaPath root) {
+    for (Criterion newChild : getSubGrades().keySet()) {
+      final CriteriaPath childPath = root.withSuffix(newChild);
+      builder.putEdgeValue(root, childPath, getWeights().get(newChild));
+      final IGrade subGrade = getSubGrades().get(newChild);
+      subGrade.putValuedChildren(builder, childPath);
+    }
+  }
 
-	/**
-	 * @param depth ≥0; 0 for a mark.
-	 */
-	public IGrade limitedDepth(int depth);
+  /**
+   * @param depth ≥0; 0 for a mark.
+   */
+  public IGrade limitedDepth(int depth);
 
-	public IGrade withComment(String newComment);
+  public IGrade withComment(String newComment);
 
-	/**
-	 * If the given criterion exists among the sub grades contained in this grade, returns a new grade
-	 * identical to this one except that the corresponding sub grade is replaced. If the criterion
-	 * does not exist, then either returns a grade identical to this one with a new sub grade, or
-	 * throws an {@link IllegalArgumentException}.
-	 *
-	 */
-	public IGrade withSubGrade(Criterion criterion, IGrade newSubGrade);
+  /**
+   * If the given criterion exists among the sub grades contained in this grade, returns a new grade
+   * identical to this one except that the corresponding sub grade is replaced. If the criterion
+   * does not exist, then either returns a grade identical to this one with a new sub grade, or
+   * throws an {@link IllegalArgumentException}.
+   *
+   */
+  public IGrade withSubGrade(Criterion criterion, IGrade newSubGrade);
 
-	public default IGrade withSubGrade(CriteriaPath path, IGrade grade) {
-		if (path.isRoot()) {
-			return grade;
-		}
-		final Criterion criterion = path.getHead();
-		checkArgument(getSubGrades().containsKey(criterion), criterion);
-		final IGrade subPatched = getSubGrades().get(criterion).withSubGrade(path.withoutHead(), grade);
-		return withSubGrade(criterion, subPatched);
-	}
+  public default IGrade withSubGrade(CriteriaPath path, IGrade grade) {
+    if (path.isRoot()) {
+      return grade;
+    }
+    final Criterion criterion = path.getHead();
+    checkArgument(getSubGrades().containsKey(criterion), criterion);
+    final IGrade subPatched = getSubGrades().get(criterion).withSubGrade(path.withoutHead(), grade);
+    return withSubGrade(criterion, subPatched);
+  }
 
-	public default IGrade withPatch(Patch patch) {
-		return withSubGrade(patch.getPath(), patch.getGrade());
-	}
+  public default IGrade withPatch(Patch patch) {
+    return withSubGrade(patch.getPath(), patch.getGrade());
+  }
 
-	public default IGrade withDissolved(Criterion criterion) {
-		/**
-		 * Considers each other branches b and each leaf in branch b. The leaf is replaced by a
-		 * weighting grade of wofbranch b * originalleaf + wofdissolved * dissolved.
-		 */
-		final ImmutableSet<Criterion> criteria = getSubGrades().keySet();
-		checkArgument(criteria.contains(criterion));
-		checkArgument(criteria.size() >= 2);
-		final PathGradeWeight toDissolve = getPathGradeWeight(CriteriaPath.ROOT.withSuffix(criterion));
-		final ImmutableMap<CriteriaPath,
-				WeightedGrade> newGrades = toTree().getLeaves().stream()
-						.filter(l -> !l.getHead().equals(criterion)).map(this::getPathGradeWeight)
-						.collect(ImmutableMap.toImmutableMap(g -> g.getPath(), g -> integrate(g, toDissolve)));
-		final IGrade dissolved = WeightingGrade.withZeroesRectified(newGrades);
-		verify(DoubleMath.fuzzyEquals(dissolved.getPoints(), getPoints(), 1e-6d));
-		return dissolved;
-	}
+  public default IGrade withDissolved(Criterion criterion) {
+    /**
+     * Considers each other branches b and each leaf in branch b. The leaf is replaced by a
+     * weighting grade of wofbranch b * originalleaf + wofdissolved * dissolved.
+     */
+    final ImmutableSet<Criterion> criteria = getSubGrades().keySet();
+    checkArgument(criteria.contains(criterion));
+    checkArgument(criteria.size() >= 2);
+    final PathGradeWeight toDissolve = getPathGradeWeight(CriteriaPath.ROOT.withSuffix(criterion));
+    final ImmutableMap<CriteriaPath,
+        WeightedGrade> newGrades = toTree().getLeaves().stream()
+            .filter(l -> !l.getHead().equals(criterion)).map(this::getPathGradeWeight)
+            .collect(ImmutableMap.toImmutableMap(g -> g.getPath(), g -> integrate(g, toDissolve)));
+    final IGrade dissolved = WeightingGrade.withZeroesRectified(newGrades);
+    verify(DoubleMath.fuzzyEquals(dissolved.getPoints(), getPoints(), 1e-6d));
+    return dissolved;
+  }
 
-	private WeightedGrade integrate(PathGradeWeight remaining, PathGradeWeight toDissolve) {
-		final Criterion remainingBranch = remaining.getPath().getHead();
-		final Double weightRemaining = getWeights().get(remainingBranch);
-		final CriterionGradeWeight gRemaining = CriterionGradeWeight.from(remaining.getPath().getTail(),
-				remaining.getGrade(), weightRemaining);
+  private WeightedGrade integrate(PathGradeWeight remaining, PathGradeWeight toDissolve) {
+    final Criterion remainingBranch = remaining.getPath().getHead();
+    final Double weightRemaining = getWeights().get(remainingBranch);
+    final CriterionGradeWeight gRemaining = CriterionGradeWeight.from(remaining.getPath().getTail(),
+        remaining.getGrade(), weightRemaining);
 
-		final Criterion toDissolveCriterion = toDissolve.getPath().getHead();
-		final Double toDissolveWeight = getWeights().get(toDissolveCriterion);
-		final CriterionGradeWeight gDissolved =
-				CriterionGradeWeight.from(toDissolveCriterion, toDissolve.getGrade(), toDissolveWeight);
+    final Criterion toDissolveCriterion = toDissolve.getPath().getHead();
+    final Double toDissolveWeight = getWeights().get(toDissolveCriterion);
+    final CriterionGradeWeight gDissolved =
+        CriterionGradeWeight.from(toDissolveCriterion, toDissolve.getGrade(), toDissolveWeight);
 
-		final WeightingGrade integrated = WeightingGrade.from(ImmutableSet.of(gRemaining, gDissolved));
-		return WeightedGrade.given(integrated, getWeight(remaining.getPath()));
-	}
+    final WeightingGrade integrated = WeightingGrade.from(ImmutableSet.of(gRemaining, gDissolved));
+    return WeightedGrade.given(integrated, getWeight(remaining.getPath()));
+  }
 
-	public default Mark getMark(CriteriaPath path) {
-		if (path.isRoot()) {
-			return (Mark) this;
-		}
-		final Criterion criterion = path.getHead();
-		checkArgument(getSubGrades().containsKey(criterion));
-		return getSubGrades().get(criterion).getMark(path.withoutHead());
-	}
+  public default Mark getMark(CriteriaPath path) {
+    if (path.isRoot()) {
+      return (Mark) this;
+    }
+    final Criterion criterion = path.getHead();
+    checkArgument(getSubGrades().containsKey(criterion));
+    return getSubGrades().get(criterion).getMark(path.withoutHead());
+  }
 
-	public default Optional<IGrade> getGrade(CriteriaPath path) {
-		if (path.isRoot()) {
-			return Optional.of(this);
-		}
-		final Criterion criterion = path.getHead();
-		if (!getSubGrades().containsKey(criterion)) {
-			return Optional.empty();
-		}
-		return getSubGrades().get(criterion).getGrade(path.withoutHead());
-	}
+  public default Optional<IGrade> getGrade(CriteriaPath path) {
+    if (path.isRoot()) {
+      return Optional.of(this);
+    }
+    final Criterion criterion = path.getHead();
+    if (!getSubGrades().containsKey(criterion)) {
+      return Optional.empty();
+    }
+    return getSubGrades().get(criterion).getGrade(path.withoutHead());
+  }
 
-	public default WeightedMark getWeightedMark(CriteriaPath path) {
-		checkArgument(toTree().asGraph().nodes().contains(path));
-		return WeightedMark.given(getMark(path), getWeight(path));
-	}
+  public default WeightedMark getWeightedMark(CriteriaPath path) {
+    checkArgument(toTree().asGraph().nodes().contains(path));
+    return WeightedMark.given(getMark(path), getWeight(path));
+  }
 
-	public default WeightedGrade getWeightedGrade(CriteriaPath path) {
-		checkArgument(toTree().asGraph().nodes().contains(path));
-		return WeightedGrade.given(getGrade(path).get(), getWeight(path));
-	}
+  public default WeightedGrade getWeightedGrade(CriteriaPath path) {
+    checkArgument(toTree().asGraph().nodes().contains(path));
+    return WeightedGrade.given(getGrade(path).get(), getWeight(path));
+  }
 
-	public default PathGradeWeight getPathGradeWeight(CriteriaPath path) {
-		checkArgument(toTree().asGraph().nodes().contains(path));
-		return PathGradeWeight.given(path, getGrade(path).get(), getWeight(path));
-	}
+  public default PathGradeWeight getPathGradeWeight(CriteriaPath path) {
+    checkArgument(toTree().asGraph().nodes().contains(path));
+    return PathGradeWeight.given(path, getGrade(path).get(), getWeight(path));
+  }
 
-	public default double getWeight(CriteriaPath path) {
-		if (path.isRoot()) {
-			return 1d;
-		}
-		final ImmutableMap<Criterion, IGrade> subGrades = getSubGrades();
-		final Criterion head = path.getHead();
-		final IGrade first =
-				Optional.ofNullable(subGrades.get(head)).orElseThrow(IllegalArgumentException::new);
-		final double local = getWeights().get(head);
-		return local == 0d ? local : local * first.getWeight(path.withoutHead());
-	}
+  public default double getWeight(CriteriaPath path) {
+    if (path.isRoot()) {
+      return 1d;
+    }
+    final ImmutableMap<Criterion, IGrade> subGrades = getSubGrades();
+    final Criterion head = path.getHead();
+    final IGrade first =
+        Optional.ofNullable(subGrades.get(head)).orElseThrow(IllegalArgumentException::new);
+    final double local = getWeights().get(head);
+    return local == 0d ? local : local * first.getWeight(path.withoutHead());
+  }
 
-	public default double getLocalWeight(CriteriaPath path) {
-		if (path.isRoot()) {
-			return 1d;
-		}
-		final CriteriaPath parent = path.withoutTail();
-		return getGrade(parent).get().getWeights().get(path.getTail());
-	}
+  public default double getLocalWeight(CriteriaPath path) {
+    if (path.isRoot()) {
+      return 1d;
+    }
+    final CriteriaPath parent = path.withoutTail();
+    return getGrade(parent).get().getWeights().get(path.getTail());
+  }
 
-	public default IGrade withPatches(Set<Patch> patches) {
-		IGrade current = this;
-		for (Patch patch : patches) {
-			current = current.withPatch(patch);
-		}
-		return current;
-	}
+  public default IGrade withPatches(Set<Patch> patches) {
+    IGrade current = this;
+    for (Patch patch : patches) {
+      current = current.withPatch(patch);
+    }
+    return current;
+  }
 
-	public default IGrade withoutTopLayer() {
-		final ImmutableSet<CriterionGradeWeight> subGradesAsSet = getSubGradesAsSet();
-		final ImmutableSet<CriterionGradeWeight> grandChildren =
-				subGradesAsSet.stream().flatMap(c -> getSubGrades().get(c.getCriterion())
-						.getSubGradesAsSet().stream().map(s -> CriterionGradeWeight.from(s.getCriterion(),
-								s.getGrade(), c.getWeight() * s.getWeight())))
-						.collect(ImmutableSet.toImmutableSet());
-		return WeightingGrade.from(grandChildren);
-	}
+  public default IGrade withoutTopLayer() {
+    final ImmutableSet<CriterionGradeWeight> subGradesAsSet = getSubGradesAsSet();
+    final ImmutableSet<CriterionGradeWeight> grandChildren =
+        subGradesAsSet.stream().flatMap(c -> getSubGrades().get(c.getCriterion())
+            .getSubGradesAsSet().stream().map(s -> CriterionGradeWeight.from(s.getCriterion(),
+                s.getGrade(), c.getWeight() * s.getWeight())))
+            .collect(ImmutableSet.toImmutableSet());
+    return WeightingGrade.from(grandChildren);
+  }
 
-	/**
-	 * Two {@link IGrade} objects are equal iff they have the same points, comment, and sub grades
-	 * (irrespective of the order of the sub grades).
-	 *
-	 * TODO this is wrong: two weighting grades with the same criteria and different weights may be
-	 * equal, according to this definition, but should not be.
-	 */
-	@Override
-	public boolean equals(Object o2);
+  /**
+   * Two {@link IGrade} objects are equal iff they have the same points, comment, and sub grades
+   * (irrespective of the order of the sub grades).
+   *
+   * TODO this is wrong: two weighting grades with the same criteria and different weights may be
+   * equal, according to this definition, but should not be.
+   */
+  @Override
+  public boolean equals(Object o2);
 }

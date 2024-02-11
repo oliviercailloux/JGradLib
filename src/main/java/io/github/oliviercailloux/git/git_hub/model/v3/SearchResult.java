@@ -18,29 +18,29 @@ import java.nio.file.Paths;
  */
 public class SearchResult {
 
-	public static SearchResult from(JsonObject json) {
-		return new SearchResult(json);
-	}
+  public static SearchResult from(JsonObject json) {
+    return new SearchResult(json);
+  }
 
-	private final JsonObject json;
+  private final JsonObject json;
 
-	private SearchResult(JsonObject json) {
-		this.json = requireNonNull(json);
-	}
+  private SearchResult(JsonObject json) {
+    this.json = requireNonNull(json);
+  }
 
-	public URI getApiURI() {
-		return URI.create(json.getString("url"));
-	}
+  public URI getApiURI() {
+    return URI.create(json.getString("url"));
+  }
 
-	public URI getHtmlURI() {
-		return URI.create(json.getString("html_url"));
-	}
+  public URI getHtmlURI() {
+    return URI.create(json.getString("html_url"));
+  }
 
-	public String getName() {
-		return json.getString("name");
-	}
+  public String getName() {
+    return json.getString("name");
+  }
 
-	public Path getPath() {
-		return Paths.get(json.getString("path"));
-	}
+  public Path getPath() {
+    return Paths.get(json.getString("path"));
+  }
 }

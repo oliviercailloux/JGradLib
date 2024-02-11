@@ -11,33 +11,33 @@ import java.util.Set;
  * ordering).
  */
 public class OwaStructure {
-	/**
-	 * Must have the same size.
-	 *
-	 * @param criteria
-	 * @param weights sum to one, zeroes allowed
-	 */
-	public static OwaStructure given(Set<Criterion> criteria, List<Double> weights) {
-		return new OwaStructure(criteria, weights);
-	}
+  /**
+   * Must have the same size.
+   *
+   * @param criteria
+   * @param weights sum to one, zeroes allowed
+   */
+  public static OwaStructure given(Set<Criterion> criteria, List<Double> weights) {
+    return new OwaStructure(criteria, weights);
+  }
 
-	private final ImmutableSet<Criterion> criteria;
-	private final ImmutableList<Double> weights;
+  private final ImmutableSet<Criterion> criteria;
+  private final ImmutableList<Double> weights;
 
-	private OwaStructure(Set<Criterion> criteria, List<Double> weights) {
-		this.criteria = ImmutableSet.copyOf(criteria);
-		this.weights = ImmutableList.copyOf(weights);
-	}
+  private OwaStructure(Set<Criterion> criteria, List<Double> weights) {
+    this.criteria = ImmutableSet.copyOf(criteria);
+    this.weights = ImmutableList.copyOf(weights);
+  }
 
-	public ImmutableSet<Criterion> getCriteria() {
-		return criteria;
-	}
+  public ImmutableSet<Criterion> getCriteria() {
+    return criteria;
+  }
 
-	public ImmutableList<Double> getWeights() {
-		return weights;
-	}
+  public ImmutableList<Double> getWeights() {
+    return weights;
+  }
 
-	public double getWeightForPosition(int positionByLargestMarks) {
-		return weights.get(positionByLargestMarks);
-	}
+  public double getWeightForPosition(int positionByLargestMarks) {
+    return weights.get(positionByLargestMarks);
+  }
 }

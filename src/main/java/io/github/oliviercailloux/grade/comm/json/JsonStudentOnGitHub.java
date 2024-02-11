@@ -12,39 +12,39 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class JsonStudentOnGitHub {
-	@SuppressWarnings("unused")
-	private static final Logger LOGGER = LoggerFactory.getLogger(JsonStudentOnGitHub.class);
+  @SuppressWarnings("unused")
+  private static final Logger LOGGER = LoggerFactory.getLogger(JsonStudentOnGitHub.class);
 
-	public static PrintableJsonObject asJson(StudentOnGitHub student) {
-		if (student.hasInstitutionalPart()) {
-			return JsonStudentOnGitHubKnown.asJson(student.asStudentOnGitHubKnown());
-		}
+  public static PrintableJsonObject asJson(StudentOnGitHub student) {
+    if (student.hasInstitutionalPart()) {
+      return JsonStudentOnGitHubKnown.asJson(student.asStudentOnGitHubKnown());
+    }
 
-		final JsonObject json = Json.createObjectBuilder()
-				.add("gitHubUsername", student.getGitHubUsername().getUsername()).build();
-		return PrintableJsonObjectFactory.wrapObject(json);
-	}
+    final JsonObject json = Json.createObjectBuilder()
+        .add("gitHubUsername", student.getGitHubUsername().getUsername()).build();
+    return PrintableJsonObjectFactory.wrapObject(json);
+  }
 
-	public static StudentOnGitHub asStudentOnGitHub(JsonObject json) {
-		if (json.containsKey("myCourseUsername")) {
-			final StudentOnGitHubKnown known = JsonStudentOnGitHubKnown.asStudentOnGitHubKnown(json);
-			return StudentOnGitHub.with(known.getGitHubUsername(), known.getInstitutionalStudent());
-		}
-		final String gitHubUsername = json.getString("gitHubUsername");
-		return StudentOnGitHub.with(GitHubUsername.given(gitHubUsername));
-	}
+  public static StudentOnGitHub asStudentOnGitHub(JsonObject json) {
+    if (json.containsKey("myCourseUsername")) {
+      final StudentOnGitHubKnown known = JsonStudentOnGitHubKnown.asStudentOnGitHubKnown(json);
+      return StudentOnGitHub.with(known.getGitHubUsername(), known.getInstitutionalStudent());
+    }
+    final String gitHubUsername = json.getString("gitHubUsername");
+    return StudentOnGitHub.with(GitHubUsername.given(gitHubUsername));
+  }
 
-	public static JsonbAdapter<StudentOnGitHub, JsonObject> asAdapter() {
-		return new JsonbAdapter<>() {
-			@Override
-			public JsonObject adaptToJson(StudentOnGitHub obj) throws Exception {
-				return asJson(obj);
-			}
+  public static JsonbAdapter<StudentOnGitHub, JsonObject> asAdapter() {
+    return new JsonbAdapter<>() {
+      @Override
+      public JsonObject adaptToJson(StudentOnGitHub obj) throws Exception {
+        return asJson(obj);
+      }
 
-			@Override
-			public StudentOnGitHub adaptFromJson(JsonObject obj) throws Exception {
-				return asStudentOnGitHub(obj);
-			}
-		};
-	}
+      @Override
+      public StudentOnGitHub adaptFromJson(JsonObject obj) throws Exception {
+        return asStudentOnGitHub(obj);
+      }
+    };
+  }
 }

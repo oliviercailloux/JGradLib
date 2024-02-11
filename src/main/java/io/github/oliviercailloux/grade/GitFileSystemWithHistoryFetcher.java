@@ -8,16 +8,16 @@ import java.io.IOException;
 
 public interface GitFileSystemWithHistoryFetcher extends AutoCloseable {
 
-	public ImmutableSet<GitHubUsername> getAuthors();
+  public ImmutableSet<GitHubUsername> getAuthors();
 
-	/**
-	 * Retrieves the instance corresponding to the given author, closes any previously retrieved one.
-	 *
-	 * @param author the author whose git file system history must be retrieved
-	 * @return the instance corresponding to the given author
-	 */
-	public GitHistorySimple goToFs(GitHubUsername author) throws IOException;
+  /**
+   * Retrieves the instance corresponding to the given author, closes any previously retrieved one.
+   *
+   * @param author the author whose git file system history must be retrieved
+   * @return the instance corresponding to the given author
+   */
+  public GitHistorySimple goToFs(GitHubUsername author) throws IOException;
 
-	@Override
-	void close() throws IOException;
+  @Override
+  void close() throws IOException;
 }

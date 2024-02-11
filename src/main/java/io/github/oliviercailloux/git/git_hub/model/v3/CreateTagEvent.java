@@ -4,12 +4,12 @@ import jakarta.json.JsonObject;
 
 public class CreateTagEvent extends Event {
 
-	CreateTagEvent(JsonObject json) {
-		super(json);
-		assert getPayload().getString("ref_type").equals("tag");
-	}
+  CreateTagEvent(JsonObject json) {
+    super(json);
+    assert getPayload().getString("ref_type").equals("tag");
+  }
 
-	public String getCreatedTagName() {
-		return getPayload().getString("ref");
-	}
+  public String getCreatedTagName() {
+    return getPayload().getString("ref");
+  }
 }

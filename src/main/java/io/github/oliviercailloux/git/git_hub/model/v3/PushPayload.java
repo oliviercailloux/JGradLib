@@ -20,36 +20,36 @@ import org.eclipse.jgit.lib.ObjectId;
  */
 public class PushPayload {
 
-	public static PushPayload from(JsonObject json) {
-		return new PushPayload(json);
-	}
+  public static PushPayload from(JsonObject json) {
+    return new PushPayload(json);
+  }
 
-	private final JsonObject json;
+  private final JsonObject json;
 
-	private PushPayload(JsonObject json) {
-		this.json = requireNonNull(json);
-		checkArgument(json.getJsonArray("commits").size() >= 1);
-	}
+  private PushPayload(JsonObject json) {
+    this.json = requireNonNull(json);
+    checkArgument(json.getJsonArray("commits").size() >= 1);
+  }
 
-	/**
-	 * @return at least one entry
-	 */
-	public List<PayloadCommitDescription> getCommits() {
-		return json.getJsonArray("commits").stream().map(JsonValue::asJsonObject)
-				.map(PayloadCommitDescription::from).collect(Collectors.toList());
-	}
+  /**
+   * @return at least one entry
+   */
+  public List<PayloadCommitDescription> getCommits() {
+    return json.getJsonArray("commits").stream().map(JsonValue::asJsonObject)
+        .map(PayloadCommitDescription::from).collect(Collectors.toList());
+  }
 
-	public int getId() {
-		return json.getInt("id");
-	}
+  public int getId() {
+    return json.getInt("id");
+  }
 
-	public Optional<ObjectId> getBefore() {
-		return json.containsKey("before") ? Optional.of(ObjectId.fromString(json.getString("before")))
-				: Optional.empty();
-	}
+  public Optional<ObjectId> getBefore() {
+    return json.containsKey("before") ? Optional.of(ObjectId.fromString(json.getString("before")))
+        : Optional.empty();
+  }
 
-	public Optional<ObjectId> getHead() {
-		return json.containsKey("head") ? Optional.of(ObjectId.fromString(json.getString("head")))
-				: Optional.empty();
-	}
+  public Optional<ObjectId> getHead() {
+    return json.containsKey("head") ? Optional.of(ObjectId.fromString(json.getString("head")))
+        : Optional.empty();
+  }
 }

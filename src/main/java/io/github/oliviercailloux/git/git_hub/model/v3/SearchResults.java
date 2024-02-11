@@ -16,22 +16,22 @@ import java.util.stream.Collectors;
  */
 public class SearchResults {
 
-	public static SearchResults from(JsonObject json) {
-		return new SearchResults(json);
-	}
+  public static SearchResults from(JsonObject json) {
+    return new SearchResults(json);
+  }
 
-	private final JsonObject json;
+  private final JsonObject json;
 
-	private SearchResults(JsonObject json) {
-		this.json = requireNonNull(json);
-	}
+  private SearchResults(JsonObject json) {
+    this.json = requireNonNull(json);
+  }
 
-	public List<SearchResult> getItems() {
-		return json.getJsonArray("items").stream().map(JsonValue::asJsonObject).map(SearchResult::from)
-				.collect(Collectors.toList());
-	}
+  public List<SearchResult> getItems() {
+    return json.getJsonArray("items").stream().map(JsonValue::asJsonObject).map(SearchResult::from)
+        .collect(Collectors.toList());
+  }
 
-	public boolean isIncomplete() {
-		return json.getBoolean("incomplete_results");
-	}
+  public boolean isIncomplete() {
+    return json.getBoolean("incomplete_results");
+  }
 }

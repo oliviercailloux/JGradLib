@@ -17,45 +17,45 @@ import org.eclipse.jgit.lib.ObjectId;
  */
 public class CommitGitHubDescription {
 
-	public static CommitGitHubDescription from(JsonObject json) {
-		return new CommitGitHubDescription(json);
-	}
+  public static CommitGitHubDescription from(JsonObject json) {
+    return new CommitGitHubDescription(json);
+  }
 
-	private final JsonObject json;
+  private final JsonObject json;
 
-	private CommitGitHubDescription(JsonObject json) {
-		this.json = requireNonNull(json);
-	}
+  private CommitGitHubDescription(JsonObject json) {
+    this.json = requireNonNull(json);
+  }
 
-	public URI getApiURI() {
-		return URI.create(json.getString("url"));
-	}
+  public URI getApiURI() {
+    return URI.create(json.getString("url"));
+  }
 
-	public Instant getCommitterCommitDate() {
-		return GitHubJsonParser.asInstant(getJsonCommitter().getString("date"));
-	}
+  public Instant getCommitterCommitDate() {
+    return GitHubJsonParser.asInstant(getJsonCommitter().getString("date"));
+  }
 
-	public String getCommitterName() {
-		return getJsonCommitter().getString("name");
-	}
+  public String getCommitterName() {
+    return getJsonCommitter().getString("name");
+  }
 
-	private JsonObject getJsonCommitter() {
-		return getJsonCommit().getJsonObject("committer");
-	}
+  private JsonObject getJsonCommitter() {
+    return getJsonCommit().getJsonObject("committer");
+  }
 
-	private JsonObject getJsonCommit() {
-		return json.getJsonObject("commit");
-	}
+  private JsonObject getJsonCommit() {
+    return json.getJsonObject("commit");
+  }
 
-	public URI getHtmlURI() {
-		return URI.create(json.getString("html_url"));
-	}
+  public URI getHtmlURI() {
+    return URI.create(json.getString("html_url"));
+  }
 
-	public JsonObject getJson() {
-		return json;
-	}
+  public JsonObject getJson() {
+    return json;
+  }
 
-	public ObjectId getSha() {
-		return ObjectId.fromString(json.getString("sha"));
-	}
+  public ObjectId getSha() {
+    return ObjectId.fromString(json.getString("sha"));
+  }
 }

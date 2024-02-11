@@ -15,25 +15,25 @@ import org.eclipse.jgit.lib.ObjectId;
  */
 public class PayloadCommitDescription {
 
-	public static PayloadCommitDescription from(JsonObject json) {
-		return new PayloadCommitDescription(json);
-	}
+  public static PayloadCommitDescription from(JsonObject json) {
+    return new PayloadCommitDescription(json);
+  }
 
-	private final JsonObject json;
+  private final JsonObject json;
 
-	private PayloadCommitDescription(JsonObject json) {
-		this.json = requireNonNull(json);
-	}
+  private PayloadCommitDescription(JsonObject json) {
+    this.json = requireNonNull(json);
+  }
 
-	public URI getApiURI() {
-		return URI.create(json.getString("url"));
-	}
+  public URI getApiURI() {
+    return URI.create(json.getString("url"));
+  }
 
-	public JsonObject getJson() {
-		return json;
-	}
+  public JsonObject getJson() {
+    return json;
+  }
 
-	public ObjectId getSha() {
-		return ObjectId.fromString(json.getString("sha"));
-	}
+  public ObjectId getSha() {
+    return ObjectId.fromString(json.getString("sha"));
+  }
 }

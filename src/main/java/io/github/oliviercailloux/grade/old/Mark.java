@@ -17,118 +17,118 @@ import java.util.Objects;
 
 @JsonbPropertyOrder({"points", "comments"})
 public class Mark implements IGrade {
-	public static Mark fromNew(io.github.oliviercailloux.grade.Mark newer) {
-		return new Mark(newer.getPoints(), newer.getComment());
-	}
+  public static Mark fromNew(io.github.oliviercailloux.grade.Mark newer) {
+    return new Mark(newer.getPoints(), newer.getComment());
+  }
 
-	public static Mark zero() {
-		return new Mark(0d, "");
-	}
+  public static Mark zero() {
+    return new Mark(0d, "");
+  }
 
-	public static Mark zero(String comment) {
-		return new Mark(0d, comment);
-	}
+  public static Mark zero(String comment) {
+    return new Mark(0d, comment);
+  }
 
-	public static Mark one() {
-		return new Mark(1d, "");
-	}
+  public static Mark one() {
+    return new Mark(1d, "");
+  }
 
-	public static Mark one(String comment) {
-		return new Mark(1d, comment);
-	}
+  public static Mark one(String comment) {
+    return new Mark(1d, comment);
+  }
 
-	public static Mark binary(boolean condition) {
-		return condition ? one() : zero();
-	}
+  public static Mark binary(boolean condition) {
+    return condition ? one() : zero();
+  }
 
-	public static Mark binary(boolean criterion, String okComment, String elseComment) {
-		return criterion ? one(okComment) : zero(elseComment);
-	}
+  public static Mark binary(boolean criterion, String okComment, String elseComment) {
+    return criterion ? one(okComment) : zero(elseComment);
+  }
 
-	@JsonbCreator
-	public static Mark given(@JsonbProperty("points") double points,
-			@JsonbProperty("comment") String comment) {
-		return new Mark(points, comment);
-	}
+  @JsonbCreator
+  public static Mark given(@JsonbProperty("points") double points,
+      @JsonbProperty("comment") String comment) {
+    return new Mark(points, comment);
+  }
 
-	private final double points;
-	private final String comment;
+  private final double points;
+  private final String comment;
 
-	private Mark(double points, String comment) {
-		checkArgument(Double.isFinite(points));
-		this.points = points;
-		this.comment = checkNotNull(comment);
-	}
+  private Mark(double points, String comment) {
+    checkArgument(Double.isFinite(points));
+    this.points = points;
+    this.comment = checkNotNull(comment);
+  }
 
-	@Override
-	public double getPoints() {
-		return points;
-	}
+  @Override
+  public double getPoints() {
+    return points;
+  }
 
-	@Override
-	public String getComment() {
-		return comment;
-	}
+  @Override
+  public String getComment() {
+    return comment;
+  }
 
-	/**
-	 * Returns the empty map.
-	 */
-	@JsonbTransient
-	@Override
-	public ImmutableMap<Criterion, IGrade> getSubGrades() {
-		return ImmutableMap.of();
-	}
+  /**
+   * Returns the empty map.
+   */
+  @JsonbTransient
+  @Override
+  public ImmutableMap<Criterion, IGrade> getSubGrades() {
+    return ImmutableMap.of();
+  }
 
-	@Override
-	@JsonbTransient
-	public ImmutableSet<CriterionGradeWeight> getSubGradesAsSet() {
-		return ImmutableSet.of();
-	}
+  @Override
+  @JsonbTransient
+  public ImmutableSet<CriterionGradeWeight> getSubGradesAsSet() {
+    return ImmutableSet.of();
+  }
 
-	@Override
-	@JsonbTransient
-	public ImmutableMap<Criterion, Double> getWeights() {
-		return ImmutableMap.of();
-	}
+  @Override
+  @JsonbTransient
+  public ImmutableMap<Criterion, Double> getWeights() {
+    return ImmutableMap.of();
+  }
 
-	@Override
-	public IGrade limitedDepth(int depth) {
-		checkArgument(depth >= 0);
-		return this;
-	}
+  @Override
+  public IGrade limitedDepth(int depth) {
+    checkArgument(depth >= 0);
+    return this;
+  }
 
-	@Override
-	public IGrade withComment(String newComment) {
-		return new Mark(points, newComment);
-	}
+  @Override
+  public IGrade withComment(String newComment) {
+    return new Mark(points, newComment);
+  }
 
-	@Override
-	public IGrade withSubGrade(Criterion criterion, IGrade newSubGrade) {
-		throw new IllegalArgumentException();
-	}
+  @Override
+  public IGrade withSubGrade(Criterion criterion, IGrade newSubGrade) {
+    throw new IllegalArgumentException();
+  }
 
-	public io.github.oliviercailloux.grade.Mark asNew() {
-		return io.github.oliviercailloux.grade.Mark.given(points, comment);
-	}
+  public io.github.oliviercailloux.grade.Mark asNew() {
+    return io.github.oliviercailloux.grade.Mark.given(points, comment);
+  }
 
-	@Override
-	public boolean equals(Object o2) {
-		if (!(o2 instanceof IGrade)) {
-			return false;
-		}
-		IGrade g2 = (IGrade) o2;
-		return getPoints() == g2.getPoints() && getComment().equals(g2.getComment())
-				&& getSubGrades().equals(g2.getSubGrades());
-	}
+  @Override
+  public boolean equals(Object o2) {
+    if (!(o2 instanceof IGrade)) {
+      return false;
+    }
+    IGrade g2 = (IGrade) o2;
+    return getPoints() == g2.getPoints() && getComment().equals(g2.getComment())
+        && getSubGrades().equals(g2.getSubGrades());
+  }
 
-	@Override
-	public int hashCode() {
-		return Objects.hash(getPoints(), getComment(), getSubGrades());
-	}
+  @Override
+  public int hashCode() {
+    return Objects.hash(getPoints(), getComment(), getSubGrades());
+  }
 
-	@Override
-	public String toString() {
-		return MoreObjects.toStringHelper(this).add("points", points).add("comment", comment)
-				.toString();
-	}
+  @Override
+  public String toString() {
+    return MoreObjects.toStringHelper(this).add("points", points).add("comment", comment)
+        .toString();
+  }
 }

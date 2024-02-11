@@ -6,13 +6,13 @@ import jakarta.json.JsonObject;
 
 public class ClosedEvent extends IssueEvent {
 
-	protected ClosedEvent(JsonObject json) {
-		super(json);
-	}
+  protected ClosedEvent(JsonObject json) {
+    super(json);
+  }
 
-	@Override
-	public IssueSnapshot applyTo(IssueSnapshot snap) {
-		checkArgument(snap.isOpen());
-		return IssueSnapshot.of(getCreatedAt(), snap.getName(), false, snap.getAssignees());
-	}
+  @Override
+  public IssueSnapshot applyTo(IssueSnapshot snap) {
+    checkArgument(snap.isOpen());
+    return IssueSnapshot.of(getCreatedAt(), snap.getName(), false, snap.getAssignees());
+  }
 }
