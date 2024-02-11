@@ -24,15 +24,15 @@ package io.github.oliviercailloux.g421;
  */
 public interface CyclicDiceRoller extends DiceRoller {
 
-	/**
-	 * Establishes the results that will be obtained by this roller from the next roll onwards (by
-	 * cyclic rotation of the given numbers), until this method is called again.
-	 *
-	 * @param firstDie the result to be obtained on the first die on the next roll
-	 * @param secondDie the result to be obtained on the second die on the next roll
-	 * @param thirdDie the result to be obtained on the third die on the next roll
-	 * @throws IllegalArgumentException iff one of the dice is a number smaller than 1 or greater than
-	 *         6
-	 */
-	void setResult(int firstDie, int secondDie, int thirdDie);
+  /**
+   * Establishes the results that will be obtained by this roller from the next roll onwards (by
+   * cyclic rotation of the given numbers), until this method is called again.
+   *
+   * @param firstDie the result to be obtained on the first die on the next roll
+   * @param secondDie the result to be obtained on the second die on the next roll
+   * @param thirdDie the result to be obtained on the third die on the next roll
+   * @throws IllegalArgumentException iff one of the dice is a number smaller than 1 or greater than
+   *         6
+   */
+  void setResult(int firstDie, int secondDie, int thirdDie);
 }

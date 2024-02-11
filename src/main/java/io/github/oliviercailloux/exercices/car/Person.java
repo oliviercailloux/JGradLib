@@ -5,12 +5,12 @@ package io.github.oliviercailloux.exercices.car;
  * drives.
  */
 public interface Person {
-	public String getName();
+  public String getName();
 
-	/**
-	 * Returns the speed at which that person drives, in km per hour.
-	 *
-	 * @return a strictly positive number
-	 */
-	public int getFavoriteSpeed();
+  /**
+   * Returns the speed at which that person drives, in km per hour.
+   *
+   * @return a strictly positive number
+   */
+  public int getFavoriteSpeed();
 }

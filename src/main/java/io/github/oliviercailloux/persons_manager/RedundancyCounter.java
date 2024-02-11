@@ -8,17 +8,17 @@ package io.github.oliviercailloux.persons_manager;
  */
 public interface RedundancyCounter {
 
-	/**
-	 * Returns the number of entries that are redundant.
-	 *
-	 * @return a non-negative number.
-	 */
-	public int getRedundancyCount();
+  /**
+   * Returns the number of entries that are redundant.
+   *
+   * @return a non-negative number.
+   */
+  public int getRedundancyCount();
 
-	/**
-	 * Returns the number of unique elements in the associated manager.
-	 *
-	 * @return a non-negative number.
-	 */
-	public int getUniqueCount();
+  /**
+   * Returns the number of unique elements in the associated manager.
+   *
+   * @return a non-negative number.
+   */
+  public int getUniqueCount();
 }
