@@ -49,8 +49,8 @@ import org.slf4j.LoggerFactory;
  * wording indicates that this aspect will not be considered) but whose result is considered
  * informative feedback for the student anyway.
  *
- * {weights: Map<CriterionAndPoints, Double>} (non empty, all non null), this implementation has
- * only the (normalized) weights and the marks and a comment, and generates the points.
+ * {weights: {@code Map<CriterionAndPoints, Double>}} (non empty, all non null), this implementation
+ * has only the (normalized) weights and the marks and a comment, and generates the points.
  *
  * As the penalty has an absolute meaning, it is necessary that this object knows the best possible
  * marks. As a convention, it is considered to be one for all sub-grades.
@@ -201,30 +201,9 @@ public class WeightingGrade implements IGrade {
     return from(grades, weights, "");
   }
 
-  /**
-   * @param grades its key set iteration order is used to determine the order of the sub-grades.
-   */
-  public static WeightingGrade fromWeightedGrades(Map<Criterion, WeightedGrade> weightedGrades) {
-    return from(Maps.toMap(weightedGrades.keySet(), c -> weightedGrades.get(c).getGrade()),
-        Maps.toMap(weightedGrades.keySet(), c -> weightedGrades.get(c).getWeight()), "");
-  }
-
   public static WeightingGrade from(Map<Criterion, ? extends IGrade> grades,
       Map<Criterion, Double> weights, String comment) {
     return new WeightingGrade(grades, weights, comment);
-  }
-
-  /**
-   * @param grades its iteration order is used to determine the order of the sub-grades.
-   */
-  @JsonbCreator
-  public static WeightingGrade fromList(
-      @JsonbProperty("subGrades") List<CriterionGradeWeight> grades,
-      @JsonbProperty("comment") String comment) {
-    /**
-     * The list type (rather than set) is required for json to deserialize in the right order.
-     */
-    return from(grades, comment);
   }
 
   public static WeightingGrade from(Collection<CriterionGradeWeight> grades) {
@@ -242,29 +221,8 @@ public class WeightingGrade implements IGrade {
     return new WeightingGrade(gradesByCriterion, weights, comment);
   }
 
-  public static WeightingGrade proportional(Criterion c1, IGrade g1, Criterion c2, IGrade g2) {
-    return proportional(c1, g1, c2, g2, "");
-  }
-
-  public static WeightingGrade proportional(Criterion c1, IGrade g1, Criterion c2, IGrade g2,
-      String comment) {
-    return WeightingGrade.from(ImmutableMap.of(c1, g1, c2, g2), ImmutableMap.of(c1, 0.5d, c2, 0.5d),
-        comment);
-  }
-
-  public static WeightingGrade proportional(Criterion c1, IGrade g1, Criterion c2, IGrade g2,
-      Criterion c3, IGrade g3) {
-    return proportional(c1, g1, c2, g2, c3, g3, "");
-  }
-
-  public static WeightingGrade proportional(Criterion c1, IGrade g1, Criterion c2, IGrade g2,
-      Criterion c3, IGrade g3, String comment) {
-    return WeightingGrade.from(ImmutableMap.of(c1, g1, c2, g2, c3, g3),
-        ImmutableMap.of(c1, 1d / 3d, c2, 1d / 3d, c3, 1d / 3d), comment);
-  }
-
   /**
-   * @param weightedGrades each of these grades will have an absolute weight given by its weight
+   * @param grades each of these grades will have an absolute weight given by its weight
    *        divided by the sum of all weights ; non empty; keys must be unrelated (if one is parent
    *        of another entry there is no way to use both grades!)
    * @return a mark iff the map key set is the singleton ROOT and the (single) weighted grade is a
@@ -272,10 +230,6 @@ public class WeightingGrade implements IGrade {
    */
   public static IGrade from(Map<CriteriaPath, WeightedGrade> grades) {
     return from(grades, false);
-  }
-
-  public static IGrade withZeroesRectified(Map<CriteriaPath, WeightedGrade> grades) {
-    return from(grades, true);
   }
 
   private static IGrade from(Map<CriteriaPath, WeightedGrade> grades, boolean changeZeroChildren) {
@@ -287,13 +241,13 @@ public class WeightingGrade implements IGrade {
     final GradeStructure structure = GradeStructure.given(grades.keySet());
     checkArgument(structure.getLeaves().equals(grades.keySet()));
 
-    /**
+    /*
      * We will populate modifiable grades from “right to left”, from children nodes to parent nodes,
      * until reaching the root node. Note that we can’t simply stop when the map has only one
      * remaining entry: at some point there may remain a single key "[a/b/c]", for example.
      */
     while (!modifiableGrades.keySet().contains(CriteriaPath.ROOT)) {
-      /**
+      /*
        * We need to consider the highest depths first, because we want all siblings to be aggregated
        * already.
        */
@@ -305,7 +259,7 @@ public class WeightingGrade implements IGrade {
       verify(!modifiableGrades.containsKey(parent));
       final ImmutableSet<CriteriaPath> childrenPaths = structure.getSuccessorPaths(parent);
       {
-        /** Modifiable grades has entries for all children nodes. */
+        /* Modifiable grades has entries for all children nodes. */
         final ImmutableMap<Criterion, WeightedGrade> childrenWGrades = childrenPaths.stream()
             .collect(ImmutableMap.toImmutableMap(CriteriaPath::getTail, modifiableGrades::get));
         final boolean allZeroes = childrenWGrades.values().stream()
@@ -338,6 +292,53 @@ public class WeightingGrade implements IGrade {
         .collect(ImmutableSet.toImmutableSet());
     verify(grade.toTree().getLeaves().equals(expectedLeaves));
     return grade;
+  }
+
+  /**
+   * @param weightedGrades its key set iteration order is used to determine the order of the
+   *        sub-grades.
+   */
+  public static WeightingGrade fromWeightedGrades(Map<Criterion, WeightedGrade> weightedGrades) {
+    return from(Maps.toMap(weightedGrades.keySet(), c -> weightedGrades.get(c).getGrade()),
+        Maps.toMap(weightedGrades.keySet(), c -> weightedGrades.get(c).getWeight()), "");
+  }
+
+  /**
+   * @param grades its iteration order is used to determine the order of the sub-grades.
+   */
+  @JsonbCreator
+  public static WeightingGrade fromList(
+      @JsonbProperty("subGrades") List<CriterionGradeWeight> grades,
+      @JsonbProperty("comment") String comment) {
+    /*
+     * The list type (rather than set) is required for json to deserialize in the right order.
+     */
+    return from(grades, comment);
+  }
+
+  public static WeightingGrade proportional(Criterion c1, IGrade g1, Criterion c2, IGrade g2) {
+    return proportional(c1, g1, c2, g2, "");
+  }
+
+  public static WeightingGrade proportional(Criterion c1, IGrade g1, Criterion c2, IGrade g2,
+      String comment) {
+    return WeightingGrade.from(ImmutableMap.of(c1, g1, c2, g2), ImmutableMap.of(c1, 0.5d, c2, 0.5d),
+        comment);
+  }
+
+  public static WeightingGrade proportional(Criterion c1, IGrade g1, Criterion c2, IGrade g2,
+      Criterion c3, IGrade g3) {
+    return proportional(c1, g1, c2, g2, c3, g3, "");
+  }
+
+  public static WeightingGrade proportional(Criterion c1, IGrade g1, Criterion c2, IGrade g2,
+      Criterion c3, IGrade g3, String comment) {
+    return WeightingGrade.from(ImmutableMap.of(c1, g1, c2, g2, c3, g3),
+        ImmutableMap.of(c1, 1d / 3d, c2, 1d / 3d, c3, 1d / 3d), comment);
+  }
+
+  public static IGrade withZeroesRectified(Map<CriteriaPath, WeightedGrade> grades) {
+    return from(grades, true);
   }
 
   private static final double MAX_MARK = 1d;
@@ -375,7 +376,7 @@ public class WeightingGrade implements IGrade {
     } else {
       effectiveNormalizer = sumPosWeights;
     }
-    /**
+    /*
      * I iterate over the sub grades key set in order to guarantee iteration order of the weights
      * reflects the order of the sub-grades.
      */

@@ -42,7 +42,7 @@ public class RepositoryWithIssuesWithHistory {
   /**
    * Not {@code null}.
    */
-  final private ImmutableList<IssueWithHistory> issues;
+  private final ImmutableList<IssueWithHistory> issues;
 
   private final boolean issuesComplete;
 
@@ -53,7 +53,7 @@ public class RepositoryWithIssuesWithHistory {
     repository = Repository.from(json);
     final JsonObject issuesConnection = Optional.ofNullable(json.getJsonObject("issues"))
         .or(() -> Optional.ofNullable(json.getJsonObject("pullRequests"))).orElseThrow();
-    /**
+    /*
      * We have to possibly account for incomplete issues list: some repository may match some search
      * criteria of ours while being a huge repository with many issues. In such case, it is still
      * useful to create an object of this class for debug output and inspection of the results.
@@ -144,7 +144,7 @@ public class RepositoryWithIssuesWithHistory {
     checkState(issuesComplete);
     requireNonNull(name);
     final ImmutableSet<IssueWithHistory> homonyms = allIssuesByName.get(name);
-    /**
+    /*
      * Guaranteed by the way we built the ImmutableSetMultimap (except after de-serialization).
      */
     assert homonyms instanceof ImmutableSortedSet;
@@ -159,7 +159,7 @@ public class RepositoryWithIssuesWithHistory {
    */
   public ImmutableSortedSet<IssueWithHistory> getIssuesOriginallyNamed(String name) {
     checkState(issuesComplete);
-    /**
+    /*
      * TODO bug if an issue is named Resources, another ResourcesBlah then renamed to Resources-2,
      * another Resources-3, then we get Resources and Resources-3 written.
      *
@@ -168,7 +168,7 @@ public class RepositoryWithIssuesWithHistory {
      */
     requireNonNull(name);
     final ImmutableSet<IssueWithHistory> homonyms = allIssuesByOriginalName.get(name);
-    /**
+    /*
      * Guaranteed by the way we built the ImmutableSetMultimap (except after de-serialization).
      */
     assert homonyms instanceof ImmutableSortedSet;

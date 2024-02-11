@@ -17,7 +17,7 @@ import java.util.regex.Pattern;
  *
  */
 public class RepositoryCoordinatesWithPrefix extends RepositoryCoordinates {
-  public static Optional<String> getUsername(String prefix, String repositoryName) {
+  public static Optional<String> getUsernameFrom(String prefix, String repositoryName) {
     final Pattern pattern = Pattern.compile(prefix + "-(.*)");
     final Matcher matcher = pattern.matcher(repositoryName);
     if (!matcher.matches()) {
@@ -32,7 +32,7 @@ public class RepositoryCoordinatesWithPrefix extends RepositoryCoordinates {
 
   public static RepositoryCoordinatesWithPrefix from(RepositoryCoordinates coordinates,
       String prefix) {
-    final String username = getUsername(prefix, coordinates.getRepositoryName())
+    final String username = getUsernameFrom(prefix, coordinates.getRepositoryName())
         .orElseThrow(IllegalArgumentException::new);
     return new RepositoryCoordinatesWithPrefix(coordinates.getOwner(), prefix, username);
   }

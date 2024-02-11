@@ -52,7 +52,7 @@ public class SandboxTests {
     try (FileSystem jimFs = Jimfs.newFileSystem(Configuration.unix())) {
       final Path work = jimFs.getPath("");
 
-      Compiler.intolerant(ImmutableList.of(), work).compile(ImmutableList.of(sourcePath));
+      Compiler.intolerant(ImmutableList.of(), work).compileSrcs(ImmutableList.of(sourcePath));
 
       final URL url = work.toUri().toURL();
       try (URLClassLoader loader =
@@ -105,7 +105,7 @@ public class SandboxTests {
     try (FileSystem jimFs = Jimfs.newFileSystem(Configuration.unix())) {
       final Path work = jimFs.getPath("");
 
-      Compiler.intolerant(ImmutableList.of(), work).compile(ImmutableList.of(sourcePath));
+      Compiler.intolerant(ImmutableList.of(), work).compileSrcs(ImmutableList.of(sourcePath));
 
       final URL url = work.toUri().toURL();
       try (URLClassLoader loader =

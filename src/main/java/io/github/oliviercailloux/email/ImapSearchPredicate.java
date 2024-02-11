@@ -73,6 +73,13 @@ public class ImapSearchPredicate implements Predicate<Message> {
         (m) -> recipientAddressEquals(recipientType, address, m));
   }
 
+  private static boolean recipientAddressEquals(RecipientType recipientType, String address,
+      Message m) {
+    return Arrays.stream(MESSAGING_UNCHECKER.getUsing(() -> m.getRecipients(recipientType)))
+        .map(a -> (InternetAddress) a)
+        .anyMatch(a -> a.getAddress().toLowerCase(Locale.ROOT).equals(address));
+  }
+
   public static ImapSearchPredicate fromAddressEquals(String address) {
     checkArgument(address.toLowerCase(Locale.ROOT).equals(address));
     final EmailAddress emailAddress = EmailAddress.given(address);
@@ -80,9 +87,14 @@ public class ImapSearchPredicate implements Predicate<Message> {
         (m) -> fromAddressEquals(address, m));
   }
 
+  private static boolean fromAddressEquals(String address, Message m) {
+    return Arrays.stream(MESSAGING_UNCHECKER.getUsing(m::getFrom)).map(a -> (InternetAddress) a)
+        .anyMatch(a -> a.getAddress().toLowerCase(Locale.ROOT).equals(address));
+  }
+
   public static ImapSearchPredicate recipientFullAddressContains(RecipientType recipientType,
       String subString) {
-    /**
+    /*
      * “In all search keys that use strings, a message matches the key if the string is a substring
      * of the field. The matching is case-insensitive.” -- https://tools.ietf.org/html/rfc3501
      */
@@ -91,15 +103,33 @@ public class ImapSearchPredicate implements Predicate<Message> {
         (m) -> recipientFullAddressContains(recipientType, subString, m));
   }
 
+  private static boolean recipientFullAddressContains(RecipientType recipientType, String subString,
+      Message m) {
+    return Arrays.stream(MESSAGING_UNCHECKER.getUsing(() -> m.getRecipients(recipientType)))
+        .map(a -> (InternetAddress) a).map(InternetAddress::toUnicodeString)
+        .anyMatch(s -> s.toLowerCase(Locale.ROOT).contains(subString));
+  }
+
   public static ImapSearchPredicate fromFullAddressContains(String subString) {
     checkArgument(subString.toLowerCase(Locale.ROOT).equals(subString));
     return new ImapSearchPredicate(new FromStringTerm(subString),
         (m) -> fromFullAddressContains(subString, m));
   }
 
+  private static boolean fromFullAddressContains(String subString, Message m) {
+    return Arrays.stream(MESSAGING_UNCHECKER.getUsing(() -> m.getFrom()))
+        .map(a -> (InternetAddress) a)
+        .anyMatch(a -> a.toUnicodeString().toLowerCase(Locale.ROOT).contains(subString));
+  }
+
   public static ImapSearchPredicate subjectContains(String subString) {
     checkArgument(subString.toLowerCase(Locale.ROOT).equals(subString));
     return new ImapSearchPredicate(new SubjectTerm(subString), m -> subjectContains(subString, m));
+  }
+
+  private static boolean subjectContains(String subString, Message m) {
+    return MESSAGING_UNCHECKER.getUsing(() -> m.getSubject()).toLowerCase(Locale.ROOT)
+        .contains(subString);
   }
 
   public static ImapSearchPredicate sentWithin(Range<Instant> range) {
@@ -169,36 +199,6 @@ public class ImapSearchPredicate implements Predicate<Message> {
         .reduce(Predicates.alwaysFalse(), Predicate::or);
 
     return new ImapSearchPredicate(orTerm, predicate);
-  }
-
-  private static boolean recipientAddressEquals(RecipientType recipientType, String address,
-      Message m) {
-    return Arrays.stream(MESSAGING_UNCHECKER.getUsing(() -> m.getRecipients(recipientType)))
-        .map(a -> (InternetAddress) a)
-        .anyMatch(a -> a.getAddress().toLowerCase(Locale.ROOT).equals(address));
-  }
-
-  private static boolean fromAddressEquals(String address, Message m) {
-    return Arrays.stream(MESSAGING_UNCHECKER.getUsing(m::getFrom)).map(a -> (InternetAddress) a)
-        .anyMatch(a -> a.getAddress().toLowerCase(Locale.ROOT).equals(address));
-  }
-
-  private static boolean recipientFullAddressContains(RecipientType recipientType, String subString,
-      Message m) {
-    return Arrays.stream(MESSAGING_UNCHECKER.getUsing(() -> m.getRecipients(recipientType)))
-        .map(a -> (InternetAddress) a).map(InternetAddress::toUnicodeString)
-        .anyMatch(s -> s.toLowerCase(Locale.ROOT).contains(subString));
-  }
-
-  private static boolean fromFullAddressContains(String subString, Message m) {
-    return Arrays.stream(MESSAGING_UNCHECKER.getUsing(() -> m.getFrom()))
-        .map(a -> (InternetAddress) a)
-        .anyMatch(a -> a.toUnicodeString().toLowerCase(Locale.ROOT).contains(subString));
-  }
-
-  private static boolean subjectContains(String subString, Message m) {
-    return MESSAGING_UNCHECKER.getUsing(() -> m.getSubject()).toLowerCase(Locale.ROOT)
-        .contains(subString);
   }
 
   private static Instant getSentDate(Message m) {

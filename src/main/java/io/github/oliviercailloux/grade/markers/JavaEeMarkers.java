@@ -9,9 +9,9 @@ import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class JavaEEMarkers {
+public class JavaEeMarkers {
   @SuppressWarnings("unused")
-  private static final Logger LOGGER = LoggerFactory.getLogger(JavaEEMarkers.class);
+  private static final Logger LOGGER = LoggerFactory.getLogger(JavaEeMarkers.class);
 
   public static IGrade getNoJsp(Path source) {
     final Optional<Path> jsp = Unchecker.IO_UNCHECKER

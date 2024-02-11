@@ -19,6 +19,7 @@ import java.util.Set;
  * <li>Add c3, w3), then on the returned object:
  * <ul>
  * <li>Add f1, then on the returned object:
+ * </ul>
  * <ul>
  * <li>Add c1, p1 (over the output of f1), w1
  * <li>Add c2, p2 (f1), w2
@@ -28,11 +29,13 @@ import java.util.Set;
  * <li>end f2
  * <li>end c3
  * <li>Add (c4, w4), …
+ * </ul>
  * <p>
  * One important advantage to lambdas here is that the intermediate objects need not exist for this
  * to make sense: if no pathroot, the corresponding structure may be empty; if the function does not
  * work, it may avoid applying the remaining predicates, … Some of these functions may return
- * Optional<NewType> to indicate conditional continuation (or even Optional<SameType>).
+ * {@code Optional<NewType>} to indicate conditional continuation (or even
+ * {@code Optional<SameType>}).
  *
  * @param <E> the input type to the grader
  */

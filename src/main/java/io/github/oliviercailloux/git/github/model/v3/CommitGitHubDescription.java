@@ -27,7 +27,7 @@ public class CommitGitHubDescription {
     this.json = requireNonNull(json);
   }
 
-  public URI getApiURI() {
+  public URI getApiUri() {
     return URI.create(json.getString("url"));
   }
 
@@ -47,7 +47,7 @@ public class CommitGitHubDescription {
     return json.getJsonObject("commit");
   }
 
-  public URI getHtmlURI() {
+  public URI getHtmlUri() {
     return URI.create(json.getString("html_url"));
   }
 

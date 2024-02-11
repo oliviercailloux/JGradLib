@@ -52,7 +52,7 @@ public class JavaGradeUtils {
     }
   }
 
-  static public Path substract(Path longer, Path toSubstract) {
+  public static Path substract(Path longer, Path toSubstract) {
     checkArgument(!longer.isAbsolute());
     checkArgument(!toSubstract.isAbsolute());
     assert longer.getNameCount() >= 1;
@@ -112,6 +112,11 @@ public class JavaGradeUtils {
     return implGrade;
   }
 
+  public static <T> IGrade gradeSecurely(Path classPathRoot, Class<T> clazz,
+      Function<Supplier<TryCatchAll<T>>, IGrade> gradeFunction) {
+    return gradeSecurely(classPathRoot, i -> fromInst(i, clazz, gradeFunction));
+  }
+
   public static <X extends Exception> MarksTree markSecurely(Path classPathRoot,
       TFunction<Instanciator, MarksTree, X> gradeFunction) throws X {
     final MarksTree implGrade;
@@ -124,11 +129,6 @@ public class JavaGradeUtils {
       throw new UncheckedIOException(e);
     }
     return implGrade;
-  }
-
-  public static <T> IGrade gradeSecurely(Path classPathRoot, Class<T> clazz,
-      Function<Supplier<TryCatchAll<T>>, IGrade> gradeFunction) {
-    return gradeSecurely(classPathRoot, i -> fromInst(i, clazz, gradeFunction));
   }
 
   private static <T> IGrade fromInst(Instanciator instanciator, Class<T> clazz,

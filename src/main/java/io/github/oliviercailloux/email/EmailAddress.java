@@ -32,7 +32,7 @@ public class EmailAddress {
   }
 
   public InternetAddress asInternetAddress() {
-    /** Need defensive copy. */
+    /* Need defensive copy. */
     try {
       return new InternetAddress(address, true);
     } catch (AddressException e) {

@@ -36,20 +36,20 @@ public class RepositoryCoordinates {
     return repo;
   }
 
-  public String getSshURLString() {
-    /**
+  public String getSshUrlString() {
+    /*
      * This is what GitHub suggests to use. Note that (I think that) this is not a valid part of a
      * URI, because the host contains : but no port number, and the path does not start with /
      */
     return "git@github.com:" + getOwner() + "/" + getRepositoryName() + ".git";
   }
 
-  public URI asURI() {
+  public URI asUri() {
     return URI.create("ssh://git@github.com/" + getOwner() + "/" + getRepositoryName() + ".git");
   }
 
   public GitUri asGitUri() {
-    return GitUri.fromUri(asURI());
+    return GitUri.fromUri(asUri());
   }
 
   @Override

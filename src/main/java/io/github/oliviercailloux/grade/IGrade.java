@@ -24,8 +24,8 @@ import java.util.stream.Collectors;
 /**
  *
  * Grade (interface): {points generally in [0, 1], comment, subGrades:
- * ImmutableMap<CriterionAndPoints, Grade> which may be empty}. A mark is a grade that has no
- * sub-grades. A composite grade is a grade that has at least one sub-grade. Interfaces to
+ * {@code ImmutableMap<CriterionAndPoints, Grade>} which may be empty}. A mark is a grade that has
+ * no sub-grades. A composite grade is a grade that has at least one sub-grade. Interfaces to
  * distinguish marks from composite grades do not exist: it would raise complexity and not bring
  * much benefit.
  *
@@ -253,7 +253,7 @@ public interface IGrade {
   }
 
   public default IGrade withDissolved(Criterion criterion) {
-    /**
+    /*
      * Considers each other branches b and each leaf in branch b. The leaf is replaced by a
      * weighting grade of wofbranch b * originalleaf + wofdissolved * dissolved.
      */

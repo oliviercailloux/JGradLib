@@ -69,7 +69,7 @@ public class Prs {
         writer.addValue("Repository", repository.getBare().getName());
         writer.addValue("Name", names.get(names.size() - 1));
         writer.addValue("Milestone", pr.getBare().getMilestone().orElse(""));
-        writer.addValue("Url", pr.getBare().getHtmlURI());
+        writer.addValue("Url", pr.getBare().getHtmlUri());
         final ImmutableList<GitHubUsername> assignees = pr.getBare().getAssignees();
         final ImmutableList<String> assigneesString = assignees.stream()
             .map(GitHubUsername::getUsername).collect(ImmutableList.toImmutableList());

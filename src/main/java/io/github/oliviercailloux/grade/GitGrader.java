@@ -53,20 +53,20 @@ public interface GitGrader {
       return r -> patternBranch.matcher(r.getGitRef()).matches();
     }
 
-    public static TPredicate<GitPathRootRef, IOException> isRefBranch(String remoteBranch) {
-      checkArgument(!remoteBranch.contains("/"));
-      checkArgument(!remoteBranch.isEmpty());
-
-      final Pattern patternBranch = Pattern.compile("refs/remotes/[^/]+/" + remoteBranch);
-      return r -> patternBranch.matcher(r.getGitRef()).matches();
-    }
-
     public static boolean isBranch(String gitRef, String remoteBranch) {
       checkArgument(!remoteBranch.contains("/"));
       checkArgument(!remoteBranch.isEmpty());
 
       final Pattern patternBranch = Pattern.compile("refs/remotes/[^/]+/" + remoteBranch);
       return patternBranch.matcher(gitRef).matches();
+    }
+
+    public static TPredicate<GitPathRootRef, IOException> isRefBranch(String remoteBranch) {
+      checkArgument(!remoteBranch.contains("/"));
+      checkArgument(!remoteBranch.isEmpty());
+
+      final Pattern patternBranch = Pattern.compile("refs/remotes/[^/]+/" + remoteBranch);
+      return r -> patternBranch.matcher(r.getGitRef()).matches();
     }
 
     public static <PI, QI, FO extends QI> TPredicate<PI, IOException>

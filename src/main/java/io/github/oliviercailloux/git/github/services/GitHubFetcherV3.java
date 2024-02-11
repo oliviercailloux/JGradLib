@@ -149,8 +149,8 @@ public class GitHubFetcherV3 implements AutoCloseable {
     client.close();
   }
 
-  public JsonObject fetchEventDetails(URL eventApiURL) throws IOException {
-    final WebTarget target = client.target(URI.create(eventApiURL.toString()));
+  public JsonObject fetchEventDetails(URL eventApiUrl) throws IOException {
+    final WebTarget target = client.target(URI.create(eventApiUrl.toString()));
     final Builder request = target.request(GIT_HUB_MEDIA_TYPE);
     final String jsonEventDetailsStr;
     try (Response response = request.get()) {
@@ -223,6 +223,70 @@ public class GitHubFetcherV3 implements AutoCloseable {
     return getContent(target, String.class, GIT_HUB_RAW_MEDIA_TYPE, Optional.of((v1, v2) -> {
       throw new UnsupportedOperationException();
     }));
+  }
+
+  private <T extends JsonValue> Optional<T> getContent(WebTarget target, Class<T> c) {
+    return getContent(target, c, GIT_HUB_MEDIA_TYPE, Optional.of((v1, v2) -> {
+      throw new UnsupportedOperationException();
+    }));
+  }
+
+  private <T> Optional<T> getContent(WebTarget target, Class<T> c, MediaType type,
+      Optional<BinaryOperator<T>> accumulator) throws ProcessingException, WebApplicationException {
+    requireNonNull(target);
+    if (JsonValue.class.isAssignableFrom(c)) {
+      checkArgument(type.equals(GIT_HUB_MEDIA_TYPE));
+    }
+    LOGGER.debug(target.toString());
+    WebTarget currentTarget = target;
+    final List<T> contents = new ArrayList<>();
+    while (currentTarget != null) {
+      final Builder request = currentTarget.request(type);
+      token.addToRequest(request);
+
+      final WebTarget nextTarget;
+      try (Response response = request.get()) {
+        readRates(response);
+        final ImmutableMap<String, URI> links = readLinks(response);
+
+        if (accumulator.isPresent() && links.containsKey("next")) {
+          final URI next = links.get("next");
+          LOGGER.info("Next: {}.", next);
+          nextTarget = client.target(next);
+        } else {
+          nextTarget = null;
+        }
+
+        final T content = response.readEntity(c);
+
+        {
+          final String contentStr;
+          if (content instanceof JsonValue) {
+            final JsonValue contentAsJson = (JsonValue) content;
+            contentStr = PrintableJsonValueFactory.wrapValue(contentAsJson).toString();
+          } else {
+            contentStr = content.toString();
+          }
+          LOGGER.debug("Got: {}.", contentStr);
+        }
+
+        if (response.getStatus() == Response.Status.NOT_FOUND.getStatusCode()) {
+          assert nextTarget == null;
+          assert currentTarget.equals(target);
+          return Optional.empty();
+        } else if (response.getStatus() != Response.Status.OK.getStatusCode()) {
+          throw new WebApplicationException(response);
+        }
+        contents.add(content);
+      }
+      currentTarget = nextTarget;
+    }
+    if (contents.size() == 1) {
+      return Optional.of(contents.get(0));
+    }
+    LOGGER.info("Size: {}.", contents.size());
+    assert accumulator.isPresent();
+    return contents.stream().reduce(accumulator.get());
   }
 
   public ImmutableList<RepositoryCoordinates> getUserRepositories(String username) {
@@ -380,12 +444,6 @@ public class GitHubFetcherV3 implements AutoCloseable {
     this.token = requireNonNull(token);
   }
 
-  private <T extends JsonValue> Optional<T> getContent(WebTarget target, Class<T> c) {
-    return getContent(target, c, GIT_HUB_MEDIA_TYPE, Optional.of((v1, v2) -> {
-      throw new UnsupportedOperationException();
-    }));
-  }
-
   private Optional<JsonArray> getContentArray(WebTarget target, boolean truncate)
       throws ProcessingException, WebApplicationException {
     final Optional<BinaryOperator<JsonArray>> accumulator;
@@ -396,64 +454,6 @@ public class GitHubFetcherV3 implements AutoCloseable {
           .of((v1, v2) -> Json.createArrayBuilder(v1).addAll(Json.createArrayBuilder(v2)).build());
     }
     return getContent(target, JsonArray.class, GIT_HUB_MEDIA_TYPE, accumulator);
-  }
-
-  private <T> Optional<T> getContent(WebTarget target, Class<T> c, MediaType type,
-      Optional<BinaryOperator<T>> accumulator) throws ProcessingException, WebApplicationException {
-    requireNonNull(target);
-    if (JsonValue.class.isAssignableFrom(c)) {
-      checkArgument(type.equals(GIT_HUB_MEDIA_TYPE));
-    }
-    LOGGER.debug(target.toString());
-    WebTarget currentTarget = target;
-    final List<T> contents = new ArrayList<>();
-    while (currentTarget != null) {
-      final Builder request = currentTarget.request(type);
-      token.addToRequest(request);
-
-      final WebTarget nextTarget;
-      try (Response response = request.get()) {
-        readRates(response);
-        final ImmutableMap<String, URI> links = readLinks(response);
-
-        if (accumulator.isPresent() && links.containsKey("next")) {
-          final URI next = links.get("next");
-          LOGGER.info("Next: {}.", next);
-          nextTarget = client.target(next);
-        } else {
-          nextTarget = null;
-        }
-
-        final T content = response.readEntity(c);
-
-        {
-          final String contentStr;
-          if (content instanceof JsonValue) {
-            final JsonValue contentAsJson = (JsonValue) content;
-            contentStr = PrintableJsonValueFactory.wrapValue(contentAsJson).toString();
-          } else {
-            contentStr = content.toString();
-          }
-          LOGGER.debug("Got: {}.", contentStr);
-        }
-
-        if (response.getStatus() == Response.Status.NOT_FOUND.getStatusCode()) {
-          assert nextTarget == null;
-          assert currentTarget.equals(target);
-          return Optional.empty();
-        } else if (response.getStatus() != Response.Status.OK.getStatusCode()) {
-          throw new WebApplicationException(response);
-        }
-        contents.add(content);
-      }
-      currentTarget = nextTarget;
-    }
-    if (contents.size() == 1) {
-      return Optional.of(contents.get(0));
-    }
-    LOGGER.info("Size: {}.", contents.size());
-    assert accumulator.isPresent();
-    return contents.stream().reduce(accumulator.get());
   }
 
   private <T> ImmutableList<T> getContentAsList(WebTarget target,

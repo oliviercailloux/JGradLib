@@ -55,7 +55,7 @@ public class JsonSimpleGrade {
   public static record GenericMarkAggregator (MarkAggregatorType type,
       Optional<Criterion> multiplied, Optional<Criterion> weighting,
       Optional<Map<Criterion, Double>> weights,
-      /**
+      /*
        * Should think about coherence with map (which is optional instead of empty to mark absence);
        * Eclipse does not like an Optional here.
        */
@@ -100,44 +100,6 @@ public class JsonSimpleGrade {
       this(MarkAggregatorType.OwaAggregator, Optional.empty(), Optional.empty(), Optional.empty(),
           Optional.of(simpleWeights));
     }
-  }
-
-  private static MarksTree asMarksTree(JsonObject gradeObject) {
-    checkArgument(!gradeObject.isEmpty());
-    final ValueType valueType =
-        gradeObject.get(gradeObject.keySet().iterator().next()).getValueType();
-    final boolean isFinal = switch (valueType) {
-      case STRING:
-      case NUMBER:
-      case TRUE:
-      case FALSE:
-      case NULL:
-        yield true;
-      case OBJECT:
-      case ARRAY:
-        yield false;
-      default:
-        throw new VerifyException("Unexpected value: " + valueType);
-    };
-
-    if (isFinal) {
-      checkArgument(gradeObject.size() == 2);
-      checkArgument(gradeObject.keySet().equals(ImmutableSet.of("points", "comment")));
-      final JsonValue pointsValue = gradeObject.get("points");
-      checkArgument(pointsValue.getValueType() == ValueType.NUMBER);
-      final JsonValue commentValue = gradeObject.get("comment");
-      checkArgument(commentValue.getValueType() == ValueType.STRING);
-      final double points = ((JsonNumber) pointsValue).doubleValue();
-      final String comment = ((JsonString) commentValue).getString();
-      return new Mark(points, comment);
-    }
-
-    checkArgument(gradeObject.values().stream().map(JsonValue::getValueType)
-        .allMatch(Predicates.equalTo(ValueType.OBJECT)));
-    final ImmutableMap<Criterion, MarksTree> subs =
-        gradeObject.keySet().stream().collect(ImmutableMap.toImmutableMap(Criterion::given,
-            s -> asMarksTree(gradeObject.getJsonObject(s))));
-    return MarksTree.composite(subs);
   }
 
   private static final class JsonAdapterGradeAggregator
@@ -297,12 +259,6 @@ public class JsonSimpleGrade {
     return jsonb.toJson(aggregator);
   }
 
-  public static MarkAggregator asMarkAggregator(String jsonAggregator) {
-    final Jsonb jsonb = JsonHelper.getJsonb(new JsonCriterionToString(),
-        new JsonMapAdapter<Double>() {}, new JsonAdapterMarkAggregator());
-    return jsonb.fromJson(jsonAggregator, MarkAggregator.class);
-  }
-
   public static String toJson(GradeAggregator aggregator) {
     final Jsonb jsonb =
         JsonHelper.getJsonb(new JsonCriterionToString(), new JsonMapAdapter<Double>() {},
@@ -317,21 +273,10 @@ public class JsonSimpleGrade {
     return jsonb.toJson(aggregators);
   }
 
-  public static GradeAggregator asAggregator(String aggregatorString) {
-    final Jsonb jsonb = JsonHelper.getJsonb(new JsonCriterion(), new JsonMapAdapter<Double>() {},
-        new JsonAdapterMarkAggregator(), new JsonAdapterGradeAggregator());
-    return jsonb.fromJson(aggregatorString, GradeAggregator.class);
-  }
-
   public static String toJson(MarksTree marksTree) {
     final Jsonb jsonb = JsonHelper.getJsonb(new JsonCriterionToString(),
         new JsonMapAdapter<MarksTree>() {}, new JsonAdapterMarksTree());
     return jsonb.toJson(marksTree);
-  }
-
-  public static MarksTree asMarksTree(String treeString) {
-    final Jsonb jsonb = JsonHelper.getJsonb(new JsonAdapterJsonToMarksTree());
-    return jsonb.fromJson(treeString, MarksTree.class);
   }
 
   public static String toJson(Grade grade) {
@@ -342,19 +287,74 @@ public class JsonSimpleGrade {
     return jsonb.toJson(grade);
   }
 
-  public static Grade asGrade(String gradeString) {
-    final Jsonb jsonb = JsonHelper.getJsonb(new JsonAdapterJsonToMarksTree(), new JsonCriterion(),
-        new JsonMapAdapter<Double>() {}, new JsonAdapterMarkAggregator(),
-        new JsonAdapterGradeAggregator(), new JsonAdapterGrade());
-    return jsonb.fromJson(gradeString, Grade.class);
-  }
-
   public static String toJson(Exam exam) {
     final Jsonb jsonb = JsonHelper.getJsonb(new JsonCriterionToString(),
         new JsonMapAdapter<MarksTree>() {}, new JsonAdapterMarksTree(),
         new JsonMapAdapter<Double>() {}, new JsonAdapterMarkAggregator(),
         new JsonAdapterGradeAggregator(), new JsonAdapterGrade(), new JsonAdapterExam());
     return jsonb.toJson(exam);
+  }
+
+  public static MarkAggregator asMarkAggregator(String jsonAggregator) {
+    final Jsonb jsonb = JsonHelper.getJsonb(new JsonCriterionToString(),
+        new JsonMapAdapter<Double>() {}, new JsonAdapterMarkAggregator());
+    return jsonb.fromJson(jsonAggregator, MarkAggregator.class);
+  }
+
+  public static GradeAggregator asAggregator(String aggregatorString) {
+    final Jsonb jsonb = JsonHelper.getJsonb(new JsonCriterion(), new JsonMapAdapter<Double>() {},
+        new JsonAdapterMarkAggregator(), new JsonAdapterGradeAggregator());
+    return jsonb.fromJson(aggregatorString, GradeAggregator.class);
+  }
+
+  private static MarksTree asMarksTree(JsonObject gradeObject) {
+    checkArgument(!gradeObject.isEmpty());
+    final ValueType valueType =
+        gradeObject.get(gradeObject.keySet().iterator().next()).getValueType();
+    final boolean isFinal = switch (valueType) {
+      case STRING:
+      case NUMBER:
+      case TRUE:
+      case FALSE:
+      case NULL:
+        yield true;
+      case OBJECT:
+      case ARRAY:
+        yield false;
+      default:
+        throw new VerifyException("Unexpected value: " + valueType);
+    };
+
+    if (isFinal) {
+      checkArgument(gradeObject.size() == 2);
+      checkArgument(gradeObject.keySet().equals(ImmutableSet.of("points", "comment")));
+      final JsonValue pointsValue = gradeObject.get("points");
+      checkArgument(pointsValue.getValueType() == ValueType.NUMBER);
+      final JsonValue commentValue = gradeObject.get("comment");
+      checkArgument(commentValue.getValueType() == ValueType.STRING);
+      final double points = ((JsonNumber) pointsValue).doubleValue();
+      final String comment = ((JsonString) commentValue).getString();
+      return new Mark(points, comment);
+    }
+
+    checkArgument(gradeObject.values().stream().map(JsonValue::getValueType)
+        .allMatch(Predicates.equalTo(ValueType.OBJECT)));
+    final ImmutableMap<Criterion, MarksTree> subs =
+        gradeObject.keySet().stream().collect(ImmutableMap.toImmutableMap(Criterion::given,
+            s -> asMarksTree(gradeObject.getJsonObject(s))));
+    return MarksTree.composite(subs);
+  }
+
+  public static MarksTree asMarksTree(String treeString) {
+    final Jsonb jsonb = JsonHelper.getJsonb(new JsonAdapterJsonToMarksTree());
+    return jsonb.fromJson(treeString, MarksTree.class);
+  }
+
+  public static Grade asGrade(String gradeString) {
+    final Jsonb jsonb = JsonHelper.getJsonb(new JsonAdapterJsonToMarksTree(), new JsonCriterion(),
+        new JsonMapAdapter<Double>() {}, new JsonAdapterMarkAggregator(),
+        new JsonAdapterGradeAggregator(), new JsonAdapterGrade());
+    return jsonb.fromJson(gradeString, Grade.class);
   }
 
   public static Exam asExam(String examString) {

@@ -179,7 +179,7 @@ public class GitHubHistory {
       final Instant successorDate = modifiedPushedDates.get(successor);
       for (ObjectId predecessor : graph.predecessors(successor)) {
         final Instant predecessorDate = modifiedPushedDates.get(predecessor);
-        /**
+        /*
          * Ensures the value associated to this predecessor is the “smallest” one among all
          * descendants of this predecessor seen so far and the original value of this predecessor.
          */

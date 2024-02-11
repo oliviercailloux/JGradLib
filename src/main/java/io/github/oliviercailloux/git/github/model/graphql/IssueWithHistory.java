@@ -97,7 +97,7 @@ public class IssueWithHistory implements Comparable<IssueWithHistory> {
 
       final Instant thisSnapBirth = snap.getBirthTime();
       if (thisSnapBirth.isAfter(fourMinutesInThePast)) {
-        /** This event is less than 4 minutes in the past. */
+        /* This event is less than 4 minutes in the past. */
         continue;
       }
 
@@ -106,7 +106,7 @@ public class IssueWithHistory implements Comparable<IssueWithHistory> {
         final Instant nextSnapBirth = nextSnap.getBirthTime();
         final Instant thisSnapPlus3m = thisSnapBirth.plus(Duration.ofMinutes(3));
         if (nextSnapBirth.isBefore(thisSnapPlus3m)) {
-          /** This event is followed by an event within three minutes. */
+          /* This event is followed by an event within three minutes. */
           continue;
         }
       }
@@ -149,7 +149,7 @@ public class IssueWithHistory implements Comparable<IssueWithHistory> {
     } else {
       helper.add("Name", getOriginalName());
     }
-    helper.addValue(simple.getHtmlURI());
+    helper.addValue(simple.getHtmlUri());
     helper.add("Snapshot nb", snaps.size());
     return helper.toString();
   }

@@ -28,11 +28,11 @@ public class SearchResult {
     this.json = requireNonNull(json);
   }
 
-  public URI getApiURI() {
+  public URI getApiUri() {
     return URI.create(json.getString("url"));
   }
 
-  public URI getHtmlURI() {
+  public URI getHtmlUri() {
     return URI.create(json.getString("html_url"));
   }
 

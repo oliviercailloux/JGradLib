@@ -94,7 +94,7 @@ class UtilsTests {
       final Path work = jimFs.getPath("");
 
       Compiler.intolerant(ImmutableList.of(Path.of("target/classes/")), work)
-          .compile(ImmutableList.of(sourcePath));
+          .compileSrcs(ImmutableList.of(sourcePath));
 
       final URL url = work.toUri().toURL();
       try (URLClassLoader loader =

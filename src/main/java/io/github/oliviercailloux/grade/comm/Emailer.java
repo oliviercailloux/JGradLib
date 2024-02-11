@@ -129,7 +129,7 @@ public class Emailer implements AutoCloseable {
 
   private Store store;
   private final LinkedHashMap<String, Folder> openReadFolders;
-  private final LinkedHashMap<String, Folder> openRWFolders;
+  private final LinkedHashMap<String, Folder> openRwFolders;
 
   private Session transportSession;
   private Transport transport;
@@ -138,7 +138,7 @@ public class Emailer implements AutoCloseable {
   private Emailer() {
     store = null;
     openReadFolders = Maps.newLinkedHashMap();
-    openRWFolders = Maps.newLinkedHashMap();
+    openRwFolders = Maps.newLinkedHashMap();
     transportSession = null;
     transport = null;
     saveInto = null;
@@ -226,12 +226,12 @@ public class Emailer implements AutoCloseable {
   private Folder lazyGetFolder(String folderName, boolean andWrite) throws IllegalStateException {
     checkState(store != null);
 
-    if (!openReadFolders.containsKey(folderName) && !openRWFolders.containsKey(folderName)) {
+    if (!openReadFolders.containsKey(folderName) && !openRwFolders.containsKey(folderName)) {
       @SuppressWarnings("resource")
       final Folder folder = MESSAGING_UNCHECKER.getUsing(() -> store.getFolder(folderName));
       if (andWrite) {
         MESSAGING_UNCHECKER.call(() -> folder.open(Folder.READ_WRITE));
-        openRWFolders.put(folderName, folder);
+        openRwFolders.put(folderName, folder);
       } else {
         MESSAGING_UNCHECKER.call(() -> folder.open(Folder.READ_ONLY));
         openReadFolders.put(folderName, folder);
@@ -240,14 +240,14 @@ public class Emailer implements AutoCloseable {
 
     final Folder folderRead = openReadFolders.get(folderName);
     if (folderRead != null) {
-      /**
+      /*
        * NB this means that opening a folder read-only for searching prevents from storing in that
        * folder: planning is required.
        */
       checkState(!andWrite, "A given folder can be opened only once.");
       return folderRead;
     }
-    return openRWFolders.get(folderName);
+    return openRwFolders.get(folderName);
   }
 
   public ImmutableSet<Message> searchIn(Folder folder, ImapSearchPredicate term) {
@@ -336,7 +336,7 @@ public class Emailer implements AutoCloseable {
 
       final EmailAddressAndPersonal to = email.getTo();
       final InternetAddress[] toSingleton = new InternetAddress[] {to.asInternetAddress()};
-      /**
+      /*
        * When the address is incorrect (e.g. WRONG@gmail.com), a message delivered event is still
        * sent to registered TransportListeners. A new message in the INBOX indicates the error, but
        * it seems hard to detect it on the spot.
@@ -375,10 +375,10 @@ public class Emailer implements AutoCloseable {
       MESSAGING_UNCHECKER.call(() -> transport.close());
     }
 
-    for (Folder folder : openRWFolders.values()) {
+    for (Folder folder : openRwFolders.values()) {
       MESSAGING_UNCHECKER.call(() -> folder.close());
     }
-    openRWFolders.clear();
+    openRwFolders.clear();
 
     for (Folder folder : openReadFolders.values()) {
       MESSAGING_UNCHECKER.call(() -> folder.close());

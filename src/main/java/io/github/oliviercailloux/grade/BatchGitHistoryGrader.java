@@ -103,35 +103,6 @@ public class BatchGitHistoryGrader<X extends Exception> {
     return getGrades(deadline, durationForZero, grader, userGradeWeight, TOptional.empty(), "");
   }
 
-  public <Y extends Exception> Exam getAndWriteGrades(GitFsGrader<Y> grader, double userGradeWeight,
-      Path outWithoutExtension, String docTitle) throws X, Y, IOException {
-    checkArgument(!docTitle.isEmpty());
-    return getGrades(BatchGitHistoryGrader.MAX_DEADLINE, Duration.ofMinutes(0), grader,
-        userGradeWeight, TOptional.of(outWithoutExtension), docTitle);
-  }
-
-  public <Y extends Exception> Exam getAndWriteGrades(ZonedDateTime deadline,
-      Duration durationForZero, GitFsGrader<Y> grader, double userGradeWeight,
-      Path outWithoutExtension, String docTitle) throws X, Y, IOException {
-    checkArgument(!docTitle.isEmpty());
-    return getGrades(deadline, durationForZero, grader, userGradeWeight,
-        TOptional.of(outWithoutExtension), docTitle);
-  }
-
-  public <Y extends Exception> Exam getAndWriteGradesExp(ZonedDateTime deadline,
-      Duration durationForZero, GitFsGrader<Y> grader, double userGradeWeight,
-      Path outWithoutExtension, String docTitle) throws X, Y, IOException {
-    checkArgument(!docTitle.isEmpty());
-    return getGrades(deadline, durationForZero, false, grader, userGradeWeight,
-        TOptional.of(outWithoutExtension), docTitle);
-  }
-
-  public <Y extends Exception> Exam getAndWriteGrades(Grader<Y> ext, Path outWithoutExtension,
-      String docTitle) throws X, Y, IOException {
-    checkArgument(!docTitle.isEmpty());
-    return getGrades(ext, TOptional.of(outWithoutExtension), docTitle);
-  }
-
   private <Y extends Exception> Exam getGrades(ZonedDateTime deadline, Duration durationForZero,
       GitFsGrader<Y> grader, double userGradeWeight, TOptional<Path> outWithoutExtensionOpt,
       String docTitle) throws X, Y, IOException {
@@ -197,6 +168,35 @@ public class BatchGitHistoryGrader<X extends Exception> {
       }
     }
     return new Exam(whole, ImmutableMap.copyOf(builder));
+  }
+
+  public <Y extends Exception> Exam getAndWriteGrades(GitFsGrader<Y> grader, double userGradeWeight,
+      Path outWithoutExtension, String docTitle) throws X, Y, IOException {
+    checkArgument(!docTitle.isEmpty());
+    return getGrades(BatchGitHistoryGrader.MAX_DEADLINE, Duration.ofMinutes(0), grader,
+        userGradeWeight, TOptional.of(outWithoutExtension), docTitle);
+  }
+
+  public <Y extends Exception> Exam getAndWriteGrades(ZonedDateTime deadline,
+      Duration durationForZero, GitFsGrader<Y> grader, double userGradeWeight,
+      Path outWithoutExtension, String docTitle) throws X, Y, IOException {
+    checkArgument(!docTitle.isEmpty());
+    return getGrades(deadline, durationForZero, grader, userGradeWeight,
+        TOptional.of(outWithoutExtension), docTitle);
+  }
+
+  public <Y extends Exception> Exam getAndWriteGrades(Grader<Y> ext, Path outWithoutExtension,
+      String docTitle) throws X, Y, IOException {
+    checkArgument(!docTitle.isEmpty());
+    return getGrades(ext, TOptional.of(outWithoutExtension), docTitle);
+  }
+
+  public <Y extends Exception> Exam getAndWriteGradesExp(ZonedDateTime deadline,
+      Duration durationForZero, GitFsGrader<Y> grader, double userGradeWeight,
+      Path outWithoutExtension, String docTitle) throws X, Y, IOException {
+    checkArgument(!docTitle.isEmpty());
+    return getGrades(deadline, durationForZero, false, grader, userGradeWeight,
+        TOptional.of(outWithoutExtension), docTitle);
   }
 
   private void write(Exam exam, Path outWithoutExtension, String docTitle) throws IOException {

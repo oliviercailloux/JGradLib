@@ -80,14 +80,14 @@ public class RepositoryWithFiles {
     return path;
   }
 
-  public URI getURI(Path completePath) {
-    /**
+  public URI getUri(Path completePath) {
+    /*
      * TODO obtain a uri, but https://developer.github.com/v4/object/treeentry/ does not give it.
      * Test this method.
      */
     try {
-      return new URI(repository.getURI().getScheme(), repository.getURI().getHost(),
-          repository.getURI().getPath() + "/blob/master/" + completePath.toString(), null);
+      return new URI(repository.getUri().getScheme(), repository.getUri().getHost(),
+          repository.getUri().getPath() + "/blob/master/" + completePath.toString(), null);
       // return new URL(repository.getURI(), "blob/master/" + Utils.getEncoded(completePath));
     } catch (URISyntaxException e) {
       throw new IllegalArgumentException(e);

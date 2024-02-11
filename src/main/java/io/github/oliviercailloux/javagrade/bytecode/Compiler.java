@@ -96,7 +96,7 @@ public class Compiler {
 
   public static ImmutableList<Diagnostic<? extends JavaFileObject>>
       compile(Collection<Path> classPath, Path destDir, Collection<Path> sources) {
-    /**
+    /*
      * Compiler throws if asked to compile no source (even though the doc seems to allow it).
      */
     if (!sources.iterator().hasNext()) {
@@ -111,14 +111,14 @@ public class Compiler {
     final JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
     final boolean compiled;
     final DiagnosticCollector<JavaFileObject> diagnosticCollector = new DiagnosticCollector<>();
-    /**
+    /*
      * API about diagnostics is unclear, but from the source code of JavacTool, it seems like the
      * second one (in the #getTask arguments) overrides the first one (in the getStandardFileManager
      * arguments).
      */
     try (StandardJavaFileManager fileManager =
         compiler.getStandardFileManager(diagnosticCollector, null, null)) {
-      /**
+      /*
        * Have to set explicitly the annotation processor path, otherwise, the initialization of
        * annotation processing (involving #getClassLoader) uses the class path, which fails if the
        * paths do not refer to File instances, because JavacFileManager#getClassLoader(Location
@@ -153,7 +153,7 @@ public class Compiler {
     verify(compiled == diagnostics.isEmpty());
     if (compiled) {
       // SourceScanner.scan()
-      /**
+      /*
        * Seems impossible to check that the file gets created, because seems impossible to
        * (elegantly) obtain the package name or output exact location of the file.
        */
@@ -166,19 +166,11 @@ public class Compiler {
    *
    * @throws IOException
    *
-   * @see https://help.eclipse.org/2020-03/index.jsp?topic=%2Forg.eclipse.jdt.doc.user%2Ftasks%2Ftask-using_batch_compiler.htm
+   * @see <a href="https://help.eclipse.org/2020-03/index.jsp?topic=%2Forg.eclipse.jdt.doc.user%2Ftasks%2Ftask-using_batch_compiler.htm">Eclipse</a>
    */
   public static CompilationResult eclipseCompile(List<Path> classPath, Set<Path> targets)
       throws IOException {
     return eclipseCompile(classPath, targets, true);
-  }
-
-  public static CompilationResult eclipseCompileUsingOurClasspath(Set<Path> targets,
-      Path destinationDir) throws IOException {
-    final List<File> classpath = new ClassGraph().getClasspathFiles();
-    final ImmutableSet<Path> classpathPaths =
-        classpath.stream().map(File::toPath).collect(ImmutableSet.toImmutableSet());
-    return eclipseCompile(classpathPaths.asList(), targets, true, Optional.of(destinationDir));
   }
 
   public static CompilationResult eclipseCompile(List<Path> classPath, Set<Path> targets,
@@ -205,7 +197,7 @@ public class Compiler {
       builder.add("--release", "17");
     }
     if (useStrictWarnings) {
-      /** Could instead use options such as "-warn:+allDeadCode,allDeprecation…". */
+      /* Could instead use options such as "-warn:+allDeadCode,allDeprecation…". */
       final URL propertiesUrl = Compiler.class.getResource("Eclipse-prefs.epf");
       checkState(propertiesUrl != null);
       final Path propertiesPath = Path.of(URI_UNCHECKER.getUsing(() -> propertiesUrl.toURI()));
@@ -261,6 +253,14 @@ public class Compiler {
     return new CompilationResult(compiled, out.toString(), err.toString());
   }
 
+  public static CompilationResult eclipseCompileUsingOurClasspath(Set<Path> targets,
+      Path destinationDir) throws IOException {
+    final List<File> classpath = new ClassGraph().getClasspathFiles();
+    final ImmutableSet<Path> classpathPaths =
+        classpath.stream().map(File::toPath).collect(ImmutableSet.toImmutableSet());
+    return eclipseCompile(classpathPaths.asList(), targets, true, Optional.of(destinationDir));
+  }
+
   public static class CompilationResultExt {
     public static CompilationResultExt given(boolean compiled, String out, String err, int s) {
       return new CompilationResultExt(compiled, out, err, s);
@@ -288,7 +288,7 @@ public class Compiler {
     }
 
     public int countWarnings() {
-      /** See https://github.com/google/guava/issues/877 */
+      /* See https://github.com/google/guava/issues/877 */
       return Splitter.on("WARNING ").splitToStream(err).mapToInt(e -> 1).sum() - 1;
     }
 
@@ -327,7 +327,7 @@ public class Compiler {
     }
 
     public int countWarnings() {
-      /** See https://github.com/google/guava/issues/877 */
+      /* See https://github.com/google/guava/issues/877 */
       return Splitter.on("WARNING ").splitToStream(err).mapToInt(e -> 1).sum() - 1;
     }
 
@@ -347,7 +347,7 @@ public class Compiler {
   }
 
   public ImmutableList<Diagnostic<? extends JavaFileObject>>
-      compile(Collection<Path> srcToCompile) {
+      compileSrcs(Collection<Path> srcToCompile) {
     final ImmutableList<Diagnostic<? extends JavaFileObject>> output =
         Compiler.compile(cp, destDir, srcToCompile);
     if (!tolerateFailure) {

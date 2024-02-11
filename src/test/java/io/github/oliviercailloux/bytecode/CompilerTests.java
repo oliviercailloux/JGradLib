@@ -142,7 +142,7 @@ class CompilerTests {
     try (FileSystem jimFs = Jimfs.newFileSystem(Configuration.unix())) {
       final Path work = jimFs.getPath("");
 
-      Compiler.intolerant(ImmutableList.of(), work).compile(ImmutableList.of(sourcePath));
+      Compiler.intolerant(ImmutableList.of(), work).compileSrcs(ImmutableList.of(sourcePath));
 
       final ImmutableSet<Path> files;
       try (Stream<Path> stream = Files.walk(work.toAbsolutePath())) {
@@ -165,10 +165,10 @@ class CompilerTests {
       final Path main = jimFs.getPath("main");
       Files.createDirectories(main);
 
-      Compiler.intolerant(ImmutableList.of(), cp).compile(ImmutableList.of(sourceRequired));
+      Compiler.intolerant(ImmutableList.of(), cp).compileSrcs(ImmutableList.of(sourceRequired));
       assertThrows(VerifyException.class, () -> Compiler.intolerant(ImmutableList.of(), main)
-          .compile(ImmutableList.of(sourceRequiring)));
-      Compiler.intolerant(ImmutableList.of(cp), main).compile(ImmutableList.of(sourceRequiring));
+          .compileSrcs(ImmutableList.of(sourceRequiring)));
+      Compiler.intolerant(ImmutableList.of(cp), main).compileSrcs(ImmutableList.of(sourceRequiring));
 
       final ImmutableSet<Path> files;
       try (Stream<Path> stream = Files.walk(main.toAbsolutePath())) {

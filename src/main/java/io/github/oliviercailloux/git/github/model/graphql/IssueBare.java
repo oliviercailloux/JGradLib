@@ -59,7 +59,7 @@ public class IssueBare {
         .flatMap(Streams::stream).collect(Collectors.toList());
   }
 
-  public URI getHtmlURI() {
+  public URI getHtmlUri() {
     return URI.create(json.getString("url"));
   }
 
@@ -71,7 +71,7 @@ public class IssueBare {
     return json.getInt("number");
   }
 
-  public URI getRepositoryURI() {
+  public URI getRepositoryUri() {
     return URI.create(json.getJsonObject("repository").getString("homepageUrl"));
   }
 
@@ -105,7 +105,7 @@ public class IssueBare {
   @Override
   public String toString() {
     final ToStringHelper helper = MoreObjects.toStringHelper(this);
-    helper.addValue(getHtmlURI());
+    helper.addValue(getHtmlUri());
     return helper.toString();
   }
 }

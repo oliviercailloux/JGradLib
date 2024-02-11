@@ -25,7 +25,7 @@ public class PomPathsSupplier {
   }
 
   public static ImmutableSet<Path> getPossiblePoms(Path root) throws IOException {
-    /**
+    /*
      * Need to limit depth, otherwise will find
      * target/m2e-wtp/web-resources/META-INF/maven/<groupId>/<artifactId>/pom.xml.
      */

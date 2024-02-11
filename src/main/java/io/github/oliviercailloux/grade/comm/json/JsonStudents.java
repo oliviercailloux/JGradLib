@@ -52,7 +52,8 @@ public class JsonStudents {
     private final Optional<GitHubUsername> gitHubUsername;
     private final Optional<Integer> institutionalId;
     private final String institutionalUsername;
-    private final String firstName, lastName;
+    private final String firstName;
+    private final String lastName;
     private final Optional<EmailAddress> email;
 
     private JsonStudentEntry(Optional<GitHubUsername> gitHubUsername,
@@ -199,7 +200,7 @@ public class JsonStudents {
 
   private JsonStudents(Set<JsonStudentEntry> entries) {
     this.entries = ImmutableSet.copyOf(entries);
-    /**
+    /*
      * Just to check that these are unique.
      */
     entries.stream().filter(e -> e.getGitHubUsername().isPresent())

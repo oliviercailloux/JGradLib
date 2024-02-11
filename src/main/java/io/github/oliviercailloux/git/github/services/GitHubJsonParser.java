@@ -31,11 +31,11 @@ public class GitHubJsonParser {
     return asInstant(gitHubTemporal);
   }
 
-  static public Stream<JsonObject> getContent(JsonObject connection) {
+  public static Stream<JsonObject> getContent(JsonObject connection) {
     return getContent(connection, false);
   }
 
-  static public Stream<JsonObject> getContent(JsonObject connection, boolean allowPartial) {
+  public static Stream<JsonObject> getContent(JsonObject connection, boolean allowPartial) {
     final JsonArray nodes = connection.getJsonArray("nodes");
     checkArgument(allowPartial || isConnectionComplete(connection),
         PrintableJsonObjectFactory.wrapObject(connection));
@@ -43,7 +43,7 @@ public class GitHubJsonParser {
     return contents;
   }
 
-  static public boolean isConnectionComplete(JsonObject connection) {
+  public static boolean isConnectionComplete(JsonObject connection) {
     final JsonArray nodes = connection.getJsonArray("nodes");
     final boolean sizeComplete = connection.getInt("totalCount") == nodes.size();
     final boolean pageComplete = !connection.getJsonObject("pageInfo").getBoolean("hasNextPage");

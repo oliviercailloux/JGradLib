@@ -14,7 +14,7 @@ import java.util.Set;
  *
  * TreeGrade implements MarksTree
  *
- * – Map<CritPath, Mark> // no extensions: no paths p1, p2 such that p2 extends p1.
+ * – {@code Map<CritPath, Mark>} // no extensions: no paths p1, p2 such that p2 extends p1.
  * </p>
  * TODO consider a Composite that is non empty and a MarksTree that can be empty.
  * <p>
@@ -68,17 +68,6 @@ public interface MarksTree {
   public MarksTree getTree(Criterion criterion);
 
   /**
-   * @return not empty; the singleton containing {@link CriteriaPath#ROOT} iff this object is a
-   *         mark; otherwise, does not contain {@link CriteriaPath#ROOT}.
-   */
-  public ImmutableSet<CriteriaPath> getPathsToMarks();
-
-  /**
-   * @return {@code true} iff this tree contains a node (terminal or not) at the given path.
-   */
-  public boolean hasPath(CriteriaPath path);
-
-  /**
    * Returns the grade at the given path, if it exists in this instance.
    * <p>
    * If the given path is the root grade path, returns this instance.
@@ -88,6 +77,17 @@ public interface MarksTree {
    * @see #hasPath(CriteriaPath)
    */
   public MarksTree getTree(CriteriaPath path);
+
+  /**
+   * @return not empty; the singleton containing {@link CriteriaPath#ROOT} iff this object is a
+   *         mark; otherwise, does not contain {@link CriteriaPath#ROOT}.
+   */
+  public ImmutableSet<CriteriaPath> getPathsToMarks();
+
+  /**
+   * @return {@code true} iff this tree contains a node (terminal or not) at the given path.
+   */
+  public boolean hasPath(CriteriaPath path);
 
   /**
    * @throws NoSuchElementException iff the given path is not contained in this object.

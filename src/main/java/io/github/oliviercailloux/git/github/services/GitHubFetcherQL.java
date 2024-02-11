@@ -75,7 +75,7 @@ public class GitHubFetcherQL implements AutoCloseable {
   private final GitHubRealToken token;
 
   private GitHubFetcherQL(GitHubRealToken token) {
-    /** Authorization token required for Graph QL GitHub API. */
+    /* Authorization token required for Graph QL GitHub API. */
     this.token = requireNonNull(token);
     rateLimit = "";
     rateReset = null;
@@ -120,7 +120,7 @@ public class GitHubFetcherQL implements AutoCloseable {
     final JsonObject varsJson = jsonBuilderFactory.createObjectBuilder()
         .add("repositoryName", coordinates.getRepositoryName())
         .add("repositoryOwner", coordinates.getOwner()).build();
-    /**
+    /*
      * TODO check why queryOpt is used here (thereby masking errors) instead of query.
      */
     return queryOpt("repository", ImmutableList.of("repositoryWithIssuesWithHistory"), varsJson)
@@ -132,7 +132,7 @@ public class GitHubFetcherQL implements AutoCloseable {
     final JsonObject varsJson = jsonBuilderFactory.createObjectBuilder()
         .add("repositoryName", coordinates.getRepositoryName())
         .add("repositoryOwner", coordinates.getOwner()).build();
-    /**
+    /*
      * TODO check why queryOpt is used here (thereby masking errors) instead of query.
      */
     // return queryOpt("repository", ImmutableList.of("repositoryWithPRsWithHistory"), varsJson)
@@ -158,7 +158,7 @@ public class GitHubFetcherQL implements AutoCloseable {
   }
 
   public GitHubHistory getReversedGitHubHistory(RepositoryCoordinates coordinates) {
-    /**
+    /*
      * I build the graph while asking queries: I need to be able to detect when I’m back at some
      * commit I know already. Thus, parse the initial request, build a partial graph of parents,
      * maintain a list of nodes that have not been seen yet (those whose parents are unknown).
@@ -248,10 +248,10 @@ public class GitHubFetcherQL implements AutoCloseable {
   private JsonObject rawQuery(String queryName, List<String> fragmentNames, JsonObject variables) {
     final JsonObject queryJson;
     {
-      final String queryGQL = RESOURCE_READER.apply("queries/" + queryName + ".txt");
+      final String queryGql = RESOURCE_READER.apply("queries/" + queryName + ".txt");
       final String fragments = fragmentNames.stream().map((n) -> "fragments/" + n + ".txt")
           .map(RESOURCE_READER).collect(Collectors.joining(""));
-      queryJson = jsonBuilderFactory.createObjectBuilder().add("query", queryGQL + "\n" + fragments)
+      queryJson = jsonBuilderFactory.createObjectBuilder().add("query", queryGql + "\n" + fragments)
           .add("variables", variables).build();
     }
 

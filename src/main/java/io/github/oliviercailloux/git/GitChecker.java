@@ -42,7 +42,7 @@ public class GitChecker {
   }
 
   public void checkCommonRefs(Git git) throws GitAPIException {
-    /** Seems like this also includes HEAD when detached. */
+    /* Seems like this also includes HEAD when detached. */
     final List<Ref> branches = git.branchList().setListMode(ListMode.ALL).call();
     final List<Ref> allRefs =
         IO_UNCHECKER.getUsing(() -> git.getRepository().getRefDatabase().getRefs());

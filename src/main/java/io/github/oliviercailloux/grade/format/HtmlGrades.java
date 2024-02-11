@@ -45,7 +45,7 @@ public class HtmlGrades {
     final HtmlGrades htmler = newInstance();
     htmler.setTitle(title);
     htmler.setDenominator(denominator);
-    return htmler.asHtml(grade);
+    return htmler.asHtmlDoc(grade);
   }
 
   public static Document asHtml(Map<String, ? extends Grade> grades, String generalTitle,
@@ -266,7 +266,7 @@ public class HtmlGrades {
     this.quantiles = ImmutableMap.copyOf(checkNotNull(quantiles));
   }
 
-  public Document asHtml(Grade grade) {
+  public Document asHtmlDoc(Grade grade) {
     final HtmlDocument document = HtmlDocument.newInstance();
     document.setTitle(title);
 

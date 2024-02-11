@@ -33,7 +33,7 @@ public class User {
     return Objects.equals(getLogin(), c2.getLogin());
   }
 
-  public URI getHtmlURI() {
+  public URI getHtmlUri() {
     return URI.create(json.getString("url"));
   }
 

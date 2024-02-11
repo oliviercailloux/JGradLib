@@ -64,7 +64,7 @@ public class TestGitHubIssue {
       final IssueWithHistory issue = repo.getIssuesNamed("test1").iterator().next();
       LOGGER.info("Issue: {}.", issue);
       assertEquals(URI.create("https://github.com/oliviercailloux/testrel/issues/2"),
-          issue.getBare().getHtmlURI());
+          issue.getBare().getHtmlUri());
       assertEquals("test1", issue.getOriginalName());
       assertEquals(2, issue.getBare().getNumber());
 
@@ -87,7 +87,7 @@ public class TestGitHubIssue {
       final IssueWithHistory issue = repo.getIssuesNamed("test open").iterator().next();
       LOGGER.info("Issue: {}.", issue);
       assertEquals(URI.create("https://github.com/oliviercailloux/testrel/issues/3"),
-          issue.getBare().getHtmlURI());
+          issue.getBare().getHtmlUri());
       assertEquals("test open", issue.getOriginalName());
       assertEquals(3, issue.getBare().getNumber());
       final List<IssueSnapshot> snapshots = issue.getSnapshots();

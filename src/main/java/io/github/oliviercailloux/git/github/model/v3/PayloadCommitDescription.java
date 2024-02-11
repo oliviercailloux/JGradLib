@@ -25,7 +25,7 @@ public class PayloadCommitDescription {
     this.json = requireNonNull(json);
   }
 
-  public URI getApiURI() {
+  public URI getApiUri() {
     return URI.create(json.getString("url"));
   }
 

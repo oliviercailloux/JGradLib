@@ -73,7 +73,7 @@ public class GradesInEmails implements AutoCloseable {
       htmler.setStats(stats);
       htmler.setQuantiles(quartiles);
     }
-    final Document doc = htmler.asHtml(grade);
+    final Document doc = htmler.asHtmlDoc(grade);
     final Email email = Email.withDocumentAndFile(doc, FILE_NAME,
         JsonSimpleGrade.toJson(grade).toString(), MIME_SUBTYPE, studentAddress);
     return email;
@@ -202,7 +202,7 @@ public class GradesInEmails implements AutoCloseable {
         : ImapSearchPredicate.orList(recipients.stream()
             .map(r -> ImapSearchPredicate.recipientAddressEquals(RecipientType.TO, r.getAddress()))
             .collect(ImmutableSet.toImmutableSet()));
-    /**
+    /*
      * If too complex, we search everything, because Zoho (and, I suspect, many others) do not
      * implement this correctly.
      */
@@ -214,11 +214,11 @@ public class GradesInEmails implements AutoCloseable {
     final ImapSearchPredicate searchTerm =
         subjectContains.andSatisfy(effectiveMatchesAddress).andSatisfy(sentWithin);
 
-    /** We filter manually in all cases for simplicity of the code. */
+    /* We filter manually in all cases for simplicity of the code. */
     final ImmutableSet<Message> matchingWidened = emailer.searchIn(folder, searchTerm);
     LOGGER.debug("Got all '{}' messages ({}).", subjectStartsWith, matchingWidened.size());
     emailer.fetchHeaders(folder, matchingWidened);
-    /**
+    /*
      * We also need to filter for subjects really starting with the predicate, not just containing
      * it.
      */
@@ -238,13 +238,24 @@ public class GradesInEmails implements AutoCloseable {
     return grades;
   }
 
+  public ImmutableMap<EmailAddress, Grade> getLastGrades(String prefix) {
+    checkState(folder != null);
+    return getLastGradesToInternal(recipientsFilter, ("Grade " + prefix).toLowerCase())
+        .column(prefix);
+  }
+
+  @Override
+  public void close() {
+    emailer.close();
+  }
+
   /**
    * @param recipients {@code null} for no filter.
    */
   private ImmutableTable<EmailAddress, String, Grade>
       getLastGradesToInternal(Set<EmailAddress> recipients, String subjectPattern) {
     final ImmutableSet<Message> matching = getMessagesTo(recipients, subjectPattern);
-    /**
+    /*
      * First, reduce the number of messages to fetch (which takes about 30 seconds for 500
      * messages).
      */
@@ -269,16 +280,5 @@ public class GradesInEmails implements AutoCloseable {
     return Optional.ofNullable(
         getLastGradesToInternal(ImmutableSet.of(recipient), ("Grade " + prefix).toLowerCase())
             .column(prefix).get(recipient));
-  }
-
-  public ImmutableMap<EmailAddress, Grade> getLastGrades(String prefix) {
-    checkState(folder != null);
-    return getLastGradesToInternal(recipientsFilter, ("Grade " + prefix).toLowerCase())
-        .column(prefix);
-  }
-
-  @Override
-  public void close() {
-    emailer.close();
   }
 }

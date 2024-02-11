@@ -82,7 +82,7 @@ class LoggingOutputStream extends OutputStream {
       throw new IOException("The stream has been closed.");
     }
 
-    /** Grow the buffer if attempting to write past the buffer. */
+    /* Grow the buffer if attempting to write past the buffer. */
     if (count == bufLength) {
       final int newBufLength = bufLength * 2;
       final byte[] newBuf = new byte[newBufLength];
@@ -108,14 +108,14 @@ class LoggingOutputStream extends OutputStream {
     System.arraycopy(buf, 0, theBytes, 0, count);
 
     final String buffer = new String(theBytes, StandardCharsets.UTF_8);
-    /**
+    /*
      * Oddly enough, PrintStream seems to flush twice, in automatic mode: once just before the EOL,
      * and once just after. We wait for the call just after.
      */
     if (!buffer.endsWith(System.lineSeparator())) {
       return;
     }
-    /**
+    /*
      * Now we remove the EOL, because the call to the logger already includes it.
      */
     final String content = buffer.substring(0, buffer.length() - System.lineSeparator().length());

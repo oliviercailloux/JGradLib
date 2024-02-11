@@ -131,6 +131,23 @@ public class Utils {
     return mutableGraph;
   }
 
+  /**
+   * @deprecated use the Jaris version
+   */
+  public static <E> ImmutableGraph<E> asGraph(List<E> elements) {
+    final MutableGraph<E> builder = GraphBuilder.directed().allowsSelfLoops(false).build();
+    final ListIterator<E> iterator = elements.listIterator();
+    final PeekingIterator<E> peekingIterator = Iterators.peekingIterator(iterator);
+    while (peekingIterator.hasNext()) {
+      final E e1 = peekingIterator.next();
+      if (peekingIterator.hasNext()) {
+        final E e2 = peekingIterator.peek();
+        builder.putEdge(e1, e2);
+      }
+    }
+    return ImmutableGraph.copyOf(builder);
+  }
+
   public static <E> ImmutableGraph<E> asImmutableGraph(Graph<E> graph) {
     if (graph instanceof ImmutableGraph) {
       return (ImmutableGraph<E>) graph;
@@ -198,23 +215,6 @@ public class Utils {
         return FileVisitResult.CONTINUE;
       }
     });
-  }
-
-  /**
-   * @deprecated use the Jaris version
-   */
-  public static <E> ImmutableGraph<E> asGraph(List<E> elements) {
-    final MutableGraph<E> builder = GraphBuilder.directed().allowsSelfLoops(false).build();
-    final ListIterator<E> iterator = elements.listIterator();
-    final PeekingIterator<E> peekingIterator = Iterators.peekingIterator(iterator);
-    while (peekingIterator.hasNext()) {
-      final E e1 = peekingIterator.next();
-      if (peekingIterator.hasNext()) {
-        final E e2 = peekingIterator.peek();
-        builder.putEdge(e1, e2);
-      }
-    }
-    return ImmutableGraph.copyOf(builder);
   }
 
   public static <T, X extends Exception> ImmutableSet<T> getMaximalElements(Iterable<T> iterable,

@@ -59,11 +59,11 @@ public class Repository {
   }
 
   @JsonbTransient
-  public String getSshURIString() {
+  public String getSshUriString() {
     return json.getString("sshUrl");
   }
 
-  public URI getURI() {
+  public URI getUri() {
     return URI.create(json.getString("url"));
   }
 

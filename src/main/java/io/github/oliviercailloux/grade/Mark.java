@@ -119,16 +119,6 @@ public class Mark implements MarksTree {
     throw new NoSuchElementException(criterion.getName());
   }
 
-  @Override
-  public ImmutableSet<CriteriaPath> getPathsToMarks() {
-    return ImmutableSet.of(CriteriaPath.ROOT);
-  }
-
-  @Override
-  public boolean hasPath(CriteriaPath path) {
-    return path.isRoot();
-  }
-
   /**
    * Returns this instance.
    *
@@ -139,6 +129,16 @@ public class Mark implements MarksTree {
   @Deprecated()
   public MarksTree getTree(CriteriaPath path) {
     return getMark(path);
+  }
+
+  @Override
+  public ImmutableSet<CriteriaPath> getPathsToMarks() {
+    return ImmutableSet.of(CriteriaPath.ROOT);
+  }
+
+  @Override
+  public boolean hasPath(CriteriaPath path) {
+    return path.isRoot();
   }
 
   /**

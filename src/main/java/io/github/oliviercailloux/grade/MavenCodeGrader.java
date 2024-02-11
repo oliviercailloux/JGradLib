@@ -69,21 +69,21 @@ public class MavenCodeGrader<X extends Exception> implements PathGrader<X> {
     }
   }
 
-  private final CodeGrader<X> g;
+  private final CodeGrader<X> grader;
   private final Function<IOException, ? extends X> wrapper;
 
   public static final Criterion WARNING_CRITERION = Criterion.given("Warnings");
   public static final Criterion CODE_CRITERION = Criterion.given("Code");
   private ImmutableMap<Path, MarksTree> gradedProjects;
   private final MyCompiler basicCompiler;
-  private WarningsBehavior w;
+  private WarningsBehavior waB;
 
   private MavenCodeGrader(CodeGrader<X> g, Function<IOException, ? extends X> wrapper,
       WarningsBehavior w, MyCompiler basicCompiler) {
-    this.g = g;
+    this.grader = g;
     gradedProjects = null;
     this.wrapper = wrapper;
-    this.w = w;
+    this.waB = w;
     this.basicCompiler = basicCompiler;
   }
 
@@ -120,10 +120,8 @@ public class MavenCodeGrader<X extends Exception> implements PathGrader<X> {
       srcDir = pomDirectory;
     }
     final ImmutableSet<Path> javaPaths =
-        Files.exists(srcDir)
-            ? PathUtils.getMatchingChildren(srcDir,
-                p -> String.valueOf(p.getFileName()).endsWith(".java"))
-            : ImmutableSet.of();
+        Files.exists(srcDir) ? PathUtils.getMatchingChildren(srcDir,
+            p -> String.valueOf(p.getFileName()).endsWith(".java")) : ImmutableSet.of();
     final CompilationResultExt result = basicCompiler.compile(compiledDir, javaPaths);
 
     final MarksTree projectGrade;
@@ -133,13 +131,12 @@ public class MavenCodeGrader<X extends Exception> implements PathGrader<X> {
       LOGGER.debug("No java files at {}.", srcDir);
       projectGrade = Mark.zero("No java files found");
     } else {
-      final MarksTree codeGrade = JavaGradeUtils.markSecurely(compiledDir, g::gradeCode);
-      if (w.penalizeWarnings()) {
+      final MarksTree codeGrade = JavaGradeUtils.markSecurely(compiledDir, grader::gradeCode);
+      if (waB.penalizeWarnings()) {
         final Mark weightingMark;
         {
-          final int nbCountedSW =
-              (w == WarningsBehavior.PENALIZE_WARNINGS_AND_SUPPRESS) ? result.nbSuppressWarnings
-                  : 0;
+          final int nbCountedSW = (waB == WarningsBehavior.PENALIZE_WARNINGS_AND_SUPPRESS)
+              ? result.nbSuppressWarnings : 0;
           final String comment;
           {
             final ImmutableSet.Builder<String> commentsBuilder = ImmutableSet.builder();
@@ -166,11 +163,11 @@ public class MavenCodeGrader<X extends Exception> implements PathGrader<X> {
 
   @Override
   public GradeAggregator getAggregator() {
-    if (w.penalizeWarnings()) {
-      return GradeAggregator.min(
-          GradeAggregator.parametric(CODE_CRITERION, WARNING_CRITERION, g.getCodeAggregator()));
+    if (waB.penalizeWarnings()) {
+      return GradeAggregator.min(GradeAggregator.parametric(CODE_CRITERION, WARNING_CRITERION,
+          grader.getCodeAggregator()));
     }
-    return GradeAggregator.min(g.getCodeAggregator());
+    return GradeAggregator.min(grader.getCodeAggregator());
   }
 
   public static ImmutableSet<Path> possibleDirs(Path projectPath) throws IOException {

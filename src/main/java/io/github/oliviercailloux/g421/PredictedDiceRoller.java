@@ -20,20 +20,20 @@ public class PredictedDiceRoller implements DiceRoller {
 
   @Override
   public int first() throws IllegalStateException {
-    return iTh(0);
+    return ith(0);
   }
 
   @Override
   public int second() throws IllegalStateException {
-    return iTh(1);
+    return ith(1);
   }
 
   @Override
   public int third() throws IllegalStateException {
-    return iTh(2);
+    return ith(2);
   }
 
-  private int iTh(int i) {
+  private int ith(int i) {
     return rolls.get(current).get(i);
   }
 }
