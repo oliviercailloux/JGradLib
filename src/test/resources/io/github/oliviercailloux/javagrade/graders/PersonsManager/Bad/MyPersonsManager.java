@@ -1,4 +1,4 @@
-package io.github.oliviercailloux.persons_manager;
+package io.github.oliviercailloux.personsmanager;
 
 import com.google.common.collect.ImmutableList;
 import java.io.IOException;

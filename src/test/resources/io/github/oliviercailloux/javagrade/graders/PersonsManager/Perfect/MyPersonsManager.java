@@ -1,4 +1,4 @@
-package io.github.oliviercailloux.persons_manager;
+package io.github.oliviercailloux.personsmanager;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;

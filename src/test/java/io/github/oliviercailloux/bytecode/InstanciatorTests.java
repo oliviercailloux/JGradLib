@@ -204,6 +204,7 @@ public class InstanciatorTests {
   }
 
   @Test
+  @Disabled("We’re giving up on sandboxing anyway.")
   void testInvokeNoSuch() throws Exception {
     URLClassLoader loader = RestrictingClassLoader
         .noPermissions(Path.of("src/main/java/").toUri().toURL(), getClass().getClassLoader());

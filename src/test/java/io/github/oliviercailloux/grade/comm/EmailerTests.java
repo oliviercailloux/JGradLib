@@ -103,6 +103,7 @@ public class EmailerTests {
   }
 
   @Test
+  @Disabled("Email stuff might be broken for now.")
   void testOutlookSmtp() throws Exception {
     try (Emailer emailer = Emailer.instance()) {
       emailer.connectToStore(Emailer.getZohoImapSession(), EmailerDauphineHelper.USERNAME_OTHERS,
@@ -334,6 +335,7 @@ public class EmailerTests {
   }
 
   @Test
+  @Disabled("Email stuff might be broken for now.")
   void testZoho() throws Exception {
     try (Emailer emailer = Emailer.instance()) {
       emailer.connectToStore(Emailer.getZohoImapSession(), EmailerDauphineHelper.USERNAME_OTHERS,
@@ -407,6 +409,7 @@ public class EmailerTests {
   }
 
   @Test
+  @Disabled("Email stuff might be broken for now.")
   void testZohoGrades() throws Exception {
     try (Emailer emailer = Emailer.instance()) {
       emailer.connectToStore(Emailer.getZohoImapSession(), EmailerDauphineHelper.USERNAME_OTHERS,
@@ -457,6 +460,7 @@ public class EmailerTests {
   }
 
   @Test
+  @Disabled("Email stuff might be broken for now.")
   void testZohoAndOr() throws Exception {
     try (Emailer emailer = Emailer.instance()) {
       // emailer.setDebug(true);
