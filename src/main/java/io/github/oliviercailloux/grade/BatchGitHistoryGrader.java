@@ -15,6 +15,7 @@ import io.github.oliviercailloux.grade.format.CsvGrades;
 import io.github.oliviercailloux.grade.format.HtmlGrades;
 import io.github.oliviercailloux.grade.format.json.JsonSimpleGrade;
 import io.github.oliviercailloux.jaris.collections.CollectionUtils;
+import io.github.oliviercailloux.jaris.throwing.TFunction;
 import io.github.oliviercailloux.jaris.throwing.TOptional;
 import io.github.oliviercailloux.jaris.throwing.TSupplier;
 import io.github.oliviercailloux.xml.XmlUtils;
@@ -28,6 +29,7 @@ import java.time.ZonedDateTime;
 import java.util.LinkedHashMap;
 import java.util.NoSuchElementException;
 import java.util.Optional;
+import java.util.function.Function;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -88,19 +90,51 @@ public class BatchGitHistoryGrader<X extends Exception> {
 
   private final TSupplier<GitFileSystemWithHistoryFetcher, X> fetcherFactory;
 
+  private Function<GitHubUsername, ImmutableMap<String, String>> effectiveIdentityFunction;
+
   private BatchGitHistoryGrader(TSupplier<GitFileSystemWithHistoryFetcher, X> fetcherFactory) {
     this.fetcherFactory = checkNotNull(fetcherFactory);
+    effectiveIdentityFunction = null;
+  }
+
+  public void setIdentityFunction(
+      Function<GitHubUsername, ImmutableMap<String, String>> identityFunction) {
+    this.effectiveIdentityFunction = identityFunction;
+  }
+  
+  private void initTrsf() throws IOException {
+    if (effectiveIdentityFunction != null) {
+      return;
+    }
+
+    LOGGER.debug("Reading usernames.");
+    final JsonStudents studentsReader =
+        JsonStudents.from(Files.readString(Path.of("usernames.json")));
+    final ImmutableBiMap<GitHubUsername, StudentOnGitHub> students =
+        studentsReader.getStudentsByGitHubUsername();
+
+    Function<? super GitHubUsername, StudentOnGitHub> keyTransformer =
+        u -> Optional.ofNullable(students.get(u)).orElseThrow(
+            () -> new NoSuchElementException(u.getUsername() + " among " + students.keySet()));
+    Function<StudentOnGitHub, ImmutableMap<String, String>> identityFunction =
+        CsvGrades.STUDENT_IDENTITY_FUNCTION;
+    effectiveIdentityFunction = u -> {
+      final StudentOnGitHub student = keyTransformer.apply(u);
+      return identityFunction.apply(student);
+    };
   }
 
   public <Y extends Exception> Exam getGrades(GitFsGrader<Y> grader, double userGradeWeight)
       throws X, Y, IOException {
+    initTrsf();
     return getGrades(MAX_DEADLINE, Duration.ofMinutes(0), grader, userGradeWeight,
         TOptional.empty(), "");
   }
 
   public <Y extends Exception> Exam getGrades(ZonedDateTime deadline, Duration durationForZero,
       GitFsGrader<Y> grader, double userGradeWeight) throws X, Y, IOException {
-    return getGrades(deadline, durationForZero, grader, userGradeWeight, TOptional.empty(), "");
+        initTrsf();
+        return getGrades(deadline, durationForZero, grader, userGradeWeight, TOptional.empty(), "");
   }
 
   private <Y extends Exception> Exam getGrades(ZonedDateTime deadline, Duration durationForZero,
@@ -173,6 +207,7 @@ public class BatchGitHistoryGrader<X extends Exception> {
   public <Y extends Exception> Exam getAndWriteGrades(GitFsGrader<Y> grader, double userGradeWeight,
       Path outWithoutExtension, String docTitle) throws X, Y, IOException {
     checkArgument(!docTitle.isEmpty());
+    initTrsf();
     return getGrades(BatchGitHistoryGrader.MAX_DEADLINE, Duration.ofMinutes(0), grader,
         userGradeWeight, TOptional.of(outWithoutExtension), docTitle);
   }
@@ -181,6 +216,7 @@ public class BatchGitHistoryGrader<X extends Exception> {
       Duration durationForZero, GitFsGrader<Y> grader, double userGradeWeight,
       Path outWithoutExtension, String docTitle) throws X, Y, IOException {
     checkArgument(!docTitle.isEmpty());
+    initTrsf();
     return getGrades(deadline, durationForZero, grader, userGradeWeight,
         TOptional.of(outWithoutExtension), docTitle);
   }
@@ -188,6 +224,7 @@ public class BatchGitHistoryGrader<X extends Exception> {
   public <Y extends Exception> Exam getAndWriteGrades(Grader<Y> ext, Path outWithoutExtension,
       String docTitle) throws X, Y, IOException {
     checkArgument(!docTitle.isEmpty());
+    initTrsf();
     return getGrades(ext, TOptional.of(outWithoutExtension), docTitle);
   }
 
@@ -195,6 +232,7 @@ public class BatchGitHistoryGrader<X extends Exception> {
       Duration durationForZero, GitFsGrader<Y> grader, double userGradeWeight,
       Path outWithoutExtension, String docTitle) throws X, Y, IOException {
     checkArgument(!docTitle.isEmpty());
+    initTrsf();
     return getGrades(deadline, durationForZero, false, grader, userGradeWeight,
         TOptional.of(outWithoutExtension), docTitle);
   }
@@ -204,18 +242,8 @@ public class BatchGitHistoryGrader<X extends Exception> {
         outWithoutExtension.resolveSibling(outWithoutExtension.getFileName() + ".json"),
         JsonSimpleGrade.toJson(exam));
 
-    LOGGER.debug("Reading usernames.");
-    final JsonStudents studentsReader =
-        JsonStudents.from(Files.readString(Path.of("usernames.json")));
-    final ImmutableBiMap<GitHubUsername, StudentOnGitHub> students =
-        studentsReader.getStudentsByGitHubUsername();
-
-    final ImmutableMap<StudentOnGitHub,
-        MarksTree> trees = CollectionUtils.transformKeys(exam.grades(),
-            u -> Optional.ofNullable(students.get(u)).orElseThrow(
-                () -> new NoSuchElementException(u.getUsername() + " among " + students.keySet())));
-    final String csv = CsvGrades.newInstance(CsvGrades.STUDENT_IDENTITY_FUNCTION, 20)
-        .gradesToCsv(exam.aggregator(), trees);
+    final String csv = CsvGrades.newInstance(effectiveIdentityFunction, 20)
+        .gradesToCsv(exam.aggregator(), exam.grades());
     Files.writeString(
         outWithoutExtension.resolveSibling(outWithoutExtension.getFileName() + ".csv"), csv);
 
