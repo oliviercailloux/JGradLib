@@ -55,7 +55,7 @@ public class Additioner implements CodeGrader<RuntimeException> {
       LocalDateTime.parse("2024-04-10T19:00:00").atZone(ZoneId.of("Europe/Paris"));
   public static final double USER_WEIGHT = 0d;
 
-  public static MyAdditioner studentInstance;
+  public static Instanciator staticInstanciator;
 
   public static void main(String[] args) throws Exception {
     final GitFileSystemWithHistoryFetcher fetcher =
@@ -84,12 +84,7 @@ public class Additioner implements CodeGrader<RuntimeException> {
 
   @Override
   public MarksTree gradeCode(Instanciator instanciator) {
-    final TryCatchAll<MyAdditioner> my = instanciator.tryGetInstance(MyAdditioner.class);
-    // return grade(my);
-
-    MyAdditioner theAdd =
-        my.orThrow(e -> new RuntimeException("Could not instanciate MyAdditioner.", e));
-    studentInstance = theAdd;
+    Additioner.staticInstanciator = instanciator;
 
     String name = AdditionerTests.class.getCanonicalName();
     LOGGER.info("Discovering tests in {}.", name);
