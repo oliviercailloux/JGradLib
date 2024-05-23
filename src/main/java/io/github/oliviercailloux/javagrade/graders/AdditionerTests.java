@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.common.base.VerifyException;
 import io.github.oliviercailloux.exercices.additioner.MyAdditioner;
+import io.github.oliviercailloux.javagrade.JUnitHelper;
 import io.github.oliviercailloux.javagrade.bytecode.Instanciator;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeAll;
@@ -17,7 +18,7 @@ public class AdditionerTests {
 
   @BeforeAll
   public static void setUp() {
-    i = Additioner.staticInstanciator;
+    i = JUnitHelper.staticInstanciator;
   }
 
   @BeforeEach
