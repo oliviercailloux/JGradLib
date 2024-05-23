@@ -82,10 +82,8 @@ public class Additioner implements CodeGrader<RuntimeException> {
 
   @Override
   public MarksTree gradeCode(Instanciator instanciator) {
-    JUnitHelper.staticInstanciator = instanciator;
-
     String packageName = Additioner.class.getPackageName();
-    return JUnitHelper.grade(packageName);
+    return JUnitHelper.grade(packageName, instanciator);
   }
 
   @Override

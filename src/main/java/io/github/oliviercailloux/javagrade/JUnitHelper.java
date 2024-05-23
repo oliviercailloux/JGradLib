@@ -34,8 +34,10 @@ public class JUnitHelper {
 
   public static Instanciator staticInstanciator;
 
-  public static MarksTree grade(String packageName) {
-    LOGGER.info("Discovering tests in {}.", packageName);
+  public static MarksTree grade(String packageName, Instanciator instanciator) {
+    JUnitHelper.staticInstanciator = instanciator;
+
+    LOGGER.debug("Discovering tests in {}.", packageName);
     LauncherDiscoveryRequest request = LauncherDiscoveryRequestBuilder.request()
         .selectors(DiscoverySelectors.selectPackage(packageName)).build();
     SummaryGeneratingListener listener = new SummaryGeneratingListener();
@@ -53,11 +55,11 @@ public class JUnitHelper {
       verify(children.size() == 1);
       TestIdentifier child = Iterables.getOnlyElement(children);
       verify(child.isContainer(), child.getDisplayName());
-      launcher.execute(testPlan);
       Set<TestIdentifier> childChildren = testPlan.getChildren(child.getUniqueIdObject());
       verify(!childChildren.isEmpty());
       ImmutableSet<String> testNames = childChildren.stream().map(TestIdentifier::getDisplayName).collect(ImmutableSet.toImmutableSet());
-
+      
+      launcher.execute(testPlan);
       TestExecutionSummary summary = listener.getSummary();
       verify(summary.getTestsFoundCount() == 2);
       verify(summary.getTestsStartedCount() == 2);
