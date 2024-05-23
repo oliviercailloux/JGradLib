@@ -3,7 +3,9 @@ package io.github.oliviercailloux.javagrade.graders;
 import static com.google.common.base.Verify.verify;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Sets;
 import io.github.oliviercailloux.exercices.additioner.MyAdditioner;
 import io.github.oliviercailloux.git.github.model.GitHubUsername;
 import io.github.oliviercailloux.git.github.model.RepositoryCoordinates;
@@ -31,6 +33,8 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Set;
 import org.junit.platform.engine.discovery.ClassNameFilter;
 import org.junit.platform.engine.discovery.DiscoverySelectors;
@@ -43,6 +47,7 @@ import org.junit.platform.launcher.core.LauncherDiscoveryRequestBuilder;
 import org.junit.platform.launcher.core.LauncherFactory;
 import org.junit.platform.launcher.listeners.SummaryGeneratingListener;
 import org.junit.platform.launcher.listeners.TestExecutionSummary;
+import org.junit.platform.launcher.listeners.TestExecutionSummary.Failure;
 import org.junit.platform.launcher.listeners.discovery.LauncherDiscoveryListeners;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -79,8 +84,8 @@ public class Additioner implements CodeGrader<RuntimeException> {
     LOGGER.info("Done original, closed.");
   }
 
-  private static final Criterion ADD = Criterion.given("Three plus two");
-  private static final Criterion ADD_NEG = Criterion.given("Minus four plus two");
+  private static final Criterion ADD = Criterion.given("pos");
+  private static final Criterion ADD_NEG = Criterion.given("neg");
 
   @Override
   public MarksTree gradeCode(Instanciator instanciator) {
@@ -89,9 +94,7 @@ public class Additioner implements CodeGrader<RuntimeException> {
     String name = AdditionerTests.class.getCanonicalName();
     LOGGER.info("Discovering tests in {}.", name);
     LauncherDiscoveryRequest request = LauncherDiscoveryRequestBuilder.request()
-        // .selectors(DiscoverySelectors.selectPackage(Additioner.class.getPackageName())).build();
-        .selectors(DiscoverySelectors.selectClass(AdditionerTests.class)).build();
-    // LauncherDiscoveryRequest request = LauncherDiscoveryRequestBuilder.request().build();
+        .selectors(DiscoverySelectors.selectPackage(Additioner.class.getPackageName())).build();
     SummaryGeneratingListener listener = new SummaryGeneratingListener();
     try (LauncherSession session = LauncherFactory.openSession()) {
       Launcher launcher = session.getLauncher();
@@ -110,25 +113,35 @@ public class Additioner implements CodeGrader<RuntimeException> {
       LOGGER.info("Child: {}.", child.getDisplayName());
       verify(child.isContainer());
       launcher.execute(testPlan);
+      Set<TestIdentifier> childChildren = testPlan.getChildren(child.getUniqueIdObject());
+      verify(!childChildren.isEmpty());
+      verify(childChildren.size() == 2);
+      ImmutableSet<String> testNames = childChildren.stream().map(TestIdentifier::getDisplayName).collect(ImmutableSet.toImmutableSet());
+      verify(testNames.equals(ImmutableSet.of(ADD.getName() + "()", ADD_NEG.getName() + "()")), testNames.toString());
+
       TestExecutionSummary summary = listener.getSummary();
-      StringWriter w = new StringWriter();
-      summary.printFailuresTo(new PrintWriter(w));
-      LOGGER.info("Tested: {}", w.toString());
-      
-      return Mark.given(1d - summary.getTotalFailureCount(), summary.getFailures().toString());
+      verify(summary.getTestsFoundCount() == 2);
+      verify(summary.getTestsStartedCount() == 2);
+      verify(summary.getTestsSkippedCount() == 0);
+      long ko = summary.getTestsAbortedCount() + summary.getTestsFailedCount();
+      verify(ko + summary.getTestsSucceededCount() == 2);
+      List<Failure> failures = summary.getFailures();
+      ImmutableSet<String> failedTests = failures.stream().map(f -> f.getTestIdentifier().getDisplayName()).collect(ImmutableSet.toImmutableSet());
+      ImmutableSet<String> succeededTests = Sets.difference(testNames, failedTests).immutableCopy();
+      verify(failures.size() == ko);
+      final ImmutableMap.Builder<Criterion, MarksTree> builder = ImmutableMap.builder();
+      for (Failure f : failures) {
+        builder.put(criterion(f.getTestIdentifier().getDisplayName()), Mark.zero(f.getException().getMessage()));
+      }
+      succeededTests.stream().forEach(t -> builder.put(criterion(t), Mark.one()));
+      return MarksTree.composite(builder.build());
     }
   }
 
-  private MarksTree grade(TryCatchAll<MyAdditioner> my) {
-    final ImmutableMap.Builder<Criterion, MarksTree> builder = ImmutableMap.builder();
-    final TryCatchAll<Integer> added32 = my.andApply(c -> c.add(3, 2));
-    builder.put(ADD, added32.map(b -> Mark.binary(b == 5, "", "3 + 2 should equal 5"),
-        c -> Mark.zero("Obtained %s".formatted(c))));
-    final TryCatchAll<Integer> addedNeg = my.andApply(c -> c.add(-4, 2));
-    builder.put(ADD_NEG, addedNeg.map(b -> Mark.binary(b == -2, "", "-4 + 2 should equal -2"),
-        c -> Mark.zero("Obtained %s".formatted(c))));
-
-    return MarksTree.composite(builder.build());
+  private static Criterion criterion(String displayName) {
+    String criterionName = displayName.substring(0, displayName.length() - 2);
+    Criterion criterion = Criterion.given(criterionName);
+    return criterion;
   }
 
   @Override
