@@ -197,7 +197,7 @@ class BranchingTests {
 
           // Files.writeString(Path.of("test grades.json"), JsonSimpleGrade.toJson(exam));
           // Files.writeString(Path.of("test grades.html"), XmlUtils.asString(HtmlGrades
-              .asHtml(exam.getGrade(USERNAME), Branching.PREFIX + " " + Instant.now(), 20d)));
+              // .asHtml(exam.getGrade(USERNAME), Branching.PREFIX + " " + Instant.now(), 20d)));
           assertEquals(ImmutableSet.of(USERNAME), exam.getUsernames());
           /* FIXME fails. */
           // assertEquals(0.99d, exam.getGrade(USERNAME).mark().getPoints());
@@ -309,7 +309,6 @@ class BranchingTests {
           final Exam exam = batchGrader.getGrades(BatchGitHistoryGrader.MAX_DEADLINE,
               Duration.ofMinutes(0), new Branching(), Branching.USER_WEIGHT);
 
-              .asHtml(exam.getGrade(USERNAME), Branching.PREFIX + " " + Instant.now(), 20d)));
           assertEquals(ImmutableSet.of(USERNAME), exam.getUsernames());
           assertEquals(1d, exam.getGrade(USERNAME).mark().getPoints(), 1e-6d);
         }
