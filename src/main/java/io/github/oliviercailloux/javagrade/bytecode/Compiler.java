@@ -19,7 +19,11 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.io.UncheckedIOException;
+import java.net.URI;
 import java.net.URL;
+import java.nio.file.FileSystem;
+import java.nio.file.FileSystemNotFoundException;
+import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Collection;
@@ -126,7 +130,8 @@ public class Compiler {
        * getLocationAsPaths(Location location). See CompilerTests#testBugJdk(). I got an email on
        * the 10th of March, 2021, stating that the incident is fixed in https://jdk.java.net/16/. I
        * have not checked.
-       * https://github.com/openjdk/jdk/blob/master/src/jdk.compiler/share/classes/com/sun/tools/javac/file/JavacFileManager.java#L744
+       * https://github.com/openjdk/jdk/blob/master/src/jdk.compiler/share/classes/com/sun/tools/
+       * javac/file/JavacFileManager.java#L744
        */
       fileManager.setLocationFromPaths(StandardLocation.ANNOTATION_PROCESSOR_PATH,
           ImmutableList.of());
@@ -166,7 +171,8 @@ public class Compiler {
    *
    * @throws IOException
    *
-   * @see <a href="https://help.eclipse.org/2020-03/index.jsp?topic=%2Forg.eclipse.jdt.doc.user%2Ftasks%2Ftask-using_batch_compiler.htm">Eclipse</a>
+   * @see <a href=
+   *      "https://help.eclipse.org/2020-03/index.jsp?topic=%2Forg.eclipse.jdt.doc.user%2Ftasks%2Ftask-using_batch_compiler.htm">Eclipse</a>
    */
   public static CompilationResult eclipseCompile(List<Path> classPath, Set<Path> targets)
       throws IOException {
@@ -200,10 +206,19 @@ public class Compiler {
       /* Could instead use options such as "-warn:+allDeadCode,allDeprecation…". */
       final URL propertiesUrl = Compiler.class.getResource("Eclipse-prefs.epf");
       checkState(propertiesUrl != null);
-      final Path propertiesPath = Path.of(URI_UNCHECKER.getUsing(() -> propertiesUrl.toURI()));
-      verify(Files.exists(propertiesPath));
-      verify(propertiesPath.getFileSystem().provider().getScheme().equals("file"));
-      builder.add("-properties", propertiesPath.toString());
+      URI propertiesUri = URI_UNCHECKER.getUsing(() -> propertiesUrl.toURI());
+      verify(propertiesUri != null);
+      LOGGER.info("Using properties file: {}.", propertiesUri);
+      try {
+        Path p = Path.of(propertiesUri);
+      } catch (FileSystemNotFoundException ex) {
+        try (FileSystem fs = FileSystems.newFileSystem(propertiesUri, ImmutableMap.of())) {
+          Path propertiesPath = fs.provider().getPath(propertiesUri);
+          verify(Files.exists(propertiesPath));
+          verify(propertiesPath.getFileSystem().provider().getScheme().equals("file"));
+          builder.add("-properties", propertiesPath.toString());
+        }
+      }
     }
     checkArgument(
         classPath.stream().allMatch(p -> p.getFileSystem().provider().getScheme().equals("file")));
