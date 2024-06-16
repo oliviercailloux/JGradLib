@@ -74,7 +74,7 @@ public class Eclipse implements GitGrader {
     this.history = work.getHistory();
     if (excludeMine) {
       authoredHistory = history.filteredCommits(c -> !c.authorName().equals("Olivier Cailloux")
-          && !c.authorName().equals("xoxor") && !c.authorName().equals("Beatrice Napolitano"));
+          && !c.authorName().equals("githublogin") && !c.authorName().equals("Author"));
     } else {
       authoredHistory = history;
     }

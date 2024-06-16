@@ -86,8 +86,7 @@ public class Colors implements CodeGrader<RuntimeException> {
 
   public static void second() throws IOException {
     final GitFileSystemWithHistoryFetcher fetcher = GitFileSystemWithHistoryFetcherByPrefix
-        .getRetrievingByPrefixAndFiltering(PREFIX, "Arvindesss");
-    // .getRetrievingByPrefix(PREFIX);
+    .getRetrievingByPrefix(PREFIX);
 
     final BatchGitHistoryGrader<RuntimeException> batchGrader =
         BatchGitHistoryGrader.given(() -> fetcher);

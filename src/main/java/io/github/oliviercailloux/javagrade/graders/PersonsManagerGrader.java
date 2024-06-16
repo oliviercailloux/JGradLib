@@ -90,7 +90,7 @@ public class PersonsManagerGrader {
   public static void main(String[] args) throws Exception {
     /* Nb should give 0.5/20 pts for user.grade. */
     final RepositoryFetcher fetcher = RepositoryFetcher.withPrefix(PREFIX)
-        .setRepositoriesFilter(r -> r.getUsername().equals("Yasmine-hamnache"));
+        .setRepositoriesFilter(r -> r.getUsername().equals("Student"));
     final GitGeneralGrader grader =
         GitGeneralGrader
             .using(fetcher,

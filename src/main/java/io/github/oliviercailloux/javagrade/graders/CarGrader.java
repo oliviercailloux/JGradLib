@@ -56,8 +56,7 @@ public class CarGrader implements CodeGrader<RuntimeException> {
 
   public static void original() throws IOException {
     final GitFileSystemWithHistoryFetcher fetcher = GitFileSystemWithHistoryFetcherByPrefix
-        .getRetrievingByPrefixAndFiltering(PREFIX, "COLLARDEAU2000");
-    // .getRetrievingByPrefix(PREFIX);
+    .getRetrievingByPrefix(PREFIX);
     final BatchGitHistoryGrader<RuntimeException> batchGrader =
         BatchGitHistoryGrader.given(() -> fetcher);
 
