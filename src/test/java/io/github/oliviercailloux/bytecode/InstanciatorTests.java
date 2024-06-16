@@ -18,6 +18,7 @@ import io.github.classgraph.MethodInfoList;
 import io.github.classgraph.ScanResult;
 import io.github.oliviercailloux.exercices.car.Person;
 import io.github.oliviercailloux.jaris.exceptions.TryCatchAll;
+import io.github.oliviercailloux.jaris.throwing.TFunction;
 import io.github.oliviercailloux.javagrade.bytecode.Compiler;
 import io.github.oliviercailloux.javagrade.bytecode.Instanciator;
 import io.github.oliviercailloux.javagrade.bytecode.RestrictingClassLoader;
@@ -200,7 +201,10 @@ public class InstanciatorTests {
     final TryCatchAll<Optional<String>> obtained = Instanciator
         .invoke(ImmutableList.of("elem", "heh"), String.class, "get", ImmutableList.of(0));
     Function<? super String, Boolean> mapper = s -> s.equals("elem");
-    assertTrue(obtained.map(o -> o.map(mapper).orElse(false), c -> false), "" + obtained);
+    TFunction<? super Optional<String>, ? extends Boolean,
+        ? extends RuntimeException> transformation = o -> o.map(mapper).orElse(false);
+    Boolean mapped = obtained.map(transformation, c -> false);
+    assertTrue(mapped, "" + obtained);
   }
 
   @Test
