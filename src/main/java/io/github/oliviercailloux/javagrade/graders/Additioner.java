@@ -1,11 +1,6 @@
 package io.github.oliviercailloux.javagrade.graders;
 
-import static com.google.common.base.Verify.verify;
-
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Sets;
 import io.github.oliviercailloux.git.github.model.GitHubUsername;
 import io.github.oliviercailloux.git.github.model.RepositoryCoordinates;
 import io.github.oliviercailloux.git.github.model.RepositoryCoordinatesWithPrefix;
@@ -16,7 +11,6 @@ import io.github.oliviercailloux.grade.GitFileSystemWithHistoryFetcher;
 import io.github.oliviercailloux.grade.GitFileSystemWithHistoryFetcherFromMap;
 import io.github.oliviercailloux.grade.GitFsGraderUsingLast;
 import io.github.oliviercailloux.grade.GradeAggregator;
-import io.github.oliviercailloux.grade.Mark;
 import io.github.oliviercailloux.grade.MarksTree;
 import io.github.oliviercailloux.grade.MavenCodeGrader;
 import io.github.oliviercailloux.grade.MavenCodeGrader.WarningsBehavior;
@@ -30,20 +24,6 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
-import java.util.List;
-import java.util.Set;
-import org.junit.platform.engine.discovery.DiscoverySelectors;
-import org.junit.platform.launcher.Launcher;
-import org.junit.platform.launcher.LauncherDiscoveryRequest;
-import org.junit.platform.launcher.LauncherSession;
-import org.junit.platform.launcher.TestIdentifier;
-import org.junit.platform.launcher.TestPlan;
-import org.junit.platform.launcher.core.LauncherDiscoveryRequestBuilder;
-import org.junit.platform.launcher.core.LauncherFactory;
-import org.junit.platform.launcher.listeners.SummaryGeneratingListener;
-import org.junit.platform.launcher.listeners.TestExecutionSummary;
-import org.junit.platform.launcher.listeners.TestExecutionSummary.Failure;
-import org.junit.platform.launcher.listeners.discovery.LauncherDiscoveryListeners;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

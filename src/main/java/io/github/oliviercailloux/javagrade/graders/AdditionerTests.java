@@ -35,6 +35,6 @@ public class AdditionerTests {
 
   @Test
   public void neg() {
-    assertEquals(-2, a.add(-4, 2));
+    assertEquals(-2, a.add(-4, 2), "Trying to add -4 and 2.");
   }
 }
