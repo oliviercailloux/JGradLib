@@ -8,7 +8,8 @@
 		<artifactId>pom</artifactId>
 		<version>0.0.21</version>
 	</parent>
-	<artifactId>st-projects</artifactId>
+	<artifactId>jgradlib</artifactId>
+  <name>JGradLib</name>
 	<version>0.0.1-SNAPSHOT</version>
 	<properties>
 		<maven.compiler.showWarnings>true</maven.compiler.showWarnings>
