@@ -99,9 +99,8 @@ class FakeTests {
           final Exam exam = batchGrader.getGrades(BatchGitHistoryGrader.MAX_DEADLINE,
               Duration.ofMinutes(0), new Fake(), 0.1d);
 
-          Files.writeString(Path.of("test grades.json"), JsonSimpleGrade.toJson(exam));
-          Files.writeString(Path.of("test grades.html"), XmlUtils
-              .asString(HtmlGrades.asHtml(exam.getGrade(USERNAME), "fake " + Instant.now(), 20d)));
+          // Files.writeString(Path.of("test grades.html"), XmlUtils
+          //     .asString(HtmlGrades.asHtml(exam.getGrade(USERNAME), "fake " + Instant.now(), 20d)));
           assertEquals(ImmutableSet.of(USERNAME), exam.getUsernames());
           assertEquals(1d, exam.getGrade(USERNAME).mark().getPoints());
         }

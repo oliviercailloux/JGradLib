@@ -85,7 +85,7 @@ public class BatchGitHistoryGraderTests {
       // "testprefix");
       final Exam exam = batchGrader.getGrades(nowTime.plus(30, ChronoUnit.MINUTES),
           Duration.of(1, ChronoUnit.HOURS), new MyGrader(), USER_GRADE_WEIGHT);
-      Files.writeString(Path.of("exam.json"), JsonSimpleGrade.toJson(exam));
+      // Files.writeString(Path.of("exam.json"), JsonSimpleGrade.toJson(exam));
 
       assertEquals(gitFses.keySet(), exam.getUsernames());
       assertEquals(0d, exam.getGrade(userEmpty).mark().getPoints());

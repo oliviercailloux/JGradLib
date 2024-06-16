@@ -33,7 +33,6 @@ class CsvGradesTests {
     final CsvGrades<GitHubUsername> csvGrades =
         CsvGrades.newInstance(CsvGrades.STUDENT_USERNAME_FUNCTION, 20d);
     final String written = csvGrades.gradesToCsv(exam.aggregator(), exam.grades());
-    Files.writeString(Path.of("out.csv"), written);
     final String expected =
         Resources.toString(getClass().getResource("TwoStudentsGrades.csv"), StandardCharsets.UTF_8);
     assertEquals(expected, written);
