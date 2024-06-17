@@ -11,8 +11,12 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
+import com.google.common.collect.MoreCollectors;
 import com.google.common.io.MoreFiles;
+import com.google.common.io.Resources;
 import io.github.classgraph.ClassGraph;
+import io.github.classgraph.Resource;
+import io.github.classgraph.ScanResult;
 import io.github.oliviercailloux.jaris.exceptions.CheckedStream;
 import java.io.File;
 import java.io.IOException;
@@ -206,19 +210,32 @@ public class Compiler {
       /* Could instead use options such as "-warn:+allDeadCode,allDeprecation…". */
       final URL propertiesUrl = Compiler.class.getResource("Eclipse-prefs.epf");
       checkState(propertiesUrl != null);
-      URI propertiesUri = URI_UNCHECKER.getUsing(() -> propertiesUrl.toURI());
+      Resources.asByteSource(propertiesUrl);
+      // URI propertiesUri = URI_UNCHECKER.getUsing(() -> propertiesUrl.toURI());
+      ScanResult scan = new ClassGraph().scan();
+      LOGGER.info("Scan: {}.", scan.getAllResources().size());
+      ImmutableSet<Resource> filtered = scan.getAllResources().stream()
+          .filter(r -> r.toString().contains("bytecode") && r.toString().contains(".epf"))
+          .collect(ImmutableSet.toImmutableSet());
+      Resource found = filtered.stream().collect(MoreCollectors.onlyElement());
+      URI propertiesUri = found.getURI();
+      LOGGER.info("Found: {}.", propertiesUri);
       verify(propertiesUri != null);
       LOGGER.info("Using properties file: {}.", propertiesUri);
-      try {
-        Path p = Path.of(propertiesUri);
-      } catch (FileSystemNotFoundException ex) {
-        try (FileSystem fs = FileSystems.newFileSystem(propertiesUri, ImmutableMap.of())) {
-          Path propertiesPath = fs.provider().getPath(propertiesUri);
-          verify(Files.exists(propertiesPath));
-          verify(propertiesPath.getFileSystem().provider().getScheme().equals("file"));
-          builder.add("-properties", propertiesPath.toString());
-        }
-      }
+      // try {
+      // Path p = Path.of(propertiesUri);
+      // } catch (FileSystemNotFoundException ex) {
+      // try (FileSystem fs = FileSystems.newFileSystem(propertiesUri, ImmutableMap.of())) {
+      // Path propertiesPath = fs.provider().getPath(propertiesUri);
+      // verify(Files.exists(propertiesPath));
+      // verify(propertiesPath.getFileSystem().provider().getScheme().equals("file"));
+      // builder.add("-properties", propertiesPath.toString());
+      // }
+      // }
+      Path propertiesPath = Path.of(propertiesUri);
+      verify(Files.exists(propertiesPath));
+      verify(propertiesPath.getFileSystem().provider().getScheme().equals("file"));
+      builder.add("-properties", propertiesPath.toString());
     }
     checkArgument(
         classPath.stream().allMatch(p -> p.getFileSystem().provider().getScheme().equals("file")));
