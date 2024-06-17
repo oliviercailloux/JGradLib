@@ -15,6 +15,22 @@
 		<maven.compiler.showWarnings>true</maven.compiler.showWarnings>
 		<checkstyle.skip>true</checkstyle.skip>
 	</properties>
+	<profiles>
+		<profile>
+			<id>release</id>
+			<build>
+				<plugins>
+					<plugin>
+						<artifactId>maven-javadoc-plugin</artifactId>
+						<configuration>
+							<failOnWarnings>false</failOnWarnings>
+							<failOnError>false</failOnError>
+						</configuration>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+	</profiles>
 	<repositories>
 		<repository>
 			<id>jakarta</id>
