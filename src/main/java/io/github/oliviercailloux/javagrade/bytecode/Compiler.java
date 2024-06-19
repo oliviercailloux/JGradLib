@@ -12,12 +12,14 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import com.google.common.collect.MoreCollectors;
+import com.google.common.io.ByteSource;
 import com.google.common.io.MoreFiles;
 import com.google.common.io.Resources;
 import io.github.classgraph.ClassGraph;
 import io.github.classgraph.Resource;
 import io.github.classgraph.ScanResult;
 import io.github.oliviercailloux.jaris.exceptions.CheckedStream;
+import io.github.oliviercailloux.utils.Utils;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -211,17 +213,22 @@ public class Compiler {
       final URL propertiesUrl = Compiler.class.getResource("Eclipse-prefs.epf");
       checkState(propertiesUrl != null);
       Resources.asByteSource(propertiesUrl);
-      // URI propertiesUri = URI_UNCHECKER.getUsing(() -> propertiesUrl.toURI());
-      ScanResult scan = new ClassGraph().scan();
-      LOGGER.info("Scan: {}.", scan.getAllResources().size());
-      ImmutableSet<Resource> filtered = scan.getAllResources().stream()
-          .filter(r -> r.toString().contains("bytecode") && r.toString().contains(".epf"))
-          .collect(ImmutableSet.toImmutableSet());
-      Resource found = filtered.stream().collect(MoreCollectors.onlyElement());
-      URI propertiesUri = found.getURI();
+      URI propertiesUri = URI_UNCHECKER.getUsing(() -> propertiesUrl.toURI());
+      // ScanResult scan = new ClassGraph().scan();
+      // LOGGER.info("Scan: {}.", scan.getAllResources().size());
+      // ImmutableSet<Resource> filtered = scan.getAllResources().stream()
+      //     .filter(r -> r.toString().contains("bytecode") && r.toString().contains(".epf"))
+      //     .collect(ImmutableSet.toImmutableSet());
+      // Resource found = filtered.stream().collect(MoreCollectors.onlyElement());
+      // URI propertiesUri = found.getURI();
       LOGGER.info("Found: {}.", propertiesUri);
       verify(propertiesUri != null);
       LOGGER.info("Using properties file: {}.", propertiesUri);
+      ByteSource propertiesByteSource = Resources.asByteSource(propertiesUrl);
+      /* Need to copy in order to extract content possibly embedded within this jar. */
+      Path propertiesPath = Utils.getTempUniqueDirectory("props");
+      propertiesByteSource.copyTo(MoreFiles.asByteSink(propertiesPath));
+
       // try {
       // Path p = Path.of(propertiesUri);
       // } catch (FileSystemNotFoundException ex) {
@@ -232,7 +239,8 @@ public class Compiler {
       // builder.add("-properties", propertiesPath.toString());
       // }
       // }
-      Path propertiesPath = Path.of(propertiesUri);
+
+      // Path propertiesPath = Path.of(propertiesUri);
       verify(Files.exists(propertiesPath));
       verify(propertiesPath.getFileSystem().provider().getScheme().equals("file"));
       builder.add("-properties", propertiesPath.toString());
