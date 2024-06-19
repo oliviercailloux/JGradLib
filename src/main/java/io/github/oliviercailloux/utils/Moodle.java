@@ -26,6 +26,10 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 
 public class Moodle {
+  private static final String MOODLE_SERVER =
+      // "https://moodle-qualif.psl.eu/webservice/rest/server.php";
+      "https://moodle-test.psl.eu/webservice/rest/server.php";
+
   private static final int COURSE_ID = 24705;
 
   @SuppressWarnings("unused")
@@ -36,8 +40,34 @@ public class Moodle {
   public static void main(String[] args) {
     // int courseId = new Moodle().courseId("23_CIP_test_autograder");
     // checkState(courseId == COURSE_ID);
-    ImmutableSet<Integer> assignmentIds = new Moodle().assignmentIds(COURSE_ID);
-    LOGGER.info("Assignments: {}.", assignmentIds);
+    // ImmutableSet<Integer> assignmentIds = new Moodle().assignmentIds(COURSE_ID);
+    // LOGGER.info("Assignments: {}.", assignmentIds);
+    ImmutableSet<JsonObject> grades = new Moodle().grades(9476);
+    LOGGER.info("Course ID: {}.", grades);
+  }
+
+  public ImmutableSet<JsonObject> grades(int assignmentId) {
+    String grades = queryGrades(assignmentId, "json");
+    try {
+      Files.writeString(Path.of("answer.json"), grades);
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+    JsonObject json;
+    try (JsonReader jr = Json.createReader(new StringReader(grades))) {
+      json = jr.readObject();
+    }
+    checkState(json.containsKey("warnings"));
+    JsonArray warnings = json.getJsonArray("warnings");
+    checkState(warnings.isEmpty(), warnings);
+    checkState(json.containsKey("assignments"));
+    JsonArray assignments = json.getJsonArray("assignments");
+    checkState(assignments.size() == 1);
+    JsonObject assignment = (JsonObject) Iterables.getOnlyElement(assignments);
+    checkState(assignment.containsKey("assignmentid"), assignment);
+    checkState(assignment.getInt("assignmentid") == assignmentId);
+    JsonArray gradesArray = assignment.getJsonArray("grades");
+    return gradesArray.stream().map(g -> (JsonObject) g).collect(ImmutableSet.toImmutableSet());
   }
 
   public ImmutableSet<Integer> assignmentIds(int courseId) {
@@ -61,7 +91,7 @@ public class Moodle {
     checkState(course.containsKey("id"));
     checkState(course.getInt("id") == courseId);
     JsonArray assignmentsArray = course.getJsonArray("assignments");
-    
+
     final ImmutableSet.Builder<Integer> idsBuilder = new ImmutableSet.Builder<>();
     for (JsonValue jsonValue : assignmentsArray) {
       JsonObject assignment = (JsonObject) jsonValue;
@@ -120,10 +150,7 @@ public class Moodle {
   }
 
   private String query(String shortname, String format) {
-    // UriBuilder uriBuilder =
-    // UriBuilder.fromPath("https://moodle-qualif.psl.eu/webservice/rest/server.php");
-    UriBuilder uriBuilder =
-        UriBuilder.fromPath("https://moodle-test.psl.eu/webservice/rest/server.php");
+    UriBuilder uriBuilder = UriBuilder.fromPath(MOODLE_SERVER);
     uriBuilder.queryParam("moodlewsrestformat", format);
     String apiKey = CredentialsReader.keyReader().getCredentials().API_KEY();
     uriBuilder.queryParam("wstoken", apiKey);
@@ -135,15 +162,25 @@ public class Moodle {
   }
 
   private String queryAssignments(int courseId, String format) {
-    UriBuilder uriBuilder =
-        UriBuilder.fromPath("https://moodle-test.psl.eu/webservice/rest/server.php");
+    UriBuilder uriBuilder = UriBuilder.fromPath(MOODLE_SERVER);
     uriBuilder.queryParam("moodlewsrestformat", format);
     String apiKey = CredentialsReader.keyReader().getCredentials().API_KEY();
     uriBuilder.queryParam("wstoken", apiKey);
     uriBuilder.queryParam("wsfunction", "mod_assign_get_assignments");
     uriBuilder.queryParam("courseids[0]", courseId);
-    String courses = client.target(uriBuilder).request().get(String.class);
-    return courses;
+    String reply = client.target(uriBuilder).request().get(String.class);
+    return reply;
+  }
+
+  private String queryGrades(int assignmentId, String format) {
+    UriBuilder uriBuilder = UriBuilder.fromPath(MOODLE_SERVER);
+    uriBuilder.queryParam("moodlewsrestformat", format);
+    String apiKey = CredentialsReader.keyReader().getCredentials().API_KEY();
+    uriBuilder.queryParam("wstoken", apiKey);
+    uriBuilder.queryParam("wsfunction", "mod_assign_get_grades");
+    uriBuilder.queryParam("assignmentids[0]", 9476);
+    String reply = client.target(uriBuilder).request().get(String.class);
+    return reply;
   }
 
   private void processWarnings(Element warningsEl) {
