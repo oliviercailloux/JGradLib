@@ -178,7 +178,7 @@ public class Moodle {
     String apiKey = CredentialsReader.keyReader().getCredentials().API_KEY();
     uriBuilder.queryParam("wstoken", apiKey);
     uriBuilder.queryParam("wsfunction", "mod_assign_get_grades");
-    uriBuilder.queryParam("assignmentids[0]", 9476);
+    uriBuilder.queryParam("assignmentids[0]", assignmentId);
     String reply = client.target(uriBuilder).request().get(String.class);
     return reply;
   }
