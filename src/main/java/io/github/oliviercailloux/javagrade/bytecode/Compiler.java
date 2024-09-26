@@ -302,29 +302,33 @@ public class Compiler {
   }
 
   public static class CompilationResultExt {
-    public static CompilationResultExt given(boolean compiled, String out, String err, int s) {
-      return new CompilationResultExt(compiled, out, err, s);
+    public static CompilationResultExt given(boolean compiled, String out, String err, int s, Path compiledDir, Set<Path> javaPaths) {
+      return new CompilationResultExt(compiled, out, err, s, compiledDir, javaPaths);
     }
 
-    public static CompilationResultExt compiled(String out, int s) {
-      return new CompilationResultExt(true, out, "", s);
+    public static CompilationResultExt compiled(String out, int s, Path compiledDir, Set<Path> javaPaths) {
+      return new CompilationResultExt(true, out, "", s, compiledDir, javaPaths);
     }
 
-    public static CompilationResultExt failed(String out, String err, int s) {
-      return new CompilationResultExt(false, out, err, s);
+    public static CompilationResultExt failed(String out, String err, int s, Path compiledDir, Set<Path> javaPaths) {
+      return new CompilationResultExt(false, out, err, s, compiledDir, javaPaths);
     }
 
     public boolean compiled;
     public String out;
     public String err;
     public int nbSuppressWarnings;
+    public Path compiledDir;
+    public final ImmutableSet<Path> javaPaths;
 
-    private CompilationResultExt(boolean compiled, String out, String err, int s) {
+    private CompilationResultExt(boolean compiled, String out, String err, int s, Path compiledDir, Set<Path> javaPaths) {
       this.compiled = compiled;
       this.out = out;
       this.err = err;
       this.nbSuppressWarnings = s;
       checkArgument(compiled == (countErrors() == 0), err);
+      this.compiledDir = compiledDir;
+      this.javaPaths = ImmutableSet.copyOf(javaPaths);
     }
 
     public int countWarnings() {

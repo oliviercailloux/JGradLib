@@ -2,6 +2,7 @@ package io.github.oliviercailloux.grade;
 
 import com.google.common.collect.ImmutableSet;
 import io.github.oliviercailloux.grade.IGrade.CriteriaPath;
+import java.io.Serializable;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
@@ -24,7 +25,7 @@ import java.util.Set;
  * graders with no specific aggregation purpose in mind; or using a logical categorization of grades
  * that differs from the aggregating structure.
  */
-public interface MarksTree {
+public interface MarksTree extends Serializable {
 
   public static MarksTree composite(Set<? extends SubMarksTree> subGrades) {
     if (subGrades.isEmpty()) {

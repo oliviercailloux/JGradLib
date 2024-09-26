@@ -19,6 +19,7 @@ import org.slf4j.LoggerFactory;
  * Points are in [−1, 1].
  */
 @JsonbPropertyOrder({"points", "comments"})
+@SuppressWarnings("serial")
 public class Mark implements MarksTree {
   @SuppressWarnings("unused")
   private static final Logger LOGGER = LoggerFactory.getLogger(Mark.class);

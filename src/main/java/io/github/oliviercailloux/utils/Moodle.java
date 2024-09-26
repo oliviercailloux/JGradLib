@@ -14,6 +14,9 @@ import jakarta.json.JsonReader;
 import jakarta.json.JsonValue;
 import jakarta.ws.rs.client.Client;
 import jakarta.ws.rs.client.ClientBuilder;
+import jakarta.ws.rs.core.HttpHeaders;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.UriBuilder;
 import java.io.IOException;
 import java.io.StringReader;
@@ -42,8 +45,32 @@ public class Moodle {
     // checkState(courseId == COURSE_ID);
     // ImmutableSet<Integer> assignmentIds = new Moodle().assignmentIds(COURSE_ID);
     // LOGGER.info("Assignments: {}.", assignmentIds);
-    ImmutableSet<JsonObject> grades = new Moodle().grades(9476);
-    LOGGER.info("Course ID: {}.", grades);
+    Moodle moodle = new Moodle();
+    // ImmutableSet<JsonObject> grades = moodle.grades(9476);
+    // LOGGER.info("Course ID: {}.", grades);
+    String answer = moodle.queryRestful();
+    LOGGER.info("Answer: {}.", answer);
+  }
+
+  public void plugins() {
+    String plugins = queryPlugins("json");
+    LOGGER.info("Plugins: {}.", plugins);
+    try {
+      Files.writeString(Path.of("answer.json"), plugins);
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+    JsonObject json;
+    try (JsonReader jr = Json.createReader(new StringReader(plugins))) {
+      json = jr.readObject();
+    }
+    checkState(json.containsKey("warnings"));
+    JsonArray warnings = json.getJsonArray("warnings");
+    checkState(warnings.isEmpty(), warnings);
+    checkState(json.containsKey("plugins"));
+    JsonArray pluginss = json.getJsonArray("plugins");
+    ImmutableSet<JsonObject> pluginsSet = pluginss.stream().map(v -> (JsonObject)v).collect(ImmutableSet.toImmutableSet());
+    pluginsSet.forEach(p -> LOGGER.info("Plugin: {}.", p.getString("component") + ":" + p.getString("addon")));
   }
 
   public ImmutableSet<JsonObject> grades(int assignmentId) {
@@ -159,6 +186,26 @@ public class Moodle {
     uriBuilder.queryParam("value", shortname);
     String courses = client.target(uriBuilder).request().get(String.class);
     return courses;
+  }
+
+  private String queryRestful() {
+    /** Abandoning: I am apparently hitting https://github.com/catalyst/moodle-webservice_restful/issues/5. */
+    UriBuilder uriBuilder = UriBuilder.fromPath("https://moodle-test.psl.eu/webservice/restful/server.php/core_course_get_courses");
+    String apiKey = CredentialsReader.keyReader().getCredentials().API_KEY();
+    // String reply = client.target(uriBuilder).request(MediaType.APPLICATION_JSON).header(HttpHeaders.AUTHORIZATION, apiKey).get(String.class);
+    Response reply = client.target(uriBuilder).request(MediaType.APPLICATION_JSON).accept().header(HttpHeaders.AUTHORIZATION, apiKey).get();
+    String entity = reply.readEntity(String.class);
+    return entity;
+  }
+
+  private String queryPlugins(String format) {
+    UriBuilder uriBuilder = UriBuilder.fromPath(MOODLE_SERVER);
+    uriBuilder.queryParam("moodlewsrestformat", format);
+    String apiKey = CredentialsReader.keyReader().getCredentials().API_KEY();
+    uriBuilder.queryParam("wstoken", apiKey);
+    uriBuilder.queryParam("wsfunction", "tool_mobile_get_plugins_supporting_mobile");
+    String reply = client.target(uriBuilder).request().get(String.class);
+    return reply;
   }
 
   private String queryAssignments(int courseId, String format) {

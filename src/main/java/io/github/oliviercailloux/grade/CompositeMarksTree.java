@@ -14,6 +14,7 @@ import java.util.Set;
 /**
  * Set as public as a temporary workaround for Json serialization.
  */
+@SuppressWarnings("serial")
 public class CompositeMarksTree implements MarksTree {
 
   public static CompositeMarksTree givenGrades(Map<Criterion, ? extends MarksTree> subGrades) {

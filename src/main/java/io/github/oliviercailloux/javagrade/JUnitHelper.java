@@ -7,6 +7,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
+import io.github.oliviercailloux.contained.SimpleInstanciator;
 import io.github.oliviercailloux.grade.Criterion;
 import io.github.oliviercailloux.grade.Mark;
 import io.github.oliviercailloux.grade.MarksTree;
@@ -32,9 +33,9 @@ public class JUnitHelper {
   @SuppressWarnings("unused")
   private static final Logger LOGGER = LoggerFactory.getLogger(JUnitHelper.class);
 
-  public static Instanciator staticInstanciator;
+  public static SimpleInstanciator staticInstanciator;
 
-  public static MarksTree grade(String packageName, Instanciator instanciator) {
+  public static MarksTree grade(String packageName, SimpleInstanciator instanciator) {
     JUnitHelper.staticInstanciator = instanciator;
 
     LOGGER.debug("Discovering tests in {}.", packageName);

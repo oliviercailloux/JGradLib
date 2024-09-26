@@ -21,7 +21,7 @@ import io.github.oliviercailloux.grade.GradeAggregator;
 import io.github.oliviercailloux.grade.Mark;
 import io.github.oliviercailloux.grade.MarksTree;
 import io.github.oliviercailloux.grade.MavenCodeGrader;
-import io.github.oliviercailloux.grade.MavenCodeGrader.WarningsBehavior;
+import io.github.oliviercailloux.grade.MavenCodeHelper.WarningsBehavior;
 import io.github.oliviercailloux.jaris.exceptions.TryCatchAll;
 import io.github.oliviercailloux.jaris.exceptions.TryCatchAllVoid;
 import io.github.oliviercailloux.jaris.throwing.TSupplier;

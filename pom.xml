@@ -6,7 +6,7 @@
 	<parent>
 		<groupId>io.github.oliviercailloux</groupId>
 		<artifactId>pom</artifactId>
-		<version>0.0.21</version>
+		<version>0.0.22</version>
 	</parent>
 	<artifactId>jgradlib</artifactId>
   <name>JGradLib</name>
@@ -47,7 +47,7 @@
 		<dependency>
 			<groupId>io.github.oliviercailloux</groupId>
 			<artifactId>jaris</artifactId>
-			<version>0.0.31-SNAPSHOT</version>
+			<version>0.0.33</version>
 		</dependency>
 		<dependency>
 			<groupId>com.google.guava</groupId>
