@@ -46,10 +46,8 @@ public class Moodle {
     // ImmutableSet<Integer> assignmentIds = new Moodle().assignmentIds(COURSE_ID);
     // LOGGER.info("Assignments: {}.", assignmentIds);
     Moodle moodle = new Moodle();
-    // ImmutableSet<JsonObject> grades = moodle.grades(9476);
-    // LOGGER.info("Course ID: {}.", grades);
-    String answer = moodle.queryRestful();
-    LOGGER.info("Answer: {}.", answer);
+    ImmutableSet<JsonObject> grades = moodle.grades(9476);
+    LOGGER.info("Course ID: {}.", grades);
   }
 
   public void plugins() {
@@ -186,16 +184,6 @@ public class Moodle {
     uriBuilder.queryParam("value", shortname);
     String courses = client.target(uriBuilder).request().get(String.class);
     return courses;
-  }
-
-  private String queryRestful() {
-    /** Abandoning: I am apparently hitting https://github.com/catalyst/moodle-webservice_restful/issues/5. */
-    UriBuilder uriBuilder = UriBuilder.fromPath("https://moodle-test.psl.eu/webservice/restful/server.php/core_course_get_courses");
-    String apiKey = CredentialsReader.keyReader().getCredentials().API_KEY();
-    // String reply = client.target(uriBuilder).request(MediaType.APPLICATION_JSON).header(HttpHeaders.AUTHORIZATION, apiKey).get(String.class);
-    Response reply = client.target(uriBuilder).request(MediaType.APPLICATION_JSON).accept().header(HttpHeaders.AUTHORIZATION, apiKey).get();
-    String entity = reply.readEntity(String.class);
-    return entity;
   }
 
   private String queryPlugins(String format) {
