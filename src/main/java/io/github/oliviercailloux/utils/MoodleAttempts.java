@@ -3,6 +3,7 @@ package io.github.oliviercailloux.utils;
 import static com.google.common.base.Preconditions.checkState;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import io.github.oliviercailloux.jaris.credentials.CredentialsReader;
@@ -11,15 +12,14 @@ import jakarta.json.Json;
 import jakarta.json.JsonArray;
 import jakarta.json.JsonObject;
 import jakarta.json.JsonReader;
+import jakarta.json.JsonReaderFactory;
 import jakarta.json.JsonValue;
 import jakarta.ws.rs.client.Client;
 import jakarta.ws.rs.client.ClientBuilder;
-import jakarta.ws.rs.core.HttpHeaders;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.UriBuilder;
 import java.io.IOException;
 import java.io.StringReader;
+import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import javax.xml.transform.stream.StreamSource;
@@ -28,26 +28,37 @@ import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 
-public class Moodle {
-  private static final String MOODLE_SERVER =
-      // "https://moodle-qualif.psl.eu/webservice/rest/server.php";
+public class MoodleAttempts {
+  private static final String MOODLE_PSL_SERVER =
+  "https://moodle-qualif.psl.eu/webservice/rest/server.php";
+  private static final String MOODLE_PSL_TEST_SERVER =
       "https://moodle-test.psl.eu/webservice/rest/server.php";
 
   private static final int COURSE_ID = 24705;
 
   @SuppressWarnings("unused")
-  private static final Logger LOGGER = LoggerFactory.getLogger(Moodle.class);
+  private static final Logger LOGGER = LoggerFactory.getLogger(MoodleAttempts.class);
 
   Client client = ClientBuilder.newClient();
 
+  private JsonReaderFactory readerFactory;
+
+  public MoodleAttempts() {
+    readerFactory = Json.createReaderFactory(ImmutableMap.of());
+  }
+
   public static void main(String[] args) {
-    // int courseId = new Moodle().courseId("23_CIP_test_autograder");
+    // ImmutableSet<JsonObject> pluginsSet = Moodle.instance().jsonPlugins();
+    // pluginsSet.forEach(p -> LOGGER.info("Plugin: {}.", p.getString("component") + ":" + p.getString("addon")));
+
+    Moodle moodle = Moodle.instance(URI.create(MOODLE_PSL_TEST_SERVER));
+    // int courseId = moodle.courseId("23_CIP_test_autograder");
     // checkState(courseId == COURSE_ID);
-    // ImmutableSet<Integer> assignmentIds = new Moodle().assignmentIds(COURSE_ID);
+    // ImmutableSet<Integer> assignmentIds = moodle.assignmentIds(COURSE_ID);
     // LOGGER.info("Assignments: {}.", assignmentIds);
-    Moodle moodle = new Moodle();
     ImmutableSet<JsonObject> grades = moodle.grades(9476);
     LOGGER.info("Course ID: {}.", grades);
+
   }
 
   public void plugins() {
@@ -59,7 +70,7 @@ public class Moodle {
       throw new RuntimeException(e);
     }
     JsonObject json;
-    try (JsonReader jr = Json.createReader(new StringReader(plugins))) {
+    try (JsonReader jr = readerFactory.createReader(new StringReader(plugins))) {
       json = jr.readObject();
     }
     checkState(json.containsKey("warnings"));
