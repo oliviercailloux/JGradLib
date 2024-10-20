@@ -65,19 +65,19 @@
 			<version>2.0.15</version>
 		</dependency>
 		<dependency>
-			<groupId>io.github.oliviercailloux.git</groupId>
-			<artifactId>jfs</artifactId>
-			<version>0.0.5</version>
+			<groupId>io.github.oliviercailloux</groupId>
+			<artifactId>gitjfs</artifactId>
+			<version>0.0.6-SNAPSHOT</version>
 		</dependency>
 		<dependency>
-			<groupId>io.github.oliviercailloux.git</groupId>
-			<artifactId>factory</artifactId>
-			<version>0.0.2</version>
+			<groupId>io.github.oliviercailloux</groupId>
+			<artifactId>git-factory</artifactId>
+			<version>0.0.3-SNAPSHOT</version>
 		</dependency>
 		<dependency>
-			<groupId>io.github.oliviercailloux.git</groupId>
-			<artifactId>filter</artifactId>
-			<version>0.0.3</version>
+			<groupId>io.github.oliviercailloux</groupId>
+			<artifactId>gitjfs-filter</artifactId>
+			<version>0.0.4-SNAPSHOT</version>
 		</dependency>
 		<dependency>
 			<groupId>io.github.oliviercailloux</groupId>
