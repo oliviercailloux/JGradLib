@@ -12,7 +12,7 @@ import com.google.common.collect.Maps;
 import com.google.common.graph.Graph;
 import com.google.common.jimfs.Configuration;
 import com.google.common.jimfs.Jimfs;
-import io.github.oliviercailloux.factogit.JGit;
+import io.github.oliviercailloux.git.factory.JGit;
 import io.github.oliviercailloux.git.filter.GitHistorySimple;
 import io.github.oliviercailloux.git.github.model.GitHubUsername;
 import io.github.oliviercailloux.gitjfs.GitFileSystem;
