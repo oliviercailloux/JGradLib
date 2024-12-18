@@ -3,9 +3,11 @@ package io.github.oliviercailloux.grade;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.google.common.base.MoreObjects;
+import java.io.Serializable;
 import java.util.Objects;
 
-public class SubMarksTree {
+@SuppressWarnings("serial")
+public class SubMarksTree implements Serializable {
 
   public static SubMarksTree given(Criterion criterion, MarksTree grade) {
     return new SubMarksTree(criterion, grade);
