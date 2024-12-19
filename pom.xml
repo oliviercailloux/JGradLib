@@ -15,34 +15,6 @@
 		<maven.compiler.showWarnings>true</maven.compiler.showWarnings>
 		<checkstyle.skip>true</checkstyle.skip>
 	</properties>
-	<profiles>
-		<profile>
-			<id>release</id>
-			<build>
-				<plugins>
-					<plugin>
-						<artifactId>maven-javadoc-plugin</artifactId>
-						<configuration>
-							<failOnWarnings>false</failOnWarnings>
-							<failOnError>false</failOnError>
-						</configuration>
-					</plugin>
-				</plugins>
-			</build>
-		</profile>
-	</profiles>
-	<repositories>
-		<repository>
-			<id>jakarta</id>
-			<url>https://jakarta.oss.sonatype.org/content/repositories/staging/</url>
-			<releases>
-				<enabled>true</enabled>
-			</releases>
-			<snapshots>
-				<enabled>true</enabled>
-			</snapshots>
-		</repository>
-	</repositories>
 	<dependencies>
 		<dependency>
 			<groupId>io.github.oliviercailloux</groupId>
@@ -62,17 +34,17 @@
 		<dependency>
 			<groupId>io.github.oliviercailloux</groupId>
 			<artifactId>gitjfs</artifactId>
-			<version>0.0.6-SNAPSHOT</version>
+			<version>0.0.6</version>
 		</dependency>
 		<dependency>
 			<groupId>io.github.oliviercailloux</groupId>
 			<artifactId>git-factory</artifactId>
-			<version>0.0.3-SNAPSHOT</version>
+			<version>0.0.3</version>
 		</dependency>
 		<dependency>
 			<groupId>io.github.oliviercailloux</groupId>
 			<artifactId>gitjfs-filter</artifactId>
-			<version>0.0.4-SNAPSHOT</version>
+			<version>0.0.4</version>
 		</dependency>
 		<dependency>
 			<groupId>io.github.oliviercailloux</groupId>
