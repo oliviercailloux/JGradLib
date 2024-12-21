@@ -17,6 +17,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
+ * <p>
  * A tree of MarkAggregator instances. Has information about how to aggregate some mark trees. The
  * other ones are said to have an incompatible structure. Compatibility depends only on the
  * structure of the mark tree (i.e., the criteria paths), not on the marks it contains; except that
