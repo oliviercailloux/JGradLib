@@ -24,19 +24,16 @@
           <plugins>
             <plugin>
               <artifactId>maven-javadoc-plugin</artifactId>
-              <executions>
-                <execution>
-                  <id>attach-javadocs</id>
-                  <phase>none</phase>
-                </execution>
-              </executions>
+              <configuration>
+                <failOnError>false</failOnError>
+              </configuration>
             </plugin>
           </plugins>
         </pluginManagement>
       </build>
     </profile>
   </profiles>
-  
+
   <dependencies>
     <dependency>
       <groupId>io.github.oliviercailloux</groupId>
